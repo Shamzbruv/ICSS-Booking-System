@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ICSS Admin — Bookings</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+<aside class="sidebar">
+    <div class="sidebar-brand">
+        <div class="brand-logo">ICSS</div>
+        <div class="brand-text">
+            <span class="brand-name" id="tenantName">Admin</span>
+            <span class="brand-plan" id="tenantPlan"></span>
+        </div>
+    </div>
+    <nav class="sidebar-nav">
+        <a href="index.html" class="nav-item"><span class="nav-icon">⬛</span> Dashboard</a>
+        <a href="bookings.html" class="nav-item active"><span class="nav-icon">📅</span> Bookings</a>
+        <a href="availability.html" class="nav-item"><span class="nav-icon">🗓️</span> Availability</a>
+        <a href="designs.html" class="nav-item"><span class="nav-icon">✏️</span> Design Inquiries</a>
+    </nav>
+    <div class="sidebar-footer">
+        <div class="user-info">
+            <div class="user-avatar" id="userAvatar">?</div>
+            <div><div class="user-name" id="userName">—</div><div class="user-role" id="userRole">—</div></div>
+        </div>
+        <button class="logout-btn" onclick="logout()">Sign Out</button>
+    </div>
+</aside>
+
+<main class="main-content">
+    <header class="page-header">
+        <div>
+            <h1 class="page-title">Bookings</h1>
+            <p class="page-subtitle">Manage all appointments and their statuses</p>
+        </div>
+    </header>
+
+    <div class="table-wrap">
+        <div class="table-toolbar">
+            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                <input type="date" id="filterDate" style="max-width:170px;" onchange="loadBookings()">
+                <select id="filterStatus" onchange="loadBookings()">
+                    <option value="">All Statuses</option>
+                    <option value="confirmed">Confirmed</option>
+                    <option value="cancelled">Cancelled</option>
+                    <option value="completed">Completed</option>
+                    <option value="no_show">No Show</option>
+                </select>
+                <input type="text" id="filterSearch" placeholder="Search name, email…" oninput="debounceLoad()" style="min-width:200px;">
+            </div>
+            <div style="display:flex;gap:8px;">
+                <span id="bookingCount" style="font-size:13px;color:var(--text-dim);align-self:center;"></span>
+                <button class="btn btn-secondary btn-sm" onclick="loadBookings()">↻</button>
+            </div>
+        </div>
+
+        <div id="tableBody">
+            <div class="spinner"></div>
+        </div>
+    </div>
+</main>
+
+<!-- Cancel Modal -->
+<div class="modal-overlay" id="cancelModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h2 class="modal-title">Cancel Booking</h2>
+            <button class="modal-close" onclick="closeModal('cancelModal')">✕</button>
+        </div>
+        <p style="margin-bottom:16px;color:var(--text-dim);font-size:14px;">
+            This will cancel the booking and send an apology email to the customer.
+        </p>
+        <div class="form-group">
+            <label for="cancelReason">Reason for Cancellation (optional)</label>
+            <textarea id="cancelReason" rows="3" placeholder="e.g. Staff unavailability, emergency closure..."></textarea>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('cancelModal')">Go Back</button>
+            <button class="btn btn-danger" id="confirmCancelBtn" onclick="confirmCancel()">Cancel Booking</button>
+        </div>
+    </div>
+</div>
+
+<script src="js/admin.js"></script>
+<script>
+    let cancelTargetId = null;
+    let searchTimer    = null;
+
+    document.addEventListener('DOMContentLoaded', () => {
+        requireAuth();
+        populateUserUI();
+        loadBookings();
+    });
+
+    function debounceLoad() {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(loadBookings, 400);
+    }
+
+    async function loadBookings() {
+        const date   = document.getElementById('filterDate').value;
+        const status = document.getElementById('filterStatus').value;
+        const search = document.getElementById('filterSearch').value;
+
+        const params = new URLSearchParams();
+        if (date)   params.set('date', date);
+        if (status) params.set('status', status);
+        if (search) params.set('search', search);
+        params.set('limit', '100');
+
+        document.getElementById('tableBody').innerHTML = '<div class="spinner"></div>';
+
+        try {
+            const data = await apiFetch(`/api/v1/bookings?${params}`);
+            renderTable(data.bookings || [], data.total || 0);
+        } catch (e) {
+            document.getElementById('tableBody').innerHTML =
+                `<div class="empty-state"><div class="empty-state-icon">⚠️</div><p class="empty-state-text">${e.message}</p></div>`;
+        }
+    }
+
+    function renderTable(bookings, total) {
+        document.getElementById('bookingCount').textContent = `${total} result${total !== 1 ? 's' : ''}`;
+
+        if (bookings.length === 0) {
+            document.getElementById('tableBody').innerHTML =
+                '<div class="empty-state"><div class="empty-state-icon">📅</div><p class="empty-state-text">No bookings found. Try adjusting your filters.</p></div>';
+            return;
+        }
+
+        const rows = bookings.map(b => `
+            <tr>
+                <td><strong>${escHtml(b.name)}</strong></td>
+                <td style="color:var(--text-dim);">${escHtml(b.email)}</td>
+                <td>${escHtml(b.phone || '—')}</td>
+                <td>${formatDate(b.booking_date)}</td>
+                <td>${formatTime(b.booking_time)}</td>
+                <td>${escHtml(b.region || '—')}</td>
+                <td>${statusBadge(b.status)}</td>
+                <td>
+                    ${b.status === 'confirmed' ? `
+                        <button class="btn btn-secondary btn-sm" onclick="markComplete('${b.id}')">✓ Complete</button>
+                        <button class="btn btn-danger btn-sm" onclick="openCancelModal('${b.id}')">✕ Cancel</button>
+                    ` : ''}
+                </td>
+            </tr>
+        `).join('');
+
+        document.getElementById('tableBody').innerHTML = `
+            <table>
+                <thead>
+                    <tr>
+                        <th>Name</th><th>Email</th><th>Phone</th>
+                        <th>Date</th><th>Time</th><th>Region</th><th>Status</th><th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+            </table>`;
+    }
+
+    async function markComplete(id) {
+        try {
+            await apiFetch(`/api/v1/bookings/${id}/status`, {
+                method: 'PATCH',
+                body: JSON.stringify({ status: 'completed' })
+            });
+            showToast('Booking marked as completed.');
+            loadBookings();
+        } catch (e) {
+            showToast(e.message, 'error');
+        }
+    }
+
+    function openCancelModal(id) {
+        cancelTargetId = id;
+        document.getElementById('cancelReason').value = '';
+        document.getElementById('cancelModal').classList.add('open');
+    }
+
+    function closeModal(id) {
+        document.getElementById(id).classList.remove('open');
+        cancelTargetId = null;
+    }
+
+    async function confirmCancel() {
+        if (!cancelTargetId) return;
+        const reason = document.getElementById('cancelReason').value.trim();
+        const btn    = document.getElementById('confirmCancelBtn');
+        btn.disabled = true; btn.textContent = 'Cancelling...';
+        try {
+            await apiFetch(`/api/v1/bookings/${cancelTargetId}/cancel`, {
+                method: 'POST',
+                body: JSON.stringify({ reason })
+            });
+            showToast('Booking cancelled. Customer has been notified.');
+            closeModal('cancelModal');
+            loadBookings();
+        } catch (e) {
+            showToast(e.message, 'error');
+        } finally {
+            btn.disabled = false; btn.textContent = 'Cancel Booking';
+        }
+    }
+
+    function escHtml(str) {
+        if (!str) return '';
+        return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+</script>
+</body>
+</html>

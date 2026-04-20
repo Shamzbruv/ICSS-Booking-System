@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ICSS Admin — Availability</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/admin.css">
+    <style>
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-bottom: 24px; }
+        .cal-header { text-align: center; font-size: 11px; font-weight: 600; color: var(--text-dim); padding: 8px 0; text-transform: uppercase; letter-spacing: 0.8px; }
+        .cal-day { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-sm); font-size: 13px; cursor: pointer; border: 1px solid transparent; transition: all 180ms ease; }
+        .cal-day:hover { border-color: var(--gold); background: var(--gold-glow); }
+        .cal-day.today { border-color: var(--gold); color: var(--gold); font-weight: 600; }
+        .cal-day.blocked { background: rgba(239,68,68,0.15); color: var(--danger); }
+        .cal-day.empty { cursor: default; }
+        .cal-day.past { opacity: 0.3; cursor: default; pointer-events: none; }
+        .cal-day.selected { background: var(--gold); color: #000; font-weight: 600; }
+        .month-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+        .month-title { font-size: 16px; font-weight: 600; }
+        .slot-list { display: flex; flex-wrap: wrap; gap: 8px; }
+        .slot-chip { padding: 6px 14px; border-radius: 100px; font-size: 12px; font-weight: 500; border: 1px solid var(--border); background: var(--surface-2); cursor: pointer; transition: all 180ms; }
+        .slot-chip:hover { border-color: var(--gold); color: var(--gold); }
+        .slot-chip.blocked { background: rgba(239,68,68,0.1); border-color: var(--danger); color: var(--danger); }
+    </style>
+</head>
+<body>
+<aside class="sidebar">
+    <div class="sidebar-brand">
+        <div class="brand-logo">ICSS</div>
+        <div class="brand-text">
+            <span class="brand-name" id="tenantName">Admin</span>
+            <span class="brand-plan" id="tenantPlan"></span>
+        </div>
+    </div>
+    <nav class="sidebar-nav">
+        <a href="index.html" class="nav-item"><span class="nav-icon">⬛</span> Dashboard</a>
+        <a href="bookings.html" class="nav-item"><span class="nav-icon">📅</span> Bookings</a>
+        <a href="availability.html" class="nav-item active"><span class="nav-icon">🗓️</span> Availability</a>
+        <a href="designs.html" class="nav-item"><span class="nav-icon">✏️</span> Design Inquiries</a>
+    </nav>
+    <div class="sidebar-footer">
+        <div class="user-info">
+            <div class="user-avatar" id="userAvatar">?</div>
+            <div><div class="user-name" id="userName">—</div><div class="user-role" id="userRole">—</div></div>
+        </div>
+        <button class="logout-btn" onclick="logout()">Sign Out</button>
+    </div>
+</aside>
+
+<main class="main-content">
+    <header class="page-header">
+        <div>
+            <h1 class="page-title">Availability</h1>
+            <p class="page-subtitle">Block days or individual time slots to prevent bookings</p>
+        </div>
+    </header>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start;">
+        <!-- Calendar -->
+        <div class="table-wrap" style="padding:20px;">
+            <div class="month-nav">
+                <button class="btn btn-secondary btn-sm" id="prevMonthBtn" onclick="changeMonth(-1)">‹</button>
+                <div class="month-title" id="monthTitle">—</div>
+                <button class="btn btn-secondary btn-sm" id="nextMonthBtn" onclick="changeMonth(1)">›</button>
+            </div>
+            <div class="calendar-grid">
+                <div class="cal-header">Sun</div><div class="cal-header">Mon</div><div class="cal-header">Tue</div>
+                <div class="cal-header">Wed</div><div class="cal-header">Thu</div><div class="cal-header">Fri</div>
+                <div class="cal-header">Sat</div>
+                <div id="calGrid"></div>
+            </div>
+            <div style="display:flex;gap:12px;font-size:12px;color:var(--text-dim);margin-top:8px;">
+                <span>🟡 Today</span>
+                <span>🔴 Blocked</span>
+                <span>🟣 Selected</span>
+            </div>
+        </div>
+
+        <!-- Day Detail Panel -->
+        <div class="table-wrap" style="padding:20px;" id="detailPanel">
+            <p style="color:var(--text-dim);font-size:14px;text-align:center;padding:32px 0;">
+                ← Select a date on the calendar
+            </p>
+        </div>
+    </div>
+</main>
+
+<script src="js/admin.js"></script>
+<script>
+    let currentYear  = new Date().getFullYear();
+    let currentMonth = new Date().getMonth(); // 0-indexed
+    let selectedDate = null;
+    let allBlocks    = [];
+
+    const SLOTS = [];
+    for (let m = 12 * 60; m <= 18 * 60 + 30; m += 30) {
+        const h = Math.floor(m / 60), mn = m % 60;
+        const time  = `${String(h).padStart(2,'0')}:${String(mn).padStart(2,'0')}`;
+        const h12   = h > 12 ? h - 12 : (h === 0 ? 12 : h);
+        const label = `${h12}:${String(mn).padStart(2,'0')} ${h >= 12 ? 'PM' : 'AM'}`;
+        SLOTS.push({ time, label });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        requireAuth();
+        populateUserUI();
+        renderCalendar();
+    });
+
+    function changeMonth(dir) {
+        currentMonth += dir;
+        if (currentMonth > 11) { currentMonth = 0; currentYear++; }
+        if (currentMonth < 0)  { currentMonth = 11; currentYear--; }
+        renderCalendar();
+    }
+
+    async function renderCalendar() {
+        const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+        document.getElementById('monthTitle').textContent = `${monthNames[currentMonth]} ${currentYear}`;
+
+        // Fetch blocks for this month
+        try {
+            const data = await apiFetch(`/api/v1/admin/unavailable?year=${currentYear}&month=${currentMonth + 1}`);
+            allBlocks  = data.blocks || [];
+        } catch (e) { allBlocks = []; }
+
+        const blockedDays = new Set(allBlocks.filter(b => b.block_type === 'day').map(b => b.block_date?.slice(0, 10)));
+        const today       = new Date().toISOString().slice(0, 10);
+
+        const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+        const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+
+        let html = '';
+        for (let i = 0; i < firstDay; i++) html += `<div class="cal-day empty"></div>`;
+
+        for (let d = 1; d <= daysInMonth; d++) {
+            const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+            const isPast  = dateStr < today;
+            const isToday = dateStr === today;
+            const isBlocked = blockedDays.has(dateStr);
+            const isSelected = dateStr === selectedDate;
+
+            let cls = 'cal-day';
+            if (isPast)    cls += ' past';
+            if (isToday)   cls += ' today';
+            if (isBlocked) cls += ' blocked';
+            if (isSelected) cls += ' selected';
+
+            html += `<div class="${cls}" data-date="${dateStr}" onclick="selectDay('${dateStr}')">${d}</div>`;
+        }
+
+        // Rebuild grid
+        const grid = document.getElementById('calGrid');
+        grid.outerHTML = `<div id="calGrid" style="display:contents;">${html}</div>`;
+        // Re-mount (hacky but avoids React)
+        document.querySelector('.calendar-grid').innerHTML =
+            `<div class="cal-header">Sun</div><div class="cal-header">Mon</div><div class="cal-header">Tue</div>
+             <div class="cal-header">Wed</div><div class="cal-header">Thu</div><div class="cal-header">Fri</div>
+             <div class="cal-header">Sat</div>${html}`;
+    }
+
+    async function selectDay(dateStr) {
+        selectedDate = dateStr;
+        renderCalendar();
+        renderDayDetail(dateStr);
+    }
+
+    async function renderDayDetail(dateStr) {
+        const panel  = document.getElementById('detailPanel');
+        panel.innerHTML = '<div class="spinner"></div>';
+
+        const dayBlocks  = allBlocks.filter(b => b.block_date?.slice(0, 10) === dateStr);
+        const isDayBlocked = dayBlocks.some(b => b.block_type === 'day');
+        const blockedTimes = new Set(dayBlocks.filter(b => b.block_type === 'slot').map(b => b.block_time?.slice(0, 5)));
+
+        const dayBlockObj = dayBlocks.find(b => b.block_type === 'day');
+
+        panel.innerHTML = `
+            <h3 style="font-size:15px;font-weight:600;margin-bottom:4px;">${formatDate(dateStr)}</h3>
+            <p style="font-size:13px;color:var(--text-dim);margin-bottom:20px;">Click slots to block/unblock. Block entire day below.</p>
+
+            ${isDayBlocked
+                ? `<div style="background:rgba(239,68,68,0.1);border:1px solid var(--danger);border-radius:var(--radius-sm);padding:14px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;">
+                       <div><strong style="color:var(--danger);">Day Blocked</strong> ${dayBlockObj?.reason ? `<span style="color:var(--text-dim);font-size:12px;"> — ${dayBlockObj.reason}</span>` : ''}</div>
+                       <button class="btn btn-secondary btn-sm" onclick="unblockDay('${dayBlockObj?.id}')">Unblock Day</button>
+                   </div>`
+                : `<div style="margin-bottom:20px;">
+                       <div class="form-row" style="align-items:flex-end;">
+                           <div class="form-group">
+                               <label>Block Reason (optional)</label>
+                               <input type="text" id="blockDayReason" placeholder="e.g. Holiday, Team event">
+                           </div>
+                           <button class="btn btn-danger" onclick="blockDay('${dateStr}')">🔒 Block Entire Day</button>
+                       </div>
+                   </div>`
+            }
+
+            ${!isDayBlocked ? `
+            <div>
+                <p style="font-size:12px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:10px;">Time Slots</p>
+                <div class="slot-list" id="slotList">
+                    ${SLOTS.map(s => {
+                        const isSlotBlocked = blockedTimes.has(s.time);
+                        const blockId = dayBlocks.find(b => b.block_type === 'slot' && b.block_time?.slice(0, 5) === s.time)?.id;
+                        return `<div class="slot-chip ${isSlotBlocked ? 'blocked' : ''}" onclick="${isSlotBlocked ? `unblockSlot('${blockId}')` : `blockSlot('${dateStr}', '${s.time}')`}">
+                            ${s.label}${isSlotBlocked ? ' 🔒' : ''}
+                        </div>`;
+                    }).join('')}
+                </div>
+            </div>` : ''}`;
+    }
+
+    async function blockDay(dateStr) {
+        const reason = document.getElementById('blockDayReason')?.value?.trim() || null;
+        try {
+            await apiFetch('/api/v1/admin/unavailable', {
+                method: 'POST',
+                body: JSON.stringify({ block_type: 'day', block_date: dateStr, reason })
+            });
+            showToast(`Day blocked: ${formatDate(dateStr)}`);
+            await renderCalendar();
+            renderDayDetail(dateStr);
+        } catch (e) { showToast(e.message, 'error'); }
+    }
+
+    async function blockSlot(dateStr, time) {
+        try {
+            await apiFetch('/api/v1/admin/unavailable', {
+                method: 'POST',
+                body: JSON.stringify({ block_type: 'slot', block_date: dateStr, block_time: time })
+            });
+            showToast(`Slot blocked: ${time}`);
+            const data = await apiFetch(`/api/v1/admin/unavailable?year=${currentYear}&month=${currentMonth + 1}`);
+            allBlocks  = data.blocks || [];
+            renderDayDetail(dateStr);
+        } catch (e) { showToast(e.message, 'error'); }
+    }
+
+    async function unblockDay(blockId) {
+        try {
+            await apiFetch(`/api/v1/admin/unavailable/${blockId}`, { method: 'DELETE' });
+            showToast('Day unblocked.');
+            await renderCalendar();
+            renderDayDetail(selectedDate);
+        } catch (e) { showToast(e.message, 'error'); }
+    }
+
+    async function unblockSlot(blockId) {
+        try {
+            await apiFetch(`/api/v1/admin/unavailable/${blockId}`, { method: 'DELETE' });
+            showToast('Slot unblocked.');
+            const data = await apiFetch(`/api/v1/admin/unavailable?year=${currentYear}&month=${currentMonth + 1}`);
+            allBlocks  = data.blocks || [];
+            renderDayDetail(selectedDate);
+        } catch (e) { showToast(e.message, 'error'); }
+    }
+</script>
+</body>
+</html>

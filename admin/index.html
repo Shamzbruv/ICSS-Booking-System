@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ICSS Admin — Dashboard</title>
+    <meta name="description" content="ICSS Booking System — Tenant Admin Dashboard">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+
+<!-- ── Sidebar ──────────────────────────────────────────────────────────────── -->
+<aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+        <div class="brand-logo">ICSS</div>
+        <div class="brand-text">
+            <span class="brand-name" id="tenantName">Booking System</span>
+            <span class="brand-plan" id="tenantPlan">Loading...</span>
+        </div>
+    </div>
+
+    <nav class="sidebar-nav">
+        <a href="index.html" class="nav-item active" id="nav-dashboard">
+            <span class="nav-icon">⬛</span> Dashboard
+        </a>
+        <a href="bookings.html" class="nav-item" id="nav-bookings">
+            <span class="nav-icon">📅</span> Bookings
+        </a>
+        <a href="availability.html" class="nav-item" id="nav-availability">
+            <span class="nav-icon">🗓️</span> Availability
+        </a>
+        <a href="designs.html" class="nav-item" id="nav-designs">
+            <span class="nav-icon">✏️</span> Design Inquiries
+        </a>
+        <a href="tenants.html" class="nav-item super-admin-only hidden" id="nav-tenants">
+            <span class="nav-icon">🏢</span> Tenants
+        </a>
+    </nav>
+
+    <div class="sidebar-footer">
+        <div class="user-info">
+            <div class="user-avatar" id="userAvatar">?</div>
+            <div>
+                <div class="user-name" id="userName">Loading...</div>
+                <div class="user-role" id="userRole">—</div>
+            </div>
+        </div>
+        <button class="logout-btn" id="logoutBtn" onclick="logout()">Sign Out</button>
+    </div>
+</aside>
+
+<!-- ── Main Content ──────────────────────────────────────────────────────────── -->
+<main class="main-content">
+    <header class="page-header">
+        <div>
+            <h1 class="page-title">Dashboard</h1>
+            <p class="page-subtitle" id="currentDate">Loading...</p>
+        </div>
+        <div class="header-actions">
+            <button class="btn btn-secondary" onclick="refreshData()">↻ Refresh</button>
+        </div>
+    </header>
+
+    <!-- Stats Grid -->
+    <section class="stats-grid" id="statsGrid">
+        <div class="stat-card" id="statConfirmed">
+            <div class="stat-icon confirmed-icon">📅</div>
+            <div class="stat-body">
+                <div class="stat-value" id="statConfirmedVal">—</div>
+                <div class="stat-label">Confirmed Bookings</div>
+            </div>
+        </div>
+        <div class="stat-card" id="statMonthly">
+            <div class="stat-icon monthly-icon">📆</div>
+            <div class="stat-body">
+                <div class="stat-value" id="statMonthlyVal">—</div>
+                <div class="stat-label">This Month</div>
+            </div>
+        </div>
+        <div class="stat-card" id="statDesigns">
+            <div class="stat-icon designs-icon">✏️</div>
+            <div class="stat-body">
+                <div class="stat-value" id="statDesignsVal">—</div>
+                <div class="stat-label">New Design Inquiries</div>
+            </div>
+        </div>
+        <div class="stat-card" id="statCancelled">
+            <div class="stat-icon cancelled-icon">✕</div>
+            <div class="stat-body">
+                <div class="stat-value" id="statCancelledVal">—</div>
+                <div class="stat-label">Cancelled</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Plan Status Card -->
+    <section class="plan-card" id="planCard">
+        <div class="plan-header">
+            <div>
+                <h2 class="plan-title">Subscription Plan</h2>
+                <p class="plan-name" id="planName">Loading...</p>
+            </div>
+            <div class="plan-usage" id="planUsage">
+                <div class="usage-bar-wrap">
+                    <div class="usage-label">Monthly Bookings</div>
+                    <div class="usage-bar">
+                        <div class="usage-fill" id="usageFill" style="width:0%"></div>
+                    </div>
+                    <div class="usage-text" id="usageText">—</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Quick Actions -->
+    <section class="quick-actions">
+        <h2 class="section-title">Quick Actions</h2>
+        <div class="action-grid">
+            <a href="bookings.html" class="action-card">
+                <div class="action-icon">📋</div>
+                <div class="action-label">View All Bookings</div>
+            </a>
+            <a href="availability.html" class="action-card">
+                <div class="action-icon">🔒</div>
+                <div class="action-label">Block Availability</div>
+            </a>
+            <a href="designs.html" class="action-card">
+                <div class="action-icon">🎨</div>
+                <div class="action-label">Design Inquiries</div>
+            </a>
+            <a href="../" target="_blank" class="action-card">
+                <div class="action-icon">🌐</div>
+                <div class="action-label">View Booking Page</div>
+            </a>
+        </div>
+    </section>
+</main>
+
+<script src="js/admin.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', async () => {
+        requireAuth();
+        document.getElementById('currentDate').textContent =
+            new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        await loadSummary();
+        populateUserUI();
+    });
+
+    async function loadSummary() {
+        try {
+            const data = await apiFetch('/api/v1/admin/summary');
+            document.getElementById('tenantName').textContent = data.tenantName || 'Admin';
+            document.getElementById('tenantPlan').textContent = (data.plan || 'starter').toUpperCase();
+            document.getElementById('statConfirmedVal').textContent  = data.confirmedBookings ?? '—';
+            document.getElementById('statMonthlyVal').textContent    = data.monthlyBookings ?? '—';
+            document.getElementById('statDesignsVal').textContent    = data.newDesigns ?? '—';
+            document.getElementById('statCancelledVal').textContent  = data.cancelledBookings ?? '—';
+            document.getElementById('planName').textContent = capitalize(data.plan || 'starter') + ' Plan';
+        } catch (e) {
+            console.error('Summary load error:', e);
+        }
+    }
+
+    async function refreshData() { await loadSummary(); }
+</script>
+</body>
+</html>

@@ -1,0 +1,41 @@
+version: '3.9'
+
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://icss:icss_pass@postgres:5432/icss_bookings
+      - JWT_SECRET=dev_jwt_secret_change_in_production
+      - RESEND_API_KEY=${RESEND_API_KEY:-}
+      - WIPAY_ACCOUNT_NUMBER=${WIPAY_ACCOUNT_NUMBER:-1234567890}
+      - WIPAY_ENVIRONMENT=sandbox
+      - PLATFORM_ADMIN_KEY=dev_platform_key_change_in_production
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-admin@icss.app}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    volumes:
+      - ./data/pdfs:/app/data/pdfs
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB:       icss_bookings
+      POSTGRES_USER:     icss
+      POSTGRES_PASSWORD: icss_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U icss -d icss_bookings"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  pgdata:

@@ -1,0 +1,17 @@
+{
+  "name": "icss-booking-system",
+  "version": "1.0.0",
+  "description": "ICSS Commercial Multi-Tenant Booking System — SaaS platform powering booking engines for multiple business clients",
+  "main": "server/app.js",
+  "scripts": {
+    "start": "/usr/local/bin/node server/app.js",
+    "dev": "/usr/local/bin/node server/app.js",
+    "migrate": "/usr/local/bin/node server/db/migrate.js",
+    "seed": "/usr/local/bin/node server/db/seed.js",
+    "test": "echo \"Tests: run node server/app.js and verify endpoints\""
+  },
+  "keywords": ["booking", "saas", "multi-tenant", "icss"],
+  "author": "iCreate Software Solutions",
+  "license": "UNLICENSED",
+  "private": true
+}

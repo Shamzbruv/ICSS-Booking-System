@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ICSS Admin — Login</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/admin.css">
+</head>
+<body class="login-page">
+    <div class="login-card">
+        <div class="login-logo">
+            <div class="login-logo-mark">ICSS</div>
+            <h1 class="login-title">Admin Portal</h1>
+            <p class="login-subtitle">Booking System Management</p>
+        </div>
+
+        <form class="login-form" id="loginForm" onsubmit="handleLogin(event)">
+            <div class="form-group">
+                <label for="loginSlug">Business Slug</label>
+                <input type="text" id="loginSlug" placeholder="e.g. windross" autocomplete="organization" required>
+            </div>
+            <div class="form-group">
+                <label for="loginEmail">Email Address</label>
+                <input type="email" id="loginEmail" placeholder="admin@yourbusiness.com" autocomplete="email" required>
+            </div>
+            <div class="form-group">
+                <label for="loginPassword">Password</label>
+                <input type="password" id="loginPassword" placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;" autocomplete="current-password" required>
+            </div>
+            <div class="login-error" id="loginError"></div>
+            <button type="submit" class="login-submit" id="loginBtn">Sign In</button>
+        </form>
+    </div>
+
+    <script src="js/admin.js"></script>
+    <script>
+        // If already logged in, redirect to dashboard
+        if (getToken()) window.location.href = 'index.html';
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            const btn      = document.getElementById('loginBtn');
+            const errEl    = document.getElementById('loginError');
+            const email    = document.getElementById('loginEmail').value.trim();
+            const password = document.getElementById('loginPassword').value;
+            const slug     = document.getElementById('loginSlug').value.trim();
+
+            errEl.textContent = '';
+            btn.textContent   = 'Signing in...';
+            btn.disabled      = true;
+
+            try {
+                const data = await apiFetch('/api/v1/auth/login', {
+                    method:  'POST',
+                    body:    JSON.stringify({ email, password, tenantSlug: slug })
+                });
+                setAuth(data.token, data.user);
+                window.location.href = 'index.html';
+            } catch (err) {
+                errEl.textContent = err.message || 'Login failed. Check your credentials.';
+                btn.textContent   = 'Sign In';
+                btn.disabled      = false;
+            }
+        }
+    </script>
+</body>
+</html>
