@@ -17,6 +17,7 @@ const paymentRoutes     = require('./routes/v1/payments');
 const adminRoutes       = require('./routes/v1/admin');
 const tenantRoutes      = require('./routes/v1/tenants');
 const publicRoutes      = require('./routes/v1/public');
+const pricingRoutes     = require('./routes/v1/pricing');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -60,6 +61,7 @@ app.use('/api/v1/payments',     paymentRoutes);
 app.use('/api/v1/admin',        adminRoutes);
 app.use('/api/v1/tenants',      tenantRoutes);
 app.use('/api/v1/public',       publicRoutes);
+app.use('/api/v1/pricing',      pricingRoutes);
 
 // ─── Health Check ─────────────────────────────────────────────────────────────
 app.get('/health', (req, res) => {
