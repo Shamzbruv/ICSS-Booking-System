@@ -7,6 +7,7 @@ on:
     branches: [main]
 
 jobs:
+  # ── Job 1: Lint, audit, and test ────────────────────────────────────────────
   lint-and-test:
     name: Lint & Test
     runs-on: ubuntu-latest
@@ -51,11 +52,18 @@ jobs:
           NODE_ENV: test
         run: npm test
 
+  # ── Job 2: Build & push Docker image to GHCR ────────────────────────────────
   build-docker:
     name: Build Docker Image
     runs-on: ubuntu-latest
     needs: lint-and-test
     if: github.ref == 'refs/heads/main'
+
+    # Explicit permissions required — without packages:write the default
+    # GITHUB_TOKEN cannot create or push to GitHub Container Registry.
+    permissions:
+      contents: read
+      packages: write
 
     steps:
       - uses: actions/checkout@v4
@@ -70,9 +78,9 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # GHCR requires the image name to be fully lowercase.
-      # github.repository_owner can contain uppercase letters (e.g. "Shamzbruv"),
-      # so we normalise it here before constructing the tag.
+      # GHCR requires the image reference to be fully lowercase.
+      # github.repository_owner preserves the original case (e.g. "Shamzbruv"),
+      # so we normalise it with tr before constructing the tag.
       - name: Compute lowercase image name
         id: image
         run: |
@@ -90,17 +98,27 @@ jobs:
           cache-from: type=gha
           cache-to:   type=gha,mode=max
 
+  # ── Job 3: Deploy ────────────────────────────────────────────────────────────
   deploy:
     name: Deploy to Production
     runs-on: ubuntu-latest
     needs: build-docker
     if: github.ref == 'refs/heads/main'
-    environment: production
+    # To enable the protected environment gate:
+    #   1. Go to GitHub → Settings → Environments → New environment → "production"
+    #   2. Add RAILWAY_TOKEN as an environment secret
+    #   3. Uncomment the line below
+    # environment: production
 
     steps:
       - name: Deploy via Railway
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
         run: |
-          echo "Deploy via Railway CLI or webhook here"
-          # npx @railway/cli up --service icss-booking-system
+          echo "✅ Docker image pushed to GHCR."
+          echo "   To enable auto-deploy to Railway:"
+          echo "   1. Create a 'production' environment in GitHub Settings → Environments"
+          echo "   2. Add RAILWAY_TOKEN as a secret there"
+          echo "   3. Uncomment 'environment: production' in ci.yml"
+          echo "   4. Uncomment the railway CLI command below"
+          # Uncomment once Railway is configured:
+          # npm install -g @railway/cli
+          # railway up --service icss-booking-system
