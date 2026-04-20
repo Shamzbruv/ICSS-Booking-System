@@ -16,6 +16,7 @@ const orderRoutes       = require('./routes/v1/orders');
 const paymentRoutes     = require('./routes/v1/payments');
 const adminRoutes       = require('./routes/v1/admin');
 const tenantRoutes      = require('./routes/v1/tenants');
+const publicRoutes      = require('./routes/v1/public');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -31,7 +32,7 @@ app.use(cors({
         ? /\.icss\.app$/ // Allow all *.icss.app subdomains in production
         : '*',           // Open in dev
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Tenant-ID'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Tenant-ID', 'X-Platform-Admin-Key'],
     credentials: true
 }));
 
@@ -58,6 +59,7 @@ app.use('/api/v1/orders',       orderRoutes);
 app.use('/api/v1/payments',     paymentRoutes);
 app.use('/api/v1/admin',        adminRoutes);
 app.use('/api/v1/tenants',      tenantRoutes);
+app.use('/api/v1/public',       publicRoutes);
 
 // ─── Health Check ─────────────────────────────────────────────────────────────
 app.get('/health', (req, res) => {

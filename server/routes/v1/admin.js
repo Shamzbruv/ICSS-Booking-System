@@ -158,6 +158,20 @@ router.get('/designs', async (req, res) => {
     }
 });
 
+// GET /api/v1/admin/designs/:id — single inquiry detail
+router.get('/designs/:id', async (req, res) => {
+    try {
+        const result = await query(
+            `SELECT * FROM design_inquiries WHERE id = $1 AND tenant_id = $2`,
+            [req.params.id, req.tenant.id]
+        );
+        if (result.rows.length === 0) return res.status(404).json({ error: 'Inquiry not found.' });
+        res.json({ design: result.rows[0] });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch inquiry.' });
+    }
+});
+
 // PATCH /api/v1/admin/designs/:id/status
 router.patch('/designs/:id/status', async (req, res) => {
     const { status } = req.body;

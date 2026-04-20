@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ICSS Admin — Tenant Management</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+<aside class="sidebar">
+    <div class="sidebar-brand">
+        <div class="brand-logo">ICSS</div>
+        <div class="brand-text">
+            <span class="brand-name">Platform Admin</span>
+            <span class="brand-plan">SUPER ADMIN</span>
+        </div>
+    </div>
+    <nav class="sidebar-nav">
+        <a href="index.html" class="nav-item"><span class="nav-icon">⬛</span> Dashboard</a>
+        <a href="bookings.html" class="nav-item"><span class="nav-icon">📅</span> Bookings</a>
+        <a href="availability.html" class="nav-item"><span class="nav-icon">🗓️</span> Availability</a>
+        <a href="designs.html" class="nav-item"><span class="nav-icon">✏️</span> Design Inquiries</a>
+        <a href="tenants.html" class="nav-item active"><span class="nav-icon">🏢</span> Tenants</a>
+    </nav>
+    <div class="sidebar-footer">
+        <div class="user-info">
+            <div class="user-avatar" id="userAvatar">?</div>
+            <div><div class="user-name" id="userName">—</div><div class="user-role" id="userRole">—</div></div>
+        </div>
+        <button class="logout-btn" onclick="logout()">Sign Out</button>
+    </div>
+</aside>
+
+<main class="main-content">
+    <header class="page-header">
+        <div>
+            <h1 class="page-title">Tenant Management</h1>
+            <p class="page-subtitle">Provision and manage all client tenants on the platform</p>
+        </div>
+        <div class="header-actions">
+            <button class="btn btn-primary" onclick="openProvisionModal()">+ New Tenant</button>
+        </div>
+    </header>
+
+    <!-- Stats row -->
+    <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:24px;" id="platformStats">
+        <div class="stat-card"><div class="stat-icon monthly-icon">🏢</div><div class="stat-body"><div class="stat-value" id="totalTenants">—</div><div class="stat-label">Total Tenants</div></div></div>
+        <div class="stat-card"><div class="stat-icon confirmed-icon">✓</div><div class="stat-body"><div class="stat-value" id="activeTenants">—</div><div class="stat-label">Active Tenants</div></div></div>
+        <div class="stat-card"><div class="stat-icon designs-icon">📅</div><div class="stat-body"><div class="stat-value" id="totalBookings">—</div><div class="stat-label">Total Bookings</div></div></div>
+    </div>
+
+    <div class="table-wrap">
+        <div class="table-toolbar">
+            <span style="font-weight:600;font-size:14px;">All Tenants</span>
+            <button class="btn btn-secondary btn-sm" onclick="loadTenants()">↻ Refresh</button>
+        </div>
+        <div id="tableBody"><div class="spinner"></div></div>
+    </div>
+</main>
+
+<!-- Provision Modal -->
+<div class="modal-overlay" id="provisionModal">
+    <div class="modal" style="max-width:560px;">
+        <div class="modal-header">
+            <h2 class="modal-title">Provision New Tenant</h2>
+            <button class="modal-close" onclick="closeModal('provisionModal')">✕</button>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label for="pSlug">Slug <span style="color:var(--danger);">*</span></label>
+                <input type="text" id="pSlug" placeholder="e.g. windross">
+            </div>
+            <div class="form-group">
+                <label for="pName">Business Name <span style="color:var(--danger);">*</span></label>
+                <input type="text" id="pName" placeholder="e.g. Windross Tailoring">
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label for="pPlan">Plan</label>
+                <select id="pPlan">
+                    <option value="starter">Starter (Free)</option>
+                    <option value="pro" selected>Pro ($49/mo)</option>
+                    <option value="enterprise">Enterprise ($199/mo)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="pColor">Brand Color</label>
+                <input type="text" id="pColor" placeholder="#D4AF37">
+            </div>
+        </div>
+        <div style="margin-bottom:12px;padding:12px;background:var(--surface-2);border-radius:var(--radius-sm);">
+            <div style="font-size:12px;color:var(--text-dim);margin-bottom:10px;font-weight:500;">Admin Account</div>
+            <div class="form-row" style="margin-bottom:0;">
+                <div class="form-group">
+                    <label for="pAdminEmail">Admin Email <span style="color:var(--danger);">*</span></label>
+                    <input type="email" id="pAdminEmail" placeholder="admin@client.com">
+                </div>
+                <div class="form-group">
+                    <label for="pAdminPw">Password <span style="color:var(--danger);">*</span></label>
+                    <input type="password" id="pAdminPw" placeholder="Min 8 characters">
+                </div>
+            </div>
+        </div>
+        <div style="font-size:12px;color:var(--text-dim);margin-bottom:4px;">Platform Admin Key</div>
+        <input type="password" id="pAdminKey" placeholder="X-Platform-Admin-Key" style="width:100%;margin-bottom:16px;">
+        <div class="login-error" id="provisionError" style="text-align:left;margin-bottom:8px;"></div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('provisionModal')">Cancel</button>
+            <button class="btn btn-primary" id="provisionBtn" onclick="provisionTenant()">Provision Tenant</button>
+        </div>
+    </div>
+</div>
+
+<!-- Plan Change Modal -->
+<div class="modal-overlay" id="planModal">
+    <div class="modal" style="max-width:420px;">
+        <div class="modal-header">
+            <h2 class="modal-title">Change Plan</h2>
+            <button class="modal-close" onclick="closeModal('planModal')">✕</button>
+        </div>
+        <p style="color:var(--text-dim);font-size:13px;margin-bottom:16px;">
+            Changing plan for: <strong id="planModalSlug">—</strong>
+        </p>
+        <div class="form-group" style="margin-bottom:16px;">
+            <label for="newPlan">New Plan</label>
+            <select id="newPlan">
+                <option value="starter">Starter (Free)</option>
+                <option value="pro">Pro ($49/mo)</option>
+                <option value="enterprise">Enterprise ($199/mo)</option>
+            </select>
+        </div>
+        <input type="password" id="planAdminKey" placeholder="Platform Admin Key" style="width:100%;margin-bottom:16px;">
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('planModal')">Cancel</button>
+            <button class="btn btn-primary" onclick="changePlan()">Update Plan</button>
+        </div>
+    </div>
+</div>
+
+<script src="js/admin.js"></script>
+<script>
+    let planTargetSlug = null;
+
+    document.addEventListener('DOMContentLoaded', () => {
+        requireAuth();
+        populateUserUI();
+        const user = getUser();
+        if (user?.role !== 'super_admin') {
+            document.querySelector('.main-content').innerHTML =
+                '<div class="empty-state"><div class="empty-state-icon">🔒</div><p class="empty-state-text">Super Admin access required.</p></div>';
+            return;
+        }
+        loadTenants();
+    });
+
+    async function loadTenants() {
+        document.getElementById('tableBody').innerHTML = '<div class="spinner"></div>';
+        const key = prompt('Enter Platform Admin Key:');
+        if (!key) return;
+
+        try {
+            const data = await apiFetch('/api/v1/tenants', {
+                headers: { 'X-Platform-Admin-Key': key }
+            });
+            const tenants = data.tenants || [];
+            document.getElementById('totalTenants').textContent  = tenants.length;
+            document.getElementById('activeTenants').textContent  = tenants.filter(t => t.active).length;
+            document.getElementById('totalBookings').textContent  = tenants.reduce((s, t) => s + parseInt(t.total_bookings || 0), 0);
+            renderTenants(tenants, key);
+        } catch (e) {
+            document.getElementById('tableBody').innerHTML =
+                `<div class="empty-state"><div class="empty-state-icon">⚠️</div><p>${e.message}</p></div>`;
+        }
+    }
+
+    function renderTenants(tenants, key) {
+        if (tenants.length === 0) {
+            document.getElementById('tableBody').innerHTML =
+                '<div class="empty-state"><div class="empty-state-icon">🏢</div><p class="empty-state-text">No tenants yet. Provision your first one!</p></div>';
+            return;
+        }
+
+        const planColors = { starter: 'badge-pending', pro: 'badge-reviewed', enterprise: 'badge-confirmed' };
+
+        const rows = tenants.map(t => `
+            <tr>
+                <td><strong>${escHtml(t.name)}</strong></td>
+                <td style="color:var(--gold);font-family:monospace;">${escHtml(t.slug)}</td>
+                <td><span class="badge ${planColors[t.plan_id] || 'badge-default'}">${capitalize(t.plan_id || '—')}</span></td>
+                <td>${parseInt(t.total_bookings || 0).toLocaleString()}</td>
+                <td>${parseInt(t.total_users || 0)}</td>
+                <td>${formatDate(t.created_at)}</td>
+                <td><span class="badge ${t.active ? 'badge-confirmed' : 'badge-cancelled'}">${t.active ? 'Active' : 'Suspended'}</span></td>
+                <td>
+                    <button class="btn btn-secondary btn-sm" onclick="openPlanModal('${t.slug}','${t.plan_id}')">Change Plan</button>
+                    <button class="btn btn-${t.active ? 'danger' : 'primary'} btn-sm" onclick="toggleActive('${t.slug}',${!t.active},'${key}')">
+                        ${t.active ? 'Suspend' : 'Reactivate'}
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+
+        document.getElementById('tableBody').innerHTML = `
+            <table>
+                <thead><tr>
+                    <th>Name</th><th>Slug</th><th>Plan</th><th>Bookings</th>
+                    <th>Users</th><th>Created</th><th>Status</th><th>Actions</th>
+                </tr></thead>
+                <tbody>${rows}</tbody>
+            </table>`;
+    }
+
+    function openProvisionModal() {
+        ['pSlug','pName','pAdminEmail','pAdminPw','pAdminKey','pColor'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.value = '';
+        });
+        document.getElementById('provisionError').textContent = '';
+        document.getElementById('provisionModal').classList.add('open');
+    }
+
+    async function provisionTenant() {
+        const slug     = document.getElementById('pSlug').value.trim();
+        const name     = document.getElementById('pName').value.trim();
+        const plan     = document.getElementById('pPlan').value;
+        const color    = document.getElementById('pColor').value.trim();
+        const email    = document.getElementById('pAdminEmail').value.trim();
+        const password = document.getElementById('pAdminPw').value;
+        const adminKey = document.getElementById('pAdminKey').value;
+        const errEl    = document.getElementById('provisionError');
+        const btn      = document.getElementById('provisionBtn');
+
+        errEl.textContent = '';
+        if (!slug || !name || !email || !password || !adminKey) {
+            errEl.textContent = 'All required fields must be filled.';
+            return;
+        }
+
+        btn.disabled = true; btn.textContent = 'Provisioning…';
+
+        try {
+            const data = await apiFetch('/api/v1/tenants', {
+                method:  'POST',
+                headers: { 'X-Platform-Admin-Key': adminKey },
+                body:    JSON.stringify({
+                    slug, name, plan,
+                    adminEmail: email, adminPassword: password,
+                    branding: color ? { primaryColor: color } : {}
+                })
+            });
+            showToast(`Tenant "${slug}" provisioned successfully!`);
+            closeModal('provisionModal');
+            loadTenants();
+        } catch (e) {
+            errEl.textContent = e.message;
+        } finally {
+            btn.disabled = false; btn.textContent = 'Provision Tenant';
+        }
+    }
+
+    function openPlanModal(slug, currentPlan) {
+        planTargetSlug = slug;
+        document.getElementById('planModalSlug').textContent = slug;
+        document.getElementById('newPlan').value = currentPlan;
+        document.getElementById('planAdminKey').value = '';
+        document.getElementById('planModal').classList.add('open');
+    }
+
+    async function changePlan() {
+        const plan = document.getElementById('newPlan').value;
+        const key  = document.getElementById('planAdminKey').value;
+        try {
+            await apiFetch(`/api/v1/tenants/${planTargetSlug}/plan`, {
+                method:  'PATCH',
+                headers: { 'X-Platform-Admin-Key': key },
+                body:    JSON.stringify({ plan })
+            });
+            showToast(`Plan updated to ${capitalize(plan)}.`);
+            closeModal('planModal');
+            loadTenants();
+        } catch (e) {
+            showToast(e.message, 'error');
+        }
+    }
+
+    async function toggleActive(slug, active, key) {
+        const label = active ? 'reactivate' : 'suspend';
+        if (!confirm(`Are you sure you want to ${label} tenant "${slug}"?`)) return;
+        try {
+            await apiFetch(`/api/v1/tenants/${slug}/active`, {
+                method:  'PATCH',
+                headers: { 'X-Platform-Admin-Key': key },
+                body:    JSON.stringify({ active })
+            });
+            showToast(`Tenant ${active ? 'reactivated' : 'suspended'}.`);
+            loadTenants();
+        } catch (e) {
+            showToast(e.message, 'error');
+        }
+    }
+
+    function closeModal(id) {
+        document.getElementById(id).classList.remove('open');
+        planTargetSlug = null;
+    }
+
+    function escHtml(str) {
+        if (!str) return '';
+        return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+</script>
+</body>
+</html>

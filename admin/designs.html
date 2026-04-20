@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ICSS Admin — Design Inquiries</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+<aside class="sidebar">
+    <div class="sidebar-brand">
+        <div class="brand-logo">ICSS</div>
+        <div class="brand-text">
+            <span class="brand-name" id="tenantName">Admin</span>
+            <span class="brand-plan" id="tenantPlan"></span>
+        </div>
+    </div>
+    <nav class="sidebar-nav">
+        <a href="index.html" class="nav-item"><span class="nav-icon">⬛</span> Dashboard</a>
+        <a href="bookings.html" class="nav-item"><span class="nav-icon">📅</span> Bookings</a>
+        <a href="availability.html" class="nav-item"><span class="nav-icon">🗓️</span> Availability</a>
+        <a href="designs.html" class="nav-item active"><span class="nav-icon">✏️</span> Design Inquiries</a>
+        <a href="tenants.html" class="nav-item super-admin-only hidden"><span class="nav-icon">🏢</span> Tenants</a>
+    </nav>
+    <div class="sidebar-footer">
+        <div class="user-info">
+            <div class="user-avatar" id="userAvatar">?</div>
+            <div><div class="user-name" id="userName">—</div><div class="user-role" id="userRole">—</div></div>
+        </div>
+        <button class="logout-btn" onclick="logout()">Sign Out</button>
+    </div>
+</aside>
+
+<main class="main-content">
+    <header class="page-header">
+        <div>
+            <h1 class="page-title">Design Inquiries</h1>
+            <p class="page-subtitle">Manage custom design submission requests</p>
+        </div>
+    </header>
+
+    <div class="table-wrap">
+        <div class="table-toolbar">
+            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                <select id="filterStatus" onchange="loadDesigns()">
+                    <option value="">All Statuses</option>
+                    <option value="new">New</option>
+                    <option value="reviewed">Reviewed</option>
+                    <option value="in_progress">In Progress</option>
+                    <option value="completed">Completed</option>
+                </select>
+                <input type="text" id="filterSearch" placeholder="Search client, email, design…" oninput="debounceLoad()" style="min-width:220px;">
+            </div>
+            <span id="designCount" style="font-size:13px;color:var(--text-dim);align-self:center;"></span>
+        </div>
+
+        <div id="tableBody"><div class="spinner"></div></div>
+    </div>
+</main>
+
+<!-- Detail Modal -->
+<div class="modal-overlay" id="detailModal">
+    <div class="modal" style="max-width:600px;">
+        <div class="modal-header">
+            <h2 class="modal-title" id="modalTitle">Design Inquiry</h2>
+            <button class="modal-close" onclick="closeModal('detailModal')">✕</button>
+        </div>
+        <div id="modalBody" style="font-size:14px;line-height:1.7;"></div>
+        <div class="modal-footer">
+            <select id="statusSelect" style="margin-right:auto;">
+                <option value="new">New</option>
+                <option value="reviewed">Reviewed</option>
+                <option value="in_progress">In Progress</option>
+                <option value="completed">Completed</option>
+            </select>
+            <button class="btn btn-secondary" onclick="closeModal('detailModal')">Close</button>
+            <button class="btn btn-primary" onclick="updateStatus()">Update Status</button>
+        </div>
+    </div>
+</div>
+
+<script src="js/admin.js"></script>
+<script>
+    let currentDesignId = null;
+    let searchTimer     = null;
+
+    document.addEventListener('DOMContentLoaded', () => {
+        requireAuth();
+        populateUserUI();
+        loadDesigns();
+    });
+
+    function debounceLoad() {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(loadDesigns, 400);
+    }
+
+    async function loadDesigns() {
+        const status = document.getElementById('filterStatus').value;
+        const search = document.getElementById('filterSearch').value;
+
+        const params = new URLSearchParams();
+        if (status) params.set('status', status);
+        if (search) params.set('search', search);
+        params.set('limit', '100');
+
+        document.getElementById('tableBody').innerHTML = '<div class="spinner"></div>';
+
+        try {
+            const data = await apiFetch(`/api/v1/admin/designs?${params}`);
+            renderDesigns(data.designs || [], data.total || 0);
+        } catch (e) {
+            document.getElementById('tableBody').innerHTML =
+                `<div class="empty-state"><div class="empty-state-icon">⚠️</div><p>${e.message}</p></div>`;
+        }
+    }
+
+    function renderDesigns(designs, total) {
+        document.getElementById('designCount').textContent = `${total} result${total !== 1 ? 's' : ''}`;
+
+        if (designs.length === 0) {
+            document.getElementById('tableBody').innerHTML =
+                '<div class="empty-state"><div class="empty-state-icon">✏️</div><p class="empty-state-text">No design inquiries found.</p></div>';
+            return;
+        }
+
+        const rows = designs.map(d => `
+            <tr style="cursor:pointer;" onclick="openDetail('${d.id}')">
+                <td><strong>${escHtml(d.customer_name)}</strong></td>
+                <td style="color:var(--text-dim);">${escHtml(d.customer_email)}</td>
+                <td>${escHtml(d.design_name || '—')}</td>
+                <td>${escHtml(d.gender || '—')}</td>
+                <td>${escHtml(d.fabric || '—')}</td>
+                <td>${formatDate(d.created_at)}</td>
+                <td>${statusBadge(d.status)}</td>
+                <td>${d.has_photo ? '📷' : '—'}</td>
+            </tr>
+        `).join('');
+
+        document.getElementById('tableBody').innerHTML = `
+            <table>
+                <thead>
+                    <tr>
+                        <th>Client</th><th>Email</th><th>Design Name</th>
+                        <th>Gender</th><th>Fabric</th><th>Submitted</th><th>Status</th><th>Photo</th>
+                    </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+            </table>`;
+    }
+
+    async function openDetail(id) {
+        currentDesignId = id;
+        try {
+            const data = await apiFetch(`/api/v1/admin/designs/${id}`);
+            const d    = data.design;
+
+            document.getElementById('modalTitle').textContent = d.design_name || 'Design Inquiry';
+            document.getElementById('statusSelect').value     = d.status;
+
+            document.getElementById('modalBody').innerHTML = `
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;">
+                    ${field('Client Name', d.customer_name)}
+                    ${field('Email', `<a href="mailto:${d.customer_email}" style="color:var(--gold);">${d.customer_email}</a>`)}
+                    ${field('Phone', d.customer_phone || '—')}
+                    ${field('Gender', d.gender || '—')}
+                    ${field('Fabric', d.fabric || '—')}
+                    ${field('Target Date', d.target_date ? formatDate(d.target_date) : '—')}
+                    ${d.booking_date ? field('Appointment', `${formatDate(d.booking_date)} at ${formatTime(d.booking_time)}`) : ''}
+                    ${field('Submitted', formatDate(d.created_at))}
+                </div>
+                ${d.description ? `<div style="padding:16px;background:var(--surface-2);border-radius:var(--radius-sm);border-left:3px solid var(--gold);">
+                    <div style="font-size:11px;color:var(--text-dim);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.8px;">Description</div>
+                    <div style="white-space:pre-wrap;font-size:13px;">${escHtml(d.description)}</div>
+                </div>` : ''}
+                ${d.has_photo ? `<p style="margin-top:12px;color:var(--gold);font-size:12px;">📷 Inspiration photo was included with this submission.</p>` : ''}`;
+
+            document.getElementById('detailModal').classList.add('open');
+        } catch (e) {
+            showToast(e.message, 'error');
+        }
+    }
+
+    async function updateStatus() {
+        if (!currentDesignId) return;
+        const status = document.getElementById('statusSelect').value;
+        try {
+            await apiFetch(`/api/v1/admin/designs/${currentDesignId}/status`, {
+                method: 'PATCH',
+                body: JSON.stringify({ status })
+            });
+            showToast(`Status updated to "${capitalize(status)}".`);
+            closeModal('detailModal');
+            loadDesigns();
+        } catch (e) {
+            showToast(e.message, 'error');
+        }
+    }
+
+    function closeModal(id) {
+        document.getElementById(id).classList.remove('open');
+        currentDesignId = null;
+    }
+
+    function field(label, value) {
+        return `<div>
+            <div style="font-size:11px;color:var(--text-dim);margin-bottom:3px;text-transform:uppercase;letter-spacing:0.8px;">${label}</div>
+            <div style="font-size:13px;">${value}</div>
+        </div>`;
+    }
+
+    function escHtml(str) {
+        if (!str) return '';
+        return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+</script>
+</body>
+</html>

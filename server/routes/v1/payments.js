@@ -106,6 +106,21 @@ router.post('/wipay/verify', paymentLimiter, async (req, res) => {
             [tenantId, order.id, txnId || 'verified', order.total_amount, order.currency]
         );
 
+        // Send order confirmation email with PDF invoice (async)
+        try {
+            const { sendOrderConfirmation } = require('../../services/email');
+            const itemsResult = await query(
+                `SELECT * FROM order_items WHERE order_id = $1`, [order.id]
+            );
+            sendOrderConfirmation(
+                { ...order, status: 'paid', payment_ref: txnId },
+                itemsResult.rows,
+                req.tenant
+            ).catch(console.error);
+        } catch (emailErr) {
+            console.error('[Payments] Email dispatch error:', emailErr.message);
+        }
+
         res.json({ success: true, orderId: order.id });
 
     } catch (err) {

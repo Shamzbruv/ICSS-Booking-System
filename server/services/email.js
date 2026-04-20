@@ -1,6 +1,7 @@
 /**
  * Email Service — Multi-Tenant, Tenant-Branded
  * Uses Resend for delivery. Branding injected from req.tenant.branding.
+ * PDF attachments generated via pdf-generator.js (PDFKit, no Puppeteer).
  *
  * Supported functions:
  *  sendBookingConfirmation(booking, tenant)
@@ -165,40 +166,47 @@ async function sendBookingCancellationEmail(booking, reason, tenant) {
 }
 
 // ── Order Confirmation ─────────────────────────────────────────────────────────
-async function sendOrderConfirmation(order, items, pdfPath, tenant) {
+async function sendOrderConfirmation(order, items, tenant) {
     const resend = getResend();
-    if (!resend || !pdfPath) {
-        console.warn('[Email] Skipping order confirmation (no Resend key or PDF).');
+    if (!resend) {
+        console.warn('[Email] Skipping order confirmation (no Resend key).');
         return;
     }
 
     const brand = getBrand(tenant);
-    const fs    = require('fs');
-
-    let pdfBase64;
-    try { pdfBase64 = fs.readFileSync(pdfPath).toString('base64'); }
-    catch (e) { console.error('[Email] Could not read PDF:', e.message); return; }
-
     const currencySymbol = order.currency === 'GBP' ? '£' : (order.currency === 'JMD' ? 'J$' : '$');
+
+    // Generate PDF invoice
+    let pdfAttachment = null;
+    try {
+        const { generateOrderInvoicePDF } = require('./pdf-generator');
+        const pdfBuffer = await generateOrderInvoicePDF(order, items || [], tenant);
+        pdfAttachment = {
+            filename: `Invoice_${String(order.id).slice(0, 8).toUpperCase()}.pdf`,
+            content:  pdfBuffer.toString('base64')
+        };
+    } catch (pdfErr) {
+        console.error('[Email] PDF generation failed:', pdfErr.message);
+    }
 
     await resend.emails.send({
         from:    getSenderAddress('orders', brand),
         to:      [order.customer_email],
         cc:      [brand.replyEmail],
         replyTo: brand.replyEmail,
-        subject: `Order Confirmation #${order.id} — ${brand.name}`,
+        subject: `Order Confirmation — ${brand.name}`,
         html: `
         <div style="font-family:Arial,sans-serif;color:#1a1a1a;max-width:600px;margin:0 auto;border:1px solid #e8e8e8;">
             ${headerHtml(brand)}
             <div style="padding:40px 36px;background:#fff;">
                 <h2 style="color:${brand.primaryColor};">Thank you for your order, ${order.customer_name}!</h2>
-                <p>We have received your order totaling <strong>${currencySymbol}${parseFloat(order.total_amount).toLocaleString()}</strong>.</p>
-                <p>Your invoice is attached to this email. Our team will be in touch with next steps.</p>
+                <p>We have received your order totaling <strong>${currencySymbol}${Number(order.total_amount || 0).toLocaleString()} ${order.currency}</strong>.</p>
+                <p>${pdfAttachment ? 'Your invoice is attached to this email.' : 'Our team will follow up with your invoice shortly.'} We look forward to serving you.</p>
                 <p style="margin-top:28px;">Warm regards,<br><strong>${brand.name} Team</strong></p>
             </div>
             ${footerHtml(brand)}
         </div>`,
-        attachments: [{ filename: `Invoice_${order.id}.pdf`, content: pdfBase64 }]
+        attachments: pdfAttachment ? [pdfAttachment] : undefined
     });
 
     console.log(`[Email] Order confirmation sent to ${order.customer_email}`);

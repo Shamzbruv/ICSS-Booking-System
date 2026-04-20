@@ -10,8 +10,16 @@
     "seed": "/usr/local/bin/node server/db/seed.js",
     "test": "echo \"Tests: run node server/app.js and verify endpoints\""
   },
-  "keywords": ["booking", "saas", "multi-tenant", "icss"],
+  "keywords": [
+    "booking",
+    "saas",
+    "multi-tenant",
+    "icss"
+  ],
   "author": "iCreate Software Solutions",
   "license": "UNLICENSED",
-  "private": true
+  "private": true,
+  "dependencies": {
+    "pdfkit": "^0.18.0"
+  }
 }
