@@ -1,15 +1,59 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-EVRQ5ZSCCT"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-EVRQ5ZSCCT');
+</script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Book an Appointment</title>
-    <meta name="description" content="Book your appointment quickly and easily.">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <title>Book an Appointment | ICSS Platform</title>
+    <meta name="description" content="Book your appointment quickly and easily with our streamlined scheduling system.">
+    <meta name="keywords" content="booking system, scheduling, appointments, business management, ICSS">
+    <meta property="og:title" content="Book an Appointment">
+    <meta property="og:description" content="Secure your preferred time slot effortlessly using our intelligent booking platform.">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary_large_image">
+    <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700,900&f[]=clash-display@400,500,600,700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/global-theme.css">
     <link rel="stylesheet" href="css/booking.css">
 </head>
 <body>
+
+<!-- Global Backgrounds -->
+<div class="gradient-bg"></div>
+<div class="grid-pattern"></div>
+
+<!-- ── Welcome Modal ────────────────────────────────────────────────────── -->
+<div class="icss-modal-overlay hidden" id="greetingModal">
+    <div class="icss-modal-card">
+        <h2 class="icss-modal-title">Welcome to ICSS! <span class="wave">👋</span></h2>
+        <p class="icss-modal-sub">To provide the best experience, please let us know what brings you here today.</p>
+        
+        <div class="icss-modal-options">
+            <button class="icss-modal-btn icss-modal-booking" onclick="handleModalSelection('booking')">
+                <span class="icss-modal-icon">📅</span>
+                <div class="icss-modal-text">
+                    <strong>Book an Appointment</strong>
+                    <span>I'm a customer needing a service.</span>
+                </div>
+            </button>
+            <button class="icss-modal-btn icss-modal-business" onclick="handleModalSelection('business')">
+                <span class="icss-modal-icon">💼</span>
+                <div class="icss-modal-text">
+                    <strong>I'm a Business Owner</strong>
+                    <span>I want to streamline my bookings.</span>
+                </div>
+            </button>
+        </div>
+        <button class="icss-modal-close" onclick="closeGreetingModal()">Skip for now</button>
+    </div>
+</div>
 
 <div class="booking-page" id="bookingPage">
 

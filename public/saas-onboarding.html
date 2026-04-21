@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SaaS Onboarding | ICSS Platform</title>
+    <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700,900&f[]=clash-display@400,500,600,700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/global-theme.css">
+    <style>
+        :root {
+            --brand-primary: #6366f1;
+            --brand-hover: #8b5cf6;
+            --surface: rgba(20, 20, 30, 0.7);
+            --bg: transparent;
+            --text-main: #ffffff;
+            --text-muted: #a1a1aa;
+            --border: rgba(255, 255, 255, 0.08);
+            --radius-md: 12px;
+            --radius-lg: 24px;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Satoshi', sans-serif; }
+        body { background: var(--bg); color: var(--text-main); line-height: 1.5; padding: 2rem; margin: 0; min-height: 100vh; }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: var(--surface);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            padding: 2.5rem;
+            border-radius: var(--radius-lg);
+            box-shadow: 0 30px 60px -20px rgba(0, 0, 0, 0.5);
+            position: relative;
+        }
+
+        .header { text-align: center; margin-bottom: 2rem; }
+        .header h1 { font-family: 'Clash Display', sans-serif; font-size: 2.5rem; font-weight: 700; background: linear-gradient(135deg, #ffffff, #a5b4fc); -webkit-background-clip: text; color: transparent; }
+        .header p { color: var(--text-muted); margin-top: 0.5rem; font-size: 1.1rem; }
+
+        .progress { display: flex; justify-content: center; gap: 1rem; margin-bottom: 3rem; }
+        .step { padding: 0.5rem 1rem; border-radius: 30px; font-weight: 500; color: var(--text-muted); background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border); backdrop-filter: blur(10px); }
+        .step.active { background: var(--brand-primary); color: white; }
+
+        .panel { display: none; }
+        .panel.active { display: block; }
+
+        .form-group { margin-bottom: 1.5rem; }
+        .form-group label { display: block; font-weight: 600; margin-bottom: 0.5rem; color: #e4e4e7; }
+        .form-group input, .form-group select { width: 100%; padding: 0.85rem; border: 1px solid var(--border); border-radius: var(--radius-md); font-size: 1rem; background: rgba(255, 255, 255, 0.03); color: white; transition: all 0.2s; }
+        .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--brand-primary); box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2); background: rgba(255, 255, 255, 0.06); }
+        .form-group input::placeholder { color: #6b7280; }
+        .form-group select option { background: #0a0a0f; color: white; }
+
+        .themes-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
+        .theme-card { border: 1px solid var(--border); border-radius: var(--radius-md); overflow: hidden; cursor: pointer; transition: 0.3s; position: relative; background: rgba(0, 0, 0, 0.2); }
+        .theme-card:hover { border-color: var(--brand-hover); transform: translateY(-3px); }
+        .theme-card.selected { border-color: var(--brand-primary); box-shadow: 0 0 20px rgba(99, 102, 241, 0.3); }
+        .theme-preview-box { height: 180px; background: rgba(255, 255, 255, 0.02); display: flex; align-items: center; justify-content: center; font-size: 2rem; color: #a1a1aa; border-bottom: 1px solid var(--border); }
+        .theme-info { padding: 1.25rem; }
+        .theme-name { font-weight: 700; margin-bottom: 0.25rem; font-family: 'Clash Display', sans-serif; font-size: 1.1rem; }
+        .theme-category { font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+        
+        .preview-action { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.6); color: white; border: 1px solid rgba(255, 255, 255, 0.1); padding: 6px 14px; border-radius: 30px; cursor: pointer; font-size: 0.8rem; backdrop-filter: blur(4px); transition: 0.2s; }
+        .preview-action:hover { background: rgba(99, 102, 241, 0.8); }
+
+        .btn { padding: 0.85rem 1.5rem; border-radius: 30px; font-weight: 600; font-size: 1rem; cursor: pointer; border: none; transition: 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+        .btn-primary { background: linear-gradient(135deg, var(--brand-primary), var(--brand-hover)); color: white; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3); }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(99, 102, 241, 0.4); }
+        .btn-secondary { background: rgba(255, 255, 255, 0.03); color: #e4e4e7; border: 1px solid var(--border); backdrop-filter: blur(10px); }
+        .btn-secondary:hover { background: rgba(255, 255, 255, 0.08); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+
+        .flex-between { display: flex; justify-content: space-between; align-items: center; margin-top: 2rem; }
+
+        /* Preview Modal */
+        .preview-modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 1000; padding: 2rem; }
+        .preview-modal.active { display: flex; flex-direction: column; }
+        .preview-header { background: white; padding: 1rem; display: flex; justify-content: space-between; border-radius: var(--radius-md) var(--radius-md) 0 0; }
+        .preview-iframe { width: 100%; flex: 1; background: white; border: none; border-radius: 0 0 var(--radius-md) var(--radius-md); }
+
+        /* PayPal container */
+        #paypal-button-container { margin-top: 2rem; max-width: 400px; margin-inline: auto; }
+
+        .error-msg { background: #fee2e2; color: #b91c1c; padding: 0.75rem; border-radius: var(--radius-md); margin-bottom: 1.5rem; display: none; }
+    </style>
+</head>
+<body>
+
+<!-- Global Backgrounds -->
+<div class="gradient-bg"></div>
+<div class="grid-pattern"></div>
+
+<div class="container">
+    <div class="header">
+        <h1>ICSS Booking SaaS Onboarding</h1>
+        <p>Set up your professional booking system in minutes.</p>
+    </div>
+
+    <div class="progress">
+        <div class="step active" id="stepIndicator1">1. Branding</div>
+        <div class="step" id="stepIndicator2">2. Theme</div>
+        <div class="step" id="stepIndicator3">3. Subscribe</div>
+    </div>
+
+    <!-- Step 1: Branding and Admin Details -->
+    <div class="panel active" id="step1">
+        <div class="error-msg" id="error1"></div>
+        <div class="form-group">
+            <label>Business Name</label>
+            <input type="text" id="tenantName" placeholder="e.g., Lumina Photography" required>
+        </div>
+        <div class="form-group">
+            <label>Business Slug (URL)</label>
+            <input type="text" id="tenantSlug" placeholder="e.g., lumina" required pattern="[a-z0-9-]+">
+            <small style="color:var(--text-muted);">This is your subdomain: lumina.icss.app</small>
+        </div>
+        <div class="form-group">
+            <label>Admin Email</label>
+            <input type="email" id="adminEmail" placeholder="admin@domain.com" required>
+        </div>
+        <div class="form-group">
+            <label>Admin Password</label>
+            <input type="password" id="adminPassword" required>
+        </div>
+        <div class="flex-between" style="justify-content: flex-end;">
+            <button class="btn btn-primary" onclick="goToStep(2)">Next: Choose Theme</button>
+        </div>
+    </div>
+
+    <!-- Step 2: Theme Selection -->
+    <div class="panel" id="step2">
+        <div class="error-msg" id="error2"></div>
+        <h2 style="margin-bottom: 1.5rem;">Select your Industry Starter Kit</h2>
+        <div class="themes-grid" id="themesGrid">
+            <!-- Populated by JS -->
+        </div>
+        
+        <div class="form-group" style="margin-top: 2rem;">
+            <label>Select Plan</label>
+            <select id="planId">
+                <option value="starter">Starter Plan ($0/mo)</option>
+                <option value="pro" selected>Pro Plan ($49/mo)</option>
+                <option value="enterprise">Enterprise ($199/mo)</option>
+            </select>
+        </div>
+
+        <div class="flex-between">
+            <button class="btn btn-secondary" onclick="goToStep(1)">Back</button>
+            <button class="btn btn-primary" id="finalizeDraftBtn" onclick="finalizeDraft()">Next: Finalize & Subscribe</button>
+        </div>
+    </div>
+
+    <!-- Step 3: Checkout -->
+    <div class="panel" id="step3">
+        <div class="error-msg" id="error3"></div>
+        <h2 style="text-align: center;">Complete Your Subscription</h2>
+        <p style="text-align: center; color: var(--text-muted); margin-bottom: 2rem;">You're almost there! Complete your payment to instantly provision your tenant.</p>
+        
+        <div id="paypal-button-container"></div>
+        
+        <div class="flex-between">
+            <button class="btn btn-secondary" onclick="goToStep(2)">Back</button>
+        </div>
+    </div>
+</div>
+
+<!-- Theme Preview Modal -->
+<div class="preview-modal" id="previewModal">
+    <div class="preview-header">
+        <strong id="previewTitle">Theme Preview</strong>
+        <div>
+            <button class="btn btn-primary" style="padding: 5px 12px; margin-right: 10px;" id="selectPreviewBtn">Select This Theme</button>
+            <button class="btn btn-secondary" style="padding: 5px 12px;" onclick="closePreview()">Close</button>
+        </div>
+    </div>
+    <iframe id="previewIframe" class="preview-iframe" src=""></iframe>
+</div>
+
+<script src="https://www.paypal.com/sdk/js?client-id=sb&vault=true&intent=subscription"></script>
+<script src="/js/saas.js"></script>
+</body>
+</html>

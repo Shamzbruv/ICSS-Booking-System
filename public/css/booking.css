@@ -6,26 +6,26 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-    --brand-primary: #D4AF37;   /* Overridden per tenant via JS */
-    --brand-dark:    #050505;
-    --bg:            #f5f5f7;
-    --surface:       #ffffff;
-    --surface-2:     #f9f9fb;
-    --border:        #e5e5ea;
-    --text:          #1a1a1a;
-    --text-dim:      #6e6e73;
+    --brand-primary: #6366f1;   /* Modern indigo default, overridden by JS */
+    --brand-dark:    #0a0a0f;
+    --bg:            transparent;
+    --surface:       rgba(20, 20, 30, 0.7);
+    --surface-2:     rgba(255, 255, 255, 0.03);
+    --border:        rgba(255, 255, 255, 0.08);
+    --text:          #ffffff;
+    --text-dim:      #a1a1aa;
     --danger:        #ef4444;
-    --success:       #22c55e;
-    --radius:        16px;
-    --radius-sm:     10px;
-    --shadow:        0 4px 24px rgba(0,0,0,0.08);
-    --transition:    200ms ease;
+    --success:       #10b981;
+    --radius:        24px;
+    --radius-sm:     12px;
+    --shadow:        0 30px 60px -20px rgba(0, 0, 0, 0.5);
+    --transition:    all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 html { font-size: 15px; }
 
 body {
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-family: 'Satoshi', sans-serif;
     background: var(--bg);
     color: var(--text);
     min-height: 100vh;
@@ -129,6 +129,9 @@ body {
 .booking-body {
     margin-top: 24px;
     background: var(--surface);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--border);
     border-radius: var(--radius);
     box-shadow: var(--shadow);
     overflow: hidden;
@@ -384,3 +387,116 @@ textarea { resize: vertical; }
     .slot-grid       { grid-template-columns: repeat(3, 1fr); }
     .progress-connector { max-width: 24px; }
 }
+
+/* ── Welcome Greeting Modal ────────────────────────────────────────────────── */
+.icss-modal-overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100vw; height: 100vh;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    animation: fadeInModal 0.4s ease;
+}
+
+.icss-modal-overlay.hidden {
+    display: none;
+}
+
+@keyframes fadeInModal {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.icss-modal-card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: 40px 32px;
+    max-width: 480px;
+    width: 100%;
+    box-shadow: 0 24px 64px rgba(0,0,0,0.2);
+    text-align: center;
+    animation: slideUpModal 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    position: relative;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+@keyframes slideUpModal {
+    from { opacity: 0; transform: translateY(40px) scale(0.96); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.icss-modal-title { font-size: 26px; font-weight: 800; margin-bottom: 12px; color: var(--text); letter-spacing: -0.5px; }
+.icss-modal-title .wave { display: inline-block; animation: wave 2.5s infinite; transform-origin: 70% 70%; }
+
+@keyframes wave {
+    0% { transform: rotate( 0.0deg) }
+    10% { transform: rotate(14.0deg) }  
+    20% { transform: rotate(-8.0deg) }
+    30% { transform: rotate(14.0deg) }
+    40% { transform: rotate(-4.0deg) }
+    50% { transform: rotate(10.0deg) }
+    60% { transform: rotate( 0.0deg) }
+    100% { transform: rotate( 0.0deg) }
+}
+
+.icss-modal-sub { font-size: 15px; color: var(--text-dim); margin-bottom: 32px; line-height: 1.5; }
+
+.icss-modal-options { display: flex; flex-direction: column; gap: 14px; margin-bottom: 28px; }
+
+.icss-modal-btn {
+    display: flex;
+    align-items: center;
+    padding: 20px;
+    background: var(--surface-2);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    text-align: left;
+    transition: all var(--transition);
+}
+
+.icss-modal-btn:hover {
+    border-color: var(--brand-primary);
+    background: rgba(212,175,55,0.06);
+    transform: translateY(-3px);
+    box-shadow: 0 12px 24px rgba(0,0,0,0.06);
+}
+
+.icss-modal-icon {
+    font-size: 32px;
+    margin-right: 20px;
+    background: var(--surface);
+    width: 64px; height: 64px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 50%;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+    flex-shrink: 0;
+}
+
+.icss-modal-text strong {
+    display: block;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 6px;
+}
+
+.icss-modal-text span {
+    display: block;
+    font-size: 14px;
+    color: var(--text-dim);
+    line-height: 1.4;
+}
+
+.icss-modal-close {
+    background: none; border: none;
+    color: var(--text-dim); font-size: 14px; font-weight: 500;
+    cursor: pointer; transition: color var(--transition);
+    text-decoration: underline; text-underline-offset: 4px;
+}
+.icss-modal-close:hover { color: var(--text); }

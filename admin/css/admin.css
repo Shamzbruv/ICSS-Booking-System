@@ -6,14 +6,14 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-    --gold:       #D4AF37;
-    --gold-dim:   #a88a20;
-    --gold-glow:  rgba(212,175,55,0.15);
-    --bg:         #0a0a0f;
-    --surface:    #111118;
-    --surface-2:  #1a1a24;
-    --surface-3:  #222230;
-    --border:     rgba(255,255,255,0.06);
+    --gold:       #6366f1;
+    --gold-dim:   #8b5cf6;
+    --gold-glow:  rgba(99, 102, 241, 0.15);
+    --bg:         transparent;
+    --surface:    rgba(20, 20, 30, 0.5);
+    --surface-2:  rgba(255, 255, 255, 0.03);
+    --surface-3:  rgba(255, 255, 255, 0.06);
+    --border:     rgba(255, 255, 255, 0.08);
     --text:       #e8e8ee;
     --text-dim:   #8888aa;
     --success:    #22c55e;
@@ -29,8 +29,8 @@
 html { font-size: 15px; }
 
 body {
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
-    background: var(--bg);
+    font-family: 'Satoshi', sans-serif;
+    background: transparent;
     color: var(--text);
     min-height: 100vh;
     display: flex;
@@ -45,6 +45,8 @@ button { cursor: pointer; }
 .sidebar {
     width: var(--sidebar-w);
     background: var(--surface);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
     border-right: 1px solid var(--border);
     display: flex;
     flex-direction: column;
@@ -199,6 +201,8 @@ button { cursor: pointer; }
 
 .stat-card {
     background: var(--surface);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
     border: 1px solid var(--border);
     border-radius: var(--radius);
     padding: 20px;
@@ -232,6 +236,8 @@ button { cursor: pointer; }
 /* ── Plan Card ──────────────────────────────────────────────────────────────── */
 .plan-card {
     background: var(--surface);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
     border: 1px solid var(--border);
     border-radius: var(--radius);
     padding: 24px;
@@ -271,6 +277,8 @@ button { cursor: pointer; }
 
 .action-card {
     background: var(--surface);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
     border: 1px solid var(--border);
     border-radius: var(--radius);
     padding: 20px 16px;
@@ -291,6 +299,8 @@ button { cursor: pointer; }
 /* ── Table ──────────────────────────────────────────────────────────────────── */
 .table-wrap {
     background: var(--surface);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
     border: 1px solid var(--border);
     border-radius: var(--radius);
     overflow: hidden;

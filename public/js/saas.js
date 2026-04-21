@@ -1,0 +1,164 @@
+let state = {
+    themes: [],
+    selectedThemeId: null,
+    signupToken: null
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+    loadThemes();
+});
+
+function goToStep(step) {
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+    
+    document.getElementById(`step${step}`).classList.add('active');
+    
+    for (let i = 1; i <= step; i++) {
+        document.getElementById(`stepIndicator${i}`).classList.add('active');
+    }
+}
+
+async function loadThemes() {
+    try {
+        const res = await fetch('/api/v1/themes');
+        const data = await res.json();
+        state.themes = data.themes || [];
+        renderThemes();
+    } catch (e) {
+        console.error('Failed to load themes', e);
+    }
+}
+
+function renderThemes() {
+    const grid = document.getElementById('themesGrid');
+    grid.innerHTML = '';
+
+    state.themes.forEach(theme => {
+        const card = document.createElement('div');
+        card.className = 'theme-card';
+        if (state.selectedThemeId === theme.id) card.classList.add('selected');
+
+        // Emulate preview image by showing colored block or specific text
+        card.innerHTML = `
+            <div class="theme-preview-box" style="background: linear-gradient(135deg, #f3f4f6, #e5e7eb);">
+                <i class="fas fa-image"></i>
+                <button class="preview-action" onclick="event.stopPropagation(); previewTheme('${theme.id}')">Preview</button>
+            </div>
+            <div class="theme-info">
+                <div class="theme-name">${theme.name}</div>
+                <div class="theme-category">${theme.category}</div>
+            </div>
+        `;
+        
+        card.onclick = () => selectTheme(theme.id);
+        grid.appendChild(card);
+    });
+}
+
+function selectTheme(id) {
+    state.selectedThemeId = id;
+    renderThemes();
+}
+
+function previewTheme(id) {
+    const theme = state.themes.find(t => t.id === id);
+    if (!theme) return;
+    
+    document.getElementById('previewTitle').textContent = `Preview: ${theme.name}`;
+    document.getElementById('previewIframe').src = theme.template_path;
+    document.getElementById('previewModal').classList.add('active');
+
+    document.getElementById('selectPreviewBtn').onclick = () => {
+        selectTheme(id);
+        closePreview();
+    };
+}
+
+function closePreview() {
+    document.getElementById('previewModal').classList.remove('active');
+    document.getElementById('previewIframe').src = '';
+}
+
+async function finalizeDraft() {
+    const name = document.getElementById('tenantName').value;
+    const slug = document.getElementById('tenantSlug').value;
+    const email = document.getElementById('adminEmail').value;
+    const pwd = document.getElementById('adminPassword').value;
+    const plan = document.getElementById('planId').value;
+    
+    if (!name || !slug || !email || !pwd) {
+        goToStep(1);
+        const err = document.getElementById('error1');
+        err.textContent = 'All fields are required.';
+        err.style.display = 'block';
+        return;
+    }
+    
+    if (!state.selectedThemeId) {
+        const err = document.getElementById('error2');
+        err.textContent = 'Please select an industry starter kit.';
+        err.style.display = 'block';
+        return;
+    }
+
+    document.getElementById('finalizeDraftBtn').disabled = true;
+    document.getElementById('finalizeDraftBtn').textContent = 'Creating...';
+
+    try {
+        const res = await fetch('/api/v1/payments/paypal/create-subscription', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                tenant_slug: slug,
+                tenant_name: name,
+                admin_email: email,
+                admin_password: pwd,
+                theme_id: state.selectedThemeId,
+                plan_id: plan
+            })
+        });
+
+        const data = await res.json();
+        
+        if (!res.ok) {
+            throw new Error(data.error || 'Failed to initialize setup.');
+        }
+
+        state.signupToken = data.signup_token;
+        
+        // Setup PayPal buttons using the dynamic plan_id
+        // In a real app we'd map "pro" to actual PayPal Plan IDs.
+        // For MVP, we use hardcoded or from env.
+        const mockPayPalPlanId = plan === 'pro' ? 'P-PRO_PLAN_ID' : 'P-STARTER_PLAN_ID';
+        
+        document.getElementById('paypal-button-container').innerHTML = ''; // clear previous
+        
+        paypal.Buttons({
+            style: {
+                shape: 'rect',
+                color: 'blue',
+                layout: 'vertical',
+                label: 'subscribe'
+            },
+            createSubscription: function(data, actions) {
+                return actions.subscription.create({
+                    'plan_id': mockPayPalPlanId,
+                    'custom_id': state.signupToken // This securely ties PayPal sub to our DB pending_signups
+                });
+            },
+            onApprove: function(data, actions) {
+                window.location.href = `/admin/login.html?success=true&slug=${slug}`;
+            }
+        }).render('#paypal-button-container');
+
+        goToStep(3);
+
+    } catch (e) {
+        document.getElementById('finalizeDraftBtn').disabled = false;
+        document.getElementById('finalizeDraftBtn').textContent = 'Next: Finalize & Subscribe';
+        const err = document.getElementById('error2');
+        err.textContent = e.message;
+        err.style.display = 'block';
+    }
+}

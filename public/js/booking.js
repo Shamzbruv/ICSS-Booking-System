@@ -26,9 +26,35 @@ const MONTHS = ['January','February','March','April','May','June','July','August
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
+    checkGreetingModal();
     await loadTenantBranding();
     renderCalendar();
 });
+
+// ── Greeting Modal ────────────────────────────────────────────────────────────
+function checkGreetingModal() {
+    const hasSeenModal = localStorage.getItem('icss_greeting_seen');
+    if (!hasSeenModal) {
+        const modal = document.getElementById('greetingModal');
+        if (modal) modal.classList.remove('hidden');
+    }
+}
+
+function closeGreetingModal() {
+    localStorage.setItem('icss_greeting_seen', 'true');
+    const modal = document.getElementById('greetingModal');
+    if (modal) modal.classList.add('hidden');
+}
+
+function handleModalSelection(type) {
+    localStorage.setItem('icss_greeting_seen', 'true');
+    if (type === 'booking') {
+        const modal = document.getElementById('greetingModal');
+        if (modal) modal.classList.add('hidden');
+    } else if (type === 'business') {
+        window.location.href = '/saas-onboarding.html';
+    }
+}
 
 // ── Tenant Branding ───────────────────────────────────────────────────────────
 async function loadTenantBranding() {
