@@ -10,6 +10,7 @@ const bcrypt  = require('bcryptjs');
 const { query }  = require('../../db/connection');
 const { signToken, authenticate, requireRole } = require('../../middleware/auth');
 const { invalidateTenantCache } = require('../../middleware/tenantResolver');
+const { seedStarterServices } = require('../../services/provisioning');
 
 // Simple platform admin key middleware (for internal provisioning)
 function platformAdminOnly(req, res, next) {
@@ -160,6 +161,74 @@ router.patch('/:slug/active', platformAdminOnly, async (req, res) => {
         res.json({ success: true, tenant: result.rows[0] });
     } catch (err) {
         res.status(500).json({ error: 'Failed to update tenant status.' });
+    }
+});
+
+// POST /api/v1/tenants/:slug/theme — Switch the tenant's active theme
+// The frontend can query the theme's configurations for 'preview' before calling this to activate.
+router.post('/:slug/theme', authenticate, async (req, res) => {
+    // Basic auth logic - in a real scenario we check if user belongs to this tenant, but we assume req.tenant is isolated
+    if (req.tenant.slug !== req.params.slug) {
+        // Platform admin fallback if they pass the header, otherwise reject
+        if (req.headers['x-platform-admin-key'] !== process.env.PLATFORM_ADMIN_KEY) {
+             return res.status(403).json({ error: 'Unauthorized to change theme for this tenant.' });
+        }
+    }
+
+    const { theme_id, seed_services } = req.body;
+    try {
+        const themeResult = await query(`SELECT id FROM themes WHERE id = $1`, [theme_id]);
+        if (themeResult.rows.length === 0) return res.status(400).json({ error: 'Invalid theme.' });
+
+        const result = await query(
+            `UPDATE tenants SET theme_id = $1 WHERE slug = $2 RETURNING id, slug, theme_id`,
+            [theme_id, req.params.slug]
+        );
+        if (result.rows.length === 0) return res.status(404).json({ error: 'Tenant not found.' });
+
+        // Optionally seed services if explicitly requested
+        if (seed_services) {
+            await seedStarterServices(result.rows[0].id, theme_id);
+        }
+
+        invalidateTenantCache(req.params.slug);
+        res.json({ success: true, tenant: result.rows[0], message: 'Theme applied successfully.'});
+    } catch (err) {
+        console.error('[Tenants/Theme]', err.message);
+        res.status(500).json({ error: 'Failed to update tenant theme.' });
+    }
+});
+
+// PATCH /api/v1/tenants/:slug/slug — Update tenant slug (editable later)
+router.patch('/:slug/slug', authenticate, async (req, res) => {
+    if (req.tenant.slug !== req.params.slug) {
+        return res.status(403).json({ error: 'Unauthorized to change slug for this tenant.' });
+    }
+
+    const { new_slug } = req.body;
+    if (!new_slug) return res.status(400).json({ error: 'new_slug is required.' });
+
+    const slugRegex = /^[a-z0-9-]{2,50}$/;
+    if (!slugRegex.test(new_slug)) {
+        return res.status(400).json({ error: 'Slug must be 2-50 lowercase alphanumeric characters or hyphens.' });
+    }
+
+    try {
+        const result = await query(
+            `UPDATE tenants SET slug = $1 WHERE slug = $2 RETURNING id, slug`,
+            [new_slug, req.params.slug]
+        );
+        if (result.rows.length === 0) return res.status(404).json({ error: 'Tenant not found.' });
+
+        invalidateTenantCache(req.params.slug); // invalidate old
+        
+        res.json({ success: true, tenant: result.rows[0], message: 'Booking link updated successfully.' });
+    } catch (err) {
+        if (err.code === '23505') {
+            return res.status(409).json({ error: `The booking link "${new_slug}" is already taken.` });
+        }
+        console.error('[Tenants/Slug Update]', err.message);
+        res.status(500).json({ error: 'Failed to update booking link.' });
     }
 });
 

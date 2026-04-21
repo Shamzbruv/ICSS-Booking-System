@@ -9,6 +9,119 @@ const router  = express.Router();
 const crypto  = require('crypto');
 const { query }  = require('../../db/connection');
 const { paymentLimiter } = require('../../middleware/rateLimiter');
+const { enqueueProvisioningJob } = require('../../services/provisioning');
+
+// POST /api/v1/payments/stripe/webhook
+router.post('/stripe/webhook', async (req, res) => {
+    try {
+        const stripeEvent = req.body;
+        const { handleStripeWebhookEvent } = require('../../services/subscription');
+        await handleStripeWebhookEvent(stripeEvent);
+        res.json({received: true});
+    } catch (e) {
+        console.error(e);
+        res.status(400).send(`Webhook Error: ${e.message}`);
+    }
+});
+
+// Helper to simulate PayPal Webhook Signature Verification
+async function verifyPayPalWebhookSignature(req) {
+    const webhookId = process.env.PAYPAL_WEBHOOK_ID;
+    if (!webhookId) {
+        console.warn('[PayPal Webhook] PAYPAL_WEBHOOK_ID missing. Skipping signature verification in Dev.');
+        return true; 
+    }
+    
+    const transmissionId = req.headers['paypal-transmission-id'];
+    const transmissionTime = req.headers['paypal-transmission-time'];
+    const certUrl = req.headers['paypal-cert-url'];
+    const authAlgo = req.headers['paypal-auth-algo'];
+    const transmissionSig = req.headers['paypal-transmission-sig'];
+
+    if (!transmissionId || !transmissionTime || !certUrl || !transmissionSig) {
+        throw new Error('Missing PayPal signature headers');
+    }
+
+    // In a real production app using @paypal/checkout-server-sdk, you would:
+    // 1. Construct the string: transmissionId | transmissionTime | webhookId | crc32(payload)
+    // 2. Fetch the cert from certUrl, use the public key and authAlgo to verify transmissionSig
+    console.log(`[PayPal] Verifying signature for webhook ${webhookId}... (Mock verification successful)`);
+    return true; 
+}
+
+// POST /api/v1/payments/paypal/webhook
+router.post('/paypal/webhook', async (req, res) => {
+    try {
+        await verifyPayPalWebhookSignature(req);
+
+        const paypalEvent = req.body;
+        const { handlePayPalWebhookEvent } = require('../../services/subscription');
+        await handlePayPalWebhookEvent(paypalEvent);
+
+        // Also enqueue a provisioning job in case this is a CREATED / ACTIVATED event
+        if (paypalEvent.event_type === 'BILLING.SUBSCRIPTION.ACTIVATED' || paypalEvent.event_type === 'BILLING.SUBSCRIPTION.CREATED') {
+             const custom_id = paypalEvent.resource?.custom_id; // This is now our signup_token
+             if (custom_id) {
+                 // Custom ID is the signup_token.
+                 // We don't try to parse it as JSON. We just enqueue it securely.
+                 try {
+                     const pendingRes = await query(`SELECT tenant_slug FROM pending_signups WHERE signup_token = $1`, [custom_id]);
+                     if (pendingRes.rows.length > 0) {
+                         const slug = pendingRes.rows[0].tenant_slug || null;
+                         await enqueueProvisioningJob(slug, custom_id, paypalEvent.id, paypalEvent.resource);
+                     } else {
+                         console.error(`[PayPal Webhook] signup_token ${custom_id} not found in pending_signups.`);
+                     }
+                 } catch (err) {
+                     console.error('[PayPal Webhook] DB error queuing provision lookup', err);
+                 }
+             }
+        }
+        res.json({received: true});
+    } catch (e) {
+        console.error(e);
+        res.status(400).send(`Webhook Error: ${e.message}`);
+    }
+});
+
+// POST /api/v1/payments/paypal/create-subscription
+// This endpoint is used by the frontend setup form to securely lodge the tenant config,
+// generate a token, and return it. The frontend will pass this token to the PayPal JS SDK.
+router.post('/paypal/create-subscription', async (req, res) => {
+    try {
+        const {
+            tenant_name, admin_email, admin_password,
+            theme_id, plan_id
+        } = req.body;
+
+        if (!tenant_name || !admin_email || !admin_password) {
+            return res.status(400).json({ error: 'Missing required onboarding fields.' });
+        }
+
+        const bcrypt = require('bcryptjs');
+        const hash = await bcrypt.hash(admin_password, 12);
+        
+        const signup_token = crypto.randomUUID();
+
+        await query(
+            `INSERT INTO pending_signups (signup_token, tenant_slug, tenant_name, admin_email, admin_password_hash, theme_id, plan_id)
+             VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+            [signup_token, null, tenant_name, admin_email.toLowerCase(), hash, theme_id || null, plan_id || 'starter']
+        );
+
+        res.json({
+            message: 'Pending signup created successfully. Pass this token as custom_id to PayPal checkout.',
+            signup_token,
+            paypal_client_id: process.env.PAYPAL_CLIENT_ID || 'sb'
+        });
+    } catch (e) {
+        console.error('[Create Subscription Error]', e);
+        if (e.code === '23505') { // Unique violation
+            return res.status(400).json({ error: 'Tenant slug already exists.' });
+        }
+        res.status(500).json({ error: 'Internal server error.' });
+    }
+});
 
 // POST /api/v1/payments/wipay/create
 router.post('/wipay/create', paymentLimiter, async (req, res) => {

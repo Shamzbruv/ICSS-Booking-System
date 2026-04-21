@@ -101,14 +101,14 @@ function closePreview() {
 
 async function finalizeDraft() {
     const name = document.getElementById('tenantName').value;
-    const slug = document.getElementById('tenantSlug').value;
+    const ownerName = document.getElementById('ownerName').value;
     const email = document.getElementById('adminEmail').value;
     const pwd = document.getElementById('adminPassword').value;
     const plan = document.getElementById('planId').value;
     const phone = document.getElementById('tenantPhone').value;
     const companySize = document.getElementById('companySize').value;
     
-    if (!name || !slug || !email || !pwd || !phone || !companySize) {
+    if (!name || !ownerName || !email || !pwd || !phone || !companySize) {
         goToStep(1);
         const err = document.getElementById('error1');
         err.textContent = 'All fields are required.';
@@ -131,8 +131,8 @@ async function finalizeDraft() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                tenant_slug: slug,
                 tenant_name: name,
+                owner_name: ownerName,
                 admin_email: email,
                 admin_password: pwd,
                 theme_id: state.selectedThemeId,
@@ -171,7 +171,7 @@ async function finalizeDraft() {
                 });
             },
             onApprove: function(data, actions) {
-                window.location.href = `/admin/login.html?success=true&slug=${slug}`;
+                window.location.href = `/admin/login.html?success=true`;
             }
         }).render('#paypal-button-container');
 
