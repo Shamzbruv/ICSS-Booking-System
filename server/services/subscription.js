@@ -46,17 +46,26 @@ async function getMonthlyBookingCount(tenantId) {
 }
 
 /**
- * Middleware factory: Enforce booking limit before allowing a new booking.
- * Call as a route middleware: router.post('/bookings', enforceBookingLimit, handler)
+ * Middleware factory: Enforce booking limit and payment statuses before allowing a new booking.
  */
 function enforceBookingLimit(req, res, next) {
     const enforce = process.env.ENABLE_SUBSCRIPTION_ENFORCEMENT === 'true';
-    if (!enforce) return next(); // Skip enforcement in dev
+    if (!enforce) return next();
 
     const tenant = req.tenant;
+    
+    // Validate trial/paid/expired lifecycle
+    const status = tenant.subscription_status || 'trial';
+    if (status === 'expired' || status === 'canceled') {
+        return res.status(402).json({
+            error: `Your subscription has expired or was canceled. Please update your billing details.`,
+            upgrade_url: `/admin/billing`
+        });
+    }
+
     const limit  = getBookingLimit(tenant);
 
-    if (limit === -1) return next(); // Unlimited plan
+    if (limit === -1) return next();
 
     getMonthlyBookingCount(tenant.id).then(count => {
         if (count >= limit) {
@@ -68,8 +77,90 @@ function enforceBookingLimit(req, res, next) {
         next();
     }).catch(err => {
         console.error('[SubscriptionEnforcer] Error checking limit:', err.message);
-        next(); // Fail open (don't block bookings on internal error)
+        next();
     });
+}
+
+/**
+ * Handle Stripe Webhook Events
+ */
+async function handleStripeWebhookEvent(event) {
+    try {
+        const obj = event.data.object;
+        switch (event.type) {
+            case 'customer.subscription.created':
+            case 'customer.subscription.updated':
+                const customerId = obj.customer;
+                const subId = obj.id;
+                const status = obj.status; // e.g. 'active', 'past_due', 'canceled', 'unpaid'
+                
+                let internalStatus = 'trial';
+                if (status === 'active' || status === 'trialing') internalStatus = 'paid';
+                if (status === 'canceled' || status === 'unpaid') internalStatus = 'canceled';
+                if (status === 'past_due') internalStatus = 'expired';
+
+                await query(
+                    `UPDATE tenants SET subscription_status = $1, stripe_subscription_id = $2 WHERE stripe_customer_id = $3`,
+                    [internalStatus, subId, customerId]
+                );
+                console.log(`[Stripe Sync] Updated tenant for customer ${customerId} to ${internalStatus}`);
+                break;
+            case 'customer.subscription.deleted':
+                await query(
+                    `UPDATE tenants SET subscription_status = 'canceled' WHERE stripe_subscription_id = $1`,
+                    [obj.id]
+                );
+                console.log(`[Stripe Sync] Canceled subscription ${obj.id}`);
+                break;
+        }
+    } catch (e) {
+        console.error('[Stripe Webhook Error]', e);
+    }
+}
+
+/**
+ * Handle PayPal Webhook Events (Main Billing System)
+ */
+async function handlePayPalWebhookEvent(event) {
+    try {
+        const resource = event.resource;
+        const subId = resource.id;
+        const status = resource.status; // 'APPROVAL_PENDING', 'APPROVED', 'ACTIVE', 'SUSPENDED', 'CANCELLED', 'EXPIRED'
+
+        let internalStatus = 'trial';
+        
+        switch (event.event_type) {
+            case 'BILLING.SUBSCRIPTION.CREATED':
+            case 'BILLING.SUBSCRIPTION.ACTIVATED':
+                // PayPal sends BILLING.SUBSCRIPTION.ACTIVATED when active.
+                if (status === 'ACTIVE') internalStatus = 'paid';
+                break;
+            case 'BILLING.SUBSCRIPTION.CANCELLED':
+            case 'BILLING.SUBSCRIPTION.PAYMENT.FAILED':
+                internalStatus = 'canceled';
+                break;
+            case 'BILLING.SUBSCRIPTION.EXPIRED':
+            case 'BILLING.SUBSCRIPTION.SUSPENDED':
+                internalStatus = 'expired';
+                break;
+            default:
+                // If it's another event or sale completed, we probably don't need to change status unless it's a specific trigger
+                if (status === 'ACTIVE') internalStatus = 'paid';
+                else return; 
+        }
+
+        const result = await query(
+            `UPDATE tenants SET subscription_status = $1 WHERE paypal_subscription_id = $2 RETURNING id`,
+            [internalStatus, subId]
+        );
+        if (result.rows.length > 0) {
+            console.log(`[PayPal Sync] Updated tenant for subscription ${subId} to ${internalStatus}`);
+            const { invalidateTenantCache } = require('../middleware/tenantResolver');
+            // Assuming tenantResolver will handle cache busting by ID or slug but we don't have slug here trivially
+        }
+    } catch (e) {
+        console.error('[PayPal Webhook Error]', e);
+    }
 }
 
 /**
@@ -88,4 +179,4 @@ function requireFeature(feature) {
     };
 }
 
-module.exports = { featureEnabled, getBookingLimit, getMonthlyBookingCount, enforceBookingLimit, requireFeature };
+module.exports = { featureEnabled, getBookingLimit, getMonthlyBookingCount, enforceBookingLimit, requireFeature, handleStripeWebhookEvent, handlePayPalWebhookEvent };

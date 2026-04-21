@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pulse Studio · Fitness & Movement</title>
+  <!-- Outfit & Source Sans Pro – energetic, modern, motivating -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Source+Sans+Pro:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: linear-gradient(145deg, #1a1a2e 0%, #16213e 40%, #0f3460 100%);
+      min-height: 100vh;
+      font-family: 'Source Sans Pro', sans-serif;
+      padding: 2rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #e8eef2;
+      position: relative;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-image: url('data:image/svg+xml;utf8,<svg width="80" height="80" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg"><path d="M10 30 L25 15 L40 30 L25 45 Z" fill="%23e94560" opacity="0.03"/><circle cx="60" cy="50" r="8" fill="%23533e8f" opacity="0.04"/><rect x="5" y="65" width="12" height="12" transform="rotate(45 11 71)" fill="%2300d2ff" opacity="0.03"/></svg>');
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .fitness-system {
+      max-width: 1380px;
+      width: 100%;
+      background: rgba(20, 25, 45, 0.7);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-radius: 40px;
+      box-shadow: 0 30px 50px -10px rgba(0, 0, 0, 0.4),
+                  0 8px 20px rgba(0, 0, 0, 0.2),
+                  inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+      padding: 2.2rem 2.5rem;
+      border: 1px solid rgba(233, 69, 96, 0.15);
+      position: relative;
+      z-index: 2;
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 2.2rem;
+      flex-wrap: wrap;
+      gap: 20px;
+      border-bottom: 1px solid rgba(233, 69, 96, 0.25);
+      padding-bottom: 1.5rem;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+    }
+
+    .brand-icon {
+      background: linear-gradient(135deg, #e94560, #c62a47);
+      width: 62px;
+      height: 62px;
+      border-radius: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      font-size: 30px;
+      box-shadow: 0 8px 0 #8a1f33, 0 16px 28px -8px rgba(233, 69, 96, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .brand-text h1 {
+      font-family: 'Outfit', sans-serif;
+      font-weight: 700;
+      font-size: 2.4rem;
+      letter-spacing: -0.5px;
+      color: #ffffff;
+      line-height: 1.1;
+      text-transform: uppercase;
+    }
+
+    .brand-text p {
+      font-size: 0.9rem;
+      font-weight: 400;
+      color: #a0b3d9;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 6px;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 12px;
+    }
+
+    .fitness-tag {
+      background: rgba(233, 69, 96, 0.15);
+      backdrop-filter: blur(4px);
+      padding: 10px 22px;
+      border-radius: 40px;
+      font-weight: 600;
+      font-size: 0.85rem;
+      color: #ff8fa3;
+      box-shadow: inset 0 0 0 1px rgba(233, 69, 96, 0.3);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border: 1px solid rgba(233, 69, 96, 0.2);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .fitness-tag i {
+      color: #e94560;
+    }
+
+    /* grid */
+    .booking-grid {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 2rem;
+    }
+
+    /* Left panel */
+    .selection-panel {
+      background: rgba(25, 32, 55, 0.5);
+      backdrop-filter: blur(4px);
+      border-radius: 32px;
+      padding: 1.8rem 1.8rem 2rem;
+      box-shadow: inset 0 1px 4px rgba(255, 255, 255, 0.05), 0 14px 24px -14px rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(233, 69, 96, 0.1);
+    }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 1.8rem;
+    }
+
+    .section-title i {
+      background: linear-gradient(135deg, #e94560, #c62a47);
+      padding: 10px;
+      border-radius: 16px;
+      color: #ffffff;
+      font-size: 1.4rem;
+      width: 50px;
+      height: 50px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 5px 0 #8a1f33;
+    }
+
+    .section-title h2 {
+      font-family: 'Outfit', sans-serif;
+      font-weight: 600;
+      font-size: 1.8rem;
+      color: #ffffff;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* class cards */
+    .class-list {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      margin-bottom: 2.2rem;
+    }
+
+    .class-card {
+      background: rgba(30, 40, 65, 0.8);
+      border-radius: 24px;
+      padding: 1.1rem 1.6rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 5px 0 rgba(233, 69, 96, 0.3), 0 12px 22px -10px rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(233, 69, 96, 0.15);
+      transition: all 0.2s;
+      cursor: pointer;
+      backdrop-filter: blur(4px);
+    }
+
+    .class-card.selected {
+      background: linear-gradient(135deg, rgba(233, 69, 96, 0.25), rgba(198, 42, 71, 0.2));
+      box-shadow: 0 5px 0 #e94560, 0 14px 26px -8px rgba(233, 69, 96, 0.4);
+      border: 1.5px solid #e94560;
+    }
+
+    .class-info {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+    }
+
+    .class-icon {
+      background: linear-gradient(135deg, #e94560, #b8243d);
+      width: 56px;
+      height: 56px;
+      border-radius: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      font-size: 1.8rem;
+    }
+
+    .class-details h3 {
+      font-weight: 700;
+      font-size: 1.2rem;
+      color: #ffffff;
+      font-family: 'Outfit', sans-serif;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    .class-details span {
+      font-size: 0.85rem;
+      color: #a0b3d9;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .class-credits {
+      font-weight: 700;
+      background: rgba(233, 69, 96, 0.15);
+      padding: 8px 18px;
+      border-radius: 40px;
+      color: #ff8fa3;
+      font-size: 1rem;
+      border: 1px solid rgba(233, 69, 96, 0.3);
+    }
+
+    /* instructor */
+    .instructor-section {
+      margin: 24px 0 28px;
+    }
+
+    .instructor-options {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+
+    .instructor-chip {
+      background: rgba(30, 40, 65, 0.8);
+      border-radius: 40px;
+      padding: 10px 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 3px 0 rgba(233, 69, 96, 0.3);
+      border: 1px solid rgba(233, 69, 96, 0.2);
+      cursor: pointer;
+      transition: 0.1s;
+      color: #d0dff5;
+    }
+
+    .instructor-chip.selected {
+      background: #e94560;
+      box-shadow: 0 3px 0 #8a1f33;
+      border-color: #ff6b8a;
+      color: white;
+    }
+
+    .instructor-chip i {
+      color: inherit;
+    }
+
+    /* date/time */
+    .date-section {
+      margin-bottom: 28px;
+    }
+
+    .label-icon {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 14px;
+      font-weight: 600;
+      color: #ff8fa3;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-size: 0.9rem;
+    }
+
+    .date-selector {
+      background: rgba(30, 40, 65, 0.8);
+      border-radius: 24px;
+      padding: 6px 20px 6px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 5px 0 rgba(233, 69, 96, 0.3), inset 0 1px 3px rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(233, 69, 96, 0.2);
+    }
+
+    .date-selector input {
+      border: none;
+      background: transparent;
+      font-family: 'Source Sans Pro', sans-serif;
+      font-size: 1rem;
+      padding: 16px 0;
+      font-weight: 600;
+      color: #ffffff;
+      outline: none;
+      width: 100%;
+    }
+
+    .date-selector input::-webkit-calendar-picker-indicator {
+      filter: invert(1) brightness(2);
+      opacity: 0.8;
+    }
+
+    .date-selector i {
+      color: #e94560;
+      font-size: 1.4rem;
+    }
+
+    .time-slots {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin: 20px 0 8px;
+    }
+
+    .time-slot {
+      background: rgba(30, 40, 65, 0.8);
+      border-radius: 40px;
+      padding: 12px 5px;
+      text-align: center;
+      font-weight: 600;
+      color: #d0dff5;
+      box-shadow: 0 4px 0 rgba(233, 69, 96, 0.3), 0 8px 14px -6px rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(233, 69, 96, 0.2);
+      cursor: pointer;
+    }
+
+    .time-slot.selected {
+      background: #e94560;
+      box-shadow: 0 4px 0 #8a1f33;
+      color: white;
+      border-color: #ff6b8a;
+    }
+
+    /* Right panel */
+    .booking-form-panel {
+      background: rgba(25, 32, 55, 0.5);
+      backdrop-filter: blur(4px);
+      border-radius: 32px;
+      padding: 1.8rem 2rem 2rem;
+      box-shadow: inset 0 1px 4px rgba(255, 255, 255, 0.05), 0 14px 24px -14px rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(233, 69, 96, 0.1);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .form-group {
+      margin-bottom: 1.6rem;
+    }
+
+    .form-group label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 600;
+      margin-bottom: 10px;
+      color: #ff8fa3;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-size: 0.85rem;
+    }
+
+    .input-wrapper {
+      background: rgba(30, 40, 65, 0.8);
+      border-radius: 40px;
+      padding: 4px 22px;
+      box-shadow: 0 4px 0 rgba(233, 69, 96, 0.3), inset 0 1px 3px rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(233, 69, 96, 0.2);
+      display: flex;
+      align-items: center;
+    }
+
+    .input-wrapper i {
+      color: #e94560;
+      margin-right: 14px;
+      font-size: 1.1rem;
+    }
+
+    .input-wrapper input,
+    .input-wrapper select,
+    .input-wrapper textarea {
+      border: none;
+      background: transparent;
+      padding: 16px 0;
+      font-family: 'Source Sans Pro', sans-serif;
+      font-size: 1rem;
+      width: 100%;
+      outline: none;
+      color: #ffffff;
+      resize: none;
+    }
+
+    .input-wrapper select option {
+      background: #1e2841;
+      color: #ffffff;
+    }
+
+    .input-wrapper textarea {
+      min-height: 65px;
+      padding: 12px 0;
+    }
+
+    .input-wrapper input::placeholder,
+    .input-wrapper textarea::placeholder {
+      color: #7a8fb0;
+    }
+
+    /* summary */
+    .booking-summary {
+      background: rgba(233, 69, 96, 0.08);
+      border-radius: 24px;
+      padding: 1.7rem;
+      margin: 22px 0 28px;
+      border: 1px dashed rgba(233, 69, 96, 0.4);
+      backdrop-filter: blur(4px);
+    }
+
+    .summary-line {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 14px;
+      font-size: 1rem;
+      color: #d0dff5;
+    }
+
+    .summary-line.total {
+      font-weight: 700;
+      font-size: 1.6rem;
+      border-top: 1.5px solid rgba(233, 69, 96, 0.5);
+      padding-top: 18px;
+      margin-top: 8px;
+      color: #ffffff;
+      font-family: 'Outfit', sans-serif;
+    }
+
+    .summary-line.total span:last-child {
+      color: #e94560;
+    }
+
+    .book-btn {
+      background: linear-gradient(135deg, #e94560, #c62a47);
+      border: none;
+      border-radius: 50px;
+      padding: 18px 20px;
+      font-family: 'Outfit', sans-serif;
+      font-weight: 700;
+      font-size: 1.2rem;
+      color: #ffffff;
+      box-shadow: 0 10px 0 #8a1f33, 0 14px 28px -8px rgba(233, 69, 96, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      cursor: pointer;
+      transition: 0.1s;
+      margin-top: auto;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .book-btn:active {
+      transform: translateY(4px);
+      box-shadow: 0 6px 0 #8a1f33, 0 14px 28px -8px rgba(233, 69, 96, 0.4);
+    }
+
+    .footer-note {
+      margin-top: 16px;
+      text-align: center;
+      color: #7a8fb0;
+      font-size: 0.85rem;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    @media (max-width: 900px) {
+      .booking-grid {
+        grid-template-columns: 1fr;
+      }
+      .fitness-system {
+        padding: 1.5rem;
+      }
+    }
+  </style>
+</head>
+<body>
+<div class="fitness-system">
+  <!-- Header -->
+  <div class="header">
+    <div class="brand">
+      <div class="brand-icon">
+        <i class="fas fa-dumbbell"></i>
+      </div>
+      <div class="brand-text">
+        <h1>PULSE STUDIO</h1>
+        <p><i class="fas fa-bolt"></i> STRENGTH · CARDIO · MINDFULNESS  <i class="fas fa-circle" style="font-size: 4px; margin:0 10px;"></i> #MOVEWITHUS</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <div class="fitness-tag"><i class="fas fa-fire"></i> 200+ classes/week</div>
+      <div class="fitness-tag"><i class="fas fa-trophy"></i> all levels welcome</div>
+    </div>
+  </div>
+
+  <!-- Grid -->
+  <div class="booking-grid">
+    <!-- LEFT -->
+    <div class="selection-panel">
+      <div class="section-title">
+        <i class="fas fa-person-running"></i>
+        <h2>select class</h2>
+      </div>
+
+      <div class="class-list" id="classList"></div>
+
+      <!-- Instructor -->
+      <div class="instructor-section">
+        <div class="label-icon">
+          <i class="fas fa-user-ninja"></i>
+          <span>coach preference</span>
+        </div>
+        <div class="instructor-options" id="instructorOptions"></div>
+      </div>
+
+      <div class="date-section">
+        <div class="label-icon">
+          <i class="fas fa-calendar-day"></i>
+          <span>class date</span>
+        </div>
+        <div class="date-selector">
+          <input type="date" id="datePicker" value="2026-05-08" min="2026-04-20">
+          <i class="fas fa-calendar-alt"></i>
+        </div>
+      </div>
+
+      <div>
+        <div class="label-icon">
+          <i class="fas fa-clock"></i>
+          <span>class time</span>
+        </div>
+        <div class="time-slots" id="timeSlotsContainer"></div>
+      </div>
+      <div style="margin-top: 18px; font-size: 0.85rem; color: #a0b3d9;">
+        <i class="fas fa-water" style="margin-right: 8px; color: #e94560;"></i> filtered water + towel service included
+      </div>
+    </div>
+
+    <!-- RIGHT -->
+    <div class="booking-form-panel">
+      <div class="section-title" style="margin-bottom: 1.2rem;">
+        <i class="fas fa-id-card"></i>
+        <h2>member details</h2>
+      </div>
+
+      <div class="form-group">
+        <label><i class="fas fa-user"></i> full name</label>
+        <div class="input-wrapper">
+          <i class="fas fa-pen"></i>
+          <input type="text" id="fullName" placeholder="e.g., Marcus Chen" value="Alex Rivera">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label><i class="fas fa-envelope"></i> email</label>
+        <div class="input-wrapper">
+          <i class="fas fa-paper-plane"></i>
+          <input type="email" id="email" placeholder="alex@email.com" value="alex.r@email.com">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label><i class="fas fa-phone"></i> phone</label>
+        <div class="input-wrapper">
+          <i class="fas fa-mobile"></i>
+          <input type="tel" id="phone" placeholder="(503) 555-0123" value="(503) 555-0182">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label><i class="fas fa-heart-pulse"></i> fitness level</label>
+        <div class="input-wrapper">
+          <i class="fas fa-chart-line"></i>
+          <select id="fitnessLevel">
+            <option value="beginner">🌱 Beginner (new to fitness)</option>
+            <option value="intermediate" selected>💪 Intermediate (consistent 3-6mo)</option>
+            <option value="advanced">🔥 Advanced (experienced)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label><i class="fas fa-circle-exclamation"></i> injuries / limitations</label>
+        <div class="input-wrapper">
+          <i class="fas fa-bandage"></i>
+          <input type="text" id="injuries" placeholder="e.g., knee, shoulder, none" value="previous shoulder injury">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label><i class="fas fa-bullseye"></i> goals / notes</label>
+        <div class="input-wrapper">
+          <i class="fas fa-feather"></i>
+          <textarea id="goals" placeholder="What are you working toward?">improve endurance & core strength</textarea>
+        </div>
+      </div>
+
+      <!-- Summary -->
+      <div class="booking-summary" id="summaryBox">
+        <div class="summary-line"><span><i class="fas fa-person-walking"></i> Class</span> <span id="summaryClass">—</span></div>
+        <div class="summary-line"><span><i class="fas fa-user-check"></i> Coach</span> <span id="summaryInstructor">—</span></div>
+        <div class="summary-line"><span><i class="fas fa-calendar"></i> Date & time</span> <span id="summaryDateTime">—</span></div>
+        <div class="summary-line total"><span>credits</span> <span id="summaryCredits">1</span></div>
+      </div>
+
+      <button class="book-btn" id="bookButton"><i class="fas fa-ticket"></i> book class</button>
+      <div class="footer-note">
+        <span><i class="fas fa-ban"></i> cancel 8h before</span>
+        <span><i class="fas fa-rotate-left"></i> late cancel fee</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function(){
+    "use strict";
+
+    // Classes
+    const classes = [
+      { id: 'hiit', name: 'HIIT FUSION', duration: '45 min', intensity: 'High', credits: 1, icon: 'fa-bolt', desc: 'Cardio + strength intervals' },
+      { id: 'yoga', name: 'POWER VINYASA', duration: '60 min', intensity: 'Med-High', credits: 1, icon: 'fa-person-praying', desc: 'Flowing strength & flexibility' },
+      { id: 'spin', name: 'RHYTHM RIDE', duration: '45 min', intensity: 'High', credits: 1, icon: 'fa-person-biking', desc: 'Beat-driven indoor cycling' },
+      { id: 'strength', name: 'LIFT LAB', duration: '50 min', intensity: 'High', credits: 1, icon: 'fa-dumbbell', desc: 'Compound lifts · form focus' },
+      { id: 'recovery', name: 'RECOVERY FLOW', duration: '45 min', intensity: 'Low', credits: 1, icon: 'fa-feather', desc: 'Mobility + myofascial release' }
+    ];
+
+    const instructors = [
+      { id: 'any', name: 'Any coach', icon: 'fa-users' },
+      { id: 'marcus', name: 'Marcus (HIIT/Strength)', icon: 'fa-fire' },
+      { id: 'jordan', name: 'Jordan (Spin/Cardio)', icon: 'fa-bicycle' },
+      { id: 'sasha', name: 'Sasha (Yoga/Recovery)', icon: 'fa-om' },
+      { id: 'taylor', name: 'Taylor (All-levels)', icon: 'fa-star' }
+    ];
+
+    const timeSlots = ["6:00 AM", "7:30 AM", "9:00 AM", "12:00 PM", "5:30 PM", "7:00 PM"];
+
+    // State
+    let selectedClassId = classes[0].id;
+    let selectedInstructorId = 'any';
+    let selectedDate = "2026-05-08";
+    let selectedTime = timeSlots[3]; // 12:00 PM
+
+    // DOM
+    const classListEl = document.getElementById('classList');
+    const instructorOptions = document.getElementById('instructorOptions');
+    const datePicker = document.getElementById('datePicker');
+    const timeSlotsContainer = document.getElementById('timeSlotsContainer');
+    const summaryClass = document.getElementById('summaryClass');
+    const summaryInstructor = document.getElementById('summaryInstructor');
+    const summaryDateTime = document.getElementById('summaryDateTime');
+    const summaryCredits = document.getElementById('summaryCredits');
+    const bookBtn = document.getElementById('bookButton');
+
+    function getSelectedClass() {
+      return classes.find(c => c.id === selectedClassId) || classes[0];
+    }
+
+    function renderClasses() {
+      let html = '';
+      classes.forEach(cls => {
+        const selectedClass = cls.id === selectedClassId ? 'selected' : '';
+        html += `
+          <div class="class-card ${selectedClass}" data-class-id="${cls.id}">
+            <div class="class-info">
+              <div class="class-icon"><i class="fas ${cls.icon}"></i></div>
+              <div class="class-details">
+                <h3>${cls.name}</h3>
+                <span><i class="far fa-clock"></i> ${cls.duration} · ${cls.intensity} · ${cls.desc}</span>
+              </div>
+            </div>
+            <div class="class-credits">${cls.credits} credit</div>
+          </div>
+        `;
+      });
+      classListEl.innerHTML = html;
+
+      document.querySelectorAll('.class-card').forEach(card => {
+        card.addEventListener('click', () => {
+          const id = card.dataset.classId;
+          if (id) {
+            selectedClassId = id;
+            renderClasses();
+            updateSummary();
+          }
+        });
+      });
+    }
+
+    function renderInstructors() {
+      let html = '';
+      instructors.forEach(inst => {
+        const selectedClass = inst.id === selectedInstructorId ? 'selected' : '';
+        html += `
+          <div class="instructor-chip ${selectedClass}" data-instructor-id="${inst.id}">
+            <i class="fas ${inst.icon}"></i>
+            <span>${inst.name}</span>
+          </div>
+        `;
+      });
+      instructorOptions.innerHTML = html;
+
+      document.querySelectorAll('.instructor-chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+          const id = chip.dataset.instructorId;
+          if (id) {
+            selectedInstructorId = id;
+            renderInstructors();
+            updateSummary();
+          }
+        });
+      });
+    }
+
+    function renderTimeSlots() {
+      let slotsHtml = '';
+      timeSlots.forEach(slot => {
+        const selectedClass = slot === selectedTime ? 'selected' : '';
+        slotsHtml += `<div class="time-slot ${selectedClass}" data-time="${slot}">${slot}</div>`;
+      });
+      timeSlotsContainer.innerHTML = slotsHtml;
+
+      document.querySelectorAll('.time-slot').forEach(slotEl => {
+        slotEl.addEventListener('click', () => {
+          const time = slotEl.dataset.time;
+          if (time) {
+            selectedTime = time;
+            renderTimeSlots();
+            updateSummary();
+          }
+        });
+      });
+    }
+
+    function updateSummary() {
+      const cls = getSelectedClass();
+      summaryClass.textContent = `${cls.name} · ${cls.duration}`;
+      
+      const instructor = instructors.find(inst => inst.id === selectedInstructorId);
+      summaryInstructor.textContent = instructor ? instructor.name : 'Any coach';
+      
+      const dateObj = selectedDate ? new Date(selectedDate + 'T12:00:00') : new Date();
+      const formattedDate = dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+      summaryDateTime.textContent = `${formattedDate} at ${selectedTime}`;
+      
+      summaryCredits.textContent = cls.credits;
+    }
+
+    function initDatePicker() {
+      const today = new Date();
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, '0');
+      const dd = String(today.getDate()).padStart(2, '0');
+      datePicker.min = `${yyyy}-${mm}-${dd}`;
+      if (!datePicker.value) datePicker.value = selectedDate;
+      else selectedDate = datePicker.value;
+
+      datePicker.addEventListener('change', (e) => {
+        selectedDate = e.target.value;
+        updateSummary();
+      });
+    }
+
+    function handleBooking() {
+      const cls = getSelectedClass();
+      const name = document.getElementById('fullName').value.trim() || 'Member';
+      const email = document.getElementById('email').value.trim() || '—';
+      const phone = document.getElementById('phone').value.trim() || '—';
+      const fitnessLevel = document.getElementById('fitnessLevel').value;
+      const injuries = document.getElementById('injuries').value.trim() || 'none reported';
+      const goals = document.getElementById('goals').value.trim() || '—';
+      const instructor = instructors.find(inst => inst.id === selectedInstructorId)?.name || 'Any coach';
+      
+      const dateObj = new Date(selectedDate + 'T12:00:00');
+      const niceDate = dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+      
+      alert(`💥 𝐂𝐋𝐀𝐒𝐒 𝐁𝐎𝐎𝐊𝐄𝐃! 💥\n\n${cls.name} · ${cls.credits} credit\n👟 Coach: ${instructor}\n📅 ${niceDate} at ${selectedTime}\n👤 ${name}\n📊 Level: ${fitnessLevel}\n🩹 Injuries: ${injuries}\n\nGet ready to sweat! Arrive 10 min early.`);
+    }
+
+    function initialize() {
+      renderClasses();
+      renderInstructors();
+      renderTimeSlots();
+      initDatePicker();
+      updateSummary();
+    }
+
+    bookBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      handleBooking();
+    });
+
+    initialize();
+  })();
+</script>
+</body>
+</html>

@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Meridian Law · Legal & Firm Services</title>
+  <!-- Crimson Pro & Work Sans – authoritative, professional, trustworthy -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Work+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: linear-gradient(135deg, #1a232c 0%, #243442 50%, #1a232c 100%);
+      min-height: 100vh;
+      font-family: 'Work Sans', sans-serif;
+      padding: 2rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #e6e9ec;
+      position: relative;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-image: url('data:image/svg+xml;utf8,<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><path d="M15 25 L25 15 L35 25 L25 35 Z" fill="%23c9a96e" opacity="0.02"/><line x1="60" y1="20" x2="80" y2="40" stroke="%23c9a96e" stroke-width="1" opacity="0.03"/><circle cx="70" cy="70" r="6" fill="none" stroke="%23c9a96e" stroke-width="1" opacity="0.03"/></svg>');
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .legal-system {
+      max-width: 1420px;
+      width: 100%;
+      background: rgba(20, 28, 36, 0.75);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-radius: 32px;
+      box-shadow: 0 30px 50px -12px rgba(0, 0, 0, 0.5),
+                  0 8px 20px rgba(0, 0, 0, 0.3),
+                  inset 0 0 0 1px rgba(201, 169, 110, 0.15);
+      padding: 2.2rem 2.5rem;
+      border: 1px solid rgba(201, 169, 110, 0.2);
+      position: relative;
+      z-index: 2;
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 2.2rem;
+      flex-wrap: wrap;
+      gap: 20px;
+      border-bottom: 1px solid rgba(201, 169, 110, 0.25);
+      padding-bottom: 1.5rem;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+    }
+
+    .brand-icon {
+      background: linear-gradient(135deg, #c9a96e, #a8844e);
+      width: 62px;
+      height: 62px;
+      border-radius: 8px 20px 8px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #1a232c;
+      font-size: 28px;
+      box-shadow: 0 6px 0 #6b5333, 0 16px 28px -10px rgba(201, 169, 110, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+
+    .brand-text h1 {
+      font-family: 'Crimson Pro', serif;
+      font-weight: 600;
+      font-size: 2.3rem;
+      letter-spacing: -0.3px;
+      color: #ffffff;
+      line-height: 1.1;
+    }
+
+    .brand-text p {
+      font-size: 0.85rem;
+      font-weight: 400;
+      color: #b8c4d0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 6px;
+      letter-spacing: 0.3px;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 14px;
+    }
+
+    .legal-badge {
+      background: rgba(201, 169, 110, 0.08);
+      backdrop-filter: blur(4px);
+      padding: 10px 22px;
+      border-radius: 4px 20px 4px 20px;
+      font-weight: 500;
+      font-size: 0.8rem;
+      color: #c9a96e;
+      box-shadow: inset 0 0 0 1px rgba(201, 169, 110, 0.2);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border: 1px solid rgba(201, 169, 110, 0.15);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+    }
+
+    .legal-badge i {
+      color: #c9a96e;
+    }
+
+    /* grid */
+    .booking-grid {
+      display: grid;
+      grid-template-columns: 1.15fr 0.9fr;
+      gap: 2rem;
+    }
+
+    /* Left panel */
+    .selection-panel {
+      background: rgba(25, 35, 45, 0.5);
+      backdrop-filter: blur(4px);
+      border-radius: 24px;
+      padding: 1.8rem 1.8rem 2rem;
+      box-shadow: inset 0 1px 4px rgba(255, 255, 255, 0.03), 0 14px 24px -14px rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(201, 169, 110, 0.1);
+    }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 1.8rem;
+    }
+
+    .section-title i {
+      background: linear-gradient(135deg, #c9a96e, #a8844e);
+      padding: 10px;
+      border-radius: 12px;
+      color: #1a232c;
+      font-size: 1.3rem;
+      width: 48px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 0 #6b5333;
+    }
+
+    .section-title h2 {
+      font-family: 'Crimson Pro', serif;
+      font-weight: 600;
+      font-size: 1.8rem;
+      color: #ffffff;
+    }
+
+    /* consultation cards */
+    .consult-list {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      margin-bottom: 2.2rem;
+    }
+
+    .consult-card {
+      background: rgba(30, 42, 54, 0.8);
+      border-radius: 16px;
+      padding: 1.2rem 1.6rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 4px 0 rgba(201, 169, 110, 0.2), 0 12px 22px -10px rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(201, 169, 110, 0.12);
+      transition: all 0.2s;
+      cursor: pointer;
+      backdrop-filter: blur(4px);
+    }
+
+    .consult-card.selected {
+      background: rgba(201, 169, 110, 0.1);
+      box-shadow: 0 4px 0 #c9a96e, 0 14px 26px -8px rgba(201, 169, 110, 0.25);
+      border: 1.5px solid rgba(201, 169, 110, 0.5);
+    }
+
+    .consult-info {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .consult-icon {
+      background: linear-gradient(135deg, #c9a96e, #a8844e);
+      width: 54px;
+      height: 54px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #1a232c;
+      font-size: 1.7rem;
+    }
+
+    .consult-details h3 {
+      font-weight: 600;
+      font-size: 1.15rem;
+      color: #ffffff;
+      font-family: 'Crimson Pro', serif;
+    }
+
+    .consult-details span {
+      font-size: 0.85rem;
+      color: #a8b9c9;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .consult-fee {
+      font-weight: 600;
+      background: rgba(201, 169, 110, 0.1);
+      padding: 8px 18px;
+      border-radius: 6px 20px 6px 20px;
+      color: #c9a96e;
+      font-size: 1.1rem;
+      border: 1px solid rgba(201, 169, 110, 0.25);
+    }
+
+    /* attorney */
+    .attorney-section {
+      margin: 24px 0 28px;
+    }
+
+    .attorney-options {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+
+    .attorney-chip {
+      background: rgba(30, 42, 54, 0.8);
+      border-radius: 6px 20px 6px 20px;
+      padding: 10px 22px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 3px 0 rgba(201, 169, 110, 0.2);
+      border: 1px solid rgba(201, 169, 110, 0.15);
+      cursor: pointer;
+      transition: 0.1s;
+      color: #c0d0e0;
+    }
+
+    .attorney-chip.selected {
+      background: #c9a96e;
+      box-shadow: 0 3px 0 #7a623f;
+      border-color: #d4b87e;
+      color: #1a232c;
+      font-weight: 600;
+    }
+
+    .attorney-chip i {
+      color: inherit;
+    }
+
+    /* date/time */
+    .date-section {
+      margin-bottom: 28px;
+    }
+
+    .label-icon {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 14px;
+      font-weight: 500;
+      color: #c9a96e;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      font-size: 0.85rem;
+    }
+
+    .date-selector {
+      background: rgba(30, 42, 54, 0.8);
+      border-radius: 16px;
+      padding: 6px 20px 6px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 4px 0 rgba(201, 169, 110, 0.2), inset 0 1px 3px rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(201, 169, 110, 0.15);
+    }
+
+    .date-selector input {
+      border: none;
+      background: transparent;
+      font-family: 'Work Sans', sans-serif;
+      font-size: 1rem;
+      padding: 16px 0;
+      font-weight: 500;
+      color: #ffffff;
+      outline: none;
+      width: 100%;
+    }
+
+    .date-selector input::-webkit-calendar-picker-indicator {
+      filter: invert(0.7) sepia(1) saturate(3) hue-rotate(340deg);
+      opacity: 0.8;
+    }
+
+    .date-selector i {
+      color: #c9a96e;
+      font-size: 1.3rem;
+    }
+
+    .time-slots {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin: 20px 0 8px;
+    }
+
+    .time-slot {
+      background: rgba(30, 42, 54, 0.8);
+      border-radius: 8px 20px 8px 20px;
+      padding: 12px 5px;
+      text-align: center;
+      font-weight: 500;
+      color: #c0d0e0;
+      box-shadow: 0 3px 0 rgba(201, 169, 110, 0.2), 0 8px 14px -6px rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(201, 169, 110, 0.15);
+      cursor: pointer;
+    }
+
+    .time-slot.selected {
+      background: #c9a96e;
+      box-shadow: 0 3px 0 #7a623f;
+      color: #1a232c;
+      border-color: #d4b87e;
+      font-weight: 600;
+    }
+
+    /* Right panel */
+    .booking-form-panel {
+      background: rgba(25, 35, 45, 0.5);
+      backdrop-filter: blur(4px);
+      border-radius: 24px;
+      padding: 1.8rem 2rem 2rem;
+      box-shadow: inset 0 1px 4px rgba(255, 255, 255, 0.03), 0 14px 24px -14px rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(201, 169, 110, 0.1);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .form-group {
+      margin-bottom: 1.6rem;
+    }
+
+    .form-group label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 500;
+      margin-bottom: 10px;
+      color: #c9a96e;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      font-size: 0.8rem;
+    }
+
+    .input-wrapper {
+      background: rgba(30, 42, 54, 0.8);
+      border-radius: 12px;
+      padding: 4px 20px;
+      box-shadow: 0 3px 0 rgba(201, 169, 110, 0.2), inset 0 1px 3px rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(201, 169, 110, 0.15);
+      display: flex;
+      align-items: center;
+    }
+
+    .input-wrapper i {
+      color: #c9a96e;
+      margin-right: 14px;
+      font-size: 1rem;
+    }
+
+    .input-wrapper input,
+    .input-wrapper select,
+    .input-wrapper textarea {
+      border: none;
+      background: transparent;
+      padding: 16px 0;
+      font-family: 'Work Sans', sans-serif;
+      font-size: 1rem;
+      width: 100%;
+      outline: none;
+      color: #ffffff;
+      resize: none;
+    }
+
+    .input-wrapper select option {
+      background: #1e2a36;
+      color: #ffffff;
+    }
+
+    .input-wrapper textarea {
+      min-height: 70px;
+      padding: 12px 0;
+    }
+
+    .input-wrapper input::placeholder,
+    .input-wrapper textarea::placeholder {
+      color: #7a8fa3;
+    }
+
+    /* summary */
+    .booking-summary {
+      background: rgba(201, 169, 110, 0.05);
+      border-radius: 16px;
+      padding: 1.7rem;
+      margin: 22px 0 28px;
+      border: 1px dashed rgba(201, 169, 110, 0.3);
+      backdrop-filter: blur(4px);
+    }
+
+    .summary-line {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 14px;
+      font-size: 0.95rem;
+      color: #c0d0e0;
+    }
+
+    .summary-line.total {
+      font-weight: 700;
+      font-size: 1.5rem;
+      border-top: 1.5px solid rgba(201, 169, 110, 0.4);
+      padding-top: 18px;
+      margin-top: 8px;
+      color: #ffffff;
+      font-family: 'Crimson Pro', serif;
+    }
+
+    .summary-line.total span:last-child {
+      color: #c9a96e;
+    }
+
+    .book-btn {
+      background: linear-gradient(135deg, #c9a96e, #a8844e);
+      border: none;
+      border-radius: 8px 24px 8px 24px;
+      padding: 18px 20px;
+      font-family: 'Work Sans', sans-serif;
+      font-weight: 600;
+      font-size: 1.15rem;
+      color: #1a232c;
+      box-shadow: 0 8px 0 #6b5333, 0 14px 28px -8px rgba(201, 169, 110, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      cursor: pointer;
+      transition: 0.1s;
+      margin-top: auto;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .book-btn:active {
+      transform: translateY(4px);
+      box-shadow: 0 4px 0 #6b5333, 0 14px 28px -8px rgba(201, 169, 110, 0.3);
+    }
+
+    .footer-note {
+      margin-top: 16px;
+      text-align: center;
+      color: #8fa3b8;
+      font-size: 0.8rem;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    @media (max-width: 950px) {
+      .booking-grid {
+        grid-template-columns: 1fr;
+      }
+      .legal-system {
+        padding: 1.5rem;
+      }
+    }
+  </style>
+</head>
+<body>
+<div class="legal-system">
+  <!-- Header -->
+  <div class="header">
+    <div class="brand">
+      <div class="brand-icon">
+        <i class="fas fa-gavel"></i>
+      </div>
+      <div class="brand-text">
+        <h1>MERIDIAN LAW</h1>
+        <p><i class="fas fa-scale-balanced"></i> EST. 2008 · BUSINESS · FAMILY · ESTATE  <i class="fas fa-circle" style="font-size: 4px; margin:0 10px;"></i> PORTLAND · SEATTLE</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <div class="legal-badge"><i class="fas fa-lock"></i> confidential</div>
+      <div class="legal-badge"><i class="fas fa-star"></i> AV-Preeminent®</div>
+    </div>
+  </div>
+
+  <!-- Grid -->
+  <div class="booking-grid">
+    <!-- LEFT -->
+    <div class="selection-panel">
+      <div class="section-title">
+        <i class="fas fa-file-signature"></i>
+        <h2>consultation type</h2>
+      </div>
+
+      <div class="consult-list" id="consultList"></div>
+
+      <!-- Attorney -->
+      <div class="attorney-section">
+        <div class="label-icon">
+          <i class="fas fa-user-tie"></i>
+          <span>preferred attorney</span>
+        </div>
+        <div class="attorney-options" id="attorneyOptions"></div>
+      </div>
+
+      <div class="date-section">
+        <div class="label-icon">
+          <i class="fas fa-calendar-week"></i>
+          <span>appointment date</span>
+        </div>
+        <div class="date-selector">
+          <input type="date" id="datePicker" value="2026-05-12" min="2026-04-20">
+          <i class="fas fa-calendar-alt"></i>
+        </div>
+      </div>
+
+      <div>
+        <div class="label-icon">
+          <i class="fas fa-clock"></i>
+          <span>available times</span>
+        </div>
+        <div class="time-slots" id="timeSlotsContainer"></div>
+      </div>
+      <div style="margin-top: 18px; font-size: 0.8rem; color: #8fa3b8;">
+        <i class="fas fa-video" style="margin-right: 8px; color: #c9a96e;"></i> in-person · video · phone consultations available
+      </div>
+    </div>
+
+    <!-- RIGHT -->
+    <div class="booking-form-panel">
+      <div class="section-title" style="margin-bottom: 1.2rem;">
+        <i class="fas fa-user-profile"></i>
+        <h2>client information</h2>
+      </div>
+
+      <div class="form-group">
+        <label><i class="fas fa-user"></i> full name</label>
+        <div class="input-wrapper">
+          <i class="fas fa-pen"></i>
+          <input type="text" id="fullName" placeholder="e.g., Jonathan Wright" value="Rebecca Morrison">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label><i class="fas fa-building"></i> company (if applicable)</label>
+        <div class="input-wrapper">
+          <i class="fas fa-briefcase"></i>
+          <input type="text" id="company" placeholder="Company name" value="Morrison Consulting LLC">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label><i class="fas fa-envelope"></i> email</label>
+        <div class="input-wrapper">
+          <i class="fas fa-paper-plane"></i>
+          <input type="email" id="email" placeholder="rebecca@email.com" value="r.morrison@email.com">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label><i class="fas fa-phone"></i> phone</label>
+        <div class="input-wrapper">
+          <i class="fas fa-mobile"></i>
+          <input type="tel" id="phone" placeholder="(503) 555-0123" value="(503) 555-0142">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label><i class="fas fa-gavel"></i> matter type</label>
+        <div class="input-wrapper">
+          <i class="fas fa-folder-open"></i>
+          <select id="matterType">
+            <option value="business">🏢 Business / Corporate</option>
+            <option value="family" selected>👨‍👩‍👧 Family Law</option>
+            <option value="estate">📜 Estate Planning</option>
+            <option value="realestate">🏠 Real Estate</option>
+            <option value="litigation">⚖️ Civil Litigation</option>
+            <option value="other">📋 Other</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label><i class="fas fa-align-left"></i> brief description</label>
+        <div class="input-wrapper">
+          <i class="fas fa-message"></i>
+          <textarea id="description" placeholder="Please briefly describe your legal matter...">Seeking counsel regarding custody modification and relocation.</textarea>
+        </div>
+      </div>
+
+      <!-- Summary -->
+      <div class="booking-summary" id="summaryBox">
+        <div class="summary-line"><span><i class="fas fa-scale-balanced"></i> Consultation</span> <span id="summaryConsult">—</span></div>
+        <div class="summary-line"><span><i class="fas fa-user-tie"></i> Attorney</span> <span id="summaryAttorney">—</span></div>
+        <div class="summary-line"><span><i class="fas fa-calendar"></i> Date & time</span> <span id="summaryDateTime">—</span></div>
+        <div class="summary-line total"><span>consultation fee</span> <span id="summaryFee">$0</span></div>
+      </div>
+
+      <button class="book-btn" id="bookButton"><i class="fas fa-handshake"></i> schedule consultation</button>
+      <div class="footer-note">
+        <span><i class="fas fa-shield"></i> attorney-client privilege</span>
+        <span><i class="fas fa-clock"></i> 48h cancellation</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function(){
+    "use strict";
+
+    // Consultations
+    const consultations = [
+      { id: 'initial', name: 'Initial Consultation', duration: '30 min', fee: 150, icon: 'fa-handshake', desc: 'Case evaluation & strategy overview' },
+      { id: 'extended', name: 'Extended Consultation', duration: '60 min', fee: 275, icon: 'fa-file-lines', desc: 'In-depth analysis & planning' },
+      { id: 'document', name: 'Document Review', duration: '45 min', fee: 200, icon: 'fa-file-contract', desc: 'Contract/agreement review' },
+      { id: 'mediation', name: 'Mediation Session', duration: '90 min', fee: 375, icon: 'fa-people-arrows', desc: 'Facilitated dispute resolution' },
+      { id: 'emergency', name: 'Urgent Matter', duration: '30 min', fee: 225, icon: 'fa-clock', desc: 'Time-sensitive legal issues' }
+    ];
+
+    const attorneys = [
+      { id: 'any', name: 'First Available', icon: 'fa-user-group' },
+      { id: 'meridian', name: 'Sarah Meridian (Managing Partner)', icon: 'fa-scale-balanced' },
+      { id: 'chen', name: 'David Chen (Corporate)', icon: 'fa-building' },
+      { id: 'williams', name: 'Michelle Williams (Family Law)', icon: 'fa-heart' },
+      { id: 'patel', name: 'Raj Patel (Estate Planning)', icon: 'fa-tree' },
+      { id: 'okonkwo', name: 'Chioma Okonkwo (Litigation)', icon: 'fa-gavel' }
+    ];
+
+    const timeSlots = ["9:00 AM", "10:30 AM", "1:00 PM", "2:30 PM", "4:00 PM", "5:30 PM"];
+
+    // State
+    let selectedConsultId = consultations[0].id;
+    let selectedAttorneyId = 'any';
+    let selectedDate = "2026-05-12";
+    let selectedTime = timeSlots[2];
+
+    // DOM
+    const consultListEl = document.getElementById('consultList');
+    const attorneyOptions = document.getElementById('attorneyOptions');
+    const datePicker = document.getElementById('datePicker');
+    const timeSlotsContainer = document.getElementById('timeSlotsContainer');
+    const summaryConsult = document.getElementById('summaryConsult');
+    const summaryAttorney = document.getElementById('summaryAttorney');
+    const summaryDateTime = document.getElementById('summaryDateTime');
+    const summaryFee = document.getElementById('summaryFee');
+    const bookBtn = document.getElementById('bookButton');
+
+    function getSelectedConsult() {
+      return consultations.find(c => c.id === selectedConsultId) || consultations[0];
+    }
+
+    function renderConsults() {
+      let html = '';
+      consultations.forEach(consult => {
+        const selectedClass = consult.id === selectedConsultId ? 'selected' : '';
+        html += `
+          <div class="consult-card ${selectedClass}" data-consult-id="${consult.id}">
+            <div class="consult-info">
+              <div class="consult-icon"><i class="fas ${consult.icon}"></i></div>
+              <div class="consult-details">
+                <h3>${consult.name}</h3>
+                <span><i class="far fa-clock"></i> ${consult.duration} · ${consult.desc}</span>
+              </div>
+            </div>
+            <div class="consult-fee">$${consult.fee}</div>
+          </div>
+        `;
+      });
+      consultListEl.innerHTML = html;
+
+      document.querySelectorAll('.consult-card').forEach(card => {
+        card.addEventListener('click', () => {
+          const id = card.dataset.consultId;
+          if (id) {
+            selectedConsultId = id;
+            renderConsults();
+            updateSummary();
+          }
+        });
+      });
+    }
+
+    function renderAttorneys() {
+      let html = '';
+      attorneys.forEach(att => {
+        const selectedClass = att.id === selectedAttorneyId ? 'selected' : '';
+        html += `
+          <div class="attorney-chip ${selectedClass}" data-attorney-id="${att.id}">
+            <i class="fas ${att.icon}"></i>
+            <span>${att.name}</span>
+          </div>
+        `;
+      });
+      attorneyOptions.innerHTML = html;
+
+      document.querySelectorAll('.attorney-chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+          const id = chip.dataset.attorneyId;
+          if (id) {
+            selectedAttorneyId = id;
+            renderAttorneys();
+            updateSummary();
+          }
+        });
+      });
+    }
+
+    function renderTimeSlots() {
+      let slotsHtml = '';
+      timeSlots.forEach(slot => {
+        const selectedClass = slot === selectedTime ? 'selected' : '';
+        slotsHtml += `<div class="time-slot ${selectedClass}" data-time="${slot}">${slot}</div>`;
+      });
+      timeSlotsContainer.innerHTML = slotsHtml;
+
+      document.querySelectorAll('.time-slot').forEach(slotEl => {
+        slotEl.addEventListener('click', () => {
+          const time = slotEl.dataset.time;
+          if (time) {
+            selectedTime = time;
+            renderTimeSlots();
+            updateSummary();
+          }
+        });
+      });
+    }
+
+    function updateSummary() {
+      const consult = getSelectedConsult();
+      summaryConsult.textContent = `${consult.name} · ${consult.duration}`;
+      
+      const attorney = attorneys.find(att => att.id === selectedAttorneyId);
+      summaryAttorney.textContent = attorney ? attorney.name : 'First Available';
+      
+      const dateObj = selectedDate ? new Date(selectedDate + 'T12:00:00') : new Date();
+      const formattedDate = dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+      summaryDateTime.textContent = `${formattedDate} at ${selectedTime}`;
+      
+      summaryFee.textContent = `$${consult.fee}`;
+    }
+
+    function initDatePicker() {
+      const today = new Date();
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, '0');
+      const dd = String(today.getDate()).padStart(2, '0');
+      datePicker.min = `${yyyy}-${mm}-${dd}`;
+      if (!datePicker.value) datePicker.value = selectedDate;
+      else selectedDate = datePicker.value;
+
+      datePicker.addEventListener('change', (e) => {
+        selectedDate = e.target.value;
+        updateSummary();
+      });
+    }
+
+    function handleBooking() {
+      const consult = getSelectedConsult();
+      const name = document.getElementById('fullName').value.trim() || 'Client';
+      const company = document.getElementById('company').value.trim() || 'N/A';
+      const email = document.getElementById('email').value.trim() || '—';
+      const phone = document.getElementById('phone').value.trim() || '—';
+      const matterType = document.getElementById('matterType').value;
+      const description = document.getElementById('description').value.trim() || 'Not provided';
+      const attorney = attorneys.find(att => att.id === selectedAttorneyId)?.name || 'First Available';
+      
+      const dateObj = new Date(selectedDate + 'T12:00:00');
+      const niceDate = dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+      
+      alert(`⚖️ 𝐂𝐎𝐍𝐒𝐔𝐋𝐓𝐀𝐓𝐈𝐎𝐍 𝐂𝐎𝐍𝐅𝐈𝐑𝐌𝐄𝐃 ⚖️\n\n${consult.name} · $${consult.fee}\n👔 Attorney: ${attorney}\n📅 ${niceDate} at ${selectedTime}\n👤 ${name} (${company})\n📋 Matter: ${matterType}\n\nA confirmation and intake form will be emailed. All communications are confidential.`);
+    }
+
+    function initialize() {
+      renderConsults();
+      renderAttorneys();
+      renderTimeSlots();
+      initDatePicker();
+      updateSummary();
+    }
+
+    bookBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      handleBooking();
+    });
+
+    initialize();
+  })();
+</script>
+</body>
+</html>

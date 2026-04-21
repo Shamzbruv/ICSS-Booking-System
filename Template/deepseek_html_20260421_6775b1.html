@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Botanica Spa · Esthetics & Wellness</title>
+  <!-- Cormorant & Raleway – serene, luxurious, organic -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600;700&family=Raleway:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: linear-gradient(165deg, #e8f0e8 0%, #dce8dc 40%, #e2ede2 100%);
+      min-height: 100vh;
+      font-family: 'Raleway', sans-serif;
+      padding: 2rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #2c3a2c;
+      position: relative;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-image: url('data:image/svg+xml;utf8,<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><path d="M20 30 Q30 15 45 25 Q55 32 50 45 Q42 55 30 48 Q18 40 20 30" fill="%23a8c3a8" opacity="0.06"/><circle cx="75" cy="20" r="3" fill="%2390b090" opacity="0.08"/><circle cx="12" cy="80" r="4" fill="%2388aa88" opacity="0.06"/></svg>');
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .spa-system {
+      max-width: 1380px;
+      width: 100%;
+      background: rgba(255, 255, 255, 0.6);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border-radius: 44px;
+      box-shadow: 0 30px 50px -15px rgba(40, 60, 40, 0.12),
+                  0 8px 20px rgba(30, 50, 30, 0.05),
+                  inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+      padding: 2.2rem 2.5rem;
+      border: 1px solid #c8dcc8;
+      position: relative;
+      z-index: 2;
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 2rem;
+      flex-wrap: wrap;
+      gap: 20px;
+      border-bottom: 1px solid #bdd0bd;
+      padding-bottom: 1.5rem;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+    }
+
+    .brand-icon {
+      background: linear-gradient(145deg, #b8d4b8, #9fc09f);
+      width: 64px;
+      height: 64px;
+      border-radius: 40% 60% 40% 60% / 60% 40% 60% 40%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #f5faf5;
+      font-size: 30px;
+      box-shadow: 0 8px 0 #7a9e7a, 0 16px 28px -10px #7f9f7f;
+      border: 1px solid #d0e4d0;
+    }
+
+    .brand-text h1 {
+      font-family: 'Cormorant Garamond', serif;
+      font-weight: 600;
+      font-size: 2.5rem;
+      letter-spacing: -0.3px;
+      color: #2a3e2a;
+      line-height: 1.1;
+    }
+
+    .brand-text p {
+      font-size: 0.9rem;
+      font-weight: 400;
+      color: #5a7a5a;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 6px;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 12px;
+    }
+
+    .spa-tag {
+      background: rgba(210, 230, 210, 0.5);
+      backdrop-filter: blur(4px);
+      padding: 10px 22px;
+      border-radius: 50px;
+      font-weight: 500;
+      font-size: 0.85rem;
+      color: #3a553a;
+      box-shadow: inset 0 0 0 1px #c2d8c2;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border: 1px solid #c6dcc6;
+    }
+
+    .spa-tag i {
+      color: #6a9a6a;
+    }
+
+    /* grid */
+    .booking-grid {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 2rem;
+    }
+
+    /* Left panel */
+    .selection-panel {
+      background: rgba(245, 250, 245, 0.5);
+      backdrop-filter: blur(4px);
+      border-radius: 34px;
+      padding: 1.8rem 1.8rem 2rem;
+      box-shadow: inset 0 1px 4px #f0f7f0, 0 14px 24px -14px #9bb59b;
+      border: 1px solid #d0e2d0;
+    }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 1.8rem;
+    }
+
+    .section-title i {
+      background: #c5ddc5;
+      padding: 10px;
+      border-radius: 22px;
+      color: #3a603a;
+      font-size: 1.4rem;
+      width: 50px;
+      height: 50px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 5px 0 #8faf8f;
+    }
+
+    .section-title h2 {
+      font-family: 'Cormorant Garamond', serif;
+      font-weight: 600;
+      font-size: 1.9rem;
+      color: #2d422d;
+    }
+
+    /* treatment cards */
+    .treatment-list {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      margin-bottom: 2.2rem;
+    }
+
+    .treatment-card {
+      background: rgba(255, 255, 255, 0.9);
+      border-radius: 28px;
+      padding: 1.1rem 1.6rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 5px 0 #c2d6c2, 0 12px 22px -10px #a6bea6;
+      border: 1px solid #daeada;
+      transition: all 0.2s;
+      cursor: pointer;
+      backdrop-filter: blur(4px);
+    }
+
+    .treatment-card.selected {
+      background: #e2f0e2;
+      box-shadow: 0 5px 0 #8aab8a, 0 14px 26px -8px #8dab8d;
+      border: 1.5px solid #a5c2a5;
+    }
+
+    .treatment-info {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .treatment-icon {
+      background: #d5e7d5;
+      width: 58px;
+      height: 58px;
+      border-radius: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #3d643d;
+      font-size: 1.9rem;
+    }
+
+    .treatment-details h3 {
+      font-weight: 600;
+      font-size: 1.2rem;
+      color: #2e462e;
+      font-family: 'Cormorant Garamond', serif;
+    }
+
+    .treatment-details span {
+      font-size: 0.85rem;
+      color: #5d7a5d;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .treatment-price {
+      font-weight: 600;
+      background: #ecf5ec;
+      padding: 8px 22px;
+      border-radius: 40px;
+      color: #426442;
+      font-size: 1.25rem;
+      font-family: 'Cormorant Garamond', serif;
+    }
+
+    /* therapist preference */
+    .therapist-section {
+      margin: 24px 0 28px;
+    }
+
+    .therapist-options {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+
+    .therapist-chip {
+      background: white;
+      border-radius: 40px;
+      padding: 10px 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 3px 0 #c2d6c2;
+      border: 1px solid #d4e6d4;
+      cursor: pointer;
+      transition: 0.1s;
+    }
+
+    .therapist-chip.selected {
+      background: #c5dec5;
+      box-shadow: 0 3px 0 #7da07d;
+      border-color: #9dbb9d;
+    }
+
+    .therapist-chip i {
+      color: #578057;
+    }
+
+    /* date/time */
+    .date-section {
+      margin-bottom: 28px;
+    }
+
+    .label-icon {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 14px;
+      font-weight: 500;
+      color: #426042;
+    }
+
+    .date-selector {
+      background: white;
+      border-radius: 28px;
+      padding: 6px 20px 6px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 5px 0 #c2d6c2, inset 0 1px 3px #f4faf4;
+      border: 1px solid #d3e5d3;
+    }
+
+    .date-selector input {
+      border: none;
+      background: transparent;
+      font-family: 'Raleway', sans-serif;
+      font-size: 1rem;
+      padding: 16px 0;
+      font-weight: 500;
+      color: #324a32;
+      outline: none;
+      width: 100%;
+    }
+
+    .time-slots {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin: 20px 0 8px;
+    }
+
+    .time-slot {
+      background: white;
+      border-radius: 40px;
+      padding: 12px 5px;
+      text-align: center;
+      font-weight: 500;
+      color: #3d5a3d;
+      box-shadow: 0 4px 0 #c2d6c2, 0 8px 14px -6px #adc5ad;
+      border: 1px solid #d9e9d9;
+      cursor: pointer;
+    }
+
+    .time-slot.selected {
+      background: #7fa67f;
+      box-shadow: 0 4px 0 #4e6e4e;
+      color: white;
+      border-color: #6b946b;
+    }
+
+    /* Right panel */
+    .booking-form-panel {
+      background: rgba(248, 252, 248, 0.7);
+      backdrop-filter: blur(4px);
+      border-radius: 34px;
+      padding: 1.8rem 2rem 2rem;
+      box-shadow: inset 0 1px 4px #f5faf5, 0 14px 24px -14px #9bb59b;
+      border: 1px solid #d4e4d4;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .form-group {
+      margin-bottom: 1.6rem;
+    }
+
+    .form-group label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 500;
+      margin-bottom: 10px;
+      color: #3b583b;
+    }
+
+    .input-wrapper {
+      background: white;
+      border-radius: 44px;
+      padding: 4px 22px;
+      box-shadow: 0 4px 0 #c2d6c2, inset 0 1px 3px #fff;
+      border: 1px solid #daeada;
+      display: flex;
+      align-items: center;
+    }
+
+    .input-wrapper i {
+      color: #6d9a6d;
+      margin-right: 14px;
+      font-size: 1.1rem;
+    }
+
+    .input-wrapper input,
+    .input-wrapper select,
+    .input-wrapper textarea {
+      border: none;
+      background: transparent;
+      padding: 16px 0;
+      font-family: 'Raleway', sans-serif;
+      font-size: 1rem;
+      width: 100%;
+      outline: none;
+      color: #2c402c;
+      resize: none;
+    }
+
+    .input-wrapper textarea {
+      min-height: 70px;
+      padding: 12px 0;
+    }
+
+    /* summary */
+    .booking-summary {
+      background: rgba(220, 235, 220, 0.5);
+      border-radius: 28px;
+      padding: 1.7rem;
+      margin: 22px 0 28px;
+      border: 1px dashed #9ebd9e;
+      backdrop-filter: blur(4px);
+    }
+
+    .summary-line {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 14px;
+      font-size: 1rem;
+    }
+
+    .summary-line.total {
+      font-weight: 700;
+      font-size: 1.5rem;
+      border-top: 1.5px solid #a2c0a2;
+      padding-top: 18px;
+      margin-top: 8px;
+      color: #2c452c;
+      font-family: 'Cormorant Garamond', serif;
+    }
+
+    .book-btn {
+      background: #7ba07b;
+      border: none;
+      border-radius: 60px;
+      padding: 18px 20px;
+      font-family: 'Raleway', sans-serif;
+      font-weight: 600;
+      font-size: 1.25rem;
+      color: #f4f9f4;
+      box-shadow: 0 10px 0 #507050, 0 14px 28px -8px #7a9a7a;
+      border: 1px solid #b8d6b8;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      cursor: pointer;
+      transition: 0.1s;
+      margin-top: auto;
+    }
+
+    .book-btn:active {
+      transform: translateY(4px);
+      box-shadow: 0 6px 0 #507050, 0 14px 28px -8px #7a9a7a;
+    }
+
+    .footer-note {
+      margin-top: 16px;
+      text-align: center;
+      color: #5f7e5f;
+      font-size: 0.85rem;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    @media (max-width: 900px) {
+      .booking-grid {
+        grid-template-columns: 1fr;
+      }
+      .spa-system {
+        padding: 1.5rem;
+      }
+    }
+  </style>
+</head>
+<body>
+<div class="spa-system">
+  <!-- Header -->
+  <div class="header">
+    <div class="brand">
+      <div class="brand-icon">
+        <i class="fas fa-leaf"></i>
+      </div>
+      <div class="brand-text">
+        <h1>Botanica Spa</h1>
+        <p><i class="fas fa-droplet"></i> organic · holistic · results-driven  <i class="fas fa-circle" style="font-size: 5px; margin:0 8px;"></i> est. 2014</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <div class="spa-tag"><i class="fas fa-seedling"></i> vegan + cruelty-free</div>
+      <div class="spa-tag"><i class="fas fa-spa"></i> aromatherapy included</div>
+    </div>
+  </div>
+
+  <!-- Grid -->
+  <div class="booking-grid">
+    <!-- LEFT -->
+    <div class="selection-panel">
+      <div class="section-title">
+        <i class="fas fa-hands-bubbles"></i>
+        <h2>select treatment</h2>
+      </div>
+
+      <div class="treatment-list" id="treatmentList"></div>
+
+      <!-- Therapist preference -->
+      <div class="therapist-section">
+        <div class="label-icon">
+          <i class="fas fa-user-tie"></i>
+          <span>preferred esthetician (optional)</span>
+        </div>
+        <div class="therapist-options" id="therapistOptions"></div>
+      </div>
+
+      <div class="date-section">
+        <div class="label-icon">
+          <i class="fas fa-calendar-spa"></i>
+          <span>appointment date</span>
+        </div>
+        <div class="date-selector">
+          <input type="date" id="datePicker" value="2026-05-05" min="2026-04-20">
+          <i class="fas fa-calendar-alt"></i>
+        </div>
+      </div>
+
+      <div>
+        <div class="label-icon">
+          <i class="fas fa-clock"></i>
+          <span>available times</span>
+        </div>
+        <div class="time-slots" id="timeSlotsContainer"></div>
+      </div>
+    </div>
+
+    <!-- RIGHT -->
+    <div class="booking-form-panel">
+      <div class="section-title" style="margin-bottom: 1.2rem;">
+        <i class="fas fa-user-astronaut"></i>
+        <h2>guest details</h2>
+      </div>
+
+      <div class="form-group">
+        <label><i class="fas fa-user"></i> full name</label>
+        <div class="input-wrapper">
+          <i class="fas fa-pen"></i>
+          <input type="text" id="fullName" placeholder="e.g., Sophia Reed" value="Emma Laurent">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label><i class="fas fa-envelope"></i> email</label>
+        <div class="input-wrapper">
+          <i class="fas fa-paper-plane"></i>
+          <input type="email" id="email" placeholder="emma@email.com" value="emma.l@email.com">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label><i class="fas fa-phone"></i> phone</label>
+        <div class="input-wrapper">
+          <i class="fas fa-mobile"></i>
+          <input type="tel" id="phone" placeholder="(503) 555-0123" value="(503) 555-0199">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label><i class="fas fa-cake-candles"></i> birth date (for skincare)</label>
+        <div class="input-wrapper">
+          <i class="fas fa-calendar"></i>
+          <input type="date" id="birthDate" value="1992-08-14">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label><i class="fas fa-allergies"></i> allergies / sensitivities</label>
+        <div class="input-wrapper">
+          <i class="fas fa-leaf"></i>
+          <input type="text" id="allergies" placeholder="e.g., nuts, lavender, none" value="none">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label><i class="fas fa-message"></i> special requests</label>
+        <div class="input-wrapper">
+          <i class="fas fa-feather"></i>
+          <textarea id="requests" placeholder="Focus areas, pressure preference...">extra attention to jaw tension</textarea>
+        </div>
+      </div>
+
+      <!-- Summary -->
+      <div class="booking-summary" id="summaryBox">
+        <div class="summary-line"><span><i class="fas fa-spa"></i> Treatment</span> <span id="summaryTreatment">—</span></div>
+        <div class="summary-line"><span><i class="fas fa-user-check"></i> Esthetician</span> <span id="summaryTherapist">any available</span></div>
+        <div class="summary-line"><span><i class="fas fa-calendar"></i> Date & time</span> <span id="summaryDateTime">—</span></div>
+        <div class="summary-line total"><span>total</span> <span id="summaryTotal">$0</span></div>
+      </div>
+
+      <button class="book-btn" id="bookButton"><i class="fas fa-calendar-check"></i> reserve your ritual</button>
+      <div class="footer-note">
+        <span><i class="fas fa-clock"></i> arrive 10min early</span>
+        <span><i class="fas fa-ban"></i> 24h cancellation</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function(){
+    "use strict";
+
+    // Treatments
+    const treatments = [
+      { id: 'facial', name: 'Signature Botanical Facial', duration: '75 min', price: 135, icon: 'fa-face-smile', desc: 'Cleanse, exfoliate, mask, massage' },
+      { id: 'micro', name: 'Microdermabrasion Glow', duration: '60 min', price: 155, icon: 'fa-sparkles', desc: 'Resurfacing + hydration' },
+      { id: 'massage', name: 'Aromatherapy Massage', duration: '90 min', price: 165, icon: 'fa-hands', desc: 'Custom blend · deep relaxation' },
+      { id: 'peel', name: 'Enzyme Renewal Peel', duration: '50 min', price: 125, icon: 'fa-droplet', desc: 'Brightening · no downtime' },
+      { id: 'package', name: 'The Botanica Ritual', duration: '2 hrs', price: 245, icon: 'fa-crown', desc: 'Facial + massage + hand/foot' }
+    ];
+
+    const therapists = [
+      { id: 'any', name: 'Any available', icon: 'fa-leaf' },
+      { id: 'jade', name: 'Jade (holistic facialist)', icon: 'fa-hand-holding-heart' },
+      { id: 'maya', name: 'Maya (massage & bodywork)', icon: 'fa-hands-praying' },
+      { id: 'elena', name: 'Elena (clinical esthetician)', icon: 'fa-microscope' }
+    ];
+
+    const timeSlots = ["9:30 AM", "11:00 AM", "1:00 PM", "2:30 PM", "4:00 PM", "5:30 PM"];
+
+    // State
+    let selectedTreatmentId = treatments[0].id;
+    let selectedTherapistId = 'any';
+    let selectedDate = "2026-05-05";
+    let selectedTime = timeSlots[2];
+
+    // DOM
+    const treatmentListEl = document.getElementById('treatmentList');
+    const therapistOptions = document.getElementById('therapistOptions');
+    const datePicker = document.getElementById('datePicker');
+    const timeSlotsContainer = document.getElementById('timeSlotsContainer');
+    const summaryTreatment = document.getElementById('summaryTreatment');
+    const summaryTherapist = document.getElementById('summaryTherapist');
+    const summaryDateTime = document.getElementById('summaryDateTime');
+    const summaryTotal = document.getElementById('summaryTotal');
+    const bookBtn = document.getElementById('bookButton');
+
+    function getSelectedTreatment() {
+      return treatments.find(t => t.id === selectedTreatmentId) || treatments[0];
+    }
+
+    function renderTreatments() {
+      let html = '';
+      treatments.forEach(t => {
+        const selectedClass = t.id === selectedTreatmentId ? 'selected' : '';
+        html += `
+          <div class="treatment-card ${selectedClass}" data-treatment-id="${t.id}">
+            <div class="treatment-info">
+              <div class="treatment-icon"><i class="fas ${t.icon}"></i></div>
+              <div class="treatment-details">
+                <h3>${t.name}</h3>
+                <span><i class="far fa-clock"></i> ${t.duration} · ${t.desc}</span>
+              </div>
+            </div>
+            <div class="treatment-price">$${t.price}</div>
+          </div>
+        `;
+      });
+      treatmentListEl.innerHTML = html;
+
+      document.querySelectorAll('.treatment-card').forEach(card => {
+        card.addEventListener('click', () => {
+          const id = card.dataset.treatmentId;
+          if (id) {
+            selectedTreatmentId = id;
+            renderTreatments();
+            updateSummary();
+          }
+        });
+      });
+    }
+
+    function renderTherapists() {
+      let html = '';
+      therapists.forEach(th => {
+        const selectedClass = th.id === selectedTherapistId ? 'selected' : '';
+        html += `
+          <div class="therapist-chip ${selectedClass}" data-therapist-id="${th.id}">
+            <i class="fas ${th.icon}"></i>
+            <span>${th.name}</span>
+          </div>
+        `;
+      });
+      therapistOptions.innerHTML = html;
+
+      document.querySelectorAll('.therapist-chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+          const id = chip.dataset.therapistId;
+          if (id) {
+            selectedTherapistId = id;
+            renderTherapists();
+            updateSummary();
+          }
+        });
+      });
+    }
+
+    function renderTimeSlots() {
+      let slotsHtml = '';
+      timeSlots.forEach(slot => {
+        const selectedClass = slot === selectedTime ? 'selected' : '';
+        slotsHtml += `<div class="time-slot ${selectedClass}" data-time="${slot}">${slot}</div>`;
+      });
+      timeSlotsContainer.innerHTML = slotsHtml;
+
+      document.querySelectorAll('.time-slot').forEach(slotEl => {
+        slotEl.addEventListener('click', () => {
+          const time = slotEl.dataset.time;
+          if (time) {
+            selectedTime = time;
+            renderTimeSlots();
+            updateSummary();
+          }
+        });
+      });
+    }
+
+    function updateSummary() {
+      const treatment = getSelectedTreatment();
+      summaryTreatment.textContent = `${treatment.name} · ${treatment.duration}`;
+      
+      const therapist = therapists.find(th => th.id === selectedTherapistId);
+      summaryTherapist.textContent = therapist ? therapist.name : 'Any available';
+      
+      const dateObj = selectedDate ? new Date(selectedDate + 'T12:00:00') : new Date();
+      const formattedDate = dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+      summaryDateTime.textContent = `${formattedDate} at ${selectedTime}`;
+      
+      summaryTotal.textContent = `$${treatment.price}`;
+    }
+
+    function initDatePicker() {
+      const today = new Date();
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, '0');
+      const dd = String(today.getDate()).padStart(2, '0');
+      datePicker.min = `${yyyy}-${mm}-${dd}`;
+      if (!datePicker.value) datePicker.value = selectedDate;
+      else selectedDate = datePicker.value;
+
+      datePicker.addEventListener('change', (e) => {
+        selectedDate = e.target.value;
+        updateSummary();
+      });
+    }
+
+    function handleBooking() {
+      const treatment = getSelectedTreatment();
+      const name = document.getElementById('fullName').value.trim() || 'Guest';
+      const email = document.getElementById('email').value.trim() || '—';
+      const phone = document.getElementById('phone').value.trim() || '—';
+      const birthDate = document.getElementById('birthDate').value || 'not provided';
+      const allergies = document.getElementById('allergies').value.trim() || 'none';
+      const requests = document.getElementById('requests').value.trim() || 'none';
+      const therapist = therapists.find(th => th.id === selectedTherapistId)?.name || 'Any available';
+      
+      const dateObj = new Date(selectedDate + 'T12:00:00');
+      const niceDate = dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+      
+      alert(`🌿 𝐀𝐏𝐏𝐎𝐈𝐍𝐓𝐌𝐄𝐍𝐓 𝐂𝐎𝐍𝐅𝐈𝐑𝐌𝐄𝐃 🌿\n\n${treatment.name} · $${treatment.price}\n👩‍🎨 Esthetician: ${therapist}\n📅 ${niceDate} at ${selectedTime}\n👤 ${name}\n📧 ${email}\n🌱 Allergies: ${allergies}\n\nPlease arrive 10 minutes early. We look forward to nurturing you.`);
+    }
+
+    function initialize() {
+      renderTreatments();
+      renderTherapists();
+      renderTimeSlots();
+      initDatePicker();
+      updateSummary();
+    }
+
+    bookBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      handleBooking();
+    });
+
+    initialize();
+  })();
+</script>
+</body>
+</html>

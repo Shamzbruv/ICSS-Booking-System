@@ -1,5 +1,5 @@
 /**
- * SaaS Provisioning Service
+ * Platform Provisioning Service
  *
  * Handles asynchronous, idempotent tenant creation and theme seeding.
  */

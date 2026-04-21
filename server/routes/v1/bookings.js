@@ -9,6 +9,7 @@ const { query }                 = require('../../db/connection');
 const { authenticate, requireRole } = require('../../middleware/auth');
 const { enforceBookingLimit }   = require('../../services/subscription');
 const { sendBookingConfirmation, sendBookingCancellationEmail } = require('../../services/email');
+const calendarSync              = require('../../services/calendarSync');
 
 const MAX_BOOKINGS_PER_DAY = 14;
 const MAX_DAYS_AHEAD       = 30;
@@ -100,6 +101,7 @@ router.post('/', enforceBookingLimit, async (req, res) => {
 
         // Fire confirmation email async
         sendBookingConfirmation(booking, req.tenant).catch(console.error);
+        calendarSync.syncBookingWithExternal(tenantId, booking).catch(console.error);
 
         res.status(201).json({ success: true, booking });
 
@@ -184,6 +186,7 @@ router.patch('/:id/status', authenticate, requireRole('staff', 'tenant_admin'), 
             [status, req.params.id, req.tenant.id]
         );
         if (result.rows.length === 0) return res.status(404).json({ error: 'Booking not found.' });
+        calendarSync.syncBookingWithExternal(req.tenant.id, result.rows[0]).catch(console.error);
         res.json({ success: true, booking: result.rows[0] });
     } catch (err) {
         res.status(500).json({ error: 'Failed to update booking status.' });
@@ -210,9 +213,11 @@ router.post('/:id/cancel', authenticate, requireRole('staff', 'tenant_admin'), a
             `UPDATE bookings SET status = 'cancelled' WHERE id = $1`,
             [booking.id]
         );
+        booking.status = 'cancelled';
 
         // Send cancellation email async
         sendBookingCancellationEmail(booking, reason || null, req.tenant).catch(console.error);
+        calendarSync.syncBookingWithExternal(req.tenant.id, booking).catch(console.error);
 
         res.json({ success: true });
     } catch (err) {

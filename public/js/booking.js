@@ -52,7 +52,7 @@ function handleModalSelection(type) {
         const modal = document.getElementById('greetingModal');
         if (modal) modal.classList.add('hidden');
     } else if (type === 'business') {
-        window.location.href = '/saas-onboarding.html';
+        window.location.href = '/platform-setup.html';
     }
 }
 

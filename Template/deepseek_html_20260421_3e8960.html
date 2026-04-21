@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lumina Lens · Photography Booking</title>
+  <!-- Cormorant & Montserrat – elegant, artistic, editorial -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: #f5f0eb;
+      background-image: linear-gradient(135deg, #f9f4ef 0%, #ede5db 100%);
+      min-height: 100vh;
+      font-family: 'Montserrat', sans-serif;
+      padding: 2rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #2c2420;
+    }
+
+    .photo-system {
+      max-width: 1350px;
+      width: 100%;
+      background: rgba(255, 255, 255, 0.7);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-radius: 40px;
+      box-shadow: 0 25px 50px -12px rgba(40, 30, 20, 0.15),
+                  0 4px 18px rgba(0, 0, 0, 0.05),
+                  inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+      padding: 2.2rem 2.5rem;
+      border: 1px solid #e8ddd2;
+    }
+
+    /* Header – refined, lens-inspired */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 2.5rem;
+      flex-wrap: wrap;
+      gap: 20px;
+      border-bottom: 1px solid #d9cdc0;
+      padding-bottom: 1.5rem;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+    }
+
+    .brand-icon {
+      background: #d4c5b6;
+      width: 60px;
+      height: 60px;
+      border-radius: 50% 20% 50% 20%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #3e3229;
+      font-size: 28px;
+      box-shadow: 0 8px 0 #b8a898, 0 12px 24px -10px #aa9b8c;
+      border: 1px solid #e5d6c8;
+    }
+
+    .brand-text h1 {
+      font-family: 'Cormorant Garamond', serif;
+      font-weight: 600;
+      font-size: 2.4rem;
+      letter-spacing: -0.5px;
+      color: #2c221c;
+      line-height: 1;
+    }
+
+    .brand-text p {
+      font-size: 0.9rem;
+      font-weight: 400;
+      color: #6b5d52;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 8px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 15px;
+    }
+
+    .tag {
+      background: rgba(220, 200, 180, 0.3);
+      backdrop-filter: blur(4px);
+      padding: 10px 22px;
+      border-radius: 50px;
+      font-weight: 500;
+      font-size: 0.85rem;
+      color: #463b32;
+      box-shadow: inset 0 0 0 1px #ddd0c2;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border: 1px solid #e3d6ca;
+    }
+
+    .tag i {
+      color: #8b735b;
+    }
+
+    /* grid */
+    .booking-grid {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 2rem;
+    }
+
+    /* Left panel – session selection */
+    .selection-panel {
+      background: rgba(250, 245, 240, 0.7);
+      backdrop-filter: blur(4px);
+      border-radius: 32px;
+      padding: 1.8rem 1.8rem 2rem;
+      box-shadow: inset 0 1px 4px #fff8f2, 0 10px 20px -12px #c4b6a8;
+      border: 1px solid #e7dbd0;
+    }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 2rem;
+    }
+
+    .section-title i {
+      background: #cfbeae;
+      padding: 10px;
+      border-radius: 20px;
+      color: #3d3026;
+      font-size: 1.5rem;
+      width: 48px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 5px 0 #ad9d8d;
+    }
+
+    .section-title h2 {
+      font-family: 'Cormorant Garamond', serif;
+      font-weight: 600;
+      font-size: 2rem;
+      color: #2f251f;
+    }
+
+    /* session cards */
+    .session-list {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      margin-bottom: 2.5rem;
+    }
+
+    .session-card {
+      background: white;
+      border-radius: 28px;
+      padding: 1.2rem 1.6rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 5px 0 #cfc0b2, 0 10px 20px -10px #b8a99a;
+      border: 1px solid #e1d3c6;
+      transition: all 0.2s;
+      cursor: pointer;
+    }
+
+    .session-card.selected {
+      background: #efe6dd;
+      box-shadow: 0 5px 0 #a89482, 0 12px 24px -8px #a3907e;
+      border: 1.5px solid #b7a392;
+    }
+
+    .session-info {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+    }
+
+    .session-icon {
+      background: #ddd0c2;
+      width: 56px;
+      height: 56px;
+      border-radius: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #4d3e32;
+      font-size: 1.9rem;
+    }
+
+    .session-details h3 {
+      font-weight: 600;
+      font-size: 1.25rem;
+      color: #332b24;
+      font-family: 'Cormorant Garamond', serif;
+      letter-spacing: 0.3px;
+    }
+
+    .session-details span {
+      font-size: 0.85rem;
+      color: #776b5f;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .session-price {
+      font-weight: 600;
+      background: #f3ede7;
+      padding: 8px 20px;
+      border-radius: 40px;
+      color: #594a3c;
+      font-size: 1.3rem;
+      font-family: 'Cormorant Garamond', serif;
+    }
+
+    /* date/time */
+    .date-section {
+      margin-bottom: 28px;
+    }
+
+    .label-icon {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+      font-weight: 500;
+      color: #52473d;
+    }
+
+    .date-selector {
+      background: white;
+      border-radius: 24px;
+      padding: 8px 18px 8px 22px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 5px 0 #cfc0b2, inset 0 1px 3px #fffaf5;
+      border: 1px solid #ddd0c2;
+    }
+
+    .date-selector input {
+      border: none;
+      background: transparent;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 1rem;
+      padding: 15px 0;
+      font-weight: 500;
+      color: #3e3127;
+      outline: none;
+      width: 100%;
+    }
+
+    .date-selector i {
+      color: #7f6e5d;
+      font-size: 1.4rem;
+    }
+
+    .time-slots {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin: 20px 0 10px;
+    }
+
+    .time-slot {
+      background: white;
+      border-radius: 40px;
+      padding: 12px 5px;
+      text-align: center;
+      font-weight: 500;
+      color: #4f4136;
+      box-shadow: 0 4px 0 #cfc0b2, 0 6px 12px -6px #b6a797;
+      border: 1px solid #ddd0c2;
+      cursor: pointer;
+      transition: 0.1s;
+    }
+
+    .time-slot.selected {
+      background: #9e8b7a;
+      box-shadow: 0 4px 0 #6e5d4e;
+      color: white;
+      border-color: #8b7766;
+    }
+
+    /* Right panel – client form */
+    .booking-form-panel {
+      background: rgba(248, 242, 236, 0.8);
+      backdrop-filter: blur(4px);
+      border-radius: 32px;
+      padding: 1.8rem 2rem 2rem;
+      box-shadow: inset 0 1px 4px #fffaf5, 0 12px 20px -12px #b8a99a;
+      border: 1px solid #e2d5c8;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .form-group {
+      margin-bottom: 1.6rem;
+    }
+
+    .form-group label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 500;
+      margin-bottom: 8px;
+      color: #4e4034;
+    }
+
+    .input-wrapper {
+      background: white;
+      border-radius: 40px;
+      padding: 4px 20px;
+      box-shadow: 0 4px 0 #cfc0b2, inset 0 1px 3px #fff;
+      border: 1px solid #ded1c4;
+      display: flex;
+      align-items: center;
+    }
+
+    .input-wrapper i {
+      color: #8b7563;
+      margin-right: 14px;
+      font-size: 1.1rem;
+    }
+
+    .input-wrapper input,
+    .input-wrapper select,
+    .input-wrapper textarea {
+      border: none;
+      background: transparent;
+      padding: 15px 0;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 1rem;
+      width: 100%;
+      outline: none;
+      color: #30261f;
+      resize: none;
+    }
+
+    .input-wrapper textarea {
+      min-height: 70px;
+      padding: 12px 0;
+    }
+
+    /* summary card */
+    .booking-summary {
+      background: rgba(235, 225, 215, 0.7);
+      border-radius: 26px;
+      padding: 1.6rem;
+      margin: 20px 0 28px;
+      border: 1px dashed #b3a392;
+      backdrop-filter: blur(4px);
+    }
+
+    .summary-line {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 14px;
+      font-size: 1rem;
+    }
+
+    .summary-line.total {
+      font-weight: 700;
+      font-size: 1.5rem;
+      border-top: 1.5px solid #b7a594;
+      padding-top: 16px;
+      margin-top: 8px;
+      color: #3b2e24;
+      font-family: 'Cormorant Garamond', serif;
+    }
+
+    .book-btn {
+      background: #7f6a58;
+      border: none;
+      border-radius: 60px;
+      padding: 18px 20px;
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 500;
+      font-size: 1.25rem;
+      color: #fcf7f2;
+      box-shadow: 0 10px 0 #5a4a3c, 0 12px 25px -6px #aa9a8a;
+      border: 1px solid #bcab9a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      cursor: pointer;
+      transition: 0.1s;
+      margin-top: auto;
+      letter-spacing: 1px;
+    }
+
+    .book-btn:active {
+      transform: translateY(4px);
+      box-shadow: 0 6px 0 #5a4a3c, 0 12px 20px -6px #aa9a8a;
+    }
+
+    .footer-note {
+      margin-top: 16px;
+      text-align: center;
+      color: #75675a;
+      font-size: 0.8rem;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    @media (max-width: 850px) {
+      .booking-grid {
+        grid-template-columns: 1fr;
+      }
+      .photo-system {
+        padding: 1.5rem;
+      }
+    }
+
+    /* subtle grain */
+    .grain {
+      background-image: url('data:image/svg+xml;utf8,<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><filter id="noise"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="1"/></filter><rect width="100" height="100" filter="url(%23noise)" opacity="0.04"/></svg>');
+    }
+  </style>
+</head>
+<body>
+<div class="photo-system grain">
+  <!-- Header -->
+  <div class="header">
+    <div class="brand">
+      <div class="brand-icon">
+        <i class="fas fa-camera-retro"></i>
+      </div>
+      <div class="brand-text">
+        <h1>Lumina Lens</h1>
+        <p><i class="fas fa-aperture"></i> fine art photography · est. 2012  <i class="fas fa-circle" style="font-size: 6px; margin:0 8px;"></i> PORTLAND · SEATTLE</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <div class="tag"><i class="fas fa-star"></i> 200+ weddings</div>
+      <div class="tag"><i class="fas fa-camera"></i> editorial & lifestyle</div>
+    </div>
+  </div>
+
+  <!-- Booking Grid -->
+  <div class="booking-grid">
+    <!-- LEFT -->
+    <div class="selection-panel">
+      <div class="section-title">
+        <i class="fas fa-images"></i>
+        <h2>select your session</h2>
+      </div>
+
+      <div class="session-list" id="sessionList"></div>
+
+      <div class="date-section">
+        <div class="label-icon">
+          <i class="fas fa-calendar-image"></i>
+          <span>session date</span>
+        </div>
+        <div class="date-selector">
+          <input type="date" id="datePicker" value="2026-05-10" min="2026-04-20">
+          <i class="fas fa-calendar-alt"></i>
+        </div>
+      </div>
+
+      <div>
+        <div class="label-icon">
+          <i class="fas fa-sun"></i>
+          <span>golden hour times</span>
+        </div>
+        <div class="time-slots" id="timeSlotsContainer"></div>
+      </div>
+      <div style="margin-top: 18px; font-size: 0.85rem; color: #6f5f50;">
+        <i class="fas fa-location-dot" style="margin-right: 8px;"></i> location details after booking · travel included up to 30mi
+      </div>
+    </div>
+
+    <!-- RIGHT -->
+    <div class="booking-form-panel">
+      <div class="section-title" style="margin-bottom: 1.2rem;">
+        <i class="fas fa-user-pen"></i>
+        <h2>client details</h2>
+      </div>
+
+      <div class="form-group">
+        <label><i class="fas fa-user"></i> full name</label>
+        <div class="input-wrapper">
+          <i class="fas fa-signature"></i>
+          <input type="text" id="fullName" placeholder="e.g., Emma & James" value="Olivia Carter">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label><i class="fas fa-envelope"></i> email</label>
+        <div class="input-wrapper">
+          <i class="fas fa-paper-plane"></i>
+          <input type="email" id="email" placeholder="hello@olivia.com" value="olivia.c@email.com">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label><i class="fas fa-phone"></i> phone</label>
+        <div class="input-wrapper">
+          <i class="fas fa-mobile"></i>
+          <input type="tel" id="phone" placeholder="(503) 555-0123" value="(503) 555-0188">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label><i class="fas fa-palette"></i> session vibe</label>
+        <div class="input-wrapper">
+          <i class="fas fa-leaf"></i>
+          <select id="vibeSelect">
+            <option value="natural">🌿 Natural light / candid</option>
+            <option value="editorial" selected>📸 Editorial / fashion</option>
+            <option value="lifestyle">☕ Lifestyle / cozy</option>
+            <option value="fineart">🎞️ Fine art / film</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label><i class="fas fa-message"></i> special requests</label>
+        <div class="input-wrapper">
+          <i class="fas fa-feather"></i>
+          <textarea id="specialRequests" placeholder="Pinterest board link, must-have shots...">couple portraits + candid moments</textarea>
+        </div>
+      </div>
+
+      <!-- Summary -->
+      <div class="booking-summary" id="summaryBox">
+        <div class="summary-line"><span><i class="fas fa-camera"></i> Session</span> <span id="summarySession">—</span></div>
+        <div class="summary-line"><span><i class="fas fa-clock"></i> Date & time</span> <span id="summaryDateTime">—</span></div>
+        <div class="summary-line"><span><i class="fas fa-paintbrush"></i> Vibe</span> <span id="summaryVibe">Editorial</span></div>
+        <div class="summary-line total"><span>session investment</span> <span id="summaryTotal">$0</span></div>
+      </div>
+
+      <button class="book-btn" id="bookButton"><i class="fas fa-camera"></i> reserve your date</button>
+      <div class="footer-note">
+        <span><i class="fas fa-lock"></i> 30% retainer</span>
+        <span><i class="fas fa-cloud-sun"></i> reschedule weather</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function(){
+    "use strict";
+
+    // Photography session packages
+    const sessions = [
+      { id: 'portrait', name: 'Portrait Session', duration: '60 min', price: 350, description: 'individual / headshots / creative', icon: 'fa-user' },
+      { id: 'couple', name: 'Couple / Engagement', duration: '90 min', price: 550, description: 'love story · 2 outfits', icon: 'fa-heart' },
+      { id: 'family', name: 'Family & Maternity', duration: '75 min', price: 475, description: 'up to 5 people', icon: 'fa-people-group' },
+      { id: 'brand', name: 'Brand & Editorial', duration: '2 hours', price: 750, description: 'commercial use · styling guide', icon: 'fa-bolt' }
+    ];
+
+    const timeSlots = ["4:30 PM", "5:45 PM", "6:30 PM", "7:15 PM"];  // golden hour vibe
+
+    // state
+    let selectedSessionId = sessions[0].id;
+    let selectedDate = "2026-05-10";
+    let selectedTime = timeSlots[1]; // 5:45 PM
+
+    // DOM
+    const sessionListEl = document.getElementById('sessionList');
+    const datePicker = document.getElementById('datePicker');
+    const timeSlotsContainer = document.getElementById('timeSlotsContainer');
+    const summarySession = document.getElementById('summarySession');
+    const summaryDateTime = document.getElementById('summaryDateTime');
+    const summaryTotal = document.getElementById('summaryTotal');
+    const summaryVibe = document.getElementById('summaryVibe');
+    const vibeSelect = document.getElementById('vibeSelect');
+    const fullNameInput = document.getElementById('fullName');
+    const bookBtn = document.getElementById('bookButton');
+
+    function getSelectedSession() {
+      return sessions.find(s => s.id === selectedSessionId) || sessions[0];
+    }
+
+    function renderSessions() {
+      let html = '';
+      sessions.forEach(session => {
+        const selectedClass = session.id === selectedSessionId ? 'selected' : '';
+        html += `
+          <div class="session-card ${selectedClass}" data-session-id="${session.id}">
+            <div class="session-info">
+              <div class="session-icon"><i class="fas ${session.icon}"></i></div>
+              <div class="session-details">
+                <h3>${session.name}</h3>
+                <span><i class="far fa-clock"></i> ${session.duration} · ${session.description}</span>
+              </div>
+            </div>
+            <div class="session-price">$${session.price}</div>
+          </div>
+        `;
+      });
+      sessionListEl.innerHTML = html;
+
+      document.querySelectorAll('.session-card').forEach(card => {
+        card.addEventListener('click', () => {
+          const id = card.dataset.sessionId;
+          if (id) {
+            selectedSessionId = id;
+            renderSessions();
+            updateSummary();
+          }
+        });
+      });
+    }
+
+    function renderTimeSlots() {
+      let slotsHtml = '';
+      timeSlots.forEach(slot => {
+        const selectedClass = slot === selectedTime ? 'selected' : '';
+        slotsHtml += `<div class="time-slot ${selectedClass}" data-time="${slot}">${slot}</div>`;
+      });
+      timeSlotsContainer.innerHTML = slotsHtml;
+
+      document.querySelectorAll('.time-slot').forEach(slotEl => {
+        slotEl.addEventListener('click', () => {
+          const time = slotEl.dataset.time;
+          if (time) {
+            selectedTime = time;
+            renderTimeSlots();
+            updateSummary();
+          }
+        });
+      });
+    }
+
+    function updateSummary() {
+      const session = getSelectedSession();
+      summarySession.textContent = `${session.name} · ${session.duration}`;
+      
+      const dateObj = selectedDate ? new Date(selectedDate + 'T12:00:00') : new Date();
+      const formattedDate = dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+      summaryDateTime.textContent = `${formattedDate} at ${selectedTime}`;
+      
+      const vibeText = vibeSelect.options[vibeSelect.selectedIndex]?.text || vibeSelect.value;
+      summaryVibe.textContent = vibeText;
+      
+      summaryTotal.textContent = `$${session.price}`;
+    }
+
+    function initDatePicker() {
+      const today = new Date();
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, '0');
+      const dd = String(today.getDate()).padStart(2, '0');
+      datePicker.min = `${yyyy}-${mm}-${dd}`;
+      if (!datePicker.value) datePicker.value = selectedDate;
+      else selectedDate = datePicker.value;
+
+      datePicker.addEventListener('change', (e) => {
+        selectedDate = e.target.value;
+        updateSummary();
+      });
+    }
+
+    function handleBooking() {
+      const session = getSelectedSession();
+      const name = fullNameInput.value.trim() || 'Client';
+      const email = document.getElementById('email').value.trim() || '—';
+      const phone = document.getElementById('phone').value.trim() || '—';
+      const vibe = vibeSelect.options[vibeSelect.selectedIndex]?.text || vibeSelect.value;
+      const requests = document.getElementById('specialRequests').value.trim() || 'none';
+      const dateObj = new Date(selectedDate + 'T12:00:00');
+      const niceDate = dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+      
+      alert(`📷 𝐒𝐄𝐒𝐒𝐈𝐎𝐍 𝐑𝐄𝐒𝐄𝐑𝐕𝐄𝐃 📷\n\n${session.name} · $${session.price}\n✨ ${niceDate} at ${selectedTime}\n👤 ${name}\n🎨 Vibe: ${vibe}\n📋 Notes: ${requests}\n\nA contract & invoice will follow within 24h. Thank you — let's create magic! ✨`);
+    }
+
+    function initialize() {
+      renderSessions();
+      renderTimeSlots();
+      initDatePicker();
+      updateSummary();
+
+      vibeSelect.addEventListener('change', updateSummary);
+    }
+
+    bookBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      handleBooking();
+    });
+
+    initialize();
+  })();
+</script>
+</body>
+</html>

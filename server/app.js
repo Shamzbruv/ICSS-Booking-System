@@ -18,6 +18,8 @@ const adminRoutes       = require('./routes/v1/admin');
 const tenantRoutes      = require('./routes/v1/tenants');
 const publicRoutes      = require('./routes/v1/public');
 const pricingRoutes     = require('./routes/v1/pricing');
+const calendarRoutes    = require('./routes/v1/calendar');
+const themesRoutes      = require('./routes/v1/themes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -62,6 +64,8 @@ app.use('/api/v1/admin',        adminRoutes);
 app.use('/api/v1/tenants',      tenantRoutes);
 app.use('/api/v1/public',       publicRoutes);
 app.use('/api/v1/pricing',      pricingRoutes);
+app.use('/api/v1/calendar',     calendarRoutes);
+app.use('/api/v1/themes',       themesRoutes);
 
 // ─── Health Check ─────────────────────────────────────────────────────────────
 app.get('/health', (req, res) => {
@@ -89,6 +93,8 @@ app.use((err, req, res, next) => {
 });
 
 // ─── Boot ─────────────────────────────────────────────────────────────────────
+const { startCronJobs } = require('./services/cron');
+
 async function start() {
     try {
         await initDatabase();
@@ -98,6 +104,7 @@ async function start() {
             console.log(`   Admin:   http://localhost:${PORT}/admin`);
             console.log(`   API:     http://localhost:${PORT}/api/v1/`);
             console.log(`   Mode:    ${process.env.NODE_ENV || 'development'}\n`);
+            startCronJobs();
         });
     } catch (err) {
         console.error('❌ Failed to start server:', err.message);

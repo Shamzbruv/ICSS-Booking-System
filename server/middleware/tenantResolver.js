@@ -101,6 +101,15 @@ async function tenantResolver(req, res, next) {
         return next();
     }
 
+    // Skip calendar callbacks, webhooks, and private feeds
+    if (req.path.startsWith('/calendar/oauth2callback') || 
+        req.path.startsWith('/calendar/webhook') || 
+        req.path.startsWith('/calendar/feed') ||
+        req.path.startsWith('/payments/stripe/webhook') ||
+        req.path.startsWith('/payments/paypal/webhook')) {
+        return next();
+    }
+
     try {
         let tenant = null;
 

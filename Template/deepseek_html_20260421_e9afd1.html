@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Serenity Health · Wellness & Medical Booking</title>
+  <!-- Inter & Merriweather – clean, professional, trustworthy -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300..600&family=Merriweather:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: #eef5f7;
+      background-image: radial-gradient(circle at 10% 20%, rgba(200, 230, 240, 0.4) 0%, transparent 30%),
+                        radial-gradient(circle at 90% 70%, rgba(180, 215, 200, 0.3) 0%, transparent 40%);
+      min-height: 100vh;
+      font-family: 'Inter', sans-serif;
+      padding: 2rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #1e2f3a;
+    }
+
+    .wellness-system {
+      max-width: 1350px;
+      width: 100%;
+      background: rgba(255, 255, 255, 0.9);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-radius: 36px;
+      box-shadow: 0 20px 40px -10px rgba(30, 60, 70, 0.15),
+                  0 6px 12px rgba(0, 30, 40, 0.05),
+                  inset 0 0 0 1px rgba(255, 255, 255, 0.6);
+      padding: 2.2rem 2.5rem;
+      border: 1px solid #d5e9ee;
+    }
+
+    /* Header — serene & medical */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 2.2rem;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .brand-icon {
+      background: #c3dde4;
+      width: 58px;
+      height: 58px;
+      border-radius: 24px 8px 24px 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #1e5b6e;
+      font-size: 30px;
+      box-shadow: 0 4px 0 #a0bcc7, 0 12px 18px -8px #b6d2dc;
+    }
+
+    .brand-text h1 {
+      font-family: 'Merriweather', serif;
+      font-weight: 500;
+      font-size: 2rem;
+      letter-spacing: -0.3px;
+      color: #19424e;
+      line-height: 1.2;
+    }
+
+    .brand-text p {
+      font-size: 0.9rem;
+      font-weight: 400;
+      color: #3f6f7f;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 6px;
+    }
+
+    .badge-med {
+      background: #dff0f5;
+      padding: 8px 18px;
+      border-radius: 50px;
+      font-weight: 500;
+      font-size: 0.9rem;
+      color: #1d5a69;
+      box-shadow: inset 0 0 0 1px #b5d7e3;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .badge-med i {
+      color: #2a7f8c;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 12px;
+    }
+
+    /* grid layout */
+    .booking-grid {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 2rem;
+    }
+
+    /* Left panel */
+    .selection-panel {
+      background: #f9fdfe;
+      border-radius: 30px;
+      padding: 1.8rem 1.8rem 2rem;
+      box-shadow: inset 0 1px 4px #ffffff, 0 10px 18px -12px #9bbec9;
+      border: 1px solid #cee3ea;
+    }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 1.8rem;
+    }
+
+    .section-title i {
+      background: #d7ecf3;
+      padding: 10px;
+      border-radius: 18px;
+      color: #1c6b7c;
+      font-size: 1.4rem;
+      width: 46px;
+      height: 46px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 0 #aac6d1;
+    }
+
+    .section-title h2 {
+      font-family: 'Merriweather', serif;
+      font-weight: 500;
+      font-size: 1.7rem;
+      color: #153e4b;
+    }
+
+    /* visit type cards */
+    .visit-list {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      margin-bottom: 2.2rem;
+    }
+
+    .visit-card {
+      background: white;
+      border-radius: 24px;
+      padding: 1rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 4px 0 #c7dee6, 0 8px 16px -8px #a2c2cf;
+      border: 1px solid #cde1e9;
+      transition: all 0.15s;
+      cursor: pointer;
+    }
+
+    .visit-card.selected {
+      background: #e2f2f8;
+      box-shadow: 0 4px 0 #7faebb, 0 8px 20px -6px #8fb7c5;
+      border: 1.5px solid #5497aa;
+    }
+
+    .visit-info {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .visit-icon {
+      background: #d6ecf3;
+      width: 54px;
+      height: 54px;
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #196c7e;
+      font-size: 1.8rem;
+    }
+
+    .visit-details h3 {
+      font-weight: 600;
+      font-size: 1.2rem;
+      color: #173f4b;
+    }
+
+    .visit-details span {
+      font-size: 0.85rem;
+      color: #3d7787;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .visit-duration {
+      font-weight: 500;
+      background: #eaf3f7;
+      padding: 8px 16px;
+      border-radius: 40px;
+      color: #135f6e;
+      font-size: 1rem;
+    }
+
+    /* date & time */
+    .date-section {
+      margin-bottom: 28px;
+    }
+
+    .label-icon {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+      font-weight: 500;
+      color: #1f5663;
+    }
+
+    .date-selector {
+      background: white;
+      border-radius: 24px;
+      padding: 8px 18px 8px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 4px 0 #c1dae3, inset 0 1px 3px #f4fbfd;
+      border: 1px solid #bed8e2;
+    }
+
+    .date-selector input {
+      border: none;
+      background: transparent;
+      font-family: 'Inter', sans-serif;
+      font-size: 1rem;
+      padding: 14px 0;
+      font-weight: 500;
+      color: #173e4a;
+      outline: none;
+      width: 100%;
+    }
+
+    .date-selector i {
+      color: #2c7e8f;
+      font-size: 1.4rem;
+    }
+
+    .time-slots {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin: 20px 0 10px;
+    }
+
+    .time-slot {
+      background: white;
+      border-radius: 40px;
+      padding: 12px 5px;
+      text-align: center;
+      font-weight: 500;
+      color: #1d4958;
+      box-shadow: 0 4px 0 #bdd6e1, 0 6px 12px -6px #9ebfcc;
+      border: 1px solid #d3e6ee;
+      cursor: pointer;
+      transition: 0.1s;
+    }
+
+    .time-slot.selected {
+      background: #398092;
+      box-shadow: 0 4px 0 #1f5767;
+      color: white;
+      border-color: #317586;
+    }
+
+    .time-slot:hover {
+      background: #d2eaf3;
+    }
+
+    /* Right panel — form */
+    .booking-form-panel {
+      background: #f5fbfd;
+      border-radius: 30px;
+      padding: 1.8rem 2rem 2rem;
+      box-shadow: inset 0 1px 4px #fff, 0 12px 20px -12px #9bbcc9;
+      border: 1px solid #cae0e8;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .form-group {
+      margin-bottom: 1.5rem;
+    }
+
+    .form-group label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 500;
+      margin-bottom: 8px;
+      color: #1a4d5b;
+    }
+
+    .input-wrapper {
+      background: white;
+      border-radius: 40px;
+      padding: 4px 20px;
+      box-shadow: 0 4px 0 #c1dae3, inset 0 1px 3px #fff;
+      border: 1px solid #d2e3ea;
+      display: flex;
+      align-items: center;
+    }
+
+    .input-wrapper i {
+      color: #367f91;
+      margin-right: 12px;
+      font-size: 1.1rem;
+    }
+
+    .input-wrapper input,
+    .input-wrapper select,
+    .input-wrapper textarea {
+      border: none;
+      background: transparent;
+      padding: 14px 0;
+      font-family: 'Inter', sans-serif;
+      font-size: 1rem;
+      width: 100%;
+      outline: none;
+      color: #153e48;
+      resize: none;
+    }
+
+    .input-wrapper textarea {
+      min-height: 60px;
+      padding: 10px 0;
+    }
+
+    .input-wrapper select {
+      cursor: pointer;
+    }
+
+    /* summary card */
+    .booking-summary {
+      background: #e6f3f8e0;
+      border-radius: 24px;
+      padding: 1.5rem;
+      margin: 20px 0 24px;
+      border: 1px dashed #619aab;
+      backdrop-filter: blur(4px);
+    }
+
+    .summary-line {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 14px;
+      font-size: 1rem;
+    }
+
+    .summary-line.total {
+      font-weight: 700;
+      font-size: 1.3rem;
+      border-top: 1.5px solid #8bb7c7;
+      padding-top: 14px;
+      margin-top: 6px;
+      color: #124453;
+    }
+
+    .book-btn {
+      background: #2f7f8f;
+      border: none;
+      border-radius: 60px;
+      padding: 18px 20px;
+      font-family: 'Inter', sans-serif;
+      font-weight: 600;
+      font-size: 1.25rem;
+      color: white;
+      box-shadow: 0 10px 0 #195a68, 0 12px 25px -6px #6da2b3;
+      border: 1px solid #9ecbd9;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      cursor: pointer;
+      transition: 0.1s;
+      margin-top: auto;
+    }
+
+    .book-btn:active {
+      transform: translateY(4px);
+      box-shadow: 0 6px 0 #195a68, 0 12px 20px -6px #6da2b3;
+    }
+
+    .book-btn i {
+      font-size: 1.5rem;
+    }
+
+    .footer-note {
+      margin-top: 15px;
+      text-align: center;
+      color: #3f7888;
+      font-size: 0.8rem;
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+    }
+
+    @media (max-width: 850px) {
+      .booking-grid {
+        grid-template-columns: 1fr;
+      }
+      body {
+        padding: 1rem;
+      }
+      .wellness-system {
+        padding: 1.5rem;
+      }
+    }
+
+    /* calm pattern */
+    .calm-pattern {
+      background-image: url('data:image/svg+xml;utf8,<svg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"><circle cx="8" cy="8" r="2.5" fill="%23b3d9e8" opacity="0.2"/><circle cx="48" cy="48" r="2" fill="%239bc1d1" opacity="0.15"/></svg>');
+    }
+  </style>
+</head>
+<body>
+<div class="wellness-system calm-pattern">
+  <!-- Header -->
+  <div class="header">
+    <div class="brand">
+      <div class="brand-icon">
+        <i class="fas fa-heart-pulse"></i>
+      </div>
+      <div class="brand-text">
+        <h1>Serenity Health</h1>
+        <p><i class="fas fa-location-dot"></i> 451 Wellness Way, Suite 2B  ·  <i class="fas fa-star" style="margin:0 6px"></i> 4.9 (380+ reviews)</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <div class="badge-med"><i class="fas fa-user-doctor"></i> Dr. Patel · Dr. Chen · NP Rivera</div>
+      <div class="badge-med"><i class="fas fa-shield-heart"></i> HIPAA secure</div>
+    </div>
+  </div>
+
+  <!-- Booking Grid -->
+  <div class="booking-grid">
+    <!-- LEFT: Visit type, date, time -->
+    <div class="selection-panel">
+      <div class="section-title">
+        <i class="fas fa-notes-medical"></i>
+        <h2>visit reason</h2>
+      </div>
+
+      <!-- visit types list -->
+      <div class="visit-list" id="visitTypeList"></div>
+
+      <div class="date-section">
+        <div class="label-icon">
+          <i class="fas fa-calendar-check"></i>
+          <span>preferred date</span>
+        </div>
+        <div class="date-selector">
+          <input type="date" id="datePicker" value="2026-04-23" min="2026-04-20">
+          <i class="fas fa-calendar-alt"></i>
+        </div>
+      </div>
+
+      <div>
+        <div class="label-icon">
+          <i class="fas fa-clock"></i>
+          <span>available times</span>
+        </div>
+        <div class="time-slots" id="timeSlotsContainer"></div>
+      </div>
+      <div style="margin-top: 16px; font-size: 0.85rem; color: #2f6f7e;">
+        <i class="fas fa-circle-check" style="margin-right: 8px;"></i> most insurance accepted · self-pay options
+      </div>
+    </div>
+
+    <!-- RIGHT: Patient form & summary -->
+    <div class="booking-form-panel">
+      <div class="section-title" style="margin-bottom: 1.2rem;">
+        <i class="fas fa-id-card"></i>
+        <h2>patient details</h2>
+      </div>
+
+      <div class="form-group">
+        <label><i class="fas fa-user"></i> full name</label>
+        <div class="input-wrapper">
+          <i class="fas fa-user-pen"></i>
+          <input type="text" id="fullName" placeholder="e.g., James Wilson" value="Sarah Chen">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label><i class="fas fa-envelope"></i> email</label>
+        <div class="input-wrapper">
+          <i class="fas fa-at"></i>
+          <input type="email" id="email" placeholder="sarah.chen@email.com" value="sarah.chen@email.com">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label><i class="fas fa-phone"></i> mobile</label>
+        <div class="input-wrapper">
+          <i class="fas fa-mobile-screen"></i>
+          <input type="tel" id="phone" placeholder="(555) 123-4567" value="(415) 555-0172">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label><i class="fas fa-user-md"></i> preferred practitioner</label>
+        <div class="input-wrapper">
+          <i class="fas fa-stethoscope"></i>
+          <select id="practitionerSelect">
+            <option value="Dr. Patel">👩‍⚕️ Dr. Anika Patel (internal medicine)</option>
+            <option value="Dr. Chen">👨‍⚕️ Dr. David Chen (wellness & longevity)</option>
+            <option value="NP Rivera" selected>💚 NP Elena Rivera (family health)</option>
+            <option value="first">⭐ First available</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label><i class="fas fa-pencil"></i> notes / concerns (optional)</label>
+        <div class="input-wrapper">
+          <i class="fas fa-message"></i>
+          <textarea id="visitNotes" placeholder="e.g., annual physical, fatigue, follow-up...">wellness check & blood work</textarea>
+        </div>
+      </div>
+
+      <!-- Summary -->
+      <div class="booking-summary" id="summaryBox">
+        <div class="summary-line"><span><i class="fas fa-file-medical"></i> Visit type</span> <span id="summaryVisit">—</span></div>
+        <div class="summary-line"><span><i class="fas fa-calendar"></i> Date & time</span> <span id="summaryDateTime">—</span></div>
+        <div class="summary-line"><span><i class="fas fa-user-doctor"></i> Practitioner</span> <span id="summaryPractitioner">NP Rivera</span></div>
+        <div class="summary-line total"><span>estimated cost</span> <span id="summaryCost">varies by insurance</span></div>
+      </div>
+
+      <button class="book-btn" id="bookButton"><i class="fas fa-calendar-plus"></i> confirm appointment</button>
+      <div class="footer-note">
+        <span><i class="fas fa-shield"></i> encrypted · no walk-ins</span>
+        <span><i class="fas fa-clock-rotate-left"></i> 24h cancellation</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function(){
+    "use strict";
+
+    // Visit types — wellness / medical
+    const visitTypes = [
+      { id: 'annual', name: 'Annual Wellness Exam', duration: '45 min', description: 'Preventive check-up, vitals, labs', icon: 'fa-heart-circle-check', costNote: '$0–$40*' },
+      { id: 'consult', name: 'Medical Consultation', duration: '30 min', description: 'New symptoms, follow-up, concerns', icon: 'fa-stethoscope', costNote: '$25–$75*' },
+      { id: 'telehealth', name: 'Telehealth Visit', duration: '20 min', description: 'Video consult, prescription refill', icon: 'fa-laptop-medical', costNote: '$0–$30*' },
+      { id: 'specialist', name: 'Specialist Referral', duration: '60 min', description: 'In-depth evaluation & referral', icon: 'fa-user-doctor', costNote: '$50–$120*' }
+    ];
+
+    const timeSlots = ["9:00 AM", "10:30 AM", "12:00 PM", "2:00 PM", "3:30 PM", "5:00 PM"];
+
+    // state
+    let selectedVisitId = visitTypes[0].id;
+    let selectedDate = "2026-04-23";
+    let selectedTime = timeSlots[2]; // 12:00 PM
+
+    // DOM
+    const visitListEl = document.getElementById('visitTypeList');
+    const datePicker = document.getElementById('datePicker');
+    const timeSlotsContainer = document.getElementById('timeSlotsContainer');
+    const summaryVisit = document.getElementById('summaryVisit');
+    const summaryDateTime = document.getElementById('summaryDateTime');
+    const summaryCost = document.getElementById('summaryCost');
+    const summaryPractitioner = document.getElementById('summaryPractitioner');
+    const practitionerSelect = document.getElementById('practitionerSelect');
+    const fullNameInput = document.getElementById('fullName');
+    const emailInput = document.getElementById('email');
+    const phoneInput = document.getElementById('phone');
+    const visitNotes = document.getElementById('visitNotes');
+    const bookBtn = document.getElementById('bookButton');
+
+    function getSelectedVisit() {
+      return visitTypes.find(v => v.id === selectedVisitId) || visitTypes[0];
+    }
+
+    function renderVisitCards() {
+      let html = '';
+      visitTypes.forEach(visit => {
+        const selectedClass = visit.id === selectedVisitId ? 'selected' : '';
+        html += `
+          <div class="visit-card ${selectedClass}" data-visit-id="${visit.id}">
+            <div class="visit-info">
+              <div class="visit-icon"><i class="fas ${visit.icon}"></i></div>
+              <div class="visit-details">
+                <h3>${visit.name}</h3>
+                <span><i class="far fa-clock"></i> ${visit.duration} · ${visit.description}</span>
+              </div>
+            </div>
+            <div class="visit-duration">${visit.costNote}</div>
+          </div>
+        `;
+      });
+      visitListEl.innerHTML = html;
+
+      document.querySelectorAll('.visit-card').forEach(card => {
+        card.addEventListener('click', () => {
+          const id = card.dataset.visitId;
+          if (id) {
+            selectedVisitId = id;
+            renderVisitCards();
+            updateSummary();
+          }
+        });
+      });
+    }
+
+    function renderTimeSlots() {
+      let slotsHtml = '';
+      timeSlots.forEach(slot => {
+        const selectedClass = slot === selectedTime ? 'selected' : '';
+        slotsHtml += `<div class="time-slot ${selectedClass}" data-time="${slot}">${slot}</div>`;
+      });
+      timeSlotsContainer.innerHTML = slotsHtml;
+
+      document.querySelectorAll('.time-slot').forEach(slotEl => {
+        slotEl.addEventListener('click', () => {
+          const time = slotEl.dataset.time;
+          if (time) {
+            selectedTime = time;
+            renderTimeSlots();
+            updateSummary();
+          }
+        });
+      });
+    }
+
+    function updateSummary() {
+      const visit = getSelectedVisit();
+      summaryVisit.textContent = `${visit.name} · ${visit.duration}`;
+      
+      const dateObj = selectedDate ? new Date(selectedDate + 'T12:00:00') : new Date();
+      const formattedDate = dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+      summaryDateTime.textContent = `${formattedDate} at ${selectedTime}`;
+      
+      const pracText = practitionerSelect.options[practitionerSelect.selectedIndex]?.text.split(' ').slice(0,2).join(' ') || practitionerSelect.value;
+      summaryPractitioner.textContent = practitionerSelect.value;
+      
+      summaryCost.textContent = visit.costNote + (visit.id==='annual'?' (copay)':'');
+    }
+
+    function initDatePicker() {
+      const today = new Date();
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, '0');
+      const dd = String(today.getDate()).padStart(2, '0');
+      datePicker.min = `${yyyy}-${mm}-${dd}`;
+      if (!datePicker.value) datePicker.value = selectedDate;
+      else selectedDate = datePicker.value;
+
+      datePicker.addEventListener('change', (e) => {
+        selectedDate = e.target.value;
+        updateSummary();
+      });
+    }
+
+    function handleBooking() {
+      const visit = getSelectedVisit();
+      const name = fullNameInput.value.trim() || 'Patient';
+      const email = emailInput.value.trim() || 'not provided';
+      const phone = phoneInput.value.trim() || '—';
+      const practitioner = practitionerSelect.value;
+      const notes = visitNotes.value.trim() || 'none';
+      const dateObj = new Date(selectedDate + 'T12:00:00');
+      const niceDate = dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+      
+      alert(`🩺 𝐀𝐏𝐏𝐎𝐈𝐍𝐓𝐌𝐄𝐍𝐓 𝐂𝐎𝐍𝐅𝐈𝐑𝐌𝐄𝐃 🩺\n\n${visit.name} with ${practitioner}\n📅 ${niceDate} at ${selectedTime}\n👤 ${name}\n📧 ${email}\n📋 Notes: ${notes}\n\nYou'll receive a confirmation email with intake forms. Thank you for choosing Serenity Health.`);
+    }
+
+    function initialize() {
+      renderVisitCards();
+      renderTimeSlots();
+      initDatePicker();
+      updateSummary();
+
+      practitionerSelect.addEventListener('change', updateSummary);
+      // update summary on any relevant change (name/notes not needed)
+    }
+
+    bookBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      handleBooking();
+    });
+
+    initialize();
+  })();
+</script>
+</body>
+</html>
