@@ -121,6 +121,16 @@ async function runMigrations(client) {
         )
     `);
 
+    // ── Tenant Slug History (for redirects) ──────────────────────────────────
+    await client.query(`
+        CREATE TABLE IF NOT EXISTS tenant_slug_history (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+            old_slug TEXT UNIQUE NOT NULL,
+            created_at TIMESTAMPTZ DEFAULT NOW()
+        )
+    `);
+
     // ── Pending Signups & Provisioning Jobs ───────────────────────────────────
     await client.query(`
         CREATE TABLE IF NOT EXISTS pending_signups (

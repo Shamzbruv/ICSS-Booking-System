@@ -12,6 +12,11 @@ const { signToken, authenticate, requireRole } = require('../../middleware/auth'
 const { invalidateTenantCache } = require('../../middleware/tenantResolver');
 const { seedStarterServices } = require('../../services/provisioning');
 
+const RESERVED_SLUGS = new Set([
+    'admin', 'api', 'login', 'signup', 'dashboard', 'settings', 'www', 'app',
+    'auth', 'billing', 'support', 'help', 'docs', 'blog', 'static', 'assets'
+]);
+
 // Simple platform admin key middleware (for internal provisioning)
 function platformAdminOnly(req, res, next) {
     const key = req.headers['x-platform-admin-key'];
@@ -212,18 +217,35 @@ router.patch('/:slug/slug', authenticate, async (req, res) => {
     if (!slugRegex.test(new_slug)) {
         return res.status(400).json({ error: 'Slug must be 2-50 lowercase alphanumeric characters or hyphens.' });
     }
+    
+    if (RESERVED_SLUGS.has(new_slug)) {
+        return res.status(400).json({ error: 'This booking link is reserved and cannot be used.' });
+    }
 
     try {
+        await query('BEGIN');
+        
+        await query(
+            `INSERT INTO tenant_slug_history (tenant_id, old_slug) VALUES ($1, $2)`,
+            [req.tenant.id, req.params.slug]
+        );
+
         const result = await query(
             `UPDATE tenants SET slug = $1 WHERE slug = $2 RETURNING id, slug`,
             [new_slug, req.params.slug]
         );
-        if (result.rows.length === 0) return res.status(404).json({ error: 'Tenant not found.' });
+        if (result.rows.length === 0) {
+            await query('ROLLBACK');
+            return res.status(404).json({ error: 'Tenant not found.' });
+        }
+        
+        await query('COMMIT');
 
         invalidateTenantCache(req.params.slug); // invalidate old
         
         res.json({ success: true, tenant: result.rows[0], message: 'Booking link updated successfully.' });
     } catch (err) {
+        await query('ROLLBACK');
         if (err.code === '23505') {
             return res.status(409).json({ error: `The booking link "${new_slug}" is already taken.` });
         }

@@ -5,13 +5,20 @@
  */
 
 const { query } = require('../db/connection');
-const bcrypt = require('bcryptjs');
+const RESERVED_SLUGS = new Set([
+    'admin', 'api', 'login', 'signup', 'dashboard', 'settings', 'www', 'app',
+    'auth', 'billing', 'support', 'help', 'docs', 'blog', 'static', 'assets'
+]);
 
 function slugifyBusinessName(name) {
-    return name
+    let slug = name
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/^-+|-+$/g, '');
+        
+    if (!slug || slug.length < 2) slug = 'tenant';
+    if (RESERVED_SLUGS.has(slug)) slug = `${slug}-app`;
+    return slug;
 }
 
 /**
@@ -68,26 +75,12 @@ async function processProvisioningJob(jobId) {
         if (pendingRes.rows.length === 0) throw new Error(`Pending signup not found for token: ${signupToken}`);
 
         const signup = pendingRes.rows[0];
-        // Generate unique slug
-        let baseSlug = slugifyBusinessName(signup.tenant_name);
-        if (!baseSlug) baseSlug = 'tenant';
         
-        let finalSlug = baseSlug;
-        let slugCounter = 1;
-        let isUnique = false;
-
-        while (!isUnique) {
-            const existingTenant = await query(
-                `SELECT id FROM tenants WHERE slug = $1`,
-                [finalSlug]
-            );
-            
-            if (existingTenant.rows.length === 0) {
-                isUnique = true;
-            } else {
-                slugCounter++;
-                finalSlug = `${baseSlug}-${slugCounter}`;
-            }
+        // Idempotency: Prevent duplicate provisioning if PayPal retries webhook
+        if (signup.status === 'provisioned') {
+            console.log(`[Provisioning] Signup ${signupToken} is already provisioned. Skipping duplicate webhook.`);
+            await query(`UPDATE provisioning_jobs SET status = 'completed', updated_at = NOW() WHERE id = $1`, [jobId]);
+            return;
         }
 
         const payload = job.payload || {};
@@ -95,13 +88,34 @@ async function processProvisioningJob(jobId) {
         const paypalPlanId = payload.paypal_plan_id || null;
         const planId = signup.plan_id || 'starter';
 
-        // 1. Create tenant
-        const tenantResult = await query(
-            `INSERT INTO tenants (slug, name, plan_id, theme_id, paypal_subscription_id, paypal_plan_id, subscription_status)
-             VALUES ($1, $2, $3, $4, $5, $6, 'paid') RETURNING *`,
-            [finalSlug, signup.tenant_name, planId, signup.theme_id, paypalSubId, paypalPlanId]
-        );
-        const tenant = tenantResult.rows[0];
+        // 1. Generate unique slug and create tenant using transaction-safe looping
+        let baseSlug = slugifyBusinessName(signup.tenant_name);
+        let finalSlug = baseSlug;
+        let slugCounter = 1;
+        let tenant = null;
+        let maxRetries = 10;
+
+        while (!tenant && slugCounter <= maxRetries) {
+            try {
+                const tenantResult = await query(
+                    `INSERT INTO tenants (slug, name, plan_id, theme_id, paypal_subscription_id, paypal_plan_id, subscription_status)
+                     VALUES ($1, $2, $3, $4, $5, $6, 'paid') RETURNING *`,
+                    [finalSlug, signup.tenant_name, planId, signup.theme_id, paypalSubId, paypalPlanId]
+                );
+                tenant = tenantResult.rows[0];
+            } catch (err) {
+                if (err.code === '23505' && err.constraint === 'tenants_slug_key') {
+                    slugCounter++;
+                    finalSlug = `${baseSlug}-${slugCounter}`;
+                } else {
+                    throw err;
+                }
+            }
+        }
+        
+        if (!tenant) {
+            throw new Error('Failed to generate a unique tenant slug after maximum retries.');
+        }
 
         // 2. Create tenant admin user using stored hash, NO raw passwords floating around!
         await query(
