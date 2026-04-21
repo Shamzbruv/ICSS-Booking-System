@@ -24,6 +24,13 @@ async function loadThemes() {
         const res = await fetch('/api/v1/themes');
         const data = await res.json();
         state.themes = data.themes || [];
+        // Inject Custom Theme option
+        state.themes.push({
+            id: 'custom',
+            name: 'Custom Design',
+            category: 'Bespoke Experience',
+            isCustom: true
+        });
         renderThemes();
     } catch (e) {
         console.error('Failed to load themes', e);
@@ -39,12 +46,24 @@ function renderThemes() {
         card.className = 'theme-card';
         if (state.selectedThemeId === theme.id) card.classList.add('selected');
 
-        // Emulate preview image by showing colored block or specific text
+        let previewHtml = '';
+        if (theme.isCustom) {
+            previewHtml = `
+                <div class="theme-preview-box" style="background: linear-gradient(135deg, #1e1e2f, #2d2d44); color: #8b5cf6;">
+                    <i class="fas fa-paint-roller" style="font-size: 3rem;"></i>
+                </div>
+            `;
+        } else {
+            previewHtml = `
+                <div class="theme-preview-box" style="background: rgba(255, 255, 255, 0.05); color: #6366f1;">
+                    <i class="fas fa-image" style="font-size: 2.5rem;"></i>
+                    <button class="preview-action" onclick="event.stopPropagation(); previewTheme('${theme.id}')">Preview</button>
+                </div>
+            `;
+        }
+
         card.innerHTML = `
-            <div class="theme-preview-box" style="background: linear-gradient(135deg, #f3f4f6, #e5e7eb);">
-                <i class="fas fa-image"></i>
-                <button class="preview-action" onclick="event.stopPropagation(); previewTheme('${theme.id}')">Preview</button>
-            </div>
+            ${previewHtml}
             <div class="theme-info">
                 <div class="theme-name">${theme.name}</div>
                 <div class="theme-category">${theme.category}</div>
@@ -86,8 +105,10 @@ async function finalizeDraft() {
     const email = document.getElementById('adminEmail').value;
     const pwd = document.getElementById('adminPassword').value;
     const plan = document.getElementById('planId').value;
+    const phone = document.getElementById('tenantPhone').value;
+    const companySize = document.getElementById('companySize').value;
     
-    if (!name || !slug || !email || !pwd) {
+    if (!name || !slug || !email || !pwd || !phone || !companySize) {
         goToStep(1);
         const err = document.getElementById('error1');
         err.textContent = 'All fields are required.';
@@ -115,7 +136,9 @@ async function finalizeDraft() {
                 admin_email: email,
                 admin_password: pwd,
                 theme_id: state.selectedThemeId,
-                plan_id: plan
+                plan_id: plan,
+                phone: phone,
+                company_size: companySize
             })
         });
 
