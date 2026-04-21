@@ -1,138 +1,774 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Book an Appointment</title>
-    <meta name="description" content="Book your appointment quickly and easily.">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/booking.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ICSS Booking System · SaaS for Every Business</title>
+  
+  <!-- Satoshi & Clash Display – modern, sleek SaaS aesthetic -->
+  <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700,900&f[]=clash-display@400,500,600,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  
+  <!-- Global Design System -->
+  <link rel="stylesheet" href="css/global-theme.css">
 </head>
 <body>
+  <div class="gradient-bg"></div>
+  <div class="grid-pattern"></div>
 
-<div class="booking-page" id="bookingPage">
+  <div class="landing-page">
+    <!-- Navigation -->
+    <nav class="navbar">
+      <div class="logo">
+        <div class="logo-icon">
+          <i class="fas fa-calendar-check"></i>
+        </div>
+        <span class="logo-text">ICSS</span>
+      </div>
+      <div class="nav-links">
+        <a href="#">Product</a>
+        <a href="#">Solutions</a>
+        <a href="#">Pricing</a>
+        <a href="#">Resources</a>
+        <a href="saas-onboarding.html" class="nav-cta">Start Free Trial</a>
+      </div>
+    </nav>
 
-    <!-- Header (populated by JS from tenant branding) -->
-    <header class="booking-header" id="bookingHeader">
-        <div class="booking-header-inner">
-            <div class="brand-mark" id="brandMark">ICSS</div>
-            <div>
-                <h1 class="brand-name" id="brandName">Book an Appointment</h1>
-                <p class="brand-sub" id="brandSub">Select a date and time below</p>
+    <!-- Hero -->
+    <section class="hero">
+      <div class="hero-badge">
+        <i class="fas fa-sparkles"></i>
+        <span>Trusted by businesses worldwide</span>
+      </div>
+      <h1>Beautiful booking systems for every business</h1>
+      <p>Give your clients a seamless scheduling experience with customizable booking pages designed for your industry. No code required.</p>
+      <div class="hero-cta">
+        <a href="saas-onboarding.html" class="btn-primary">
+          <i class="fas fa-rocket"></i> Start free trial
+        </a>
+        <button class="btn-secondary" onclick="document.getElementById('showcase').scrollIntoView({behavior: 'smooth'})">
+          <i class="fas fa-play"></i> See it in action
+        </button>
+      </div>
+    </section>
+
+    <!-- Industry Showcase -->
+    <section id="showcase" class="showcase-section">
+      <div class="section-header">
+        <h2>Designed for your industry</h2>
+        <p>Beautiful, conversion-optimized booking pages tailored to your business</p>
+      </div>
+
+      <!-- Tabs -->
+      <div class="industry-tabs">
+        <button class="tab-btn active" data-industry="beauty">
+          <i class="fas fa-spa"></i> Hair & Beauty
+        </button>
+        <button class="tab-btn" data-industry="wellness">
+          <i class="fas fa-heart-pulse"></i> Wellness & Medical
+        </button>
+        <button class="tab-btn" data-industry="photography">
+          <i class="fas fa-camera"></i> Photography
+        </button>
+        <button class="tab-btn" data-industry="events">
+          <i class="fas fa-champagne-glasses"></i> Events & Rentals
+        </button>
+        <button class="tab-btn" data-industry="spa">
+          <i class="fas fa-leaf"></i> Spa & Esthetics
+        </button>
+        <button class="tab-btn" data-industry="fitness">
+          <i class="fas fa-dumbbell"></i> Fitness
+        </button>
+        <button class="tab-btn" data-industry="legal">
+          <i class="fas fa-scale-balanced"></i> Legal
+        </button>
+      </div>
+
+      <!-- Preview panels container -->
+      <div class="preview-container">
+        <!-- Beauty Panel -->
+        <div class="preview-panel active" id="beauty-panel">
+          <div class="industry-card">
+            <div class="industry-header">
+              <div class="industry-icon" style="background: linear-gradient(135deg, #fec7d7, #eeb7cb);">
+                <i class="fas fa-spa" style="color: #b3406c;"></i>
+              </div>
+              <div class="industry-title">
+                <h3>Blush & Braids</h3>
+                <p>Hair & Beauty · Portland, OR</p>
+              </div>
             </div>
-        </div>
-    </header>
-
-    <!-- ── Step Progress ────────────────────────────────────────────────── -->
-    <div class="progress-bar-wrap">
-        <div class="progress-step active" id="step-indicator-1">
-            <div class="step-dot">1</div>
-            <div class="step-label">Select Date</div>
-        </div>
-        <div class="progress-connector"></div>
-        <div class="progress-step" id="step-indicator-2">
-            <div class="step-dot">2</div>
-            <div class="step-label">Select Time</div>
-        </div>
-        <div class="progress-connector"></div>
-        <div class="progress-step" id="step-indicator-3">
-            <div class="step-dot">3</div>
-            <div class="step-label">Your Details</div>
-        </div>
-        <div class="progress-connector"></div>
-        <div class="progress-step" id="step-indicator-4">
-            <div class="step-dot">✓</div>
-            <div class="step-label">Confirmed</div>
-        </div>
-    </div>
-
-    <div class="booking-body">
-
-        <!-- ── Step 1: Calendar ──────────────────────────────────────────── -->
-        <section class="step-panel" id="step1">
-            <h2 class="step-title">Choose a Date</h2>
-
-            <div class="calendar-nav">
-                <button class="cal-nav-btn" id="prevMonthBtn" onclick="changeMonth(-1)">‹</button>
-                <div class="cal-month" id="calMonthTitle">—</div>
-                <button class="cal-nav-btn" id="nextMonthBtn" onclick="changeMonth(1)">›</button>
-            </div>
-
-            <div class="calendar-grid" id="calGrid">
-                <div class="cal-day-header">Sun</div>
-                <div class="cal-day-header">Mon</div>
-                <div class="cal-day-header">Tue</div>
-                <div class="cal-day-header">Wed</div>
-                <div class="cal-day-header">Thu</div>
-                <div class="cal-day-header">Fri</div>
-                <div class="cal-day-header">Sat</div>
-            </div>
-        </section>
-
-        <!-- ── Step 2: Time Slots ────────────────────────────────────────── -->
-        <section class="step-panel hidden" id="step2">
-            <button class="back-btn" onclick="goToStep(1)">← Back to Calendar</button>
-            <h2 class="step-title">Available Times</h2>
-            <p class="step-sub" id="selectedDateLabel">—</p>
-            <div class="slot-grid" id="slotGrid">
-                <div class="slot-loading">Loading times…</div>
-            </div>
-        </section>
-
-        <!-- ── Step 3: Details Form ──────────────────────────────────────── -->
-        <section class="step-panel hidden" id="step3">
-            <button class="back-btn" onclick="goToStep(2)">← Back to Times</button>
-            <h2 class="step-title">Your Information</h2>
-            <p class="step-sub" id="selectedSummaryLabel">—</p>
-
-            <form class="booking-form" id="bookingForm" onsubmit="submitBooking(event)" novalidate>
-                <div class="form-row-2">
-                    <div class="field-wrap">
-                        <label for="fieldName">Full Name <span class="req">*</span></label>
-                        <input type="text" id="fieldName" placeholder="John Doe" required autocomplete="name">
+            <div class="booking-grid-mini">
+              <div class="mini-service-list">
+                <div class="mini-service-item">
+                  <div class="mini-service-info">
+                    <div class="mini-service-icon" style="background: #fbd1e2; color: #a13e62;">
+                      <i class="fas fa-wind"></i>
                     </div>
-                    <div class="field-wrap">
-                        <label for="fieldPhone">Phone Number <span class="req">*</span></label>
-                        <input type="tel" id="fieldPhone" placeholder="+1 876 555 0000" required autocomplete="tel">
+                    <div class="mini-service-details">
+                      <h4>Blowout & Style</h4>
+                      <span>45 min</span>
                     </div>
+                  </div>
+                  <span class="mini-price">$55</span>
                 </div>
-                <div class="field-wrap">
-                    <label for="fieldEmail">Email Address <span class="req">*</span></label>
-                    <input type="email" id="fieldEmail" placeholder="you@example.com" required autocomplete="email">
+                <div class="mini-service-item">
+                  <div class="mini-service-info">
+                    <div class="mini-service-icon" style="background: #fbd1e2; color: #a13e62;">
+                      <i class="fas fa-paint-brush"></i>
+                    </div>
+                    <div class="mini-service-details">
+                      <h4>Balayage / Highlights</h4>
+                      <span>2h 30min</span>
+                    </div>
+                  </div>
+                  <span class="mini-price">$180</span>
                 </div>
-                <div class="field-wrap">
-                    <label for="fieldNotes">Additional Notes <span class="opt">(optional)</span></label>
-                    <textarea id="fieldNotes" rows="3" placeholder="Any preferences or special requests…" maxlength="500"></textarea>
+                <div class="mini-service-item">
+                  <div class="mini-service-info">
+                    <div class="mini-service-icon" style="background: #fbd1e2; color: #a13e62;">
+                      <i class="fas fa-cut"></i>
+                    </div>
+                    <div class="mini-service-details">
+                      <h4>Haircut & Treatment</h4>
+                      <span>1h 15min</span>
+                    </div>
+                  </div>
+                  <span class="mini-price">$85</span>
                 </div>
-
-                <div class="form-error" id="formError"></div>
-
-                <button type="submit" class="submit-btn" id="submitBtn">
-                    <span id="submitLabel">Confirm Appointment</span>
+              </div>
+              <div class="mini-form-panel">
+                <div class="mini-form-group">
+                  <label>Full name</label>
+                  <input type="text" class="mini-input" placeholder="Bella Swan" value="Bella Swan">
+                </div>
+                <div class="mini-form-group">
+                  <label>Date & time</label>
+                  <input type="text" class="mini-input" placeholder="Apr 22, 2026 at 1:00 PM" value="Apr 22, 2026 at 1:00 PM">
+                </div>
+                <div class="mini-summary">
+                  <div class="mini-summary-line">
+                    <span>Blowout & Style</span>
+                    <span>$55</span>
+                  </div>
+                  <div class="mini-summary-line total">
+                    <span>Total</span>
+                    <span>$55</span>
+                  </div>
+                </div>
+                <button class="mini-book-btn" onclick="alert('✨ Booking confirmed at Blush & Braids!')">
+                  <i class="fas fa-magic"></i> Book now
                 </button>
-            </form>
-        </section>
-
-        <!-- ── Step 4: Confirmation ──────────────────────────────────────── -->
-        <section class="step-panel hidden" id="step4">
-            <div class="confirmation-wrap">
-                <div class="confirm-icon">✓</div>
-                <h2 class="confirm-title">You're Booked!</h2>
-                <p class="confirm-sub">A confirmation email has been sent to <strong id="confirmEmail">—</strong></p>
-                <div class="confirm-card" id="confirmCard">
-                    <div class="confirm-row"><span>Date</span><strong id="confirmDate">—</strong></div>
-                    <div class="confirm-row"><span>Time</span><strong id="confirmTime">—</strong></div>
-                    <div class="confirm-row"><span>Name</span><strong id="confirmName">—</strong></div>
-                </div>
-                <p class="confirm-note">Need to reschedule? Reply to your confirmation email.</p>
-                <button class="submit-btn" onclick="resetBooking()" style="max-width:240px;margin:0 auto;display:block;">Book Another</button>
+              </div>
             </div>
-        </section>
+          </div>
+        </div>
 
-    </div>
-</div>
+        <!-- Wellness Panel -->
+        <div class="preview-panel" id="wellness-panel">
+          <div class="industry-card">
+            <div class="industry-header">
+              <div class="industry-icon" style="background: linear-gradient(135deg, #c3dde4, #b6d2dc);">
+                <i class="fas fa-heart-pulse" style="color: #1e5b6e;"></i>
+              </div>
+              <div class="industry-title">
+                <h3>Serenity Health</h3>
+                <p>Wellness & Medical · Seattle, WA</p>
+              </div>
+            </div>
+            <div class="booking-grid-mini">
+              <div class="mini-service-list">
+                <div class="mini-service-item">
+                  <div class="mini-service-info">
+                    <div class="mini-service-icon" style="background: #d6ecf3; color: #196c7e;">
+                      <i class="fas fa-heart-circle-check"></i>
+                    </div>
+                    <div class="mini-service-details">
+                      <h4>Annual Wellness Exam</h4>
+                      <span>45 min</span>
+                    </div>
+                  </div>
+                  <span class="mini-price">$0-40*</span>
+                </div>
+                <div class="mini-service-item">
+                  <div class="mini-service-info">
+                    <div class="mini-service-icon" style="background: #d6ecf3; color: #196c7e;">
+                      <i class="fas fa-stethoscope"></i>
+                    </div>
+                    <div class="mini-service-details">
+                      <h4>Medical Consultation</h4>
+                      <span>30 min</span>
+                    </div>
+                  </div>
+                  <span class="mini-price">$25-75*</span>
+                </div>
+                <div class="mini-service-item">
+                  <div class="mini-service-info">
+                    <div class="mini-service-icon" style="background: #d6ecf3; color: #196c7e;">
+                      <i class="fas fa-laptop-medical"></i>
+                    </div>
+                    <div class="mini-service-details">
+                      <h4>Telehealth Visit</h4>
+                      <span>20 min</span>
+                    </div>
+                  </div>
+                  <span class="mini-price">$0-30*</span>
+                </div>
+              </div>
+              <div class="mini-form-panel">
+                <div class="mini-form-group">
+                  <label>Patient name</label>
+                  <input type="text" class="mini-input" placeholder="Sarah Chen" value="Sarah Chen">
+                </div>
+                <div class="mini-form-group">
+                  <label>Practitioner</label>
+                  <select class="mini-input">
+                    <option>NP Rivera (Family Health)</option>
+                  </select>
+                </div>
+                <div class="mini-summary">
+                  <div class="mini-summary-line">
+                    <span>Annual Wellness</span>
+                    <span>varies</span>
+                  </div>
+                  <div class="mini-summary-line total">
+                    <span>Est. cost</span>
+                    <span>copay</span>
+                  </div>
+                </div>
+                <button class="mini-book-btn" onclick="alert('🩺 Appointment confirmed at Serenity Health!')">
+                  <i class="fas fa-calendar-plus"></i> Confirm
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
 
-<script src="js/booking.js"></script>
+        <!-- Photography Panel -->
+        <div class="preview-panel" id="photography-panel">
+          <div class="industry-card">
+            <div class="industry-header">
+              <div class="industry-icon" style="background: linear-gradient(135deg, #d4c5b6, #cfbeae);">
+                <i class="fas fa-camera-retro" style="color: #3e3229;"></i>
+              </div>
+              <div class="industry-title">
+                <h3>Lumina Lens</h3>
+                <p>Fine Art Photography · Portland</p>
+              </div>
+            </div>
+            <div class="booking-grid-mini">
+              <div class="mini-service-list">
+                <div class="mini-service-item">
+                  <div class="mini-service-info">
+                    <div class="mini-service-icon" style="background: #ddd0c2; color: #4d3e32;">
+                      <i class="fas fa-user"></i>
+                    </div>
+                    <div class="mini-service-details">
+                      <h4>Portrait Session</h4>
+                      <span>60 min</span>
+                    </div>
+                  </div>
+                  <span class="mini-price">$350</span>
+                </div>
+                <div class="mini-service-item">
+                  <div class="mini-service-info">
+                    <div class="mini-service-icon" style="background: #ddd0c2; color: #4d3e32;">
+                      <i class="fas fa-heart"></i>
+                    </div>
+                    <div class="mini-service-details">
+                      <h4>Couple / Engagement</h4>
+                      <span>90 min</span>
+                    </div>
+                  </div>
+                  <span class="mini-price">$550</span>
+                </div>
+                <div class="mini-service-item">
+                  <div class="mini-service-info">
+                    <div class="mini-service-icon" style="background: #ddd0c2; color: #4d3e32;">
+                      <i class="fas fa-bolt"></i>
+                    </div>
+                    <div class="mini-service-details">
+                      <h4>Brand & Editorial</h4>
+                      <span>2 hours</span>
+                    </div>
+                  </div>
+                  <span class="mini-price">$750</span>
+                </div>
+              </div>
+              <div class="mini-form-panel">
+                <div class="mini-form-group">
+                  <label>Client name</label>
+                  <input type="text" class="mini-input" placeholder="Olivia Carter" value="Olivia Carter">
+                </div>
+                <div class="mini-form-group">
+                  <label>Session vibe</label>
+                  <select class="mini-input">
+                    <option>Editorial / Fashion</option>
+                  </select>
+                </div>
+                <div class="mini-summary">
+                  <div class="mini-summary-line">
+                    <span>Portrait Session</span>
+                    <span>$350</span>
+                  </div>
+                  <div class="mini-summary-line total">
+                    <span>Investment</span>
+                    <span>$350</span>
+                  </div>
+                </div>
+                <button class="mini-book-btn" onclick="alert('📷 Session reserved at Lumina Lens!')">
+                  <i class="fas fa-camera"></i> Reserve date
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Events Panel -->
+        <div class="preview-panel" id="events-panel">
+          <div class="industry-card">
+            <div class="industry-header">
+              <div class="industry-icon" style="background: linear-gradient(135deg, #d4b89c, #c4a484);">
+                <i class="fas fa-champagne-glasses" style="color: #fff5eb;"></i>
+              </div>
+              <div class="industry-title">
+                <h3>Gather & Grace</h3>
+                <p>Events & Rentals · Willamette Valley</p>
+              </div>
+            </div>
+            <div class="booking-grid-mini">
+              <div class="mini-service-list">
+                <div class="mini-service-item">
+                  <div class="mini-service-info">
+                    <div class="mini-service-icon" style="background: #e0cfbe; color: #534333;">
+                      <i class="fas fa-ring"></i>
+                    </div>
+                    <div class="mini-service-details">
+                      <h4>Wedding Package</h4>
+                      <span>Full planning</span>
+                    </div>
+                  </div>
+                  <span class="mini-price">$3,500+</span>
+                </div>
+                <div class="mini-service-item">
+                  <div class="mini-service-info">
+                    <div class="mini-service-icon" style="background: #e0cfbe; color: #534333;">
+                      <i class="fas fa-briefcase"></i>
+                    </div>
+                    <div class="mini-service-details">
+                      <h4>Corporate Event</h4>
+                      <span>Conference · gala</span>
+                    </div>
+                  </div>
+                  <span class="mini-price">$2,200+</span>
+                </div>
+              </div>
+              <div class="mini-form-panel">
+                <div class="mini-form-group">
+                  <label>Host name</label>
+                  <input type="text" class="mini-input" placeholder="Michael & Lauren" value="Michael & Lauren">
+                </div>
+                <div class="mini-form-group">
+                  <label>Guest count</label>
+                  <select class="mini-input">
+                    <option>40-75 guests</option>
+                  </select>
+                </div>
+                <div class="mini-summary">
+                  <div class="mini-summary-line">
+                    <span>Wedding Package</span>
+                    <span>$3,500</span>
+                  </div>
+                  <div class="mini-summary-line total">
+                    <span>Estimated</span>
+                    <span>$3,500+</span>
+                  </div>
+                </div>
+                <button class="mini-book-btn" onclick="alert('🎉 Booking request sent to Gather & Grace!')">
+                  <i class="fas fa-envelope-open-text"></i> Request booking
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Spa Panel -->
+        <div class="preview-panel" id="spa-panel">
+          <div class="industry-card">
+            <div class="industry-header">
+              <div class="industry-icon" style="background: linear-gradient(135deg, #b8d4b8, #9fc09f);">
+                <i class="fas fa-leaf" style="color: #f5faf5;"></i>
+              </div>
+              <div class="industry-title">
+                <h3>Botanica Spa</h3>
+                <p>Esthetics & Wellness · Portland</p>
+              </div>
+            </div>
+            <div class="booking-grid-mini">
+              <div class="mini-service-list">
+                <div class="mini-service-item">
+                  <div class="mini-service-info">
+                    <div class="mini-service-icon" style="background: #d5e7d5; color: #3d643d;">
+                      <i class="fas fa-face-smile"></i>
+                    </div>
+                    <div class="mini-service-details">
+                      <h4>Signature Botanical Facial</h4>
+                      <span>75 min</span>
+                    </div>
+                  </div>
+                  <span class="mini-price">$135</span>
+                </div>
+                <div class="mini-service-item">
+                  <div class="mini-service-info">
+                    <div class="mini-service-icon" style="background: #d5e7d5; color: #3d643d;">
+                      <i class="fas fa-hands"></i>
+                    </div>
+                    <div class="mini-service-details">
+                      <h4>Aromatherapy Massage</h4>
+                      <span>90 min</span>
+                    </div>
+                  </div>
+                  <span class="mini-price">$165</span>
+                </div>
+              </div>
+              <div class="mini-form-panel">
+                <div class="mini-form-group">
+                  <label>Guest name</label>
+                  <input type="text" class="mini-input" placeholder="Emma Laurent" value="Emma Laurent">
+                </div>
+                <div class="mini-form-group">
+                  <label>Esthetician</label>
+                  <select class="mini-input">
+                    <option>Jade (holistic facialist)</option>
+                  </select>
+                </div>
+                <div class="mini-summary">
+                  <div class="mini-summary-line">
+                    <span>Signature Facial</span>
+                    <span>$135</span>
+                  </div>
+                  <div class="mini-summary-line total">
+                    <span>Total</span>
+                    <span>$135</span>
+                  </div>
+                </div>
+                <button class="mini-book-btn" onclick="alert('🌿 Ritual reserved at Botanica Spa!')">
+                  <i class="fas fa-calendar-check"></i> Reserve ritual
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Fitness Panel -->
+        <div class="preview-panel" id="fitness-panel">
+          <div class="industry-card">
+            <div class="industry-header">
+              <div class="industry-icon" style="background: linear-gradient(135deg, #e94560, #c62a47);">
+                <i class="fas fa-dumbbell" style="color: #ffffff;"></i>
+              </div>
+              <div class="industry-title">
+                <h3>PULSE STUDIO</h3>
+                <p>Strength · Cardio · Mindfulness</p>
+              </div>
+            </div>
+            <div class="booking-grid-mini">
+              <div class="mini-service-list">
+                <div class="mini-service-item">
+                  <div class="mini-service-info">
+                    <div class="mini-service-icon" style="background: linear-gradient(135deg, #e94560, #b8243d); color: white;">
+                      <i class="fas fa-bolt"></i>
+                    </div>
+                    <div class="mini-service-details">
+                      <h4>HIIT FUSION</h4>
+                      <span>45 min · High</span>
+                    </div>
+                  </div>
+                  <span class="mini-price">1 credit</span>
+                </div>
+                <div class="mini-service-item">
+                  <div class="mini-service-info">
+                    <div class="mini-service-icon" style="background: linear-gradient(135deg, #e94560, #b8243d); color: white;">
+                      <i class="fas fa-person-praying"></i>
+                    </div>
+                    <div class="mini-service-details">
+                      <h4>POWER VINYASA</h4>
+                      <span>60 min · Med-High</span>
+                    </div>
+                  </div>
+                  <span class="mini-price">1 credit</span>
+                </div>
+              </div>
+              <div class="mini-form-panel">
+                <div class="mini-form-group">
+                  <label>Member name</label>
+                  <input type="text" class="mini-input" placeholder="Alex Rivera" value="Alex Rivera">
+                </div>
+                <div class="mini-form-group">
+                  <label>Fitness level</label>
+                  <select class="mini-input">
+                    <option>Intermediate</option>
+                  </select>
+                </div>
+                <div class="mini-summary">
+                  <div class="mini-summary-line">
+                    <span>HIIT FUSION</span>
+                    <span>1 credit</span>
+                  </div>
+                  <div class="mini-summary-line total">
+                    <span>Credits</span>
+                    <span>1</span>
+                  </div>
+                </div>
+                <button class="mini-book-btn" onclick="alert('💥 Class booked at PULSE STUDIO!')">
+                  <i class="fas fa-ticket"></i> Book class
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Legal Panel -->
+        <div class="preview-panel" id="legal-panel">
+          <div class="industry-card">
+            <div class="industry-header">
+              <div class="industry-icon" style="background: linear-gradient(135deg, #c9a96e, #a8844e);">
+                <i class="fas fa-scale-balanced" style="color: #1a232c;"></i>
+              </div>
+              <div class="industry-title">
+                <h3>MERIDIAN LAW</h3>
+                <p>Business · Family · Estate</p>
+              </div>
+            </div>
+            <div class="booking-grid-mini">
+              <div class="mini-service-list">
+                <div class="mini-service-item">
+                  <div class="mini-service-info">
+                    <div class="mini-service-icon" style="background: linear-gradient(135deg, #c9a96e, #a8844e); color: #1a232c;">
+                      <i class="fas fa-handshake"></i>
+                    </div>
+                    <div class="mini-service-details">
+                      <h4>Initial Consultation</h4>
+                      <span>30 min</span>
+                    </div>
+                  </div>
+                  <span class="mini-price">$150</span>
+                </div>
+                <div class="mini-service-item">
+                  <div class="mini-service-info">
+                    <div class="mini-service-icon" style="background: linear-gradient(135deg, #c9a96e, #a8844e); color: #1a232c;">
+                      <i class="fas fa-file-lines"></i>
+                    </div>
+                    <div class="mini-service-details">
+                      <h4>Extended Consultation</h4>
+                      <span>60 min</span>
+                    </div>
+                  </div>
+                  <span class="mini-price">$275</span>
+                </div>
+              </div>
+              <div class="mini-form-panel">
+                <div class="mini-form-group">
+                  <label>Client name</label>
+                  <input type="text" class="mini-input" placeholder="Rebecca Morrison" value="Rebecca Morrison">
+                </div>
+                <div class="mini-form-group">
+                  <label>Attorney</label>
+                  <select class="mini-input">
+                    <option>Michelle Williams (Family Law)</option>
+                  </select>
+                </div>
+                <div class="mini-summary">
+                  <div class="mini-summary-line">
+                    <span>Initial Consultation</span>
+                    <span>$150</span>
+                  </div>
+                  <div class="mini-summary-line total">
+                    <span>Fee</span>
+                    <span>$150</span>
+                  </div>
+                </div>
+                <button class="mini-book-btn" onclick="alert('⚖️ Consultation scheduled with Meridian Law!')">
+                  <i class="fas fa-handshake"></i> Schedule
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features-section">
+      <div class="section-header">
+        <h2>Everything you need to scale</h2>
+        <p>Powerful features that make managing bookings effortless</p>
+      </div>
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon">
+            <i class="fas fa-calendar-alt"></i>
+          </div>
+          <h3>Smart Scheduling</h3>
+          <p>Automated time zone detection, buffer times, and recurring appointments.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">
+            <i class="fas fa-credit-card"></i>
+          </div>
+          <h3>Integrated Payments</h3>
+          <p>Accept deposits, full payments, and subscriptions securely.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">
+            <i class="fas fa-users"></i>
+          </div>
+          <h3>Team Management</h3>
+          <p>Unlimited staff calendars, roles, and individual booking pages.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">
+            <i class="fas fa-palette"></i>
+          </div>
+          <h3>Fully Customizable</h3>
+          <p>Match your brand with custom colors, logos, and booking form fields.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">
+            <i class="fas fa-envelope"></i>
+          </div>
+          <h3>Automated Reminders</h3>
+          <p>Reduce no-shows with SMS and email confirmations and reminders.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">
+            <i class="fas fa-chart-line"></i>
+          </div>
+          <h3>Analytics Dashboard</h3>
+          <p>Track revenue, bookings, and client retention with beautiful reports.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">
+            <i class="fas fa-globe"></i>
+          </div>
+          <h3>Multi-location</h3>
+          <p>Manage multiple business locations from a single dashboard.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">
+            <i class="fas fa-plug"></i>
+          </div>
+          <h3>Integrations</h3>
+          <p>Connect with Google Calendar, Microsoft Outlook, and more.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Stats Section -->
+    <section class="stats-section">
+      <div class="stat-item">
+        <h4>10,000+</h4>
+        <p>Businesses trust ICSS</p>
+      </div>
+      <div class="stat-item">
+        <h4>2.5M+</h4>
+        <p>Appointments booked monthly</p>
+      </div>
+      <div class="stat-item">
+        <h4>98%</h4>
+        <p>Customer satisfaction rate</p>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <p>© 2026 ICSS Booking System. All rights reserved. · Elevating service businesses globally.</p>
+    </footer>
+  </div>
+
+  <script>
+    // Industry tab switching with smooth transitions
+    const tabs = document.querySelectorAll('.tab-btn');
+    const panels = {
+      beauty: document.getElementById('beauty-panel'),
+      wellness: document.getElementById('wellness-panel'),
+      photography: document.getElementById('photography-panel'),
+      events: document.getElementById('events-panel'),
+      spa: document.getElementById('spa-panel'),
+      fitness: document.getElementById('fitness-panel'),
+      legal: document.getElementById('legal-panel')
+    };
+
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        // Remove active class from all tabs
+        tabs.forEach(t => t.classList.remove('active'));
+        // Add active class to clicked tab
+        tab.classList.add('active');
+
+        // Get industry from data attribute
+        const industry = tab.dataset.industry;
+
+        // Hide all panels
+        Object.values(panels).forEach(panel => {
+          if (panel) panel.classList.remove('active');
+        });
+
+        // Show selected panel with smooth transition
+        if (panels[industry]) {
+          panels[industry].classList.add('active');
+        }
+      });
+    });
+
+    // Auto-rotate through industries
+    let currentIndex = 0;
+    const industryOrder = ['beauty', 'wellness', 'photography', 'events', 'spa', 'fitness', 'legal'];
+    
+    function autoRotate() {
+      if (!userInteracted) {
+        currentIndex = (currentIndex + 1) % industryOrder.length;
+        const nextIndustry = industryOrder[currentIndex];
+        
+        tabs.forEach(tab => {
+          tab.classList.remove('active');
+          if (tab.dataset.industry === nextIndustry) {
+            tab.classList.add('active');
+          }
+        });
+        
+        Object.values(panels).forEach(panel => {
+          if (panel) panel.classList.remove('active');
+        });
+        if (panels[nextIndustry]) {
+          panels[nextIndustry].classList.add('active');
+        }
+      }
+    }
+
+    let userInteracted = false;
+    let rotationInterval = setInterval(autoRotate, 6000);
+
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        userInteracted = true;
+        clearInterval(rotationInterval);
+        setTimeout(() => {
+          userInteracted = false;
+          rotationInterval = setInterval(autoRotate, 6000);
+        }, 30000);
+      });
+    });
+
+    // Parallax effect on mouse move
+    document.addEventListener('mousemove', (e) => {
+      const moveX = (e.clientX - window.innerWidth / 2) * 0.005;
+      const moveY = (e.clientY - window.innerHeight / 2) * 0.005;
+      
+      document.querySelectorAll('.preview-panel.active .industry-card').forEach(card => {
+        card.style.transform = `translate(${moveX}px, ${moveY}px)`;
+      });
+    });
+  </script>
 </body>
 </html>
