@@ -53,6 +53,16 @@ function renderThemes() {
                     <i class="fas fa-paint-roller" style="font-size: 3rem;"></i>
                 </div>
             `;
+        } else if (theme.template_path) {
+            previewHtml = `
+                <div class="theme-preview-box" style="position: relative; overflow: hidden; background: #fff;">
+                    <iframe src="${theme.template_path}" 
+                            style="position: absolute; top: 0; left: 0; width: 400%; height: 400%; transform: scale(0.25); transform-origin: top left; border: none; pointer-events: none;" 
+                            tabindex="-1" loading="lazy"></iframe>
+                    <div style="position: absolute; inset: 0; background: rgba(0,0,0,0.02); z-index: 10;"></div>
+                    <button class="preview-action" style="position: absolute; z-index: 20;" onclick="event.stopPropagation(); previewTheme('${theme.id}')">Preview</button>
+                </div>
+            `;
         } else {
             previewHtml = `
                 <div class="theme-preview-box" style="background: rgba(255, 255, 255, 0.05); color: #6366f1;">
