@@ -110,12 +110,11 @@ function closePreview() {
 }
 
 async function finalizeDraft() {
-    const name = document.getElementById('tenantName').value;
-    const ownerName = document.getElementById('ownerName').value;
-    const email = document.getElementById('adminEmail').value;
-    const pwd = document.getElementById('adminPassword').value;
-    const plan = document.getElementById('planId').value;
-    const phone = document.getElementById('tenantPhone').value;
+    const name        = document.getElementById('tenantName').value.trim();
+    const ownerName   = document.getElementById('ownerName').value.trim();
+    const email       = document.getElementById('adminEmail').value.trim();
+    const pwd         = document.getElementById('adminPassword').value;
+    const phone       = document.getElementById('tenantPhone').value.trim();
     const companySize = document.getElementById('companySize').value;
     
     if (!name || !ownerName || !email || !pwd || !phone || !companySize) {
@@ -141,14 +140,14 @@ async function finalizeDraft() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                tenant_name: name,
-                owner_name: ownerName,
-                admin_email: email,
-                admin_password: pwd,
-                theme_id: state.selectedThemeId,
-                plan_id: plan,
-                phone: phone,
-                company_size: companySize
+                tenant_name:      name,
+                admin_owner_name: ownerName,
+                admin_email:      email,
+                admin_password:   pwd,
+                theme_id:         state.selectedThemeId,
+                plan_id:          'monthly',
+                phone:            phone,
+                company_size:     companySize
             })
         });
 
@@ -160,12 +159,11 @@ async function finalizeDraft() {
 
         state.signupToken = data.signup_token;
         
-        // Setup PayPal buttons using the dynamic plan_id
-        // In a real app we'd map "pro" to actual PayPal Plan IDs.
-        // For MVP, we use hardcoded or from env.
-        const mockPayPalPlanId = plan === 'pro' ? 'P-PRO_PLAN_ID' : 'P-STARTER_PLAN_ID';
-        
-        document.getElementById('paypal-button-container').innerHTML = ''; // clear previous
+        // Single monthly plan — real PayPal plan ID
+        const PAYPAL_PLAN_ID = 'P-4EC410252Y479773KNHUVB4A';
+        const containerId    = `paypal-button-container-${PAYPAL_PLAN_ID}`;
+
+        document.getElementById(containerId).innerHTML = ''; // clear previous
         
         paypal.Buttons({
             style: {
@@ -176,14 +174,14 @@ async function finalizeDraft() {
             },
             createSubscription: function(data, actions) {
                 return actions.subscription.create({
-                    'plan_id': mockPayPalPlanId,
-                    'custom_id': state.signupToken // This securely ties PayPal sub to our DB pending_signups
+                    plan_id:   PAYPAL_PLAN_ID,
+                    custom_id: state.signupToken // Ties PayPal subscription to our pending_signups row
                 });
             },
             onApprove: function(data, actions) {
-                window.location.href = `/admin/login.html?success=true`;
+                window.location.href = `/provisioning?token=${state.signupToken}`;
             }
-        }).render('#paypal-button-container');
+        }).render(`#${containerId}`);
 
         goToStep(3);
 
