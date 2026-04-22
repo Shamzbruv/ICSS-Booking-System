@@ -82,7 +82,13 @@
         .preview-iframe { width: 100%; flex: 1; background: white; border: none; border-radius: 0 0 var(--radius-md) var(--radius-md); }
 
         /* PayPal container */
-        #paypal-button-container { margin-top: 2rem; max-width: 400px; margin-inline: auto; }
+        .paypal-checkout-box {
+            max-width: 440px;
+            margin: 0 auto 2rem;
+        }
+        #paypal-button-container-P-4EC410252Y479773KNHUVB4A {
+            width: 100%;
+        }
 
         .error-msg { background: #fee2e2; color: #b91c1c; padding: 0.75rem; border-radius: var(--radius-md); margin-bottom: 1.5rem; display: none; }
     </style>
@@ -170,14 +176,17 @@
     <!-- Step 3: Checkout -->
     <div class="panel" id="step3">
         <div class="error-msg" id="error3"></div>
-        <h2 style="text-align: center;">Complete Your Subscription</h2>
-        <p style="text-align: center; color: var(--text-muted); margin-bottom: 0.5rem;">You're almost there! Complete your payment to instantly set up your booking platform.</p>
-        <p style="text-align: center; font-size: 1.1rem; font-weight: 700; color: #a5b4fc; margin-bottom: 2rem;">Monthly Plan — 7 days free, then $35.50 USD/month</p>
-        
-        <div id="paypal-button-container-P-4EC410252Y479773KNHUVB4A"></div>
-        
-        <div class="flex-between">
-            <button class="btn btn-secondary" onclick="goToStep(2)">Back</button>
+
+        <div style="max-width: 540px; margin: 0 auto; text-align: center;">
+            <h2 style="margin-bottom: 0.5rem;">Complete Your Subscription</h2>
+            <p style="color: var(--text-muted); margin-bottom: 0.5rem;">You're almost there! Complete your payment to activate your booking platform.</p>
+            <p style="font-size: 1.1rem; font-weight: 700; color: #a5b4fc; margin-bottom: 2rem;">Monthly Plan &mdash; 7 days free, then $35.50 USD/month</p>
+
+            <div class="paypal-checkout-box">
+                <div id="paypal-button-container-P-4EC410252Y479773KNHUVB4A"></div>
+            </div>
+
+            <button class="btn btn-secondary" onclick="goToStep(2)" style="margin: 0 auto;">← Back</button>
         </div>
     </div>
 </div>
