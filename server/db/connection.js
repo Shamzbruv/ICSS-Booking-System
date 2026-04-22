@@ -275,11 +275,6 @@ async function runMigrations(client) {
         )
     `);
 
-    // Indexes for fast overlap checks
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_bookings_tenant_time ON bookings (tenant_id, start_time, end_time)`);
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_bookings_status ON bookings (status)`);
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_bookings_active_states ON bookings (tenant_id, start_time, end_time) WHERE status IN ('confirmed', 'pending_payment', 'pending_manual_confirmation')`);
-
     // Ensure columns exist if table was already created
     try { await client.query(`ALTER TABLE pending_signups ALTER COLUMN tenant_slug DROP NOT NULL`); } catch(e){}
     try { await client.query(`ALTER TABLE provisioning_jobs ALTER COLUMN tenant_slug DROP NOT NULL`); } catch(e){}
@@ -300,6 +295,11 @@ async function runMigrations(client) {
     try { await client.query(`ALTER TABLE bookings ADD COLUMN end_time TIMESTAMPTZ`); } catch(e){}
     try { await client.query(`ALTER TABLE bookings ADD COLUMN expires_at TIMESTAMPTZ`); } catch(e){}
     try { await client.query(`ALTER TABLE bookings ADD COLUMN payment_mode TEXT DEFAULT 'none'`); } catch(e){}
+
+    // Indexes for fast overlap checks (Must run after columns are added)
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_bookings_tenant_time ON bookings (tenant_id, start_time, end_time)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_bookings_status ON bookings (status)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_bookings_active_states ON bookings (tenant_id, start_time, end_time) WHERE status IN ('confirmed', 'pending_payment', 'pending_manual_confirmation')`);
     
     try { await client.query(`ALTER TABLE services ADD COLUMN buffer_time_minutes INT DEFAULT 0`); } catch(e){}
     try { await client.query(`ALTER TABLE services ADD COLUMN payment_mode TEXT DEFAULT 'tenant_default'`); } catch(e){}
