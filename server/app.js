@@ -52,6 +52,7 @@ app.use('/api/v1', tenantResolver);
 
 // ─── Static Files (Admin Dashboard + Public Booking Widget) ──────────────────
 app.use('/admin', express.static(path.join(__dirname, '../admin')));
+app.use('/Template', express.static(path.join(__dirname, '../Template')));
 app.use('/', express.static(path.join(__dirname, '../public')));
 
 // ─── API Routes ───────────────────────────────────────────────────────────────
