@@ -153,7 +153,8 @@ router.post('/', enforceBookingLimit, async (req, res) => {
                 const payment = paymentRes.rows[0];
 
                 if (paymentMode === 'wipay') {
-                    const returnUrl = `http://${req.get('host')}/payment-processing?booking=${booking.id}`;
+                    const baseUrl = process.env.PUBLIC_APP_URL || process.env.BASE_URL || `${req.headers['x-forwarded-proto'] || req.protocol}://${req.get('host')}`;
+                    const returnUrl = `${baseUrl}/payment-processing?booking=${booking.id}`;
                     checkoutUrl = wipay.generateCheckoutUrl(tenant, booking, payment, returnUrl);
                 } else if (paymentMode === 'manual') {
                     bankInstructions = tenant.bank_transfer_instructions;
@@ -219,7 +220,10 @@ router.post('/:id/verify-payment', async (req, res) => {
             // Verify with WiPay
             const verification = await wipay.verifyTransaction(transaction_id, payment.id, tenant);
             
-            if (verification.status === 'success') {
+            // Normalize WiPay status — accept the same approved states as the webhook route
+            const isPaid = ['success', 'approved'].includes((verification.status || '').toLowerCase());
+            
+            if (isPaid) {
                 await client.query(
                     `UPDATE booking_payments SET status = 'paid', external_reference = $1, gateway_response = $2 WHERE id = $3`,
                     [transaction_id, JSON.stringify(verification), payment.id]

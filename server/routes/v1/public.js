@@ -84,4 +84,46 @@ router.post('/designs', async (req, res) => {
     }
 });
 
+// GET /api/v1/public/provisioning-status/:signupToken
+router.get('/provisioning-status/:signupToken', async (req, res) => {
+    const { signupToken } = req.params;
+    
+    // Basic UUID format check
+    if (!/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(signupToken)) {
+        return res.status(400).json({ error: 'Invalid token format.' });
+    }
+
+    try {
+        const result = await query(`SELECT status, tenant_slug FROM pending_signups WHERE signup_token = $1`, [signupToken]);
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Provisioning session not found.' });
+        }
+
+        const signup = result.rows[0];
+        
+        // Map to minimal state
+        let returnStatus = signup.status; // pending, provisioned, failed
+
+        // Check if there's an active job to show 'processing'
+        if (returnStatus === 'pending') {
+             const jobRes = await query(`SELECT status FROM provisioning_jobs WHERE signup_token = $1 ORDER BY created_at DESC LIMIT 1`, [signupToken]);
+             if (jobRes.rows.length > 0) {
+                 const jobStatus = jobRes.rows[0].status;
+                 if (jobStatus === 'pending') returnStatus = 'processing';
+                 else if (jobStatus === 'failed') returnStatus = 'failed';
+                 else if (jobStatus === 'completed') returnStatus = 'provisioned';
+             }
+        }
+
+        res.json({
+            status: returnStatus,
+            // Only return slug if fully provisioned to prevent premature redirects
+            tenant_slug: returnStatus === 'provisioned' ? signup.tenant_slug : null
+        });
+    } catch (err) {
+        console.error('[Provisioning Status Error]', err.message);
+        res.status(500).json({ error: 'Internal server error.' });
+    }
+});
+
 module.exports = router;

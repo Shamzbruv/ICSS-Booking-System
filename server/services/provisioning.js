@@ -57,9 +57,10 @@ async function seedStarterServices(tenantId, themeId) {
 
 /**
  * Idempotent Provisioning Job.
- * Takes a UUID representing a `provisioning_jobs` row and executes it.
+ * Takes a pg-boss job object containing a `jobId` representing a `provisioning_jobs` row.
  */
-async function processProvisioningJob(jobId) {
+async function processProvisioningJob(job) {
+    const jobId = job?.data?.jobId || job; // Support both direct string and pg-boss job
     try {
         const jobRes = await query(`SELECT * FROM provisioning_jobs WHERE id = $1`, [jobId]);
         if (jobRes.rows.length === 0) return;
@@ -129,7 +130,8 @@ async function processProvisioningJob(jobId) {
 
         // 4. Mark job and signup as completed
         await query(`UPDATE provisioning_jobs SET status = 'completed', updated_at = NOW() WHERE id = $1`, [jobId]);
-        await query(`UPDATE pending_signups SET status = 'provisioned' WHERE id = $1`, [signup.id]);
+        // Write the final slug back so the status polling endpoint can return it
+        await query(`UPDATE pending_signups SET status = 'provisioned', tenant_slug = $1 WHERE id = $2`, [finalSlug, signup.id]);
 
         console.log(`[Provisioning] Successfully completed provisioning for tenant ${finalSlug}.`);
 
@@ -153,14 +155,16 @@ async function enqueueProvisioningJob(tenantSlug, signupToken, webhookId, payloa
             [tenantSlug, signupToken, webhookId, JSON.stringify(payload)]
         );
         
-        // Trigger background processing asynchronously
-        setImmediate(() => {
-            processProvisioningJob(result.rows[0].id);
-        });
+        // Trigger background processing durably through pg-boss
+        const { enqueue } = require('./queue');
+        await enqueue('provisioning-jobs', { jobId: result.rows[0].id });
 
     } catch (e) {
         console.error('[Provisioning Enqueue Error]', e);
+        // Surface the failure to the caller (PayPal webhook handler) so it returns 500
+        // and PayPal will retry the delivery automatically.
+        throw e;
     }
 }
 
-module.exports = { enqueueProvisioningJob, seedStarterServices };
+module.exports = { enqueueProvisioningJob, seedStarterServices, processProvisioningJob };

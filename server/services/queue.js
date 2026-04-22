@@ -36,6 +36,10 @@ async function initQueue() {
     const { processExpireBookingHold } = require('./bookingWorker');
     await boss.work('expire-booking-hold', { retryLimit: 1 }, processExpireBookingHold);
 
+    // ── Worker: Tenant Provisioning ────────────────────────────────────────────
+    const { processProvisioningJob } = require('./provisioning');
+    await boss.work('provisioning-jobs', { retryLimit: 5, retryDelay: 60 }, processProvisioningJob);
+
     return boss;
 }
 

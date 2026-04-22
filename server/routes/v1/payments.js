@@ -44,8 +44,9 @@ router.post('/stripe/webhook', async (req, res) => {
         await handleStripeWebhookEvent(stripeEvent);
         res.json({received: true});
     } catch (e) {
-        console.error(e);
-        res.status(400).send(`Webhook Error: ${e.message}`);
+        console.error('[Stripe Webhook Error]', e);
+        const isValidation = e.message.includes('signature') || e.message.includes('payload');
+        res.status(isValidation ? 400 : 500).send(`Webhook Error: ${e.message}`);
     }
 });
 
@@ -169,8 +170,10 @@ router.post('/paypal/webhook', async (req, res) => {
         }
         res.json({received: true});
     } catch (e) {
-        console.error(e);
-        res.status(400).send(`Webhook Error: ${e.message}`);
+        console.error('[PayPal Webhook Error]', e);
+        // Differentiate between 400 validation errors and 500 processing errors
+        const isValidation = e.message.includes('signature') || e.message.includes('Missing required') || e.message.includes('forgery');
+        res.status(isValidation ? 400 : 500).send(`Webhook Error: ${e.message}`);
     }
 });
 
@@ -228,11 +231,11 @@ router.post('/wipay/webhook', async (req, res) => {
             return res.json({ received: true, duplicate: true });
         }
 
-        // We use order_id as booking.id for booking payments
+        // order_id corresponds to booking_payments.id, NOT bookings.id
         const paymentRes = await query(
             `SELECT p.*, b.tenant_id FROM booking_payments p 
              JOIN bookings b ON b.id = p.booking_id 
-             WHERE b.id = $1 AND p.status = 'pending'`,
+             WHERE p.id = $1 AND p.status = 'pending'`,
             [order_id]
         );
 
@@ -258,10 +261,14 @@ router.post('/wipay/webhook', async (req, res) => {
         const { verifyTransaction } = require('../../services/wipay');
         
         try {
-             // Perform an actual server-to-server check to verify authenticity
+             // Perform an actual server-to-server check to verify authenticity.
+             // (Note: WiPay does not offer signed cryptographic headers like PayPal. 
+             // We authenticate by actively fetching the transaction status from WiPay's secure API.)
              const verification = await verifyTransaction(transaction_id, payment.id, tenant);
              
-             if (verification.status === 'success' || verification.status === 'approved') {
+             const isPaid = ['success', 'approved'].includes((verification.status || '').toLowerCase());
+
+             if (isPaid) {
                  await query(
                     `UPDATE booking_payments SET status = 'paid', external_reference = $1, gateway_response = $2 WHERE id = $3`,
                     [transaction_id, JSON.stringify(verification), payment.id]
@@ -270,7 +277,7 @@ router.post('/wipay/webhook', async (req, res) => {
                  // Mark booking as confirmed
                  const bRes = await query(
                     `UPDATE bookings SET status = 'confirmed', updated_at = NOW() WHERE id = $1 RETURNING *`,
-                    [order_id]
+                    [payment.booking_id]
                  );
                  
                  const { sendBookingConfirmation } = require('../../services/email');
@@ -306,7 +313,7 @@ router.post('/wipay/create', paymentLimiter, async (req, res) => {
         // Use tenant-specific WiPay credentials if configured, fall back to platform defaults
         const wipayAccount = req.tenant.branding?.wipay_account || process.env.WIPAY_ACCOUNT_NUMBER || '1234567890';
         const wipayEnv     = process.env.WIPAY_ENVIRONMENT || 'sandbox';
-        const baseUrl      = req.headers.origin || `${req.protocol}://${req.get('host')}`;
+        const baseUrl      = process.env.PUBLIC_APP_URL || process.env.BASE_URL || `${req.headers['x-forwarded-proto'] || req.protocol}://${req.get('host')}`;
         const responseUrl  = returnPath
             ? `${baseUrl}/${returnPath}`
             : `${baseUrl}/`;
@@ -428,7 +435,7 @@ router.post('/deposit/create', paymentLimiter, async (req, res) => {
         );
 
         const wipayAccount = req.tenant.branding?.wipay_account || process.env.WIPAY_ACCOUNT_NUMBER || '1234567890';
-        const baseUrl      = req.headers.origin || `${req.protocol}://${req.get('host')}`;
+        const baseUrl      = process.env.PUBLIC_APP_URL || process.env.BASE_URL || `${req.headers['x-forwarded-proto'] || req.protocol}://${req.get('host')}`;
 
         res.json({
             depositId,

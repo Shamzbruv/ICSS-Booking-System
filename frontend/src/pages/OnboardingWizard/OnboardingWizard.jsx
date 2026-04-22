@@ -5,23 +5,20 @@
 //
 // Steps:
 //   0 → Business Basics (name, owner, email, password)
-//   1 → Choose Plan
-//   2 → Choose Theme (redirects to ThemeSelector page)
-//   3 → PayPal Subscription Checkout
-//   4 → Success / Provisioning Wait
+//   1 → Choose Theme (redirects to ThemeSelector page)
+//   2 → PayPal Subscription Checkout ($35.50/mo — 7-day free trial)
+//   3 → Success / Provisioning Wait
 
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import s from './OnboardingWizard.module.css';
 import { api } from '../../api';
 
-const PLANS = [
-  { id: 'starter',    label: 'Starter',    price: 'Free', tagline: 'Up to 50 bookings/mo' },
-  { id: 'pro',        label: 'Pro',         price: '$49/mo', tagline: '500 bookings + branding' },
-  { id: 'enterprise', label: 'Enterprise',  price: '$199/mo', tagline: 'Unlimited + API access' },
-];
+// Real PayPal plan ID — Monthly Plan – 7 Day Free Trial, $35.50 USD/mo
+const PAYPAL_PLAN_ID    = 'P-4EC410252Y479773KNHUVB4A';
+const PAYPAL_CLIENT_ID  = 'AZM7kD2EdxPGkSVk3I64iMNN_snyRB8uO2LP37WmApdHqnBHpC8HC3BEMlpLbMGK3R3CVOOOuBc1cWhr';
 
-const TOTAL_STEPS = 4;
+const TOTAL_STEPS = 3;
 
 function StepDots({ current }) {
   return (
@@ -50,7 +47,7 @@ function StepBasics({ data, onChange, onNext }) {
   return (
     <>
       <h1 className={s.wizard__title}>Start your free trial</h1>
-      <p className={s.wizard__subtitle}>No credit card required. 7 days free on any plan.</p>
+      <p className={s.wizard__subtitle}>7 days free, then $35.50 USD/month. Cancel anytime.</p>
       <div className={s.wizard__field}>
         <label className={s.wizard__label}>Business Name</label>
         <input value={data.businessName} onChange={e => onChange('businessName', e.target.value)} placeholder="e.g. Luxe Hair Studio" />
@@ -75,42 +72,7 @@ function StepBasics({ data, onChange, onNext }) {
   );
 }
 
-// ── Step 1: Plan Selection ───────────────────────────────────────────────────
-function StepPlan({ data, onChange, onNext, onBack }) {
-  return (
-    <>
-      <h1 className={s.wizard__title}>Choose your plan</h1>
-      <p className={s.wizard__subtitle}>You can upgrade or downgrade at any time.</p>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {PLANS.map(p => (
-          <label key={p.id} style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            padding: '14px 18px', borderRadius: 'var(--radius-md)',
-            border: `1px solid ${data.planId === p.id ? 'var(--color-primary)' : 'var(--color-border)'}`,
-            background: data.planId === p.id ? 'rgba(124,110,247,0.08)' : 'var(--color-surface-2)',
-            cursor: 'pointer', transition: 'all 0.15s ease',
-          }}>
-            <span>
-              <input type="radio" name="plan" value={p.id} checked={data.planId === p.id}
-                onChange={() => onChange('planId', p.id)} style={{ display: 'none' }} />
-              <strong style={{ display: 'block', marginBottom: 2 }}>{p.label}</strong>
-              <span style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{p.tagline}</span>
-            </span>
-            <span style={{ fontWeight: 700, color: data.planId === p.id ? 'var(--color-primary)' : 'var(--color-text-muted)' }}>
-              {p.price}
-            </span>
-          </label>
-        ))}
-      </div>
-      <div className={s.wizard__actions}>
-        <button className={`${s.btn} ${s['btn--ghost']}`} onClick={onBack}>← Back</button>
-        <button className={`${s.btn} ${s['btn--primary']}`} onClick={onNext} disabled={!data.planId}>Choose Theme →</button>
-      </div>
-    </>
-  );
-}
-
-// ── Step 2: Theme Selection (delegates to ThemeSelector page) ────────────────
+// ── Step 1: Theme Selection (delegates to ThemeSelector page) ────────────────
 function StepTheme({ data, onNext, onBack, navigate }) {
   return (
     <>
@@ -136,7 +98,7 @@ function StepTheme({ data, onNext, onBack, navigate }) {
   );
 }
 
-// ── Step 3: PayPal Checkout ──────────────────────────────────────────────────
+// ── Step 2: PayPal Checkout ──────────────────────────────────────────────────
 function StepPayPal({ data, onNext }) {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState('');
@@ -147,44 +109,76 @@ function StepPayPal({ data, onNext }) {
     setErr('');
     try {
       const res = await api.createPendingSignup({
-        tenant_name:     data.businessName,
-        admin_email:     data.email,
-        admin_password:  data.password,
-        theme_id:        data.themeId || null,
-        plan_id:         data.planId,
+        tenant_name:    data.businessName,
+        admin_email:    data.email,
+        admin_password: data.password,
+        theme_id:       data.themeId || null,
+        plan_id:        'monthly', // Single plan
       });
       setSignupToken(res.signup_token);
       localStorage.setItem('icss_signup_token', res.signup_token);
-      // In production: load PayPal JS SDK and call paypal.Buttons() here.
-      // For now, simulate a successful subscription initiation for development.
-      setTimeout(() => onNext(), 1500);
+      
+      const loadPayPal = () => {
+        if (window.paypal) return renderButtons(res.signup_token);
+        const script = document.createElement('script');
+        script.src = `https://www.paypal.com/sdk/js?client-id=${PAYPAL_CLIENT_ID}&vault=true&intent=subscription`;
+        script.dataset.sdkIntegrationSource = 'button-factory';
+        script.async = true;
+        script.onload = () => renderButtons(res.signup_token);
+        script.onerror = () => setErr('Failed to load PayPal. Please refresh and try again.');
+        document.body.appendChild(script);
+      };
+      loadPayPal();
     } catch (e) {
       setErr(e.message);
-    } finally {
       setLoading(false);
     }
+  };
+
+  const renderButtons = (token) => {
+    setLoading(false);
+    const container = document.getElementById('paypal-button-container-P-4EC410252Y479773KNHUVB4A');
+    if (container) container.innerHTML = '';
+    
+    window.paypal.Buttons({
+      style: { shape: 'rect', color: 'blue', layout: 'vertical', label: 'subscribe' },
+      createSubscription: function(data, actions) {
+        return actions.subscription.create({
+          plan_id: PAYPAL_PLAN_ID,
+          custom_id: token
+        });
+      },
+      onApprove: function(data, actions) {
+        onNext();
+      },
+      onError: function(err) {
+        setErr('PayPal checkout encountered an error. Please try again.');
+      }
+    }).render('#paypal-button-container-P-4EC410252Y479773KNHUVB4A');
   };
 
   return (
     <>
       <h1 className={s.wizard__title}>Start your free trial</h1>
-      <p className={s.wizard__subtitle}>Your 7-day trial begins now. You will only be billed after it ends.</p>
+      <p className={s.wizard__subtitle}>7 days free, then <strong>$35.50 USD/month</strong>. Cancel anytime.</p>
       <div style={{ padding: '24px', textAlign: 'center', background: 'var(--color-surface-2)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
         <p style={{ fontSize: 13, color: 'var(--color-text-muted)', marginBottom: 16 }}>
-          Plan: <strong style={{ color: 'var(--color-text)' }}>{data.planId}</strong>
+          ICSS Booking Management — Monthly Plan
         </p>
-        {/* PayPal Smart Buttons mount here in production */}
-        <div id="paypal-button-container" />
-        <button className={`${s.btn} ${s['btn--primary']}`} onClick={startSubscription} disabled={loading} style={{ width: '100%' }}>
-          {loading ? 'Connecting to PayPal…' : '🅿️ Activate Trial with PayPal'}
-        </button>
+        {/* PayPal Smart Buttons mount here */}
+        <div id="paypal-button-container-P-4EC410252Y479773KNHUVB4A" style={{ marginTop: 8 }} />
+        {!signupToken && (
+          <button className={`${s.btn} ${s['btn--primary']}`} onClick={startSubscription} disabled={loading} style={{ width: '100%', marginTop: 12 }}>
+            {loading ? 'Connecting to PayPal…' : '🅿️ Proceed to Payment'}
+          </button>
+        )}
       </div>
       {err && <p className={s.wizard__error}>{err}</p>}
     </>
   );
 }
 
-// ── Step 4: Success ──────────────────────────────────────────────────────────
+// ── Step 3: Success ──────────────────────────────────────────────────────────
 function StepSuccess({ navigate }) {
   useEffect(() => {
     const t = setTimeout(() => navigate('/provisioning'), 2000);
@@ -214,7 +208,7 @@ export default function OnboardingWizard() {
     const saved = localStorage.getItem(PERSIST_KEY);
     return saved ? JSON.parse(saved).data : {
       businessName: '', ownerName: '', email: '', password: '',
-      planId: 'pro', themeId: '', themeName: '',
+      themeId: '', themeName: '',
     };
   });
 
@@ -232,7 +226,7 @@ export default function OnboardingWizard() {
     const themeName = params.get('theme_name');
     if (themeId) {
       setData(d => ({ ...d, themeId, themeName: decodeURIComponent(themeName || '') }));
-      setStep(2);
+      setStep(1);
     }
   }, []);
 
@@ -243,10 +237,9 @@ export default function OnboardingWizard() {
   const renderStep = () => {
     switch (step) {
       case 0: return <StepBasics data={data} onChange={onChange} onNext={onNext} />;
-      case 1: return <StepPlan data={data} onChange={onChange} onNext={onNext} onBack={onBack} />;
-      case 2: return <StepTheme data={data} onNext={onNext} onBack={onBack} navigate={navigate} />;
-      case 3: return <StepPayPal data={data} onNext={onNext} />;
-      case 4: return <StepSuccess navigate={navigate} />;
+      case 1: return <StepTheme data={data} onNext={onNext} onBack={onBack} navigate={navigate} />;
+      case 2: return <StepPayPal data={data} onNext={onNext} />;
+      case 3: return <StepSuccess navigate={navigate} />;
       default: return null;
     }
   };

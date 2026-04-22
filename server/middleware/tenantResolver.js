@@ -108,7 +108,8 @@ async function tenantResolver(req, res, next) {
         req.path.startsWith('/payments/stripe/webhook') ||
         req.path.startsWith('/payments/paypal/webhook') ||
         req.path === '/payments/paypal/create-subscription' ||
-        req.path.startsWith('/themes')) {
+        req.path.startsWith('/themes') ||
+        req.path.startsWith('/public/provisioning-status')) {
         return next();
     }
 
