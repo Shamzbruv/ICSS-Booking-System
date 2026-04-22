@@ -24,9 +24,12 @@ export default function EditorCanvas() {
 
   useEffect(() => {
     api.me().then(user => {
-      if (user.tenant_slug) {
-        setTenantSlug(user.tenant_slug);
-        return api.getLayout(user.tenant_slug);
+      // Primary: read slug from JWT claim (set after login)
+      // Fallback: read from localStorage for users who just finished provisioning
+      const slug = user.tenant_slug || localStorage.getItem('icss_tenant_slug') || '';
+      if (slug) {
+        setTenantSlug(slug);
+        return api.getLayout(slug);
       }
     })
     .then(data => {

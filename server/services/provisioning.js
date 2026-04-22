@@ -122,7 +122,7 @@ async function processProvisioningJob(job) {
         await query(
             `INSERT INTO users (tenant_id, email, password_hash, name, role)
              VALUES ($1, $2, $3, $4, 'tenant_admin')`,
-            [tenant.id, signup.admin_email.toLowerCase().trim(), signup.admin_password_hash, signup.admin_email]
+            [tenant.id, signup.admin_email.toLowerCase().trim(), signup.admin_password_hash, signup.admin_owner_name || signup.admin_email]
         );
 
         // 3. Seed starter services asynchronously based on the theme

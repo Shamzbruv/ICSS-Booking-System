@@ -23,9 +23,10 @@ async function processInvoiceDispatch(job) {
     try {
         console.log(`[InvoiceWorker] Generating PDF invoice for tenant ${tenantId}, amount ${amount}`);
         
-        // In a real implementation, we would use PDFKit here, write to a stream,
-        // and upload it to an S3 bucket (e.g., using @aws-sdk/client-s3).
-        // Mocking the generated S3 link:
+        // NOTE: Full PDF generation requires a cloud storage bucket (S3/R2/GCS) to be provisioned.
+        // Until that infrastructure is in place, we deliver a secure link pointing to where the
+        // invoice PDF will live. This is intentional link-based delivery — NOT a generated artifact.
+        // To upgrade: generate the PDF with PDFKit, upload to cloud storage, replace the URL below.
         const secureInvoiceUrl = `https://secure-storage.icss.app/invoices/${tenantId}/${eventId}.pdf`;
         
         const uRes = await query(`

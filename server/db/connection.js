@@ -277,6 +277,7 @@ async function runMigrations(client) {
 
     // Ensure columns exist if table was already created
     try { await client.query(`ALTER TABLE pending_signups ALTER COLUMN tenant_slug DROP NOT NULL`); } catch(e){}
+    try { await client.query(`ALTER TABLE pending_signups ADD COLUMN admin_owner_name TEXT`); } catch(e){}
     try { await client.query(`ALTER TABLE provisioning_jobs ALTER COLUMN tenant_slug DROP NOT NULL`); } catch(e){}
     try { await client.query(`ALTER TABLE tenants ADD COLUMN subscription_status TEXT DEFAULT 'trial'`); } catch(e){}
     try { await client.query(`ALTER TABLE tenants ADD COLUMN stripe_customer_id TEXT`); } catch(e){}

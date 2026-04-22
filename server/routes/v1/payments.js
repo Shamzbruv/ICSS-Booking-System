@@ -184,7 +184,7 @@ router.post('/paypal/create-subscription', async (req, res) => {
     try {
         const {
             tenant_name, admin_email, admin_password,
-            theme_id, plan_id
+            admin_owner_name, theme_id, plan_id
         } = req.body;
 
         if (!tenant_name || !admin_email || !admin_password) {
@@ -197,9 +197,9 @@ router.post('/paypal/create-subscription', async (req, res) => {
         const signup_token = crypto.randomUUID();
 
         await query(
-            `INSERT INTO pending_signups (signup_token, tenant_slug, tenant_name, admin_email, admin_password_hash, theme_id, plan_id)
-             VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-            [signup_token, null, tenant_name, admin_email.toLowerCase(), hash, theme_id || null, plan_id || 'starter']
+            `INSERT INTO pending_signups (signup_token, tenant_slug, tenant_name, admin_email, admin_password_hash, admin_owner_name, theme_id, plan_id)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+            [signup_token, null, tenant_name, admin_email.toLowerCase(), hash, admin_owner_name || admin_email, theme_id || null, plan_id || 'monthly']
         );
 
         res.json({
