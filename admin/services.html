@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ICSS Admin — Services</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700,900&f[]=clash-display@400,500,600,700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/global-theme.css">
+    <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+
+<div class="gradient-bg"></div>
+<div class="grid-pattern"></div>
+
+<aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+        <span class="brand-name" id="tenantName">Booking System</span>
+    </div>
+    <nav class="sidebar-nav">
+        <a href="index.html" class="nav-item"><span class="nav-icon">⬛</span> Dashboard</a>
+        <a href="bookings.html" class="nav-item"><span class="nav-icon">📅</span> Bookings</a>
+        <a href="availability.html" class="nav-item"><span class="nav-icon">🗓️</span> Availability</a>
+        <a href="settings.html" class="nav-item"><span class="nav-icon">⚙️</span> Settings</a>
+        <a href="services.html" class="nav-item active"><span class="nav-icon">📦</span> Services</a>
+    </nav>
+</aside>
+
+<main class="main-content">
+    <header class="page-header">
+        <div>
+            <h1 class="page-title">Services</h1>
+            <p class="page-subtitle">Manage your services, duration, and payment overrides.</p>
+        </div>
+        <button class="btn btn-primary" onclick="showCreateModal()">+ Add Service</button>
+    </header>
+
+    <div class="card" style="padding: 1.5rem;">
+        <table class="data-table" style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr style="border-bottom: 2px solid var(--color-border); text-align: left;">
+                    <th style="padding: 1rem;">Service Name</th>
+                    <th style="padding: 1rem;">Duration</th>
+                    <th style="padding: 1rem;">Price</th>
+                    <th style="padding: 1rem;">Payment Mode</th>
+                    <th style="padding: 1rem;">Deposit Rule</th>
+                    <th style="padding: 1rem;">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="servicesList">
+                <tr><td colspan="6" style="padding: 1rem; text-align: center;">Loading services...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</main>
+
+<!-- Create/Edit Modal -->
+<div id="serviceModal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+    <div style="background: var(--color-surface); padding: 2rem; border-radius: 8px; width: 100%; max-width: 600px;">
+        <h2 id="modalTitle" style="margin-bottom: 1.5rem;">Add Service</h2>
+        <form id="serviceForm">
+            <input type="hidden" id="serviceId">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="form-group">
+                    <label>Name</label>
+                    <input type="text" id="name" required style="width: 100%; padding: 0.5rem;">
+                </div>
+                <div class="form-group">
+                    <label>Price</label>
+                    <input type="number" id="price" required style="width: 100%; padding: 0.5rem;">
+                </div>
+                <div class="form-group">
+                    <label>Duration (mins)</label>
+                    <input type="number" id="duration_minutes" required value="30" style="width: 100%; padding: 0.5rem;">
+                </div>
+                <div class="form-group">
+                    <label>Buffer Time (mins)</label>
+                    <input type="number" id="buffer_time_minutes" value="0" style="width: 100%; padding: 0.5rem;">
+                </div>
+                
+                <div class="form-group">
+                    <label>Payment Mode Override</label>
+                    <select id="payment_mode" style="width: 100%; padding: 0.5rem;">
+                        <option value="tenant_default">Use Business Default</option>
+                        <option value="none">No Payment</option>
+                        <option value="wipay">WiPay</option>
+                        <option value="manual">Manual Bank Transfer</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Requirement Type</label>
+                    <select id="payment_requirement_type" style="width: 100%; padding: 0.5rem;">
+                        <option value="none">None</option>
+                        <option value="deposit">Deposit</option>
+                        <option value="full">Full Payment</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Deposit Type</label>
+                    <select id="deposit_type" style="width: 100%; padding: 0.5rem;">
+                        <option value="percentage">Percentage (%)</option>
+                        <option value="fixed">Fixed Amount</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Deposit Amount</label>
+                    <input type="number" id="deposit_amount" value="0" style="width: 100%; padding: 0.5rem;">
+                </div>
+            </div>
+            <div class="form-group" style="margin-top: 1rem;">
+                <label>Description</label>
+                <textarea id="description" rows="3" style="width: 100%; padding: 0.5rem;"></textarea>
+            </div>
+            
+            <div style="margin-top: 1.5rem; display: flex; justify-content: flex-end; gap: 1rem;">
+                <button type="button" class="btn" onclick="document.getElementById('serviceModal').style.display='none'">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save Service</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="js/admin.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', async () => {
+        requireAuth();
+        await loadServices();
+
+        document.getElementById('serviceForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await saveService();
+        });
+    });
+
+    async function loadServices() {
+        try {
+            const data = await apiFetch('/api/v1/services');
+            const tbody = document.getElementById('servicesList');
+            tbody.innerHTML = '';
+            
+            if (data.services.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="padding: 1rem; text-align: center;">No services found.</td></tr>';
+                return;
+            }
+
+            data.services.forEach(svc => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="padding: 1rem;"><strong>${svc.name}</strong></td>
+                    <td style="padding: 1rem;">${svc.duration_minutes}m + ${svc.buffer_time_minutes}m buffer</td>
+                    <td style="padding: 1rem;">${svc.currency} ${svc.price}</td>
+                    <td style="padding: 1rem;"><span class="badge" style="background: #eef2ff; color: #4f46e5; padding: 4px 8px; border-radius: 4px;">${svc.payment_mode}</span></td>
+                    <td style="padding: 1rem;">${svc.payment_requirement_type} ${svc.deposit_amount > 0 ? '('+svc.deposit_amount+')' : ''}</td>
+                    <td style="padding: 1rem;">
+                        <button class="btn" onclick="editService('${svc.id}')">Edit</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
+    function showCreateModal() {
+        document.getElementById('serviceForm').reset();
+        document.getElementById('serviceId').value = '';
+        document.getElementById('modalTitle').textContent = 'Add Service';
+        document.getElementById('serviceModal').style.display = 'flex';
+    }
+
+    async function saveService() {
+        const id = document.getElementById('serviceId').value;
+        const payload = {
+            name: document.getElementById('name').value,
+            price: document.getElementById('price').value,
+            duration_minutes: document.getElementById('duration_minutes').value,
+            buffer_time_minutes: document.getElementById('buffer_time_minutes').value,
+            payment_mode: document.getElementById('payment_mode').value,
+            payment_requirement_type: document.getElementById('payment_requirement_type').value,
+            deposit_type: document.getElementById('deposit_type').value,
+            deposit_amount: document.getElementById('deposit_amount').value,
+            description: document.getElementById('description').value
+        };
+
+        try {
+            if (id) {
+                await apiFetch(`/api/v1/services/${id}`, { method: 'PATCH', body: payload });
+            } else {
+                await apiFetch(`/api/v1/services`, { method: 'POST', body: payload });
+            }
+            document.getElementById('serviceModal').style.display = 'none';
+            await loadServices();
+        } catch (err) {
+            alert('Error saving service: ' + err.message);
+        }
+    }
+</script>
+</body>
+</html>

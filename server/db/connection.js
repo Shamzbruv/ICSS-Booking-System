@@ -53,6 +53,26 @@ async function query(sql, params = []) {
 }
 
 /**
+ * Execute a series of SQL queries within an ACID transaction.
+ * @param {function} callback - Function receiving the connected client
+ * @returns {Promise<any>}
+ */
+async function transaction(callback) {
+    const client = await getPool().connect();
+    try {
+        await client.query('BEGIN');
+        const result = await callback(client);
+        await client.query('COMMIT');
+        return result;
+    } catch (err) {
+        await client.query('ROLLBACK');
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+/**
  * Initialize the database — run migrations to create tables if they don't exist.
  * Called once on server boot.
  */
@@ -116,10 +136,26 @@ async function runMigrations(client) {
             features JSONB DEFAULT '{}',
             limits JSONB DEFAULT '{}',
             branding JSONB DEFAULT '{}',
+            layout JSONB DEFAULT '[]'::jsonb,
             active BOOLEAN DEFAULT true,
+            default_payment_mode TEXT DEFAULT 'none',
+            wipay_enabled BOOLEAN DEFAULT false,
+            manual_payment_enabled BOOLEAN DEFAULT false,
+            hold_timeout_minutes INTEGER DEFAULT 15,
+            bank_transfer_instructions TEXT,
+            payment_settings JSONB DEFAULT '{}',
             created_at TIMESTAMPTZ DEFAULT NOW()
         )
     `);
+
+    // Migration for existing databases
+    await client.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS layout JSONB DEFAULT '[]'::jsonb`);
+    await client.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS default_payment_mode TEXT DEFAULT 'none'`);
+    await client.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS wipay_enabled BOOLEAN DEFAULT false`);
+    await client.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS manual_payment_enabled BOOLEAN DEFAULT false`);
+    await client.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS hold_timeout_minutes INTEGER DEFAULT 15`);
+    await client.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS bank_transfer_instructions TEXT`);
+    await client.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS payment_settings JSONB DEFAULT '{}'`);
 
     // ── Tenant Slug History (for redirects) ──────────────────────────────────
     await client.query(`
@@ -137,7 +173,7 @@ async function runMigrations(client) {
             id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
             signup_token TEXT UNIQUE NOT NULL,
             tenant_name TEXT NOT NULL,
-            tenant_slug TEXT NOT NULL,
+            tenant_slug TEXT,
             admin_email TEXT NOT NULL,
             admin_password_hash TEXT NOT NULL,
             theme_id UUID REFERENCES themes(id),
@@ -152,7 +188,7 @@ async function runMigrations(client) {
         CREATE TABLE IF NOT EXISTS provisioning_jobs (
             id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
             status TEXT DEFAULT 'pending',
-            tenant_slug TEXT NOT NULL,
+            tenant_slug TEXT,
             signup_token TEXT,
             webhook_id TEXT,
             payload JSONB DEFAULT '{}',
@@ -160,6 +196,18 @@ async function runMigrations(client) {
             attempts INTEGER DEFAULT 0,
             created_at TIMESTAMPTZ DEFAULT NOW(),
             updated_at TIMESTAMPTZ DEFAULT NOW()
+        )
+    `);
+
+    // ── Idempotency Keys (Webhook duplicate prevention) ───────────────────────
+    await client.query(`
+        CREATE TABLE IF NOT EXISTS idempotency_keys (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            provider TEXT NOT NULL,
+            event_id TEXT NOT NULL,
+            payload JSONB DEFAULT '{}',
+            created_at TIMESTAMPTZ DEFAULT NOW(),
+            UNIQUE(provider, event_id)
         )
     `);
 
@@ -188,8 +236,13 @@ async function runMigrations(client) {
             name TEXT NOT NULL,
             description TEXT,
             duration_minutes INT DEFAULT 30,
+            buffer_time_minutes INT DEFAULT 0,
             price NUMERIC DEFAULT 0,
             currency TEXT DEFAULT 'JMD',
+            payment_mode TEXT DEFAULT 'tenant_default',
+            payment_requirement_type TEXT DEFAULT 'none',
+            deposit_type TEXT DEFAULT 'percentage',
+            deposit_amount NUMERIC DEFAULT 0,
             active BOOLEAN DEFAULT true,
             created_at TIMESTAMPTZ DEFAULT NOW()
         )
@@ -207,16 +260,25 @@ async function runMigrations(client) {
             phone TEXT,
             booking_date DATE NOT NULL,
             booking_time TIME NOT NULL,
+            start_time TIMESTAMPTZ,
+            end_time TIMESTAMPTZ,
+            expires_at TIMESTAMPTZ,
             notes TEXT,
             region TEXT DEFAULT 'Jamaica',
-            status TEXT DEFAULT 'confirmed',
+            status TEXT DEFAULT 'pending_payment',
+            payment_mode TEXT DEFAULT 'none',
             calendar_event_id TEXT,
             sync_status TEXT DEFAULT 'pending',
             created_at TIMESTAMPTZ DEFAULT NOW(),
             updated_at TIMESTAMPTZ DEFAULT NOW(),
-            UNIQUE(tenant_id, booking_date, booking_time)
+            UNIQUE(tenant_id, start_time, end_time)
         )
     `);
+
+    // Indexes for fast overlap checks
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_bookings_tenant_time ON bookings (tenant_id, start_time, end_time)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_bookings_status ON bookings (status)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_bookings_active_states ON bookings (tenant_id, start_time, end_time) WHERE status IN ('confirmed', 'pending_payment', 'pending_manual_confirmation')`);
 
     // Ensure columns exist if table was already created
     try { await client.query(`ALTER TABLE pending_signups ALTER COLUMN tenant_slug DROP NOT NULL`); } catch(e){}
@@ -234,6 +296,76 @@ async function runMigrations(client) {
     try { await client.query(`ALTER TABLE bookings ADD COLUMN calendar_event_id TEXT`); } catch(e){}
     try { await client.query(`ALTER TABLE bookings ADD COLUMN sync_status TEXT DEFAULT 'pending'`); } catch(e){}
     try { await client.query(`ALTER TABLE bookings ADD COLUMN updated_at TIMESTAMPTZ DEFAULT NOW()`); } catch(e){}
+    try { await client.query(`ALTER TABLE bookings ADD COLUMN start_time TIMESTAMPTZ`); } catch(e){}
+    try { await client.query(`ALTER TABLE bookings ADD COLUMN end_time TIMESTAMPTZ`); } catch(e){}
+    try { await client.query(`ALTER TABLE bookings ADD COLUMN expires_at TIMESTAMPTZ`); } catch(e){}
+    try { await client.query(`ALTER TABLE bookings ADD COLUMN payment_mode TEXT DEFAULT 'none'`); } catch(e){}
+    
+    try { await client.query(`ALTER TABLE services ADD COLUMN buffer_time_minutes INT DEFAULT 0`); } catch(e){}
+    try { await client.query(`ALTER TABLE services ADD COLUMN payment_mode TEXT DEFAULT 'tenant_default'`); } catch(e){}
+    try { await client.query(`ALTER TABLE services ADD COLUMN payment_requirement_type TEXT DEFAULT 'none'`); } catch(e){}
+    try { await client.query(`ALTER TABLE services ADD COLUMN deposit_type TEXT DEFAULT 'percentage'`); } catch(e){}
+    try { await client.query(`ALTER TABLE services ADD COLUMN deposit_amount NUMERIC DEFAULT 0`); } catch(e){}
+
+    // ── Booking Payments ──────────────────────────────────────────────────────
+    await client.query(`
+        CREATE TABLE IF NOT EXISTS booking_payments (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            booking_id UUID REFERENCES bookings(id) ON DELETE CASCADE,
+            tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+            provider TEXT NOT NULL,
+            payment_type TEXT DEFAULT 'full',
+            amount_due NUMERIC NOT NULL,
+            amount_paid NUMERIC DEFAULT 0,
+            status TEXT DEFAULT 'pending',
+            external_reference TEXT,
+            gateway_response JSONB DEFAULT '{}',
+            created_at TIMESTAMPTZ DEFAULT NOW(),
+            updated_at TIMESTAMPTZ DEFAULT NOW()
+        )
+    `);
+
+    // ── Ledger Schema (Phase 2) ────────────────────────────────────────────────
+    await client.query(`
+        CREATE TABLE IF NOT EXISTS ledger_accounts (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+            code TEXT NOT NULL,
+            name TEXT NOT NULL,
+            type TEXT NOT NULL CHECK (type IN ('asset', 'liability', 'equity', 'revenue', 'expense')),
+            description TEXT,
+            created_at TIMESTAMPTZ DEFAULT NOW(),
+            UNIQUE(tenant_id, code)
+        )
+    `);
+
+    await client.query(`
+        CREATE TABLE IF NOT EXISTS ledger_transactions (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+            description TEXT NOT NULL,
+            reference_type TEXT,
+            reference_id TEXT,
+            transaction_date TIMESTAMPTZ DEFAULT NOW(),
+            created_at TIMESTAMPTZ DEFAULT NOW()
+        )
+    `);
+
+    await client.query(`
+        CREATE TABLE IF NOT EXISTS journal_entries (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            transaction_id UUID REFERENCES ledger_transactions(id) ON DELETE CASCADE,
+            account_id UUID REFERENCES ledger_accounts(id) ON DELETE RESTRICT,
+            type TEXT NOT NULL CHECK (type IN ('debit', 'credit')),
+            amount NUMERIC NOT NULL CHECK (amount > 0),
+            created_at TIMESTAMPTZ DEFAULT NOW()
+        )
+    `);
+
+    // Strictly enforce debits = credits at the transaction level using a deferred trigger constraint.
+    // Wait, deferred triggers require custom function creation which can be complex.
+    // We will enforce this balance strictly at the application boundary within our transaction block.
+    // (A DB-level trigger would be ideal, but for now we enforce via the Ledger Service API).
 
     // Indexes for fast tenant-scoped lookups
     await client.query(`CREATE INDEX IF NOT EXISTS idx_bookings_tenant_date ON bookings(tenant_id, booking_date)`);
@@ -355,14 +487,23 @@ async function runMigrations(client) {
             id BIGSERIAL PRIMARY KEY,
             tenant_id UUID,
             user_id UUID,
+            actor_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
             action TEXT NOT NULL,
             entity TEXT,
             entity_id TEXT,
+            old_status TEXT,
+            new_status TEXT,
+            note TEXT,
             metadata JSONB DEFAULT '{}',
             ip_address TEXT,
             created_at TIMESTAMPTZ DEFAULT NOW()
         )
     `);
+
+    try { await client.query(`ALTER TABLE audit_log ADD COLUMN actor_user_id UUID REFERENCES users(id) ON DELETE SET NULL`); } catch(e){}
+    try { await client.query(`ALTER TABLE audit_log ADD COLUMN old_status TEXT`); } catch(e){}
+    try { await client.query(`ALTER TABLE audit_log ADD COLUMN new_status TEXT`); } catch(e){}
+    try { await client.query(`ALTER TABLE audit_log ADD COLUMN note TEXT`); } catch(e){}
 
     await client.query(`CREATE INDEX IF NOT EXISTS idx_audit_tenant ON audit_log(tenant_id, created_at DESC)`);
 
@@ -430,4 +571,4 @@ async function runMigrations(client) {
     `);
 }
 
-module.exports = { query, initDatabase, getPool };
+module.exports = { query, transaction, initDatabase, getPool };

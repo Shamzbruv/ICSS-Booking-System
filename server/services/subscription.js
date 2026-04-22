@@ -6,6 +6,7 @@
  */
 
 const { query } = require('../db/connection');
+const { logAudit } = require('./audit');
 
 /**
  * Check if a feature is enabled for the given tenant.
@@ -103,6 +104,17 @@ async function handleStripeWebhookEvent(event) {
                     `UPDATE tenants SET subscription_status = $1, stripe_subscription_id = $2 WHERE stripe_customer_id = $3`,
                     [internalStatus, subId, customerId]
                 );
+                // Audit the subscription state change
+                const tRes = await query(`SELECT id FROM tenants WHERE stripe_customer_id = $1`, [customerId]);
+                if (tRes.rows.length > 0) {
+                    await logAudit({
+                        tenantId: tRes.rows[0].id,
+                        action: `subscription.${internalStatus}`,
+                        entity: 'tenant',
+                        entityId: tRes.rows[0].id,
+                        metadata: { provider: 'stripe', stripeSubId: subId, status: internalStatus, stripeEventType: event.type }
+                    });
+                }
                 console.log(`[Stripe Sync] Updated tenant for customer ${customerId} to ${internalStatus}`);
                 break;
             case 'customer.subscription.deleted':
@@ -154,9 +166,17 @@ async function handlePayPalWebhookEvent(event) {
             [internalStatus, subId]
         );
         if (result.rows.length > 0) {
-            console.log(`[PayPal Sync] Updated tenant for subscription ${subId} to ${internalStatus}`);
+            const tenantId = result.rows[0].id;
+            console.log(`[PayPal Sync] Updated tenant ${tenantId} for subscription ${subId} to ${internalStatus}`);
+            // Audit the subscription state change
+            await logAudit({
+                tenantId,
+                action: `subscription.${internalStatus}`,
+                entity: 'tenant',
+                entityId: tenantId,
+                metadata: { provider: 'paypal', paypalSubId: subId, status: internalStatus, paypalEventType: event.event_type }
+            });
             const { invalidateTenantCache } = require('../middleware/tenantResolver');
-            // Assuming tenantResolver will handle cache busting by ID or slug but we don't have slug here trivially
         }
     } catch (e) {
         console.error('[PayPal Webhook Error]', e);

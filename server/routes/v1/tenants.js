@@ -254,4 +254,130 @@ router.patch('/:slug/slug', authenticate, async (req, res) => {
     }
 });
 
+// GET /api/v1/tenants/:slug/layout — Get the current grid layout
+router.get('/:slug/layout', authenticate, async (req, res) => {
+    // Basic tenant check
+    if (req.tenant.slug !== req.params.slug) {
+        return res.status(403).json({ error: 'Unauthorized to view layout for this tenant.' });
+    }
+    try {
+        const result = await query(`SELECT layout FROM tenants WHERE slug = $1`, [req.params.slug]);
+        if (result.rows.length === 0) return res.status(404).json({ error: 'Tenant not found.' });
+        res.json({ layout: result.rows[0].layout });
+    } catch (err) {
+        console.error('[Tenants/Layout Load]', err.message);
+        res.status(500).json({ error: 'Failed to load layout.' });
+    }
+});
+
+// PATCH /api/v1/tenants/:slug/layout — Save the grid layout
+router.patch('/:slug/layout', authenticate, async (req, res) => {
+    if (req.tenant.slug !== req.params.slug) {
+        return res.status(403).json({ error: 'Unauthorized to save layout for this tenant.' });
+    }
+    const { layout } = req.body;
+    if (!layout) return res.status(400).json({ error: 'layout array is required.' });
+    
+    try {
+        const result = await query(
+            `UPDATE tenants SET layout = $1 WHERE slug = $2 RETURNING id`,
+            [JSON.stringify(layout), req.params.slug]
+        );
+        if (result.rows.length === 0) return res.status(404).json({ error: 'Tenant not found.' });
+        res.json({ success: true, message: 'Layout saved successfully.' });
+    } catch (err) {
+        console.error('[Tenants/Layout Save]', err.message);
+        res.status(500).json({ error: 'Failed to save layout.' });
+    }
+});
+
+const { encrypt, maskSecret } = require('../../services/encryption');
+
+// GET /api/v1/tenants/:slug/payment-settings
+router.get('/:slug/payment-settings', authenticate, async (req, res) => {
+    if (req.tenant.slug !== req.params.slug) {
+        return res.status(403).json({ error: 'Unauthorized to view payment settings for this tenant.' });
+    }
+    
+    try {
+        const result = await query(
+            `SELECT default_payment_mode, wipay_enabled, manual_payment_enabled, 
+                    hold_timeout_minutes, bank_transfer_instructions, payment_settings 
+             FROM tenants WHERE slug = $1`, 
+            [req.params.slug]
+        );
+        if (result.rows.length === 0) return res.status(404).json({ error: 'Tenant not found.' });
+        
+        const data = result.rows[0];
+        let maskedSettings = {};
+        
+        if (data.payment_settings) {
+            // Mask secrets
+            maskedSettings = { ...data.payment_settings };
+            if (maskedSettings.wipay_merchant_code) {
+                maskedSettings.wipay_merchant_code = maskSecret('MASKED_SECRET', 0) + ' (Set)'; 
+                // We don't want to expose length or partials of raw encrypted hashes, 
+                // but just indicating it exists is safe.
+            }
+        }
+        
+        res.json({ settings: { ...data, payment_settings: maskedSettings } });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch settings.' });
+    }
+});
+
+// PATCH /api/v1/tenants/:slug/payment-settings — Save the payment configuration
+router.patch('/:slug/payment-settings', authenticate, async (req, res) => {
+    if (req.tenant.slug !== req.params.slug) {
+        return res.status(403).json({ error: 'Unauthorized to save payment settings for this tenant.' });
+    }
+    const { 
+        default_payment_mode, wipay_enabled, manual_payment_enabled, 
+        hold_timeout_minutes, bank_transfer_instructions, payment_settings 
+    } = req.body;
+    
+    try {
+        // Fetch existing settings to preserve unmodified secrets if they come back masked
+        const currentRes = await query(`SELECT payment_settings FROM tenants WHERE slug = $1`, [req.params.slug]);
+        let existingSettings = currentRes.rows[0]?.payment_settings || {};
+        
+        let newSettings = { ...existingSettings };
+        
+        if (payment_settings) {
+            if (payment_settings.wipay_merchant_code && !payment_settings.wipay_merchant_code.includes('(Set)')) {
+                newSettings.wipay_merchant_code = encrypt(payment_settings.wipay_merchant_code);
+            }
+            if (payment_settings.wipay_account_id) {
+                newSettings.wipay_account_id = payment_settings.wipay_account_id; // Usually public/non-secret, but can encrypt if needed
+            }
+        }
+
+        const result = await query(
+            `UPDATE tenants 
+             SET default_payment_mode = COALESCE($1, default_payment_mode),
+                 wipay_enabled = COALESCE($2, wipay_enabled),
+                 manual_payment_enabled = COALESCE($3, manual_payment_enabled),
+                 hold_timeout_minutes = COALESCE($4, hold_timeout_minutes),
+                 bank_transfer_instructions = COALESCE($5, bank_transfer_instructions),
+                 payment_settings = $6
+             WHERE slug = $7 RETURNING id`,
+            [
+                default_payment_mode, 
+                wipay_enabled !== undefined ? Boolean(wipay_enabled) : null,
+                manual_payment_enabled !== undefined ? Boolean(manual_payment_enabled) : null,
+                hold_timeout_minutes ? parseInt(hold_timeout_minutes) : null,
+                bank_transfer_instructions,
+                JSON.stringify(newSettings),
+                req.params.slug
+            ]
+        );
+        if (result.rows.length === 0) return res.status(404).json({ error: 'Tenant not found.' });
+        res.json({ success: true, message: 'Payment settings saved successfully.' });
+    } catch (err) {
+        console.error('[Tenants/Payment Settings]', err.message);
+        res.status(500).json({ error: 'Failed to save payment settings.' });
+    }
+});
+
 module.exports = router;

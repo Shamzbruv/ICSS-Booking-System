@@ -17,6 +17,7 @@
     <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700,900&f[]=clash-display@400,500,600,700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/global-theme.css">
     <link rel="stylesheet" href="css/admin.css">
+  <link rel="icon" type="image/png" href="./favicon.png">
 </head>
 <body class="login-page">
 
@@ -25,7 +26,13 @@
 <div class="grid-pattern"></div>
     <div class="login-card">
         <div class="login-logo">
-            <div class="login-logo-mark">ICSS</div>
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; margin-bottom: 1rem;">
+                <img src="./favicon.png" alt="ICSS Icon" style="width: 56px; height: 56px; border-radius: 12px; object-fit: contain;">
+                <div style="display: flex; flex-direction: column; align-items: center;">
+                    <span style="font-family: 'Clash Display', sans-serif; font-weight: 700; font-size: 2rem; background: linear-gradient(135deg, #ffffff, #a5b4fc); -webkit-background-clip: text; color: transparent; line-height: 1;">ICSS</span>
+                    <span style="font-size: 0.65rem; letter-spacing: 2px; color: #8888aa; font-weight: 600; line-height: 1; margin-top: 4px;">BOOKING MANAGEMENT</span>
+                </div>
+            </div>
             <h1 class="login-title">Admin Portal</h1>
             <p class="login-subtitle">Booking System Management</p>
         </div>

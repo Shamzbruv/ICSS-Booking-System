@@ -1,0 +1,140 @@
+.pageWrapper {
+  min-height: 100vh;
+  background: var(--color-bg);
+  padding: 40px 20px;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.loading, .error {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  color: var(--color-text-muted);
+}
+
+.error {
+  color: var(--color-error);
+}
+
+.gridItem {
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+}
+
+/* Header Component */
+.header {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  text-align: center;
+}
+
+.header h1 {
+  font-size: 36px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+/* Service Menu Component */
+.serviceMenu {
+  flex: 1;
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+}
+
+.serviceMenu h2 {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 24px;
+}
+
+.muted {
+  color: var(--color-text-muted);
+}
+
+.serviceList {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+}
+
+.serviceCard {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  padding: 20px;
+  border-radius: var(--radius-md);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.serviceCard:hover {
+  border-color: var(--color-primary);
+  transform: translateY(-2px);
+}
+
+.serviceCard__info strong {
+  display: block;
+  font-size: 16px;
+  margin-bottom: 6px;
+}
+
+.serviceCard__info p {
+  font-size: 14px;
+  color: var(--color-text-muted);
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+
+.duration {
+  font-size: 12px;
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+.serviceCard__price {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+/* Calendar Component */
+.calendarWidget {
+  background: var(--color-surface);
+  flex: 1;
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+}
+
+.calendarWidget h2 {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 24px;
+}
+
+.mockCalendarBody {
+  flex: 1;
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted);
+  font-size: 14px;
+}

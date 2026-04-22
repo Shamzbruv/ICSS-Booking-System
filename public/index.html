@@ -11,6 +11,7 @@
   
   <!-- Global Design System -->
   <link rel="stylesheet" href="css/global-theme.css">
+  <link rel="icon" type="image/png" href="./favicon.png">
 </head>
 <body>
   <div class="gradient-bg"></div>
@@ -20,10 +21,13 @@
     <!-- Navigation -->
     <nav class="navbar">
       <div class="logo">
-        <div class="logo-icon">
-          <i class="fas fa-calendar-check"></i>
+        <div class="logo-icon" style="background: transparent; box-shadow: none;">
+          <img src="./favicon.png" alt="ICSS Icon" style="width: 42px; height: 42px; border-radius: 12px; object-fit: contain;">
         </div>
-        <span class="logo-text">ICSS</span>
+        <div style="display: flex; flex-direction: column; justify-content: center;">
+          <span class="logo-text" style="line-height: 1;">ICSS</span>
+          <span style="font-size: 0.55rem; letter-spacing: 2px; color: #a1a1aa; font-weight: 600; line-height: 1; margin-top: 2px;">BOOKING MANAGEMENT</span>
+        </div>
       </div>
       <div class="nav-links">
         <a href="#features">Product</a>

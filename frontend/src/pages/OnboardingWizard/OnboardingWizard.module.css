@@ -1,0 +1,121 @@
+.wizard {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: radial-gradient(ellipse at 30% 0%, rgba(124,110,247,0.12) 0%, transparent 60%),
+              var(--color-bg);
+}
+
+.wizard__card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  width: 100%;
+  max-width: 520px;
+  padding: 40px 44px;
+  box-shadow: var(--shadow-glow);
+}
+
+.wizard__logo {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-primary);
+  margin-bottom: 28px;
+}
+
+.wizard__steps {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 32px;
+}
+
+.wizard__step-dot {
+  height: 4px;
+  flex: 1;
+  border-radius: 2px;
+  background: var(--color-border);
+  transition: background 0.3s ease;
+}
+.wizard__step-dot--active  { background: var(--color-primary); }
+.wizard__step-dot--done    { background: var(--color-accent); }
+
+.wizard__title {
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 6px;
+  line-height: 1.3;
+}
+
+.wizard__subtitle {
+  font-size: 14px;
+  color: var(--color-text-muted);
+  margin-bottom: 28px;
+}
+
+.wizard__field {
+  margin-bottom: 16px;
+}
+
+.wizard__label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  margin-bottom: 6px;
+}
+
+.wizard__actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 28px;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 11px 22px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-weight: 600;
+  transition: all var(--transition);
+}
+
+.btn--primary {
+  background: var(--color-primary);
+  color: #fff;
+  flex: 1;
+}
+.btn--primary:hover { filter: brightness(1.1); transform: translateY(-1px); }
+.btn--primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+.btn--ghost {
+  color: var(--color-text-muted);
+  background: transparent;
+  border: 1px solid var(--color-border);
+}
+.btn--ghost:hover { border-color: var(--color-text-muted); color: var(--color-text); }
+
+.wizard__error {
+  font-size: 13px;
+  color: var(--color-error);
+  margin-top: 12px;
+  padding: 10px 14px;
+  background: rgba(245,101,101,0.08);
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(245,101,101,0.2);
+}
+
+.wizard__success-icon {
+  width: 56px; height: 56px;
+  border-radius: 50%;
+  background: rgba(72, 187, 120, 0.15);
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 20px;
+  font-size: 26px;
+}

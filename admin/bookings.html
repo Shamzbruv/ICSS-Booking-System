@@ -17,6 +17,7 @@
     <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700,900&f[]=clash-display@400,500,600,700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/global-theme.css">
     <link rel="stylesheet" href="css/admin.css">
+  <link rel="icon" type="image/png" href="./favicon.png">
 </head>
 <body>
 
@@ -25,7 +26,13 @@
 <div class="grid-pattern"></div>
 <aside class="sidebar">
     <div class="sidebar-brand">
-        <div class="brand-logo">ICSS</div>
+        <div style="display: flex; align-items: center; gap: 10px;">
+              <img src="./favicon.png" alt="ICSS Icon" style="width: 36px; height: 36px; border-radius: 8px; object-fit: contain;">
+              <div style="display: flex; flex-direction: column; justify-content: center;">
+                <span style="font-family: 'Clash Display', sans-serif; font-weight: 700; font-size: 1.2rem; background: linear-gradient(135deg, #ffffff, #a5b4fc); -webkit-background-clip: text; color: transparent; line-height: 1;">ICSS</span>
+                <span style="font-size: 0.45rem; letter-spacing: 1px; color: #8888aa; font-weight: 600; line-height: 1; margin-top: 2px;">BOOKING MANAGEMENT</span>
+              </div>
+            </div>
         <div class="brand-text">
             <span class="brand-name" id="tenantName">Admin</span>
             <span class="brand-plan" id="tenantPlan"></span>
@@ -60,8 +67,11 @@
                 <input type="date" id="filterDate" style="max-width:170px;" onchange="loadBookings()">
                 <select id="filterStatus" onchange="loadBookings()">
                     <option value="">All Statuses</option>
+                    <option value="pending_payment">Pending WiPay</option>
+                    <option value="pending_manual_confirmation">Pending Bank Transfer</option>
                     <option value="confirmed">Confirmed</option>
                     <option value="cancelled">Cancelled</option>
+                    <option value="rejected">Rejected</option>
                     <option value="completed">Completed</option>
                     <option value="no_show">No Show</option>
                 </select>
@@ -158,8 +168,12 @@
                 <td>${statusBadge(b.status)}</td>
                 <td>
                     ${b.status === 'confirmed' ? `
-                        <button class="btn btn-secondary btn-sm" onclick="markComplete('${b.id}')">✓ Complete</button>
+                        <button class="btn btn-secondary btn-sm" onclick="updateStatus('${b.id}', 'completed')">✓ Complete</button>
                         <button class="btn btn-danger btn-sm" onclick="openCancelModal('${b.id}')">✕ Cancel</button>
+                    ` : ''}
+                    ${b.status === 'pending_manual_confirmation' ? `
+                        <button class="btn btn-primary btn-sm" style="background:#10b981;" onclick="updateStatus('${b.id}', 'confirmed', 'Bank transfer approved.')">✓ Approve Transfer</button>
+                        <button class="btn btn-danger btn-sm" onclick="updateStatus('${b.id}', 'rejected', 'Bank transfer not received.')">✕ Reject</button>
                     ` : ''}
                 </td>
             </tr>
@@ -177,13 +191,16 @@
             </table>`;
     }
 
-    async function markComplete(id) {
+    async function updateStatus(id, newStatus, note = '') {
+        if (newStatus === 'rejected' && !confirmDialog('Are you sure you want to reject this booking?')) return;
+        if (newStatus === 'confirmed' && !confirmDialog('Are you sure you want to approve this bank transfer and confirm the booking?')) return;
+        
         try {
             await apiFetch(`/api/v1/bookings/${id}/status`, {
                 method: 'PATCH',
-                body: JSON.stringify({ status: 'completed' })
+                body: JSON.stringify({ status: newStatus, note })
             });
-            showToast('Booking marked as completed.');
+            showToast('Booking status updated to ' + newStatus);
             loadBookings();
         } catch (e) {
             showToast(e.message, 'error');

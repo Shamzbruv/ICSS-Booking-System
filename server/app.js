@@ -20,6 +20,7 @@ const publicRoutes      = require('./routes/v1/public');
 const pricingRoutes     = require('./routes/v1/pricing');
 const calendarRoutes    = require('./routes/v1/calendar');
 const themesRoutes      = require('./routes/v1/themes');
+const servicesRoutes    = require('./routes/v1/services');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -40,6 +41,12 @@ app.use(cors({
 }));
 
 // ─── Body Parsing ─────────────────────────────────────────────────────────────
+// Capture raw body for PayPal webhook signature verification (must come before express.json)
+app.use('/api/v1/payments/paypal/webhook', express.raw({ type: 'application/json' }), (req, res, next) => {
+    req.rawBody = req.body.toString('utf8');
+    req.body = JSON.parse(req.rawBody);
+    next();
+});
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
@@ -67,6 +74,7 @@ app.use('/api/v1/public',       publicRoutes);
 app.use('/api/v1/pricing',      pricingRoutes);
 app.use('/api/v1/calendar',     calendarRoutes);
 app.use('/api/v1/themes',       themesRoutes);
+app.use('/api/v1/services',     servicesRoutes);
 
 // ─── Health Check ─────────────────────────────────────────────────────────────
 app.get('/health', (req, res) => {
@@ -95,10 +103,12 @@ app.use((err, req, res, next) => {
 
 // ─── Boot ─────────────────────────────────────────────────────────────────────
 const { startCronJobs } = require('./services/cron');
+const { initQueue } = require('./services/queue');
 
 async function start() {
     try {
         await initDatabase();
+        await initQueue();
         app.listen(PORT, () => {
             console.log(`\n🚀 ICSS Booking System running on port ${PORT}`);
             console.log(`   Health:  http://localhost:${PORT}/health`);

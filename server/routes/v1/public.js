@@ -21,7 +21,7 @@ router.get('/tenant', (req, res) => {
         timezone:       branding?.timezone       || 'America/Jamaica'
     };
 
-    res.json({ slug, plan: plan_id, branding: safeBranding });
+    res.json({ slug, plan: plan_id, branding: safeBranding, layout: req.tenant.layout });
 });
 
 // GET /api/v1/public/services — List tenant's active services

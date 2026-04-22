@@ -1,0 +1,236 @@
+.editorLayout {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--color-bg);
+}
+
+.sidebar {
+  width: 260px;
+  background: var(--color-surface);
+  border-right: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar__header {
+  padding: 20px;
+  font-weight: 600;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 14px;
+}
+
+.sidebar__list {
+  padding: 20px;
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.componentBox {
+  padding: 12px;
+  background: var(--color-surface-2);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  cursor: grab;
+  text-align: center;
+  transition: all var(--transition);
+}
+.componentBox:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+.componentBox:active {
+  cursor: grabbing;
+}
+
+.sidebar__actions {
+  padding: 20px;
+  border-top: 1px solid var(--color-border);
+}
+
+.btnSave {
+  width: 100%;
+  padding: 12px;
+  background: var(--color-primary);
+  color: #fff;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  font-size: 14px;
+}
+.btnSave:hover { filter: brightness(1.1); }
+.btnSave:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.canvas {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: #000; /* Darker than bg to simulate an editor board */
+}
+
+.canvas__toolbar {
+  height: 60px;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+}
+
+.canvas__toolbar h2 {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.deviceToggle {
+  display: flex;
+  background: var(--color-surface-2);
+  border-radius: 6px;
+  padding: 4px;
+}
+.deviceToggle button {
+  padding: 6px 12px;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+.deviceToggle button.active {
+  background: var(--color-surface);
+  color: var(--color-text);
+  border-radius: 4px;
+}
+
+.gridContainer {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+}
+
+.gridItem {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+}
+
+/* React-Grid-Layout overrides */
+:global(.react-grid-item.react-draggable-dragging) {
+  box-shadow: 0 0 20px rgba(124, 110, 247, 0.4);
+  border-color: var(--color-primary);
+  z-index: 100;
+}
+
+.gridItem__label {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+}
+
+.mockHeader { font-size: 24px; font-weight: 700; }
+.mockList { color: var(--color-text-muted); font-size: 14px; text-align: center; }
+.mockCal { font-size: 40px; }
+
+/* Properties Panel Sidebar */
+.propertiesPanel {
+  width: 300px;
+  background: var(--color-surface);
+  border-left: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+}
+
+.propertiesPanel__header {
+  padding: 20px;
+  font-weight: 600;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.propertiesPanel__body {
+  padding: 20px;
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.emptyState {
+  color: var(--color-text-muted);
+  font-size: 13px;
+  text-align: center;
+  margin-top: 40px;
+}
+
+.propGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.propGroup label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.propInput {
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  width: 100%;
+}
+
+.propColor {
+  height: 36px;
+  padding: 2px;
+  cursor: pointer;
+}
+
+.toggleLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.btnDanger {
+  margin-top: auto;
+  padding: 10px;
+  background: rgba(245, 101, 101, 0.1);
+  color: var(--color-error);
+  border: 1px solid rgba(245, 101, 101, 0.2);
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.btnDanger:hover {
+  background: rgba(245, 101, 101, 0.2);
+}
+
+.gridItem--selected {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px var(--color-primary);
+}

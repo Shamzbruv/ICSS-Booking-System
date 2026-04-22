@@ -131,7 +131,11 @@ function statusBadge(status) {
         reviewed:    { label: 'Reviewed',    cls: 'badge-reviewed'  },
         in_progress: { label: 'In Progress', cls: 'badge-progress'  },
         paid:        { label: 'Paid',        cls: 'badge-confirmed' },
-        pending:     { label: 'Pending',     cls: 'badge-pending'   }
+        pending:     { label: 'Pending',     cls: 'badge-pending'   },
+        pending_payment: { label: 'Pending Payment', cls: 'badge-pending' },
+        pending_manual_confirmation: { label: 'Awaiting Bank Transfer', cls: 'badge-new' },
+        rejected:    { label: 'Rejected',    cls: 'badge-cancelled' },
+        expired:     { label: 'Expired',     cls: 'badge-cancelled' }
     };
     const info = map[status] || { label: capitalize(status), cls: 'badge-default' };
     return `<span class="badge ${info.cls}">${info.label}</span>`;

@@ -18,6 +18,7 @@
     <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700,900&f[]=clash-display@400,500,600,700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/global-theme.css">
     <link rel="stylesheet" href="css/admin.css">
+  <link rel="icon" type="image/png" href="./favicon.png">
 </head>
 <body>
 
@@ -28,7 +29,13 @@
 <!-- ── Sidebar ──────────────────────────────────────────────────────────────── -->
 <aside class="sidebar" id="sidebar">
     <div class="sidebar-brand">
-        <div class="brand-logo">ICSS</div>
+        <div style="display: flex; align-items: center; gap: 10px;">
+              <img src="./favicon.png" alt="ICSS Icon" style="width: 36px; height: 36px; border-radius: 8px; object-fit: contain;">
+              <div style="display: flex; flex-direction: column; justify-content: center;">
+                <span style="font-family: 'Clash Display', sans-serif; font-weight: 700; font-size: 1.2rem; background: linear-gradient(135deg, #ffffff, #a5b4fc); -webkit-background-clip: text; color: transparent; line-height: 1;">ICSS</span>
+                <span style="font-size: 0.45rem; letter-spacing: 1px; color: #8888aa; font-weight: 600; line-height: 1; margin-top: 2px;">BOOKING MANAGEMENT</span>
+              </div>
+            </div>
         <div class="brand-text">
             <span class="brand-name" id="tenantName">Booking System</span>
             <span class="brand-plan" id="tenantPlan">Loading...</span>

@@ -7,14 +7,39 @@
 const express = require('express');
 const router  = express.Router();
 const crypto  = require('crypto');
+const https   = require('https');
 const { query }  = require('../../db/connection');
 const { paymentLimiter } = require('../../middleware/rateLimiter');
 const { enqueueProvisioningJob } = require('../../services/provisioning');
+
+// Helper to enforce webhook idempotency
+async function checkIdempotency(provider, eventId, payload) {
+    if (!eventId) return true; // Cannot verify
+    try {
+        await query(
+            `INSERT INTO idempotency_keys (provider, event_id, payload) VALUES ($1, $2, $3)`,
+            [provider, eventId, JSON.stringify(payload || {})]
+        );
+        return true; // Successfully inserted, proceed
+    } catch (e) {
+        if (e.code === '23505') { // Unique constraint violation
+            return false; // Already processed
+        }
+        throw e;
+    }
+}
 
 // POST /api/v1/payments/stripe/webhook
 router.post('/stripe/webhook', async (req, res) => {
     try {
         const stripeEvent = req.body;
+        
+        const isNew = await checkIdempotency('stripe', stripeEvent.id, stripeEvent);
+        if (!isNew) {
+            console.log(`[Stripe Webhook] Duplicate event ${stripeEvent.id} ignored.`);
+            return res.json({ received: true, duplicate: true });
+        }
+
         const { handleStripeWebhookEvent } = require('../../services/subscription');
         await handleStripeWebhookEvent(stripeEvent);
         res.json({received: true});
@@ -24,29 +49,83 @@ router.post('/stripe/webhook', async (req, res) => {
     }
 });
 
-// Helper to simulate PayPal Webhook Signature Verification
+// ── PayPal Webhook Signature Verification ─────────────────────────────────────
+// Implements PayPal's CRC32-based verification algorithm:
+// https://developer.paypal.com/docs/api-basics/notifications/webhooks/notification-messages/
+
+/**
+ * Compute CRC32 of a buffer. Used as part of PayPal's signature check.
+ */
+function crc32(buf) {
+    const table = [];
+    for (let i = 0; i < 256; i++) {
+        let c = i;
+        for (let j = 0; j < 8; j++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+        table.push(c >>> 0);
+    }
+    let crc = 0xFFFFFFFF;
+    for (let i = 0; i < buf.length; i++) {
+        crc = (crc >>> 8) ^ table[(crc ^ buf[i]) & 0xFF];
+    }
+    return ((crc ^ 0xFFFFFFFF) >>> 0);
+}
+
+/**
+ * Fetch a PEM certificate from a URL (PayPal cert endpoint).
+ */
+function fetchCert(url) {
+    return new Promise((resolve, reject) => {
+        if (!url.startsWith('https://www.paypalobjects.com') && !url.startsWith('https://api.paypal.com')) {
+            return reject(new Error('Untrusted cert URL: ' + url));
+        }
+        https.get(url, (res) => {
+            let data = '';
+            res.on('data', chunk => data += chunk);
+            res.on('end', () => resolve(data));
+        }).on('error', reject);
+    });
+}
+
 async function verifyPayPalWebhookSignature(req) {
     const webhookId = process.env.PAYPAL_WEBHOOK_ID;
     if (!webhookId) {
-        console.warn('[PayPal Webhook] PAYPAL_WEBHOOK_ID missing. Skipping signature verification in Dev.');
-        return true; 
+        console.warn('[PayPal Webhook] PAYPAL_WEBHOOK_ID missing — skipping signature check in Dev.');
+        return true;
     }
-    
-    const transmissionId = req.headers['paypal-transmission-id'];
+
+    const transmissionId   = req.headers['paypal-transmission-id'];
     const transmissionTime = req.headers['paypal-transmission-time'];
-    const certUrl = req.headers['paypal-cert-url'];
-    const authAlgo = req.headers['paypal-auth-algo'];
-    const transmissionSig = req.headers['paypal-transmission-sig'];
+    const certUrl          = req.headers['paypal-cert-url'];
+    const authAlgo         = req.headers['paypal-auth-algo'];
+    const transmissionSig  = req.headers['paypal-transmission-sig'];
 
-    if (!transmissionId || !transmissionTime || !certUrl || !transmissionSig) {
-        throw new Error('Missing PayPal signature headers');
+    if (!transmissionId || !transmissionTime || !certUrl || !authAlgo || !transmissionSig) {
+        throw new Error('Missing required PayPal webhook signature headers.');
     }
 
-    // In a real production app using @paypal/checkout-server-sdk, you would:
-    // 1. Construct the string: transmissionId | transmissionTime | webhookId | crc32(payload)
-    // 2. Fetch the cert from certUrl, use the public key and authAlgo to verify transmissionSig
-    console.log(`[PayPal] Verifying signature for webhook ${webhookId}... (Mock verification successful)`);
-    return true; 
+    // Step 1: Compute CRC32 of the raw body
+    const rawBody = req.rawBody || JSON.stringify(req.body);
+    const bodyCrc32 = crc32(Buffer.from(rawBody)).toString();
+
+    // Step 2: Build the verification string
+    const verificationString = `${transmissionId}|${transmissionTime}|${webhookId}|${bodyCrc32}`;
+
+    // Step 3: Fetch the PayPal certificate and extract the public key
+    const certPem = await fetchCert(certUrl);
+
+    // Step 4: Verify the signature against the verification string
+    const sigBuffer  = Buffer.from(transmissionSig, 'base64');
+    const hashAlgo   = authAlgo.replace('withRSA', '').replace('RSA-', '').toLowerCase();
+    const isValid    = crypto.createVerify(hashAlgo)
+        .update(verificationString)
+        .verify(certPem, sigBuffer);
+
+    if (!isValid) {
+        throw new Error('PayPal webhook signature verification FAILED. Possible forgery attempt.');
+    }
+
+    console.log('[PayPal Webhook] Signature verified successfully.');
+    return true;
 }
 
 // POST /api/v1/payments/paypal/webhook
@@ -55,8 +134,19 @@ router.post('/paypal/webhook', async (req, res) => {
         await verifyPayPalWebhookSignature(req);
 
         const paypalEvent = req.body;
+        
+        const isNew = await checkIdempotency('paypal', paypalEvent.id, paypalEvent);
+        if (!isNew) {
+            console.log(`[PayPal Webhook] Duplicate event ${paypalEvent.id} ignored.`);
+            return res.json({ received: true, duplicate: true });
+        }
+
         const { handlePayPalWebhookEvent } = require('../../services/subscription');
         await handlePayPalWebhookEvent(paypalEvent);
+
+        // Enqueue to pg-boss for double-entry ledger processing (Phase 2)
+        const { enqueue } = require('../../services/queue');
+        await enqueue('paypal-webhooks', paypalEvent);
 
         // Also enqueue a provisioning job in case this is a CREATED / ACTIVATED event
         if (paypalEvent.event_type === 'BILLING.SUBSCRIPTION.ACTIVATED' || paypalEvent.event_type === 'BILLING.SUBSCRIPTION.CREATED') {
@@ -120,6 +210,81 @@ router.post('/paypal/create-subscription', async (req, res) => {
             return res.status(400).json({ error: 'Tenant slug already exists.' });
         }
         res.status(500).json({ error: 'Internal server error.' });
+    }
+});
+
+// POST /api/v1/payments/wipay/webhook — Server-Side Callback
+router.post('/wipay/webhook', async (req, res) => {
+    try {
+        const { order_id, transaction_id, status, hash, total } = req.body;
+        
+        if (!order_id || !transaction_id) {
+            return res.status(400).json({ error: 'Missing required fields' });
+        }
+
+        const isNew = await checkIdempotency('wipay', transaction_id, req.body);
+        if (!isNew) {
+            console.log(`[WiPay Webhook] Duplicate transaction ${transaction_id} ignored.`);
+            return res.json({ received: true, duplicate: true });
+        }
+
+        // We use order_id as booking.id for booking payments
+        const paymentRes = await query(
+            `SELECT p.*, b.tenant_id FROM booking_payments p 
+             JOIN bookings b ON b.id = p.booking_id 
+             WHERE b.id = $1 AND p.status = 'pending'`,
+            [order_id]
+        );
+
+        if (paymentRes.rows.length === 0) {
+             return res.status(404).json({ error: 'Pending payment not found' });
+        }
+        const payment = paymentRes.rows[0];
+
+        // Fetch tenant to get keys
+        const tRes = await query(`SELECT * FROM tenants WHERE id = $1`, [payment.tenant_id]);
+        const tenant = tRes.rows[0];
+        const config = tenant.payment_settings || {};
+        
+        // Ensure we decrypt the merchant code if needed
+        const { decrypt } = require('../../services/encryption');
+        let merchantId = config.wipay_merchant_code;
+        if (merchantId && merchantId.includes(':')) {
+            merchantId = decrypt(merchantId);
+        }
+
+        // Hash verification would go here (similar to what verify transaction does)
+        // For now, if status is approved/success, we confirm it.
+        const { verifyTransaction } = require('../../services/wipay');
+        
+        try {
+             // Perform an actual server-to-server check to verify authenticity
+             const verification = await verifyTransaction(transaction_id, payment.id, tenant);
+             
+             if (verification.status === 'success' || verification.status === 'approved') {
+                 await query(
+                    `UPDATE booking_payments SET status = 'paid', external_reference = $1, gateway_response = $2 WHERE id = $3`,
+                    [transaction_id, JSON.stringify(verification), payment.id]
+                 );
+                 
+                 // Mark booking as confirmed
+                 const bRes = await query(
+                    `UPDATE bookings SET status = 'confirmed', updated_at = NOW() WHERE id = $1 RETURNING *`,
+                    [order_id]
+                 );
+                 
+                 const { sendBookingConfirmation } = require('../../services/email');
+                 sendBookingConfirmation(bRes.rows[0], tenant).catch(console.error);
+             }
+        } catch (verifyErr) {
+             console.error('[WiPay Webhook] Authenticity check failed:', verifyErr.message);
+             return res.status(403).json({ error: 'Webhook authenticity verification failed.' });
+        }
+
+        res.json({ received: true });
+    } catch (e) {
+        console.error('[WiPay Webhook Error]', e);
+        res.status(500).json({ error: 'Webhook processing failed.' });
     }
 });
 

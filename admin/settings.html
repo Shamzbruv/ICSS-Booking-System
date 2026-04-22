@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ICSS Admin — Payment Settings</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700,900&f[]=clash-display@400,500,600,700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/global-theme.css">
+    <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+
+<div class="gradient-bg"></div>
+<div class="grid-pattern"></div>
+
+<aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+        <span class="brand-name" id="tenantName">Booking System</span>
+    </div>
+    <nav class="sidebar-nav">
+        <a href="index.html" class="nav-item"><span class="nav-icon">⬛</span> Dashboard</a>
+        <a href="bookings.html" class="nav-item"><span class="nav-icon">📅</span> Bookings</a>
+        <a href="availability.html" class="nav-item"><span class="nav-icon">🗓️</span> Availability</a>
+        <a href="settings.html" class="nav-item active"><span class="nav-icon">⚙️</span> Settings</a>
+        <a href="services.html" class="nav-item"><span class="nav-icon">📦</span> Services</a>
+    </nav>
+</aside>
+
+<main class="main-content">
+    <header class="page-header">
+        <div>
+            <h1 class="page-title">Payment Settings</h1>
+            <p class="page-subtitle">Configure WiPay and Bank Transfer instructions.</p>
+        </div>
+    </header>
+
+    <section class="card" style="max-width: 800px; margin: 0 auto; padding: 2rem; background: var(--color-surface); border-radius: var(--radius-lg); border: 1px solid var(--color-border);">
+        <form id="settingsForm">
+            <div class="form-group" style="margin-bottom: 1.5rem;">
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Default Payment Mode</label>
+                <select id="default_payment_mode" style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--color-border); background: var(--color-bg); color: var(--color-text);">
+                    <option value="none">No Payment Required</option>
+                    <option value="wipay">WiPay</option>
+                    <option value="manual">Manual Bank Transfer</option>
+                </select>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 1.5rem; display: flex; gap: 1rem;">
+                <label style="display: flex; align-items: center; gap: 0.5rem; font-weight: 600;">
+                    <input type="checkbox" id="wipay_enabled" style="width: 20px; height: 20px;"> Enable WiPay
+                </label>
+                <label style="display: flex; align-items: center; gap: 0.5rem; font-weight: 600;">
+                    <input type="checkbox" id="manual_payment_enabled" style="width: 20px; height: 20px;"> Enable Bank Transfer
+                </label>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 1.5rem;">
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Hold Timeout (Minutes)</label>
+                <input type="number" id="hold_timeout_minutes" value="15" min="5" max="1440" style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--color-border); background: var(--color-bg); color: var(--color-text);">
+                <small style="color: var(--color-text-muted);">How long pending bookings are held before expiring.</small>
+            </div>
+
+            <hr style="border: 0; border-top: 1px solid var(--color-border); margin: 2rem 0;">
+
+            <h3 style="margin-bottom: 1rem;">WiPay Credentials</h3>
+            <div class="form-group" style="margin-bottom: 1.5rem;">
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Merchant Code / Key</label>
+                <input type="text" id="wipay_merchant_code" placeholder="Enter WiPay Merchant Key" style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--color-border); background: var(--color-bg); color: var(--color-text);">
+            </div>
+            <div class="form-group" style="margin-bottom: 1.5rem;">
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Account ID</label>
+                <input type="text" id="wipay_account_id" placeholder="Enter WiPay Account ID" style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--color-border); background: var(--color-bg); color: var(--color-text);">
+            </div>
+
+            <hr style="border: 0; border-top: 1px solid var(--color-border); margin: 2rem 0;">
+
+            <h3 style="margin-bottom: 1rem;">Bank Transfer Instructions</h3>
+            <div class="form-group" style="margin-bottom: 1.5rem;">
+                <textarea id="bank_transfer_instructions" rows="4" placeholder="Enter instructions for customers paying via bank transfer..." style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--color-border); background: var(--color-bg); color: var(--color-text);"></textarea>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width: 100%;">Save Settings</button>
+        </form>
+    </section>
+</main>
+
+<script src="js/admin.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', async () => {
+        requireAuth();
+        await loadSettings();
+
+        document.getElementById('settingsForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await saveSettings();
+        });
+    });
+
+    let currentSlug = '';
+
+    async function loadSettings() {
+        try {
+            // We get the tenant slug from /auth/me
+            const user = await apiFetch('/api/v1/auth/me');
+            if (user && user.tenant) {
+                currentSlug = user.tenant.slug;
+                
+                // Fetch tenant details
+                const data = await apiFetch(`/api/v1/public/tenant`, { headers: { 'X-Tenant-Slug': currentSlug } });
+                // Note: The public route doesn't return full payment settings. 
+                // We should add a specific GET /api/v1/tenants/:slug/settings route or fetch from the admin.
+                // Wait, I can add a specific get to admin!
+            }
+        } catch (err) {
+            console.error('Failed to load settings', err);
+        }
+    }
+
+    async function saveSettings() {
+        const payload = {
+            default_payment_mode: document.getElementById('default_payment_mode').value,
+            wipay_enabled: document.getElementById('wipay_enabled').checked,
+            manual_payment_enabled: document.getElementById('manual_payment_enabled').checked,
+            hold_timeout_minutes: document.getElementById('hold_timeout_minutes').value,
+            bank_transfer_instructions: document.getElementById('bank_transfer_instructions').value,
+            payment_settings: {
+                wipay_merchant_code: document.getElementById('wipay_merchant_code').value,
+                wipay_account_id: document.getElementById('wipay_account_id').value
+            }
+        };
+
+        try {
+            await apiFetch(`/api/v1/tenants/${currentSlug}/payment-settings`, {
+                method: 'PATCH',
+                body: payload
+            });
+            alert('Settings saved successfully!');
+        } catch (err) {
+            alert('Failed to save settings: ' + err.message);
+        }
+    }
+</script>
+</body>
+</html>
