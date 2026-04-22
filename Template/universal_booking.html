@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BookFlow · Universal Booking System</title>
+  <!-- Inter & Plus Jakarta Sans – clean, modern, universal -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: linear-gradient(135deg, #f8fafc 0%, #eef2f6 50%, #f8fafc 100%);
+      min-height: 100vh;
+      font-family: 'Inter', sans-serif;
+      padding: 2rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #1e293b;
+    }
+
+    .booking-system {
+      max-width: 1280px;
+      width: 100%;
+      background: #ffffff;
+      border-radius: 28px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15),
+                  0 4px 18px rgba(0, 0, 0, 0.05),
+                  0 0 0 1px rgba(0, 0, 0, 0.02);
+      padding: 2rem 2rem 2.2rem;
+      transition: all 0.2s ease;
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 2.2rem;
+      flex-wrap: wrap;
+      gap: 20px;
+      padding-bottom: 1.5rem;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .brand-icon {
+      background: linear-gradient(135deg, #3b82f6, #6366f1);
+      width: 50px;
+      height: 50px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      font-size: 24px;
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
+    }
+
+    .brand-text h1 {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-weight: 700;
+      font-size: 1.8rem;
+      letter-spacing: -0.02em;
+      color: #0f172a;
+      line-height: 1.2;
+    }
+
+    .brand-text p {
+      font-size: 0.85rem;
+      font-weight: 400;
+      color: #64748b;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 4px;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    .badge {
+      background: #f1f5f9;
+      padding: 8px 18px;
+      border-radius: 30px;
+      font-weight: 500;
+      font-size: 0.85rem;
+      color: #475569;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .badge i {
+      color: #3b82f6;
+    }
+
+    /* Grid Layout */
+    .booking-grid {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 2rem;
+    }
+
+    /* Left Panel */
+    .selection-panel {
+      background: #fafcff;
+      border-radius: 20px;
+      padding: 1.8rem 1.8rem 2rem;
+      border: 1px solid #eef2f6;
+    }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 1.8rem;
+    }
+
+    .section-title i {
+      background: #3b82f6;
+      padding: 10px;
+      border-radius: 12px;
+      color: #ffffff;
+      font-size: 1.2rem;
+      width: 42px;
+      height: 42px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 10px rgba(59, 130, 246, 0.2);
+    }
+
+    .section-title h2 {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-weight: 600;
+      font-size: 1.5rem;
+      color: #0f172a;
+    }
+
+    /* Service List */
+    .service-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 2rem;
+    }
+
+    .service-card {
+      background: #ffffff;
+      border-radius: 16px;
+      padding: 1rem 1.4rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+      border: 1.5px solid #e2e8f0;
+      transition: all 0.2s;
+      cursor: pointer;
+    }
+
+    .service-card:hover {
+      border-color: #94a3b8;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+    }
+
+    .service-card.selected {
+      background: #eff6ff;
+      border-color: #3b82f6;
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.12);
+    }
+
+    .service-info {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .service-icon {
+      background: #f1f5f9;
+      width: 48px;
+      height: 48px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #3b82f6;
+      font-size: 1.5rem;
+    }
+
+    .service-details h3 {
+      font-weight: 600;
+      font-size: 1.1rem;
+      color: #1e293b;
+      margin-bottom: 4px;
+    }
+
+    .service-details span {
+      font-size: 0.85rem;
+      color: #64748b;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .service-price {
+      font-weight: 700;
+      background: #f8fafc;
+      padding: 8px 18px;
+      border-radius: 30px;
+      color: #1e293b;
+      font-size: 1.15rem;
+      border: 1px solid #e2e8f0;
+    }
+
+    /* Staff Preference */
+    .staff-section {
+      margin: 24px 0 28px;
+    }
+
+    .staff-options {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+
+    .staff-chip {
+      background: #ffffff;
+      border-radius: 30px;
+      padding: 10px 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border: 1.5px solid #e2e8f0;
+      cursor: pointer;
+      transition: all 0.15s;
+      color: #475569;
+      font-weight: 500;
+      font-size: 0.9rem;
+    }
+
+    .staff-chip:hover {
+      border-color: #94a3b8;
+    }
+
+    .staff-chip.selected {
+      background: #3b82f6;
+      border-color: #3b82f6;
+      color: white;
+    }
+
+    .staff-chip i {
+      font-size: 0.9rem;
+    }
+
+    /* Date & Time */
+    .date-section {
+      margin-bottom: 28px;
+    }
+
+    .label-icon {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+      font-weight: 600;
+      color: #334155;
+      font-size: 0.9rem;
+    }
+
+    .label-icon i {
+      color: #3b82f6;
+      font-size: 1rem;
+    }
+
+    .date-selector {
+      background: #ffffff;
+      border-radius: 14px;
+      padding: 6px 18px 6px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border: 1.5px solid #e2e8f0;
+      transition: border-color 0.2s;
+    }
+
+    .date-selector:focus-within {
+      border-color: #3b82f6;
+    }
+
+    .date-selector input {
+      border: none;
+      background: transparent;
+      font-family: 'Inter', sans-serif;
+      font-size: 1rem;
+      padding: 14px 0;
+      font-weight: 500;
+      color: #1e293b;
+      outline: none;
+      width: 100%;
+    }
+
+    .date-selector i {
+      color: #64748b;
+      font-size: 1.2rem;
+    }
+
+    .time-slots {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin: 18px 0 8px;
+    }
+
+    .time-slot {
+      background: #ffffff;
+      border-radius: 30px;
+      padding: 12px 5px;
+      text-align: center;
+      font-weight: 500;
+      color: #475569;
+      border: 1.5px solid #e2e8f0;
+      cursor: pointer;
+      transition: all 0.15s;
+      font-size: 0.9rem;
+    }
+
+    .time-slot:hover {
+      border-color: #94a3b8;
+    }
+
+    .time-slot.selected {
+      background: #3b82f6;
+      border-color: #3b82f6;
+      color: white;
+    }
+
+    /* Right Panel - Form */
+    .booking-form-panel {
+      background: #fafcff;
+      border-radius: 20px;
+      padding: 1.8rem 2rem 2rem;
+      border: 1px solid #eef2f6;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .form-group {
+      margin-bottom: 1.4rem;
+    }
+
+    .form-group label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: #334155;
+      font-size: 0.9rem;
+    }
+
+    .form-group label i {
+      color: #3b82f6;
+      font-size: 0.9rem;
+    }
+
+    .input-wrapper {
+      background: #ffffff;
+      border-radius: 14px;
+      padding: 4px 18px;
+      border: 1.5px solid #e2e8f0;
+      display: flex;
+      align-items: center;
+      transition: border-color 0.2s;
+    }
+
+    .input-wrapper:focus-within {
+      border-color: #3b82f6;
+    }
+
+    .input-wrapper i {
+      color: #94a3b8;
+      margin-right: 12px;
+      font-size: 1rem;
+    }
+
+    .input-wrapper input,
+    .input-wrapper select,
+    .input-wrapper textarea {
+      border: none;
+      background: transparent;
+      padding: 14px 0;
+      font-family: 'Inter', sans-serif;
+      font-size: 1rem;
+      width: 100%;
+      outline: none;
+      color: #1e293b;
+      resize: none;
+    }
+
+    .input-wrapper textarea {
+      min-height: 60px;
+      padding: 12px 0;
+    }
+
+    .input-wrapper input::placeholder,
+    .input-wrapper textarea::placeholder {
+      color: #94a3b8;
+    }
+
+    /* Summary Card */
+    .booking-summary {
+      background: #f1f5f9;
+      border-radius: 16px;
+      padding: 1.5rem;
+      margin: 20px 0 24px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .summary-line {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      font-size: 0.95rem;
+      color: #475569;
+    }
+
+    .summary-line i {
+      width: 20px;
+      color: #3b82f6;
+    }
+
+    .summary-line.total {
+      font-weight: 700;
+      font-size: 1.4rem;
+      border-top: 1.5px solid #cbd5e1;
+      padding-top: 16px;
+      margin-top: 8px;
+      color: #0f172a;
+    }
+
+    .book-btn {
+      background: linear-gradient(135deg, #3b82f6, #6366f1);
+      border: none;
+      border-radius: 50px;
+      padding: 16px 20px;
+      font-family: 'Inter', sans-serif;
+      font-weight: 600;
+      font-size: 1.1rem;
+      color: #ffffff;
+      box-shadow: 0 8px 20px rgba(59, 130, 246, 0.25);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-top: auto;
+    }
+
+    .book-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 25px rgba(59, 130, 246, 0.3);
+    }
+
+    .book-btn:active {
+      transform: translateY(0);
+    }
+
+    .footer-note {
+      margin-top: 14px;
+      text-align: center;
+      color: #64748b;
+      font-size: 0.8rem;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .footer-note i {
+      margin-right: 4px;
+      color: #3b82f6;
+    }
+
+    /* Responsive */
+    @media (max-width: 850px) {
+      .booking-grid {
+        grid-template-columns: 1fr;
+      }
+      body {
+        padding: 1rem;
+      }
+      .booking-system {
+        padding: 1.5rem;
+      }
+      .time-slots {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 480px) {
+      .time-slots {
+        grid-template-columns: 1fr;
+      }
+      .header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+    }
+  </style>
+</head>
+<body>
+<div class="booking-system">
+  <!-- Header -->
+  <div class="header">
+    <div class="brand">
+      <div class="brand-icon">
+        <i class="fas fa-calendar-check"></i>
+      </div>
+      <div class="brand-text">
+        <h1>BookFlow</h1>
+        <p><i class="fas fa-map-pin"></i> Your Business Name · Online Booking</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <div class="badge"><i class="fas fa-clock"></i> Mon–Sat 9am–7pm</div>
+      <div class="badge"><i class="fas fa-credit-card"></i> Pay online or in-person</div>
+    </div>
+  </div>
+
+  <!-- Booking Grid -->
+  <div class="booking-grid">
+    <!-- Left Panel -->
+    <div class="selection-panel">
+      <div class="section-title">
+        <i class="fas fa-list-ul"></i>
+        <h2>Select service</h2>
+      </div>
+
+      <div class="service-list" id="serviceList"></div>
+
+      <!-- Staff preference -->
+      <div class="staff-section">
+        <div class="label-icon">
+          <i class="fas fa-user-circle"></i>
+          <span>Preferred staff (optional)</span>
+        </div>
+        <div class="staff-options" id="staffOptions"></div>
+      </div>
+
+      <div class="date-section">
+        <div class="label-icon">
+          <i class="fas fa-calendar-alt"></i>
+          <span>Choose date</span>
+        </div>
+        <div class="date-selector">
+          <input type="date" id="datePicker" value="2026-04-28" min="2026-04-20">
+          <i class="fas fa-chevron-down"></i>
+        </div>
+      </div>
+
+      <div>
+        <div class="label-icon">
+          <i class="fas fa-clock"></i>
+          <span>Select time</span>
+        </div>
+        <div class="time-slots" id="timeSlotsContainer"></div>
+      </div>
+    </div>
+
+    <!-- Right Panel - Form -->
+    <div class="booking-form-panel">
+      <div class="section-title" style="margin-bottom: 1.2rem;">
+        <i class="fas fa-user-pen"></i>
+        <h2>Your details</h2>
+      </div>
+
+      <div class="form-group">
+        <label><i class="fas fa-user"></i> Full name</label>
+        <div class="input-wrapper">
+          <i class="fas fa-user"></i>
+          <input type="text" id="fullName" placeholder="John Smith" value="John Smith">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label><i class="fas fa-envelope"></i> Email address</label>
+        <div class="input-wrapper">
+          <i class="fas fa-envelope"></i>
+          <input type="email" id="email" placeholder="john@email.com" value="john.smith@email.com">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label><i class="fas fa-phone"></i> Phone number</label>
+        <div class="input-wrapper">
+          <i class="fas fa-phone"></i>
+          <input type="tel" id="phone" placeholder="(555) 123-4567" value="(555) 123-4567">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label><i class="fas fa-pencil"></i> Notes (optional)</label>
+        <div class="input-wrapper">
+          <i class="fas fa-pen"></i>
+          <textarea id="notes" placeholder="Any special requests or information..."></textarea>
+        </div>
+      </div>
+
+      <!-- Summary -->
+      <div class="booking-summary" id="summaryBox">
+        <div class="summary-line">
+          <span><i class="fas fa-tag"></i> Service</span>
+          <span id="summaryService">—</span>
+        </div>
+        <div class="summary-line">
+          <span><i class="fas fa-user-check"></i> Staff</span>
+          <span id="summaryStaff">Anyone available</span>
+        </div>
+        <div class="summary-line">
+          <span><i class="fas fa-calendar"></i> Date & time</span>
+          <span id="summaryDateTime">—</span>
+        </div>
+        <div class="summary-line total">
+          <span>Total</span>
+          <span id="summaryTotal">$0</span>
+        </div>
+      </div>
+
+      <button class="book-btn" id="bookButton">
+        <i class="fas fa-calendar-plus"></i> Confirm booking
+      </button>
+      <div class="footer-note">
+        <span><i class="fas fa-shield"></i> Secure booking</span>
+        <span><i class="fas fa-undo-alt"></i> Free cancellation up to 24h before</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function(){
+    "use strict";
+
+    // Generic services - easily customizable
+    const services = [
+      { id: 'service1', name: 'Service Option 1', duration: '30 min', price: 50, icon: 'fa-star' },
+      { id: 'service2', name: 'Service Option 2', duration: '60 min', price: 85, icon: 'fa-gem' },
+      { id: 'service3', name: 'Service Option 3', duration: '90 min', price: 120, icon: 'fa-crown' },
+      { id: 'service4', name: 'Consultation', duration: '45 min', price: 65, icon: 'fa-comments' }
+    ];
+
+    const staffMembers = [
+      { id: 'any', name: 'Anyone available', icon: 'fa-user-group' },
+      { id: 'staff1', name: 'Staff Member 1', icon: 'fa-user' },
+      { id: 'staff2', name: 'Staff Member 2', icon: 'fa-user' },
+      { id: 'staff3', name: 'Staff Member 3', icon: 'fa-user-tie' }
+    ];
+
+    const timeSlots = ["9:00 AM", "10:30 AM", "1:00 PM", "2:30 PM", "4:00 PM", "5:30 PM", "7:00 PM"];
+
+    // State
+    let selectedServiceId = services[0].id;
+    let selectedStaffId = 'any';
+    let selectedDate = "2026-04-28";
+    let selectedTime = timeSlots[2];
+
+    // DOM elements
+    const serviceListEl = document.getElementById('serviceList');
+    const staffOptions = document.getElementById('staffOptions');
+    const datePicker = document.getElementById('datePicker');
+    const timeSlotsContainer = document.getElementById('timeSlotsContainer');
+    const summaryService = document.getElementById('summaryService');
+    const summaryStaff = document.getElementById('summaryStaff');
+    const summaryDateTime = document.getElementById('summaryDateTime');
+    const summaryTotal = document.getElementById('summaryTotal');
+    const bookBtn = document.getElementById('bookButton');
+
+    function getSelectedService() {
+      return services.find(s => s.id === selectedServiceId) || services[0];
+    }
+
+    function renderServices() {
+      let html = '';
+      services.forEach(service => {
+        const selectedClass = service.id === selectedServiceId ? 'selected' : '';
+        html += `
+          <div class="service-card ${selectedClass}" data-service-id="${service.id}">
+            <div class="service-info">
+              <div class="service-icon"><i class="fas ${service.icon}"></i></div>
+              <div class="service-details">
+                <h3>${service.name}</h3>
+                <span><i class="far fa-clock"></i> ${service.duration}</span>
+              </div>
+            </div>
+            <div class="service-price">$${service.price}</div>
+          </div>
+        `;
+      });
+      serviceListEl.innerHTML = html;
+
+      document.querySelectorAll('.service-card').forEach(card => {
+        card.addEventListener('click', () => {
+          const id = card.dataset.serviceId;
+          if (id) {
+            selectedServiceId = id;
+            renderServices();
+            updateSummary();
+          }
+        });
+      });
+    }
+
+    function renderStaff() {
+      let html = '';
+      staffMembers.forEach(staff => {
+        const selectedClass = staff.id === selectedStaffId ? 'selected' : '';
+        html += `
+          <div class="staff-chip ${selectedClass}" data-staff-id="${staff.id}">
+            <i class="fas ${staff.icon}"></i>
+            <span>${staff.name}</span>
+          </div>
+        `;
+      });
+      staffOptions.innerHTML = html;
+
+      document.querySelectorAll('.staff-chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+          const id = chip.dataset.staffId;
+          if (id) {
+            selectedStaffId = id;
+            renderStaff();
+            updateSummary();
+          }
+        });
+      });
+    }
+
+    function renderTimeSlots() {
+      let slotsHtml = '';
+      timeSlots.forEach(slot => {
+        const selectedClass = slot === selectedTime ? 'selected' : '';
+        slotsHtml += `<div class="time-slot ${selectedClass}" data-time="${slot}">${slot}</div>`;
+      });
+      timeSlotsContainer.innerHTML = slotsHtml;
+
+      document.querySelectorAll('.time-slot').forEach(slotEl => {
+        slotEl.addEventListener('click', () => {
+          const time = slotEl.dataset.time;
+          if (time) {
+            selectedTime = time;
+            renderTimeSlots();
+            updateSummary();
+          }
+        });
+      });
+    }
+
+    function updateSummary() {
+      const service = getSelectedService();
+      summaryService.textContent = `${service.name} · ${service.duration}`;
+      
+      const staff = staffMembers.find(s => s.id === selectedStaffId);
+      summaryStaff.textContent = staff ? staff.name : 'Anyone available';
+      
+      const dateObj = selectedDate ? new Date(selectedDate + 'T12:00:00') : new Date();
+      const formattedDate = dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+      summaryDateTime.textContent = `${formattedDate} at ${selectedTime}`;
+      
+      summaryTotal.textContent = `$${service.price}`;
+    }
+
+    function initDatePicker() {
+      const today = new Date();
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, '0');
+      const dd = String(today.getDate()).padStart(2, '0');
+      datePicker.min = `${yyyy}-${mm}-${dd}`;
+      if (!datePicker.value) datePicker.value = selectedDate;
+      else selectedDate = datePicker.value;
+
+      datePicker.addEventListener('change', (e) => {
+        selectedDate = e.target.value;
+        updateSummary();
+      });
+    }
+
+    function handleBooking() {
+      const service = getSelectedService();
+      const name = document.getElementById('fullName').value.trim() || 'Customer';
+      const email = document.getElementById('email').value.trim() || '—';
+      const phone = document.getElementById('phone').value.trim() || '—';
+      const notes = document.getElementById('notes').value.trim() || 'None';
+      const staff = staffMembers.find(s => s.id === selectedStaffId)?.name || 'Anyone available';
+      
+      const dateObj = new Date(selectedDate + 'T12:00:00');
+      const niceDate = dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+      
+      alert(`✅ Booking Confirmed!\n\n${service.name} · $${service.price}\n👤 Staff: ${staff}\n📅 ${niceDate} at ${selectedTime}\n👋 ${name}\n📧 ${email}\n📝 Notes: ${notes}\n\nA confirmation email has been sent. Thank you!`);
+    }
+
+    function initialize() {
+      renderServices();
+      renderStaff();
+      renderTimeSlots();
+      initDatePicker();
+      updateSummary();
+    }
+
+    bookBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      handleBooking();
+    });
+
+    initialize();
+  })();
+</script>
+</body>
+</html>

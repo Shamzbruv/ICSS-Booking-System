@@ -85,6 +85,9 @@
         <button class="tab-btn" data-industry="legal">
           <i class="fas fa-scale-balanced"></i> Legal
         </button>
+        <button class="tab-btn" data-industry="universal">
+          <i class="fas fa-globe"></i> Universal
+        </button>
       </div>
 
       <!-- Preview panels container -->
@@ -598,6 +601,84 @@
             </div>
           </div>
         </div>
+
+        <!-- Universal Panel -->
+        <div class="preview-panel" id="universal-panel">
+          <div class="industry-card">
+            <div class="industry-header">
+              <div class="industry-icon" style="background: linear-gradient(135deg, #e2e8f0, #cbd5e1);">
+                <i class="fas fa-globe" style="color: #475569;"></i>
+              </div>
+              <div class="industry-title">
+                <h3>Universal Services</h3>
+                <p>General Consulting · Any City</p>
+              </div>
+            </div>
+            <div class="booking-grid-mini">
+              <div class="mini-service-list">
+                <div class="mini-service-item">
+                  <div class="mini-service-info">
+                    <div class="mini-service-icon" style="background: #f1f5f9; color: #475569;">
+                      <i class="fas fa-comments"></i>
+                    </div>
+                    <div class="mini-service-details">
+                      <h4>Consultation</h4>
+                      <span>30 min</span>
+                    </div>
+                  </div>
+                  <span class="mini-price">$50</span>
+                </div>
+                <div class="mini-service-item">
+                  <div class="mini-service-info">
+                    <div class="mini-service-icon" style="background: #f1f5f9; color: #475569;">
+                      <i class="fas fa-briefcase"></i>
+                    </div>
+                    <div class="mini-service-details">
+                      <h4>Professional Service</h4>
+                      <span>60 min</span>
+                    </div>
+                  </div>
+                  <span class="mini-price">$120</span>
+                </div>
+                <div class="mini-service-item">
+                  <div class="mini-service-info">
+                    <div class="mini-service-icon" style="background: #f1f5f9; color: #475569;">
+                      <i class="fas fa-handshake"></i>
+                    </div>
+                    <div class="mini-service-details">
+                      <h4>Follow-up</h4>
+                      <span>15 min</span>
+                    </div>
+                  </div>
+                  <span class="mini-price">Free</span>
+                </div>
+              </div>
+              <div class="mini-form-panel">
+                <div class="mini-form-group">
+                  <label>Full name</label>
+                  <input type="text" class="mini-input" placeholder="Alex Morgan" value="Alex Morgan">
+                </div>
+                <div class="mini-form-group">
+                  <label>Date & Time</label>
+                  <input type="text" class="mini-input" placeholder="May 10, 2026 at 2:00 PM" value="May 10, 2026 at 2:00 PM">
+                </div>
+                <div class="mini-summary">
+                  <div class="mini-summary-line">
+                    <span>Professional Service</span>
+                    <span>$120</span>
+                  </div>
+                  <div class="mini-summary-line total">
+                    <span>Total</span>
+                    <span>$120</span>
+                  </div>
+                </div>
+                <button class="mini-book-btn" onclick="alert('✅ Booking confirmed at Universal Services!')">
+                  <i class="fas fa-calendar-check"></i> Book Appointment
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -699,7 +780,8 @@
       events: document.getElementById('events-panel'),
       spa: document.getElementById('spa-panel'),
       fitness: document.getElementById('fitness-panel'),
-      legal: document.getElementById('legal-panel')
+      legal: document.getElementById('legal-panel'),
+      universal: document.getElementById('universal-panel')
     };
 
     tabs.forEach(tab => {

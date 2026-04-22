@@ -424,7 +424,8 @@ async function runMigrations(client) {
         ('Zen Spa', 'Spa/Wellness', '/Template/deepseek_html_20260421_6775b1.html', '{"services": [{"name": "Swedish Massage (60 Min)", "duration_minutes": 60, "price": 10000}]}'::jsonb),
         ('Legal Access', 'Legal', '/Template/deepseek_html_20260421_7b8f29.html', '{"services": [{"name": "Initial Consultation", "duration_minutes": 30, "price": 5000}]}'::jsonb),
         ('Iron Fitness', 'Fitness', '/Template/deepseek_html_20260421_77f091.html', '{"services": [{"name": "Personal Training Session", "duration_minutes": 60, "price": 6000}]}'::jsonb),
-        ('Wellness Clinic', 'Medical', '/Template/deepseek_html_20260421_e9afd1.html', '{"services": [{"name": "General Checkup", "duration_minutes": 30, "price": 7500}]}'::jsonb)
+        ('Wellness Clinic', 'Medical', '/Template/deepseek_html_20260421_e9afd1.html', '{"services": [{"name": "General Checkup", "duration_minutes": 30, "price": 7500}]}'::jsonb),
+        ('Universal Standard', 'General / Universal', '/Template/universal_booking.html', '{"services": [{"name": "Standard Service", "duration_minutes": 60, "price": 5000}]}'::jsonb)
         ON CONFLICT (name) DO NOTHING
     `);
 }
