@@ -62,9 +62,15 @@ app.use('/api/v1', (req, res, next) => {
     tenantResolver(req, res, next);
 });
 
-// ─── Static Files (Admin Dashboard + Public Booking Widget) ──────────────────
+// ─── Static Files (Admin Dashboard + React Frontend) ───────────────────────
 app.use('/admin', express.static(path.join(__dirname, '../admin')));
 app.use('/Template', express.static(path.join(__dirname, '../Template')));
+
+// Serve the compiled React application
+const frontendDist = path.join(__dirname, '../frontend/dist');
+app.use(express.static(frontendDist));
+
+// Serve legacy public folder (if still needed for any direct assets)
 app.use('/', express.static(path.join(__dirname, '../public')));
 
 // ─── API Routes ───────────────────────────────────────────────────────────────
@@ -92,7 +98,13 @@ app.get('/health', (req, res) => {
     });
 });
 
-// ─── 404 Handler ─────────────────────────────────────────────────────────────
+// ─── React SPA Fallback ───────────────────────────────────────────────────────
+// Any GET request not matching api, admin, Template, or health goes to React.
+app.get(/^\/(?!api|admin|Template|health).*/, (req, res) => {
+    res.sendFile(path.join(frontendDist, 'index.html'));
+});
+
+// ─── 404 Handler (API only now) ──────────────────────────────────────────────
 app.use((req, res) => {
     res.status(404).json({ error: 'Route not found', path: req.path });
 });
