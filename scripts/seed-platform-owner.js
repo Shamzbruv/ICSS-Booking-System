@@ -1,26 +1,22 @@
 /**
  * scripts/seed-platform-owner.js
  *
- * One-time script to promote an existing user to platform_owner role.
- * This is the ONLY way to create a platform_owner account.
- * There is no self-service path.
+ * One-time script to promote an existing user to platform_owner role,
+ * or create a new platform_owner if the email doesn't exist.
  *
  * Usage:
- *   node scripts/seed-platform-owner.js your@email.com
- *
- * The user must already exist in the database.
- * Their role will be updated to 'platform_owner'.
- * Their tenant_id association is preserved (but the login flow
- * will authenticate them as platform_owner first, bypassing tenant resolution).
+ *   node scripts/seed-platform-owner.js your@email.com [password]
  */
 
 require('dotenv').config();
 const { Pool } = require('pg');
+const bcrypt = require('bcryptjs');
 
 const email = process.argv[2];
+const password = process.argv[3] || 'Password123!';
 
 if (!email) {
-    console.error('Usage: node scripts/seed-platform-owner.js your@email.com');
+    console.error('Usage: node scripts/seed-platform-owner.js your@email.com [password]');
     process.exit(1);
 }
 
@@ -28,16 +24,27 @@ async function run() {
     const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
     try {
-        // Check the user exists
         const checkRes = await pool.query(
             `SELECT id, email, name, role FROM users WHERE email = $1`,
             [email.toLowerCase().trim()]
         );
 
         if (checkRes.rows.length === 0) {
-            console.error(`❌ No user found with email: ${email}`);
-            console.error('   Make sure you use the exact email address from the users table.');
-            process.exit(1);
+            console.log(`⚠️ No user found with email: ${email}. Creating new platform_owner...`);
+            const passwordHash = await bcrypt.hash(password, 12);
+            
+            // We insert a user with NO tenant_id (platform_owner doesn't need one)
+            await pool.query(
+                `INSERT INTO users (email, password_hash, name, role, active)
+                 VALUES ($1, $2, 'Platform Owner', 'platform_owner', true)`,
+                [email.toLowerCase().trim(), passwordHash]
+            );
+            
+            console.log('\n✅ Successfully created platform_owner.');
+            console.log(`   Email:    ${email}`);
+            console.log(`   Password: ${password}`);
+            console.log('   You can now log in at /platform.\n');
+            process.exit(0);
         }
 
         const user = checkRes.rows[0];
@@ -52,7 +59,6 @@ async function run() {
             process.exit(0);
         }
 
-        // Promote to platform_owner
         await pool.query(
             `UPDATE users SET role = 'platform_owner' WHERE id = $1`,
             [user.id]
