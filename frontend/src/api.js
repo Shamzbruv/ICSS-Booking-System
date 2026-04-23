@@ -28,8 +28,22 @@ export const api = {
   themes: ()     => apiFetch('/themes'),
 
   // Public endpoints
-  publicTenant:   (slug) => apiFetch('/public/tenant', { headers: { 'X-Tenant-Slug': slug } }),
+  publicTenant:   (slug) => apiFetch('/public/tenant',   { headers: { 'X-Tenant-Slug': slug } }),
   publicServices: (slug) => apiFetch('/public/services', { headers: { 'X-Tenant-Slug': slug } }),
+
+  // Public Booking Flow
+  publicAvailability: (slug, date, serviceId) =>
+    apiFetch(`/availability?date=${date}${serviceId ? `&service_id=${serviceId}` : ''}`, {
+      headers: { 'X-Tenant-Slug': slug },
+    }),
+  publicCreateBooking: (slug, body) =>
+    apiFetch('/bookings', { method: 'POST', body, headers: { 'X-Tenant-Slug': slug } }),
+  publicVerifyPayment: (slug, bookingId, transactionId) =>
+    apiFetch(`/bookings/${bookingId}/verify-payment`, {
+      method: 'POST',
+      body: { transaction_id: transactionId },
+      headers: { 'X-Tenant-Slug': slug },
+    }),
 
   // Onboarding – create pending signup + PayPal subscription
   createPendingSignup: (body) => apiFetch('/payments/paypal/create-subscription', { method: 'POST', body }),

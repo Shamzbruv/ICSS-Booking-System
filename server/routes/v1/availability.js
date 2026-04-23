@@ -1,28 +1,26 @@
 /**
  * Availability Routes — /api/v1/availability
- * Returns available time slots for a given date and tenant.
- * Ported and generalized from Windross api.js.
+ * Returns available time slots for a given date, tenant, and optionally a service.
+ *
+ * When service_id is provided, slot availability accounts for the full
+ * service duration + buffer so a 90-minute service at 5:30 PM is correctly
+ * blocked (it would run past closing time / overlap other bookings).
  */
 
 const express = require('express');
 const router  = express.Router();
 const { query } = require('../../db/connection');
 
-// ─── Business Rule Constants (can be moved to tenant settings in future) ──────
-const SLOT_INTERVAL_MINS  = 30;
-const DAY_START_HOUR      = 12;     // 12:00 PM
-const DAY_END_HOUR        = 18;     // 6:00 PM
-const DAY_END_MINS        = 30;     // 6:30 PM last slot
+// ─── Business Rule Constants ───────────────────────────────────────────────────
+const SLOT_INTERVAL_MINS   = 30;
+const DAY_START_HOUR       = 12;   // 12:00 PM
+const DAY_END_HOUR         = 18;
+const DAY_END_MINS         = 30;   // 6:30 PM last possible slot start
 const MAX_BOOKINGS_PER_DAY = 14;
-const MIN_BUFFER_MINS     = 60;     // Reject slots within 60 min of now
-const MAX_DAYS_AHEAD      = 30;
+const MIN_BUFFER_MINS      = 60;   // Reject slots within 60 min of now
+const MAX_DAYS_AHEAD       = 30;
+const BUSINESS_CLOSE_MINS  = 19 * 60; // 7:00 PM — no service can run past this
 
-/**
- * Get current time in a specific timezone as a formatted string.
- * @param {string} tz - IANA timezone string
- * @param {number} addMinutes
- * @param {number} addDays
- */
 function getTzTimeStr(tz = 'America/Jamaica', addMinutes = 0, addDays = 0) {
     const now = new Date();
     if (addMinutes) now.setMinutes(now.getMinutes() + addMinutes);
@@ -39,11 +37,11 @@ function getTzTimeStr(tz = 'America/Jamaica', addMinutes = 0, addDays = 0) {
 }
 
 function generateSlots() {
-    const slots = [];
-    const startMins = DAY_START_HOUR * 60;
-    const endMins   = DAY_END_HOUR * 60 + DAY_END_MINS;
+    const slots    = [];
+    const startMin = DAY_START_HOUR * 60;
+    const endMin   = DAY_END_HOUR   * 60 + DAY_END_MINS;
 
-    for (let m = startMins; m <= endMins; m += SLOT_INTERVAL_MINS) {
+    for (let m = startMin; m <= endMin; m += SLOT_INTERVAL_MINS) {
         const h    = Math.floor(m / 60);
         const min  = m % 60;
         const time = `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
@@ -58,11 +56,10 @@ function generateSlots() {
     return slots;
 }
 
-// GET /api/v1/availability?date=YYYY-MM-DD
+// GET /api/v1/availability?date=YYYY-MM-DD[&service_id=UUID]
 router.get('/', async (req, res) => {
-    const { date } = req.query;
-    const tenantId  = req.tenant.id;
-    // Timezone from tenant branding, default to Jamaica
+    const { date, service_id } = req.query;
+    const tenantId = req.tenant.id;
     const timezone = req.tenant.branding?.timezone || 'America/Jamaica';
 
     if (!date) return res.status(400).json({ error: 'date query parameter is required (YYYY-MM-DD).' });
@@ -77,6 +74,27 @@ router.get('/', async (req, res) => {
         return res.json({ date, slots: [], message: 'Date is out of bookable range.' });
     }
 
+    // ── Fetch service duration if service_id provided ──────────────────────────
+    let serviceDurationMins = 30; // Default slot length
+    let serviceBufferMins   = 0;
+
+    if (service_id) {
+        try {
+            const svcRes = await query(
+                `SELECT duration_minutes, buffer_time_minutes FROM services WHERE id = $1 AND tenant_id = $2`,
+                [service_id, tenantId]
+            );
+            if (svcRes.rows.length > 0) {
+                serviceDurationMins = svcRes.rows[0].duration_minutes || 30;
+                serviceBufferMins   = svcRes.rows[0].buffer_time_minutes || 0;
+            }
+        } catch (e) {
+            console.warn('[Availability] Could not fetch service duration:', e.message);
+        }
+    }
+
+    const totalServiceMins = serviceDurationMins + serviceBufferMins;
+
     const slots = generateSlots();
 
     // Mark past/too-close slots
@@ -85,6 +103,17 @@ router.get('/', async (req, res) => {
         if (`${date}T${slot.time}` < bufferedNow) {
             slot.available = false;
             slot.reason    = 'PAST';
+        }
+    });
+
+    // Block slots where service would run past closing time
+    slots.forEach(slot => {
+        if (!slot.available) return;
+        const [h, m] = slot.time.split(':').map(Number);
+        const slotStartMins = h * 60 + m;
+        if (slotStartMins + totalServiceMins > BUSINESS_CLOSE_MINS) {
+            slot.available = false;
+            slot.reason    = 'TOO_LATE';
         }
     });
 
@@ -97,7 +126,7 @@ router.get('/', async (req, res) => {
             [tenantId, date]
         );
 
-        const adminBlocks = blocksResult.rows;
+        const adminBlocks  = blocksResult.rows;
         const isDayBlocked = adminBlocks.some(b => b.block_type === 'day');
 
         if (isDayBlocked) {
@@ -116,24 +145,25 @@ router.get('/', async (req, res) => {
         });
 
         slots.forEach(slot => {
-            if (slot.available && slotBlockMap.hasOwnProperty(slot.time)) {
+            if (slot.available && Object.prototype.hasOwnProperty.call(slotBlockMap, slot.time)) {
                 slot.available  = false;
                 slot.reason     = 'UNAVAILABLE';
                 if (slotBlockMap[slot.time]) slot.adminReason = slotBlockMap[slot.time];
             }
         });
 
-        // 2. Check DB-confirmed bookings
+        // 2. Check overlapping bookings using precise start_time/end_time columns.
+        //    A slot is blocked if ANY confirmed/pending booking overlaps the window
+        //    [slot_start, slot_start + service_duration + buffer).
         const bookedResult = await query(
-            `SELECT booking_time::TEXT AS booking_time, COUNT(*) AS cnt
-             FROM bookings
-             WHERE tenant_id = $1 AND booking_date = $2 AND status = 'confirmed'
-             GROUP BY booking_time`,
+            `SELECT start_time, end_time FROM bookings
+             WHERE tenant_id = $1
+               AND booking_date = $2
+               AND status IN ('confirmed', 'pending_payment', 'pending_manual_confirmation')`,
             [tenantId, date]
         );
 
-        const dailyTotal = bookedResult.rows.reduce((sum, r) => sum + parseInt(r.cnt), 0);
-
+        const dailyTotal = bookedResult.rows.length;
         if (dailyTotal >= MAX_BOOKINGS_PER_DAY) {
             slots.forEach(slot => {
                 slot.available = false;
@@ -142,15 +172,32 @@ router.get('/', async (req, res) => {
             return res.json({ date, slots });
         }
 
-        const bookedTimes = bookedResult.rows.map(r => r.booking_time.slice(0, 5));
-        slots.forEach(slot => {
-            if (slot.available && bookedTimes.includes(slot.time)) {
-                slot.available = false;
-                slot.reason    = 'BOOKED';
-            }
-        });
+        // For each available slot, check whether the service window overlaps any booking
+        for (const slot of slots) {
+            if (!slot.available) continue;
 
-        res.json({ date, slots });
+            const [h, m] = slot.time.split(':').map(Number);
+            const slotStartMins = h * 60 + m;
+            const slotEndMins   = slotStartMins + totalServiceMins;
+
+            for (const booking of bookedResult.rows) {
+                if (!booking.start_time || !booking.end_time) continue;
+
+                const bStart = new Date(booking.start_time);
+                const bEnd   = new Date(booking.end_time);
+                const bStartMins = bStart.getHours() * 60 + bStart.getMinutes();
+                const bEndMins   = bEnd.getHours()   * 60 + bEnd.getMinutes();
+
+                // Overlap: slot window intersects booking window
+                if (slotStartMins < bEndMins && slotEndMins > bStartMins) {
+                    slot.available = false;
+                    slot.reason    = 'BOOKED';
+                    break;
+                }
+            }
+        }
+
+        res.json({ date, slots, serviceDurationMins, totalServiceMins });
 
     } catch (err) {
         console.error('[Availability]', err.message);
