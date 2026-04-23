@@ -1,25 +1,27 @@
-FROM node:20-alpine
+FROM node:20-alpine AS frontend-builder
+WORKDIR /app/frontend
+COPY frontend/package*.json ./
+RUN npm ci
+COPY frontend/ ./
+RUN npm run build
 
-# Set working directory
+FROM node:20-alpine AS backend
 WORKDIR /app
 
-# Install dependencies
 COPY package*.json ./
-RUN npm ci --only=production
+RUN npm ci --omit=dev
 
-# Copy source
 COPY . .
+COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
 
-# Create data directory for any local file storage
 RUN mkdir -p /app/data/pdfs
 
-# Non-root user for security
 RUN addgroup -S icss && adduser -S icss -G icss
 USER icss
 
 EXPOSE 3000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s \
-    CMD wget -qO- http://localhost:3000/health || exit 1
+  CMD wget -qO- http://localhost:${PORT:-3000}/health || exit 1
 
 CMD ["node", "server/app.js"]
