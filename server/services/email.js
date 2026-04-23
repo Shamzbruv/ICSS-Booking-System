@@ -257,9 +257,44 @@ async function sendDesignInquiryEmail(data, tenant) {
     console.log(`[Email] Design inquiry forwarded to ${adminEmail}`);
 }
 
+async function sendPasswordResetEmail(email, resetUrl) {
+    const resend = getResend();
+    if (!resend) {
+        console.warn('[Email] No RESEND_API_KEY — skipping password reset email to:', email);
+        console.log(`[Email] Fake send: Reset URL is ${resetUrl}`);
+        return;
+    }
+
+    await resend.emails.send({
+        from:    'ICSS Booking <security@icss.app>',
+        to:      [email],
+        subject: `Password Reset Request - ICSS Booking System`,
+        html: `
+        <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;border:1px solid #e8e8e8;border-radius:8px;overflow:hidden;">
+            <div style="background:#050505;padding:24px;text-align:center;">
+                <h2 style="color:#fff;margin:0;font-family:Georgia,serif;letter-spacing:2px;">PASSWORD RESET</h2>
+            </div>
+            <div style="padding:32px 36px;background:#fff;color:#333;">
+                <p>Hello,</p>
+                <p>We received a request to reset your password. Click the button below to set a new password. This link is valid for 1 hour.</p>
+                <div style="text-align:center;margin:30px 0;">
+                    <a href="${resetUrl}" style="background:#050505;color:#fff;text-decoration:none;padding:14px 28px;border-radius:4px;font-weight:bold;display:inline-block;letter-spacing:1px;">RESET PASSWORD</a>
+                </div>
+                <p>If you did not request a password reset, you can safely ignore this email.</p>
+            </div>
+            <div style="background:#f9f9f9;padding:20px;text-align:center;font-size:12px;color:#999;border-top:1px solid #eee;">
+                <p style="margin:0;">&copy; ${new Date().getFullYear()} ICSS Booking System. All rights reserved.</p>
+            </div>
+        </div>`
+    });
+
+    console.log(`[Email] Password reset sent to ${email}`);
+}
+
 module.exports = {
     sendBookingConfirmation,
     sendBookingCancellationEmail,
     sendOrderConfirmation,
-    sendDesignInquiryEmail
+    sendDesignInquiryEmail,
+    sendPasswordResetEmail
 };

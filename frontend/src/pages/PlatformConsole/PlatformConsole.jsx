@@ -43,6 +43,9 @@ function ConsoleLogin() {
         <form onSubmit={handleLogin} className={s.loginForm}>
           <input className={s.loginInput} type="email" placeholder="Owner email" value={email} onChange={e => setEmail(e.target.value)} required />
           <input className={s.loginInput} type="password" placeholder="Password" value={pass} onChange={e => setPass(e.target.value)} required />
+          <div style={{ textAlign: 'right', marginTop: '-8px', marginBottom: '8px' }}>
+            <a href="/forgot-password" style={{ color: '#7c6ef7', fontSize: '13px', textDecoration: 'none' }}>Forgot Password?</a>
+          </div>
           <button className={s.btnPrimary} type="submit" disabled={busy}>{busy ? 'Signing in…' : 'Sign In'}</button>
         </form>
       </div>
@@ -144,7 +147,7 @@ function TenantsView() {
                   </td>
                   <td onClick={e => e.stopPropagation()}>
                     <div className={s.rowActions}>
-                      <a href={`/book/${t.slug}`} target="_blank" rel="noreferrer" className={s.rowBtn} title="Open Public Page">🌐</a>
+                      <a href={`/${t.slug}`} target="_blank" rel="noreferrer" className={s.rowBtn} title="Open Public Page">🌐</a>
                       <a href={`/editor?_tenant=${t.slug}`} target="_blank" rel="noreferrer" className={s.rowBtn} title="Open Editor">🎨</a>
                       <a href={`/admin?tenant=${t.slug}`} target="_blank" rel="noreferrer" className={s.rowBtn} title="Open Admin">🛠</a>
                       <button className={`${s.rowBtn} ${s['rowBtn--imp']}`} title="Impersonate Read-Only" onClick={() => quickImpersonate(t)}>👁</button>

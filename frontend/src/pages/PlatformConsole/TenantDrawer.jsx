@@ -48,7 +48,7 @@ export default function TenantDrawer({ tenant, onClose }) {
     await startImpersonation(tenant.id, mode, reason || '');
   };
 
-  const openPublicPage = () => window.open(`/book/${tenant.slug}`, '_blank');
+  const openPublicPage = () => window.open(`/${tenant.slug}`, '_blank');
   const openEditor     = () => window.open(`/editor?_tenant=${tenant.slug}`, '_blank');
   const openAdmin      = () => window.open(`/admin?tenant=${tenant.slug}`, '_blank');
 

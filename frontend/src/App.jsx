@@ -7,6 +7,8 @@ import ProvisioningWait  from './pages/ProvisioningWait/ProvisioningWait';
 import CustomThemeRequest from './pages/CustomThemeRequest/CustomThemeRequest';
 import PublicBookingPage from './pages/PublicBookingPage/PublicBookingPage';
 import PlatformConsole   from './pages/PlatformConsole/PlatformConsole';
+import ForgotPassword    from './pages/Auth/ForgotPassword';
+import ResetPassword     from './pages/Auth/ResetPassword';
 
 function App() {
   return (
@@ -18,8 +20,10 @@ function App() {
       <Route path="/editor"       element={<EditorCanvas />} />
       <Route path="/custom-theme" element={<CustomThemeRequest />} />
       {/* Platform Owner Console — must be before /:slug wildcard */}
-      <Route path="/platform"     element={<PlatformConsole />} />
-      <Route path="/:slug"        element={<PublicBookingPage />} />
+      <Route path="/platform"         element={<PlatformConsole />} />
+      <Route path="/forgot-password"  element={<ForgotPassword />} />
+      <Route path="/reset-password"   element={<ResetPassword />} />
+      <Route path="/:slug"            element={<PublicBookingPage />} />
     </Routes>
   );
 }
