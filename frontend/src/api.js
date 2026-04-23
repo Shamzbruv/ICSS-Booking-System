@@ -1,8 +1,10 @@
 // src/api.js — Centralized API client for all backend requests
 const BASE = '/api/v1';
 
-async function apiFetch(path, options = {}) {
-  const token = localStorage.getItem('icss_token');
+// apiFetch — uses owner token from localStorage by default.
+// Pass overrideToken to use an impersonation overlay token instead.
+async function apiFetch(path, options = {}, overrideToken = null) {
+  const token = overrideToken || localStorage.getItem('icss_token');
   const res = await fetch(`${BASE}${path}`, {
     ...options,
     headers: {
@@ -21,11 +23,11 @@ async function apiFetch(path, options = {}) {
 
 export const api = {
   // Auth
-  login:  (body) => apiFetch('/auth/login',    { method: 'POST', body }),
+  login:  (body) => apiFetch('/auth/login', { method: 'POST', body }),
   me:     ()     => apiFetch('/auth/me'),
 
   // Themes
-  themes: ()     => apiFetch('/themes'),
+  themes: () => apiFetch('/themes'),
 
   // Public endpoints
   publicTenant:   (slug) => apiFetch('/public/tenant',   { headers: { 'X-Tenant-Slug': slug } }),
@@ -56,12 +58,52 @@ export const api = {
   savePaymentSettings: (slug, settings) => apiFetch(`/tenants/${slug}/payment-settings`, { method: 'PATCH', body: settings }),
 
   // Services
-  getServices:    () => apiFetch('/services'),
-  createService:  (service) => apiFetch('/services', { method: 'POST', body: service }),
-  updateService:  (id, service) => apiFetch(`/services/${id}`, { method: 'PATCH', body: service }),
+  getServices:   ()           => apiFetch('/services'),
+  createService: (service)    => apiFetch('/services', { method: 'POST', body: service }),
+  updateService: (id, service)=> apiFetch(`/services/${id}`, { method: 'PATCH', body: service }),
 
   // Admin Bookings
-  summary:  () => apiFetch('/admin/summary'),
+  summary:  ()           => apiFetch('/admin/summary'),
   bookings: (params = '') => apiFetch(`/bookings?${params}`),
   updateBookingStatus: (id, status, note) => apiFetch(`/bookings/${id}/status`, { method: 'PATCH', body: { status, note } }),
+
+  // ── Platform Console (platform_owner only) ────────────────────────────────
+  // All platform calls use the owner's main localStorage token automatically.
+  platform: {
+    // Tenant management
+    listTenants:          (search = '', page = 1) => apiFetch(`/platform/tenants?search=${encodeURIComponent(search)}&page=${page}`),
+    getTenant:            (id)   => apiFetch(`/platform/tenants/${id}`),
+    getTenantHealth:      (id)   => apiFetch(`/platform/tenants/${id}/health`),
+    getTenantServices:    (id)   => apiFetch(`/platform/tenants/${id}/services`),
+    getTenantBookings:    (id)   => apiFetch(`/platform/tenants/${id}/bookings`),
+    getTenantPayments:    (id)   => apiFetch(`/platform/tenants/${id}/payment-settings`),
+    getTenantProvisioning:(id)   => apiFetch(`/platform/tenants/${id}/provisioning`),
+
+    // Themes
+    getThemes:            ()         => apiFetch('/platform/themes'),
+    getThemeTenants:      (themeId)  => apiFetch(`/platform/themes/${themeId}/tenants`),
+
+    // Diagnostics
+    getJobs:              ()          => apiFetch('/platform/jobs'),
+    getAuditLog:          (tenantId)  => apiFetch(`/platform/audit-log${tenantId ? `?tenantId=${tenantId}` : ''}`),
+    getPayments:          (tenantId)  => apiFetch(`/platform/payments${tenantId ? `?tenantId=${tenantId}` : ''}`),
+    getBuildInfo:         ()          => apiFetch('/platform/build-info'),
+    getEnvCheck:          ()          => apiFetch('/platform/env-check'),
+
+    // Impersonation — returns { session_id, token, expires_at, mode, tenant }
+    // The returned token is the OVERLAY token — kept in React state only (never localStorage)
+    startImpersonation:   (tenantId, mode, reason) =>
+      apiFetch(`/platform/impersonate/tenant/${tenantId}`, { method: 'POST', body: { mode, reason } }),
+    endImpersonation:     (sessionId) =>
+      apiFetch(`/platform/impersonation/${sessionId}/end`, { method: 'POST' }),
+    elevateImpersonation: (sessionId, reason) =>
+      apiFetch(`/platform/impersonation/${sessionId}/elevate`, { method: 'POST', body: { reason } }),
+    getActiveSessions:    () => apiFetch('/platform/impersonation/active'),
+
+    // Safe write actions
+    expireHold:           (bookingId) =>
+      apiFetch(`/platform/bookings/${bookingId}/expire-hold`, { method: 'POST' }),
+    replayProvisioning:   (tenantId)  =>
+      apiFetch(`/platform/tenants/${tenantId}/replay-provisioning`, { method: 'POST' }),
+  },
 };

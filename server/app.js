@@ -21,6 +21,7 @@ const pricingRoutes     = require('./routes/v1/pricing');
 const calendarRoutes    = require('./routes/v1/calendar');
 const themesRoutes      = require('./routes/v1/themes');
 const servicesRoutes    = require('./routes/v1/services');
+const platformRoutes    = require('./routes/v1/platform');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -36,7 +37,7 @@ app.use(cors({
         ? /\.icss\.app$/ // Allow all *.icss.app subdomains in production
         : '*',           // Open in dev
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Tenant-ID', 'X-Platform-Admin-Key'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Tenant-ID', 'X-Tenant-Slug', 'X-Platform-Admin-Key', 'X-Impersonation-Session'],
     credentials: true
 }));
 
@@ -55,7 +56,11 @@ app.use('/api/', rateLimiter);
 
 // ─── Tenant Resolution ───────────────────────────────────────────────────────
 // Injects req.tenant on every /api/v1/ request
-app.use('/api/v1', tenantResolver);
+// Platform routes bypass tenant resolution — they operate cross-tenant
+app.use('/api/v1', (req, res, next) => {
+    if (req.path.startsWith('/platform')) return next();
+    tenantResolver(req, res, next);
+});
 
 // ─── Static Files (Admin Dashboard + Public Booking Widget) ──────────────────
 app.use('/admin', express.static(path.join(__dirname, '../admin')));
@@ -75,6 +80,7 @@ app.use('/api/v1/pricing',      pricingRoutes);
 app.use('/api/v1/calendar',     calendarRoutes);
 app.use('/api/v1/themes',       themesRoutes);
 app.use('/api/v1/services',     servicesRoutes);
+app.use('/api/v1/platform',     platformRoutes);
 
 // ─── Health Check ─────────────────────────────────────────────────────────────
 app.get('/health', (req, res) => {

@@ -570,6 +570,25 @@ async function runMigrations(client) {
         ('Universal Standard', 'General / Universal', '/Template/universal_booking.html', '{"services": [{"name": "Standard Service", "duration_minutes": 60, "price": 5000}]}'::jsonb)
         ON CONFLICT (name) DO NOTHING
     `);
+
+    // ── Impersonation Sessions (Platform Console) ──────────────────────────────
+    await client.query(`
+        CREATE TABLE IF NOT EXISTS impersonation_sessions (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            actor_user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            target_tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+            target_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+            mode TEXT NOT NULL DEFAULT 'read_only',
+            reason TEXT,
+            ip_address TEXT,
+            user_agent TEXT,
+            created_at TIMESTAMPTZ DEFAULT NOW(),
+            expires_at TIMESTAMPTZ DEFAULT NOW() + INTERVAL '30 minutes',
+            revoked_at TIMESTAMPTZ
+        )
+    `);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_imp_actor ON impersonation_sessions(actor_user_id)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_imp_tenant ON impersonation_sessions(target_tenant_id)`);
 }
 
 module.exports = { query, transaction, initDatabase, getPool };

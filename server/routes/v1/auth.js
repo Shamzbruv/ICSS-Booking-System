@@ -70,6 +70,23 @@ router.post('/login', authLimiter, async (req, res) => {
     }
 
     try {
+        // ── Platform owner login — no tenant association required ─────────────
+        const ownerRes = await query(
+            `SELECT id, email, name, role, password_hash FROM users
+             WHERE email = $1 AND role = 'platform_owner' AND active = true`,
+            [email.toLowerCase().trim()]
+        );
+
+        if (ownerRes.rows.length > 0) {
+            const owner = ownerRes.rows[0];
+            const valid = await bcrypt.compare(password, owner.password_hash);
+            if (!valid) return res.status(401).json({ error: 'Invalid email or password.' });
+
+            const token = signToken({ id: owner.id, email: owner.email, role: owner.role });
+            return res.json({ token, user: { id: owner.id, email: owner.email, name: owner.name, role: owner.role } });
+        }
+
+        // ── Standard tenant-scoped login ──────────────────────────────────────
         let tenantFilter = '';
         let params = [email.toLowerCase().trim()];
 
@@ -126,6 +143,7 @@ router.post('/login', authLimiter, async (req, res) => {
         res.status(500).json({ error: 'Login failed. Please try again.' });
     }
 });
+
 
 // GET /api/v1/auth/me — Get current user profile
 router.get('/me', authenticate, async (req, res) => {
