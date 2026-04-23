@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react';
-import ReactGridLayout from 'react-grid-layout';
+import { Responsive, WidthProvider } from 'react-grid-layout/legacy';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 import s from './EditorCanvas.module.css';
 import { api } from '../../api';
 
-const { Responsive, WidthProvider } = ReactGridLayout;
 const ResponsiveGridLayout = WidthProvider(Responsive);
 
 // Default layout items with type and props
