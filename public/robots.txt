@@ -1,0 +1,31 @@
+User-agent: *
+
+# Allow public marketing pages
+Allow: /$
+Allow: /industries/
+Allow: /faq
+Allow: /platform-setup.html
+
+# Block internal app routes
+Disallow: /onboarding
+Disallow: /themes
+Disallow: /editor
+Disallow: /provisioning
+Disallow: /custom-theme
+Disallow: /platform
+Disallow: /forgot-password
+Disallow: /reset-password
+
+# Block admin panel
+Disallow: /admin/
+
+# Block API
+Disallow: /api/
+
+# Block template previews (internal)
+Disallow: /Template/
+
+# Block query string duplicates
+Disallow: /*?*
+
+Sitemap: https://icssbookings.com/sitemap.xml

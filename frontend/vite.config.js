@@ -19,5 +19,20 @@ export default defineConfig({
         changeOrigin: true,
       }
     }
+  },
+  build: {
+    // Target modern browsers — smaller, faster bundles
+    target: 'es2020',
+    // Warn only above 600KB — individual lazy chunks will be much smaller
+    chunkSizeWarningLimit: 600,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Core React runtime — cached aggressively
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+        }
+      }
+    }
   }
 });
+

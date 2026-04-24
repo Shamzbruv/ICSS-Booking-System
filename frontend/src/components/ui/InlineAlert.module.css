@@ -1,0 +1,16 @@
+.alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  border: 1px solid transparent;
+}
+.alert.error   { background: rgba(245,101,101,0.1);  border-color: rgba(245,101,101,0.25);  color: #fc8181; }
+.alert.warning { background: rgba(246,173,85,0.1);   border-color: rgba(246,173,85,0.25);   color: #f6ad55; }
+.alert.success { background: rgba(72,187,120,0.1);   border-color: rgba(72,187,120,0.25);   color: #68d391; }
+.alert.info    { background: rgba(124,110,247,0.1);  border-color: rgba(124,110,247,0.25);  color: #a78bfa; }
+.icon { flex-shrink: 0; font-weight: 700; font-size: 12px; margin-top: 1px; }
+.text { flex: 1; }

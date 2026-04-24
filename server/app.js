@@ -34,7 +34,7 @@ app.use(helmet({
 // ─── CORS ─────────────────────────────────────────────────────────────────────
 app.use(cors({
     origin: process.env.NODE_ENV === 'production'
-        ? /\.icss\.app$/ // Allow all *.icss.app subdomains in production
+        ? [/\.icssbookings\.com$/, /^https:\/\/(www\.)?icssbookings\.com$/]
         : '*',           // Open in dev
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Tenant-ID', 'X-Tenant-Slug', 'X-Platform-Admin-Key', 'X-Impersonation-Session'],
@@ -99,8 +99,16 @@ app.get('/health', (req, res) => {
 });
 
 // ─── React SPA Fallback ───────────────────────────────────────────────────────
-// Any GET request not matching api, admin, Template, or health goes to React.
-app.get(/^\/(?!api|admin|Template|health).*/, (req, res) => {
+// Serve React SPA for app routes. Static public pages (/, /industries/*, /faq)
+// are already handled above by express.static(public) — so exclude them here.
+app.get(/^\/(?!api\/|admin\/|admin$|Template\/|health$|industries\/|industries$|faq|sitemap\.xml|robots\.txt|favicon|logo)/, (req, res) => {
+    // Only send the SPA if the static middleware didn't match
+    // (i.e. file doesn't exist in public/ — checked by trying the file first)
+    const staticPublic = path.join(__dirname, '../public', req.path);
+    const fs = require('fs');
+    if (fs.existsSync(staticPublic) && fs.statSync(staticPublic).isFile()) {
+        return res.sendFile(staticPublic);
+    }
     res.sendFile(path.join(frontendDist, 'index.html'));
 });
 
