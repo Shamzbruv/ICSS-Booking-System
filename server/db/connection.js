@@ -600,16 +600,17 @@ async function runMigrations(client) {
     // ── Seed Themes ───────────────────────────────────────────────────────────
     await client.query(`
         INSERT INTO themes (name, category, template_path, business_config) VALUES
-        ('Lumina Lens', 'Photography', '/Template/deepseek_html_20260421_3e8960.html', '{"services": [{"name": "1-Hour Portrait Session", "duration_minutes": 60, "price": 15000}]}'::jsonb),
-        ('Elegant Nails', 'Nail Tech', '/Template/deepseek_html_20260421_6c135e.html', '{"services": [{"name": "Acrylic Full Set", "duration_minutes": 90, "price": 8000}]}'::jsonb),
-        ('Iron & Blade', 'Barber', '/Template/barber.html', '{"services": [{"name": "Signature Haircut", "duration_minutes": 45, "price": 4000}, {"name": "Fade & Blend", "duration_minutes": 50, "price": 4500}, {"name": "Beard Trim & Shape", "duration_minutes": 30, "price": 2500}, {"name": "The Full Treatment", "duration_minutes": 75, "price": 6000}, {"name": "Hot Towel Shave", "duration_minutes": 40, "price": 3500}]}'::jsonb),
-        ('Pro Auto Care', 'Mechanic', '/Template/mechanic.html', '{"services": [{"name": "Oil Change & Inspection", "duration_minutes": 45, "price": 12000}, {"name": "Brake Pad Replacement", "duration_minutes": 120, "price": 25000}, {"name": "Full Diagnostics", "duration_minutes": 90, "price": 15000}]}'::jsonb),
-        ('Gather & Grace', 'Events', '/Template/deepseek_html_20260421_e879f5.html', '{"services": [{"name": "Event Venue Tour", "duration_minutes": 30, "price": 0}]}'::jsonb),
-        ('Zen Spa', 'Spa/Wellness', '/Template/deepseek_html_20260421_6775b1.html', '{"services": [{"name": "Swedish Massage (60 Min)", "duration_minutes": 60, "price": 10000}]}'::jsonb),
-        ('Legal Access', 'Legal', '/Template/deepseek_html_20260421_7b8f29.html', '{"services": [{"name": "Initial Consultation", "duration_minutes": 30, "price": 5000}]}'::jsonb),
-        ('Iron Fitness', 'Fitness', '/Template/deepseek_html_20260421_77f091.html', '{"services": [{"name": "Personal Training Session", "duration_minutes": 60, "price": 6000}]}'::jsonb),
-        ('Wellness Clinic', 'Medical', '/Template/deepseek_html_20260421_e9afd1.html', '{"services": [{"name": "General Checkup", "duration_minutes": 30, "price": 7500}]}'::jsonb),
-        ('Universal Standard', 'General / Universal', '/Template/universal_booking.html', '{"services": [{"name": "Standard Service", "duration_minutes": 60, "price": 5000}]}'::jsonb)
+        ('Blush & Braids', 'Hair & Beauty', '/Template/Hairdresser.html', '{"services": [{"name": "Blowout & Style", "duration_minutes": 45, "price": 55}, {"name": "Balayage / Highlights", "duration_minutes": 150, "price": 180}]}'::jsonb),
+        ('Serenity Health', 'Medical', '/Template/Health.html', '{"services": [{"name": "Annual Wellness Exam", "duration_minutes": 45, "price": 40}, {"name": "Telehealth Visit", "duration_minutes": 20, "price": 30}]}'::jsonb),
+        ('Lumina Lens', 'Photography', '/Template/photography.html', '{"services": [{"name": "Portrait Session", "duration_minutes": 60, "price": 350}, {"name": "Couple / Engagement", "duration_minutes": 90, "price": 550}]}'::jsonb),
+        ('Gather & Grace', 'Events', '/Template/Events.html', '{"services": [{"name": "Wedding Package", "duration_minutes": 0, "price": 3500}, {"name": "Corporate Event", "duration_minutes": 0, "price": 2200}]}'::jsonb),
+        ('Botanica Spa', 'Spa/Wellness', '/Template/Spa.html', '{"services": [{"name": "Signature Botanical Facial", "duration_minutes": 75, "price": 135}, {"name": "Aromatherapy Massage", "duration_minutes": 90, "price": 165}]}'::jsonb),
+        ('Pulse Studio', 'Fitness', '/Template/Fitness.html', '{"services": [{"name": "HIIT FUSION", "duration_minutes": 45, "price": 0}, {"name": "POWER VINYASA", "duration_minutes": 60, "price": 0}]}'::jsonb),
+        ('Meridian Law', 'Legal', '/Template/Law.html', '{"services": [{"name": "Initial Consultation", "duration_minutes": 30, "price": 150}, {"name": "Extended Consultation", "duration_minutes": 60, "price": 275}]}'::jsonb),
+        ('Iron & Blade', 'Barber', '/Template/barber.html', '{"services": [{"name": "Signature Haircut", "duration_minutes": 45, "price": 40}, {"name": "Fade & Blend", "duration_minutes": 50, "price": 45}, {"name": "Beard Trim & Shape", "duration_minutes": 30, "price": 25}, {"name": "The Full Treatment", "duration_minutes": 75, "price": 60}, {"name": "Hot Towel Shave", "duration_minutes": 40, "price": 35}]}'::jsonb),
+        ('Elegant Nails', 'Nail Tech', '/Template/Nail Tech.html', '{"services": [{"name": "Acrylic Full Set", "duration_minutes": 90, "price": 80}]}'::jsonb),
+        ('Pro Auto Care', 'Mechanic', '/Template/mechanic.html', '{"services": [{"name": "Oil Change & Inspection", "duration_minutes": 45, "price": 120}, {"name": "Brake Pad Replacement", "duration_minutes": 120, "price": 250}, {"name": "Full Diagnostics", "duration_minutes": 90, "price": 150}]}'::jsonb),
+        ('Universal Services', 'General / Universal', '/Template/universal_booking.html', '{"services": [{"name": "Consultation", "duration_minutes": 30, "price": 50}, {"name": "Professional Service", "duration_minutes": 60, "price": 120}]}'::jsonb)
         ON CONFLICT (name) DO NOTHING
     `);
 

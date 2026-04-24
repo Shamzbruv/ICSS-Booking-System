@@ -514,8 +514,52 @@
         padding: 1.5rem;
       }
     }
+  
+    /* Enhanced Mobile Optimizations */
+    @media (max-width: 650px) {
+      body {
+        padding: 0 !important;
+      }
+      body > div[class$="-system"] {
+        padding: 1.5rem 1.2rem !important;
+        border-radius: 0 !important;
+        border-left: none !important;
+        border-right: none !important;
+        box-shadow: none !important;
+        min-height: 100vh;
+        margin: 0;
+        width: 100% !important;
+        max-width: 100% !important;
+      }
+      .header {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 15px !important;
+      }
+      .brand {
+        width: 100%;
+      }
+      .brand-text h1 {
+        font-size: 1.8rem !important;
+      }
+      .booking-grid {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 1.5rem !important;
+      }
+      .time-slots {
+        grid-template-columns: repeat(2, 1fr) !important;
+      }
+      .selection-panel, .booking-form-panel {
+        padding: 1.5rem 1.2rem !important;
+        border-radius: 20px !important;
+      }
+      .service-card, .event-card, .rental-item {
+        padding: 1rem 1.2rem !important;
+      }
+    }
   </style>
-  <link rel="icon" type="image/png" href="../public/favicon.png">
+
 </head>
 <body>
 <div class="legal-system">
