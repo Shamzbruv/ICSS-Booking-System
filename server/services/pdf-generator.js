@@ -363,4 +363,263 @@ async function savePDFToTemp(buffer, filename) {
     return filePath;
 }
 
-module.exports = { generateBookingPDF, generateOrderInvoicePDF, savePDFToTemp };
+// ── 3. Platform Billing Brand ──────────────────────────────────────────────────
+/**
+ * Returns ICSS platform billing identity — intentionally NOT tenant-specific.
+ * Used exclusively for subscription invoices sent on behalf of the ICSS platform.
+ */
+function getPlatformBillingBrand() {
+    const logoPath = path.join(__dirname, '../../Pictures/ICSS Logo.png');
+    const iconPath = path.join(__dirname, '../../Pictures/ICSS (1).png');
+    return {
+        name:         'ICSS Booking System',
+        tagline:      'Subscription Invoice',
+        primaryColor: '#0F0F1A',     // deep navy/black
+        accentColor:  '#7C6EF7',     // soft violet — matches site CTA
+        mutedColor:   '#A0A0B8',     // muted lavender-grey for labels
+        successColor: '#22c55e',     // paid/success green
+        website:      'https://icssbookings.com',
+        supportEmail: 'billing@icssbookings.com',
+        // Gracefully resolve logo paths — safe in Docker if files are missing
+        logoPath: fs.existsSync(logoPath) ? logoPath : null,
+        iconPath: fs.existsSync(iconPath) ? iconPath : null,
+    };
+}
+
+// ── 4. Subscription Invoice PDF ────────────────────────────────────────────────
+/**
+ * Generates a premium ICSS-branded subscription invoice PDF.
+ *
+ * @param {Object} opts
+ * @param {{ name: string, slug: string }} opts.tenant
+ * @param {{ name: string, email: string }} opts.owner
+ * @param {number} opts.amount
+ * @param {string} opts.currency          e.g. 'USD'
+ * @param {string} opts.subscriptionId    PayPal subscription ID
+ * @param {string} opts.eventId           PayPal event/reference ID
+ * @param {Date}   opts.paidAt
+ * @param {string} opts.planName          e.g. 'Monthly', 'Annual'
+ * @param {string} opts.billingPeriod     e.g. 'Apr 2026 – May 2026'
+ * @param {string} opts.invoiceNumber     e.g. 'ICSS-20260423-AB12'
+ * @returns {Promise<Buffer>}
+ */
+function generateSubscriptionInvoicePDF(opts) {
+    const { tenant, owner, amount, currency = 'USD', subscriptionId, eventId,
+            paidAt, planName = 'Monthly', billingPeriod, invoiceNumber } = opts;
+
+    return new Promise((resolve, reject) => {
+        try {
+            const doc    = new PDFDocument({ margin: 0, size: 'A4' });
+            const chunks = [];
+            doc.on('data', c => chunks.push(c));
+            doc.on('end',  () => resolve(Buffer.concat(chunks)));
+
+            const brand = getPlatformBillingBrand();
+            const w = doc.page.width;  // 595.28 for A4
+            const H = doc.page.height; // 841.89 for A4
+            const L = 48;              // left margin
+            const R = w - 48;          // right bound
+            const CW = R - L;          // content width
+
+            const paidDate  = paidAt ? new Date(paidAt) : new Date();
+            const issueDate = new Date();
+            const fmtDate   = (d) => d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+            const currSym   = currency === 'GBP' ? '£' : currency === 'JMD' ? 'J$' : '$';
+            const amtStr    = `${currSym}${Number(amount).toFixed(2)}`;
+
+            // ── HEADER (full bleed dark block) ─────────────────────────────
+            const HEADER_H = 130;
+            doc.rect(0, 0, w, HEADER_H).fillColor(brand.primaryColor).fill();
+
+            // Logo — left side of header
+            if (brand.logoPath) {
+                try {
+                    doc.image(brand.logoPath, L, 26, { height: 52, fit: [180, 52] });
+                } catch (e) {
+                    // Logo failed to load — render text fallback
+                    doc.fillColor('#FFFFFF').fontSize(18).font('Helvetica-Bold')
+                        .text('ICSS', L, 44);
+                }
+            } else {
+                doc.fillColor('#FFFFFF').fontSize(18).font('Helvetica-Bold').text('ICSS', L, 44);
+            }
+
+            // Invoice title — right side of header
+            doc.fillColor('#FFFFFF')
+                .fontSize(22).font('Helvetica-Bold')
+                .text('SUBSCRIPTION INVOICE', 0, 38, { align: 'right', width: R });
+            doc.fillColor(brand.accentColor)
+                .fontSize(10).font('Helvetica')
+                .text(invoiceNumber, 0, 66, { align: 'right', width: R });
+            doc.fillColor(brand.mutedColor)
+                .fontSize(9)
+                .text(brand.website, 0, 82, { align: 'right', width: R });
+
+            // ── VIOLET ACCENT BAR ───────────────────────────────────────────
+            doc.rect(0, HEADER_H, w, 4).fillColor(brand.accentColor).fill();
+
+            // ── META BLOCK (two columns) ────────────────────────────────────
+            let y = HEADER_H + 24;
+            const COL2 = L + CW / 2;
+
+            // Left column
+            doc.fillColor(brand.mutedColor).fontSize(7.5).font('Helvetica')
+                .text('INVOICE DATE', L, y, { characterSpacing: 1.2 });
+            doc.fillColor('#000000').fontSize(10).font('Helvetica-Bold')
+                .text(fmtDate(issueDate), L, y + 12);
+
+            doc.fillColor(brand.mutedColor).fontSize(7.5).font('Helvetica')
+                .text('PAYMENT DATE', L, y + 32, { characterSpacing: 1.2 });
+            doc.fillColor('#000000').fontSize(10).font('Helvetica-Bold')
+                .text(fmtDate(paidDate), L, y + 44);
+
+            // Right column
+            doc.fillColor(brand.mutedColor).fontSize(7.5).font('Helvetica')
+                .text('INVOICE NUMBER', COL2, y, { characterSpacing: 1.2 });
+            doc.fillColor('#000000').fontSize(10).font('Helvetica-Bold')
+                .text(invoiceNumber, COL2, y + 12);
+
+            // PAID badge
+            const badgeX = COL2;
+            const badgeY = y + 32;
+            doc.roundedRect(badgeX, badgeY, 58, 20, 3)
+                .fillColor(brand.successColor).fill();
+            doc.fillColor('#FFFFFF').fontSize(9).font('Helvetica-Bold')
+                .text('✓  PAID', badgeX + 6, badgeY + 5, { width: 46 });
+
+            y += 82;
+
+            // ── SECTION DIVIDER ─────────────────────────────────────────────
+            doc.moveTo(L, y).lineTo(R, y).lineWidth(0.5)
+                .strokeColor('#E0E0E8').stroke();
+            y += 20;
+
+            // ── BILL TO CARD ────────────────────────────────────────────────
+            const CARD_PAD = 16;
+            const BILLTO_H = 78;
+            doc.roundedRect(L, y, CW, BILLTO_H, 4)
+                .fillColor('#F7F7FB').fill();
+            doc.moveTo(L, y).lineTo(L, y + BILLTO_H)
+                .lineWidth(3).strokeColor(brand.accentColor).stroke();
+
+            doc.fillColor(brand.mutedColor).fontSize(7.5).font('Helvetica')
+                .text('BILL TO', L + CARD_PAD, y + CARD_PAD, { characterSpacing: 1.2 });
+            doc.fillColor('#0F0F1A').fontSize(12).font('Helvetica-Bold')
+                .text(tenant?.name || 'Your Business', L + CARD_PAD, y + CARD_PAD + 14);
+            doc.fillColor('#333333').fontSize(9.5).font('Helvetica')
+                .text(owner?.name || '', L + CARD_PAD, y + CARD_PAD + 30);
+            doc.fillColor(brand.mutedColor).fontSize(9).font('Helvetica')
+                .text(owner?.email || '', L + CARD_PAD, y + CARD_PAD + 44);
+
+            y += BILLTO_H + 18;
+
+            // ── SUBSCRIPTION DETAILS CARD ───────────────────────────────────
+            const DETAILS_H = 118;
+            doc.roundedRect(L, y, CW, DETAILS_H, 4)
+                .fillColor('#F7F7FB').fill();
+            doc.moveTo(L, y).lineTo(L, y + DETAILS_H)
+                .lineWidth(3).strokeColor(brand.primaryColor).stroke();
+
+            doc.fillColor(brand.mutedColor).fontSize(7.5).font('Helvetica')
+                .text('SUBSCRIPTION DETAILS', L + CARD_PAD, y + CARD_PAD, { characterSpacing: 1.2 });
+
+            const details = [
+                ['Plan',              planName || 'Monthly'],
+                ['Billing Period',    billingPeriod || '—'],
+                ['Payment Provider',  'PayPal'],
+                ['Subscription ID',   subscriptionId || '—'],
+                ['Reference ID',      eventId || '—'],
+            ];
+
+            let dy = y + CARD_PAD + 16;
+            const LABEL_W = 120;
+            details.forEach(([label, val]) => {
+                doc.fillColor('#555566').fontSize(8.5).font('Helvetica-Bold')
+                    .text(label + ':', L + CARD_PAD, dy, { continued: true, width: LABEL_W });
+                doc.fillColor('#111122').font('Helvetica')
+                    .text('  ' + val, { width: CW - CARD_PAD - LABEL_W - 8 });
+                dy += 16;
+            });
+
+            y += DETAILS_H + 18;
+
+            // ── AMOUNT BLOCK ────────────────────────────────────────────────
+            const AMOUNT_H = 100;
+            doc.roundedRect(L, y, CW, AMOUNT_H, 4)
+                .fillColor('#F7F7FB').fill();
+
+            const AMT_LEFT  = L + CARD_PAD;
+            const AMT_RIGHT = R - CARD_PAD;
+
+            // Subtotal row
+            let ay = y + CARD_PAD;
+            doc.fillColor('#555566').fontSize(9).font('Helvetica')
+                .text('Subtotal', AMT_LEFT, ay);
+            doc.fillColor('#111122').fontSize(9).font('Helvetica')
+                .text(amtStr, AMT_LEFT, ay, { align: 'right', width: CW - CARD_PAD * 2 });
+
+            ay += 20;
+            doc.fillColor('#555566').fontSize(9).font('Helvetica')
+                .text('Tax', AMT_LEFT, ay);
+            doc.fillColor('#888899').fontSize(9).font('Helvetica')
+                .text('$0.00', AMT_LEFT, ay, { align: 'right', width: CW - CARD_PAD * 2 });
+
+            // Divider
+            ay += 16;
+            doc.moveTo(AMT_LEFT, ay).lineTo(AMT_RIGHT, ay)
+                .lineWidth(0.5).strokeColor('#D0D0E0').stroke();
+
+            // Total row
+            ay += 12;
+            doc.fillColor(brand.mutedColor).fontSize(8).font('Helvetica')
+                .text('TOTAL PAID', AMT_LEFT, ay, { characterSpacing: 1 });
+            doc.fillColor(brand.accentColor).fontSize(20).font('Helvetica-Bold')
+                .text(amtStr + '  ', AMT_LEFT, ay - 4, { align: 'right', width: CW - CARD_PAD * 2, continued: true });
+            doc.fillColor(brand.mutedColor).fontSize(9).font('Helvetica')
+                .text(currency, { continued: false });
+
+            y += AMOUNT_H + 20;
+
+            // ── PAID WATERMARK (diagonal ghost) ─────────────────────────────
+            doc.save()
+                .rotate(-45, { origin: [w / 2, H / 2] })
+                .fontSize(100).font('Helvetica-Bold')
+                .fillColor(brand.successColor)
+                .opacity(0.045)
+                .text('PAID', 0, H / 2 - 50, { width: w, align: 'center' })
+                .restore();
+
+            // ── NOTE LINE ───────────────────────────────────────────────────
+            doc.fillColor('#888899').fontSize(8.5).font('Helvetica')
+                .text(
+                    'This invoice confirms your subscription payment was successfully processed by ICSS Booking System.',
+                    L, y, { width: CW, align: 'center' }
+                );
+
+            // ── FOOTER (full bleed dark) ─────────────────────────────────────
+            const FOOTER_TOP = H - 72;
+            doc.rect(0, FOOTER_TOP, w, 72).fillColor(brand.primaryColor).fill();
+
+            // Violet accent top edge
+            doc.rect(0, FOOTER_TOP, w, 3).fillColor(brand.accentColor).fill();
+
+            doc.fillColor('#FFFFFF').fontSize(9).font('Helvetica-Bold')
+                .text('ICSS Booking System', L, FOOTER_TOP + 14);
+            doc.fillColor(brand.mutedColor).fontSize(8).font('Helvetica')
+                .text(`${brand.website}  ·  ${brand.supportEmail}`, L, FOOTER_TOP + 28);
+            doc.fillColor('#555566').fontSize(7.5)
+                .text(
+                    'Questions about this invoice? Contact us at billing@icssbookings.com',
+                    L, FOOTER_TOP + 44,
+                    { width: CW }
+                );
+
+            doc.end();
+        } catch (err) {
+            reject(err);
+        }
+    });
+}
+
+module.exports = { generateBookingPDF, generateOrderInvoicePDF, savePDFToTemp, getPlatformBillingBrand, generateSubscriptionInvoicePDF };
+

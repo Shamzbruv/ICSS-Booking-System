@@ -291,10 +291,133 @@ async function sendPasswordResetEmail(email, resetUrl) {
     console.log(`[Email] Password reset sent to ${email}`);
 }
 
+async function sendSubscriptionInvoiceEmail({ to, ownerName, businessName, amount, currency = 'USD',
+                                               invoiceNumber, paidAt, pdfBuffer }) {
+    const resend = getResend();
+    if (!resend) {
+        console.warn('[Email] No RESEND_API_KEY — skipping subscription invoice to:', to);
+        return;
+    }
+
+    const currSym   = currency === 'GBP' ? '£' : currency === 'JMD' ? 'J$' : '$';
+    const amtStr    = `${currSym}${Number(amount).toFixed(2)} ${currency}`;
+    const firstName = (ownerName || '').split(' ')[0] || 'there';
+    const paidDate  = paidAt
+        ? new Date(paidAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+        : new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+    const htmlBody = `
+    <div style="font-family:'Helvetica Neue',Arial,sans-serif;color:#1a1a2e;max-width:600px;margin:0 auto;border:1px solid #e2e2f0;border-radius:8px;overflow:hidden;">
+
+      <!-- Header -->
+      <div style="background:#0F0F1A;padding:32px 36px 24px;">
+        <p style="color:#A0A0B8;font-size:10px;letter-spacing:2px;margin:0 0 8px;text-transform:uppercase;">ICSS Booking System</p>
+        <h1 style="color:#ffffff;font-size:22px;margin:0;font-weight:700;line-height:1.2;">Payment Received</h1>
+        <div style="margin-top:16px;display:inline-block;background:#7C6EF7;color:#fff;padding:4px 14px;border-radius:20px;font-size:12px;font-weight:600;letter-spacing:0.5px;">✓ Subscription Active</div>
+      </div>
+
+      <!-- Violet accent bar -->
+      <div style="height:4px;background:#7C6EF7;"></div>
+
+      <!-- Body -->
+      <div style="padding:36px;background:#fff;">
+        <p style="font-size:15px;margin:0 0 18px;">Hi ${firstName},</p>
+        <p style="font-size:15px;line-height:1.7;margin:0 0 24px;">
+          We have successfully processed your subscription payment for
+          <strong>${businessName || 'your account'}</strong>.
+          Your invoice is attached to this email for your records.
+        </p>
+
+        <!-- Summary card -->
+        <div style="background:#F7F7FB;border-left:4px solid #7C6EF7;border-radius:4px;padding:20px 24px;margin:0 0 28px;">
+          <p style="font-size:11px;color:#A0A0B8;letter-spacing:1.5px;margin:0 0 12px;text-transform:uppercase;">Payment Summary</p>
+          <table style="width:100%;border-collapse:collapse;">
+            <tr>
+              <td style="font-size:13px;color:#555566;padding:4px 0;">Invoice Number</td>
+              <td style="font-size:13px;color:#0F0F1A;font-weight:600;text-align:right;">${invoiceNumber}</td>
+            </tr>
+            <tr>
+              <td style="font-size:13px;color:#555566;padding:4px 0;">Payment Date</td>
+              <td style="font-size:13px;color:#0F0F1A;font-weight:600;text-align:right;">${paidDate}</td>
+            </tr>
+            <tr style="border-top:1px solid #E0E0EE;">
+              <td style="font-size:16px;color:#0F0F1A;font-weight:700;padding:12px 0 0;">Total Paid</td>
+              <td style="font-size:20px;color:#7C6EF7;font-weight:700;text-align:right;padding:12px 0 0;">${amtStr}</td>
+            </tr>
+          </table>
+        </div>
+
+        <p style="font-size:13px;color:#888899;line-height:1.6;margin:0 0 28px;">
+          Your subscription invoice is attached as a PDF. Keep it for your records or accounting purposes.
+          If you have any questions, our billing team is here to help.
+        </p>
+
+        <!-- CTA -->
+        <div style="text-align:center;margin:32px 0;">
+          <a href="https://icssbookings.com/admin"
+             style="background:#7C6EF7;color:#ffffff;text-decoration:none;padding:14px 32px;
+                    border-radius:6px;font-size:13px;font-weight:700;letter-spacing:0.5px;display:inline-block;">
+            Go to Dashboard →
+          </a>
+        </div>
+
+        <p style="font-size:13px;color:#888899;margin:0;">
+          Need help? Email us at
+          <a href="mailto:billing@icssbookings.com" style="color:#7C6EF7;text-decoration:none;">billing@icssbookings.com</a>
+        </p>
+      </div>
+
+      <!-- Footer -->
+      <div style="background:#0F0F1A;padding:20px 36px;text-align:center;border-top:3px solid #7C6EF7;">
+        <p style="color:#555566;font-size:11px;margin:0;">ICSS Booking System · https://icssbookings.com</p>
+        <p style="color:#444455;font-size:10px;margin:6px 0 0;">&copy; ${new Date().getFullYear()} ICSS. All rights reserved.</p>
+      </div>
+    </div>`;
+
+    const textBody = [
+        'ICSS Booking System — Payment Received',
+        '=======================================',
+        '',
+        `Hi ${firstName},`,
+        '',
+        `Your subscription payment for ${businessName || 'your account'} has been processed successfully.`,
+        '',
+        `Invoice Number : ${invoiceNumber}`,
+        `Payment Date   : ${paidDate}`,
+        `Total Paid     : ${amtStr}`,
+        '',
+        'Your invoice is attached as a PDF.',
+        '',
+        'Questions? Contact billing@icssbookings.com',
+        '',
+        'ICSS Booking System · https://icssbookings.com',
+    ].join('\n');
+
+    const attachments = [];
+    if (pdfBuffer) {
+        attachments.push({
+            filename: `ICSS_Invoice_${invoiceNumber}.pdf`,
+            content:  pdfBuffer.toString('base64'),
+        });
+    }
+
+    await resend.emails.send({
+        from:    'ICSS Billing <billing@icssbookings.com>',
+        to:      [to],
+        subject: `Payment Received — ICSS Booking System · ${invoiceNumber}`,
+        html:    htmlBody,
+        text:    textBody,
+        attachments: attachments.length > 0 ? attachments : undefined,
+    });
+
+    console.log(`[Email] Subscription invoice ${invoiceNumber} sent to ${to}`);
+}
+
 module.exports = {
     sendBookingConfirmation,
     sendBookingCancellationEmail,
     sendOrderConfirmation,
     sendDesignInquiryEmail,
-    sendPasswordResetEmail
+    sendPasswordResetEmail,
+    sendSubscriptionInvoiceEmail,
 };

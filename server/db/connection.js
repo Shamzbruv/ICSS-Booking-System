@@ -602,6 +602,32 @@ async function runMigrations(client) {
         )
     `);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_prt_user ON password_reset_tokens(user_id)`);
+
+    // ── Subscription Invoices ────────────────────────────────────────────────
+    // Tracks every subscription invoice dispatched by the platform.
+    // UNIQUE(provider, provider_event_id) acts as a hard DB-level idempotency guard.
+    // UNIQUE(invoice_number) protects the human-facing invoice number.
+    await client.query(`
+        CREATE TABLE IF NOT EXISTS subscription_invoices (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            tenant_id UUID REFERENCES tenants(id) ON DELETE SET NULL,
+            provider TEXT NOT NULL DEFAULT 'paypal',
+            provider_event_id TEXT NOT NULL,
+            subscription_id TEXT,
+            invoice_number TEXT NOT NULL,
+            amount NUMERIC(12,2) NOT NULL,
+            currency TEXT DEFAULT 'USD',
+            plan_name TEXT DEFAULT 'Monthly',
+            billing_period TEXT,
+            status TEXT DEFAULT 'processing',
+            sent_at TIMESTAMPTZ,
+            created_at TIMESTAMPTZ DEFAULT NOW(),
+            UNIQUE(provider, provider_event_id),
+            UNIQUE(invoice_number)
+        )
+    `);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_sub_inv_tenant ON subscription_invoices(tenant_id)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_sub_inv_event ON subscription_invoices(provider_event_id)`);
 }
 
 module.exports = { query, transaction, initDatabase, getPool };
