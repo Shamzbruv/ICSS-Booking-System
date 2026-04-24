@@ -776,18 +776,18 @@
       let html = '';
       services.forEach(service => {
         const selectedClass = service.id === selectedServiceId ? 'selected' : '';
-        html += \`
-          <div class="service-card \${selectedClass}" data-service-id="\${service.id}">
+        html += `
+          <div class="service-card ${selectedClass}" data-service-id="${service.id}">
             <div class="service-info">
-              <div class="service-icon"><i class="fas \${service.icon}"></i></div>
+              <div class="service-icon"><i class="fas ${service.icon}"></i></div>
               <div class="service-details">
-                <h3>\${service.name}</h3>
-                <span><i class="far fa-clock"></i> \${service.duration}</span>
+                <h3>${service.name}</h3>
+                <span><i class="far fa-clock"></i> ${service.duration}</span>
               </div>
             </div>
-            <div class="service-price">$\${service.price}</div>
+            <div class="service-price">$${service.price}</div>
           </div>
-        \`;
+        `;
       });
       serviceListEl.innerHTML = html;
 
@@ -807,12 +807,12 @@
       let html = '';
       staffMembers.forEach(staff => {
         const selectedClass = staff.id === selectedStaffId ? 'selected' : '';
-        html += \`
-          <div class="staff-chip \${selectedClass}" data-staff-id="\${staff.id}">
-            <i class="fas \${staff.icon}"></i>
-            <span>\${staff.name}</span>
+        html += `
+          <div class="staff-chip ${selectedClass}" data-staff-id="${staff.id}">
+            <i class="fas ${staff.icon}"></i>
+            <span>${staff.name}</span>
           </div>
-        \`;
+        `;
       });
       staffOptions.innerHTML = html;
 
@@ -832,7 +832,7 @@
       let slotsHtml = '';
       timeSlots.forEach(slot => {
         const selectedClass = slot === selectedTime ? 'selected' : '';
-        slotsHtml += \`<div class="time-slot \${selectedClass}" data-time="\${slot}">\${slot}</div>\`;
+        slotsHtml += `<div class="time-slot ${selectedClass}" data-time="${slot}">${slot}</div>`;
       });
       timeSlotsContainer.innerHTML = slotsHtml;
 
@@ -850,16 +850,16 @@
 
     function updateSummary() {
       const service = getSelectedService();
-      summaryService.textContent = \`\${service.name} · \${service.duration}\`;
+      summaryService.textContent = `${service.name} · ${service.duration}`;
       
       const staff = staffMembers.find(s => s.id === selectedStaffId);
       summaryStaff.textContent = staff ? staff.name : 'First Available';
       
       const dateObj = selectedDate ? new Date(selectedDate + 'T12:00:00') : new Date();
       const formattedDate = dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-      summaryDateTime.textContent = \`\${formattedDate} at \${selectedTime}\`;
+      summaryDateTime.textContent = `${formattedDate} at ${selectedTime}`;
       
-      summaryTotal.textContent = \`$\${service.price}\`;
+      summaryTotal.textContent = `$${service.price}`;
     }
 
     function initDatePicker() {
@@ -867,7 +867,7 @@
       const yyyy = today.getFullYear();
       const mm = String(today.getMonth() + 1).padStart(2, '0');
       const dd = String(today.getDate()).padStart(2, '0');
-      datePicker.min = \`\${yyyy}-\${mm}-\${dd}\`;
+      datePicker.min = `${yyyy}-${mm}-${dd}`;
       if (!datePicker.value) datePicker.value = selectedDate;
       else selectedDate = datePicker.value;
 
