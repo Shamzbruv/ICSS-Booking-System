@@ -425,8 +425,8 @@ function generateSubscriptionInvoicePDF(opts) {
             const paidDate  = paidAt ? new Date(paidAt) : new Date();
             const issueDate = new Date();
             const fmtDate   = (d) => d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-            const currSym   = currency === 'GBP' ? '£' : currency === 'JMD' ? 'J$' : '$';
-            const amtStr    = `${currSym}${Number(amount).toFixed(2)}`;
+            const amtStr    = `${currency} ${Number(amount).toFixed(2)}`;
+            const zeroStr   = `${currency} 0.00`;
 
             // ── HEADER ────────────────────────────────────────────────────────
             const HEADER_H = 130;
@@ -524,6 +524,7 @@ function generateSubscriptionInvoicePDF(opts) {
             const rows = [
                 ['Plan',             planName      || 'Monthly'],
                 ['Billing Period',   billingPeriod || '—'],
+                ['Currency',         currency],
                 ['Payment Provider', 'PayPal'],
                 ['Subscription ID',  subscriptionId || '—'],
                 ['Reference ID',     eventId        || '—'],
@@ -575,7 +576,7 @@ function generateSubscriptionInvoicePDF(opts) {
             doc.fillColor('#555566').fontSize(9).font('Helvetica')
                 .text('Tax', L + CP, ay, { width: AMT_W, lineBreak: false });
             doc.fillColor('#888899').fontSize(9).font('Helvetica')
-                .text('$0.00', L + CP, ay, { width: AMT_W, align: 'right', lineBreak: false });
+                .text(zeroStr, L + CP, ay, { width: AMT_W, align: 'right', lineBreak: false });
             ay += 18;
 
             // Divider
