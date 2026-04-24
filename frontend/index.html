@@ -1,6 +1,15 @@
 <!doctype html>
 <html lang="en">
   <head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-N5L794KSNM"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-N5L794KSNM');
+    </script>
+
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 
@@ -8,8 +17,9 @@
     <title>ICSS Booking System — Appointments, Bookings & Scheduling</title>
     <meta name="description" content="ICSS Booking System: the modern scheduling platform built in Jamaica for service businesses across the Caribbean and beyond. Manage appointments, staff, and payments online." />
 
-    <!-- App routes are protected/internal — noindex by default; individual pages override via SEO component -->
-    <meta name="robots" content="noindex, nofollow" />
+    <!-- App routes: public /:slug booking pages are indexable.
+         Internal-only routes (platform, onboarding, editor) set their own
+         noindex at runtime via the useNoIndex() hook. Do NOT blanket-noindex here. -->
 
     <!-- Theme / PWA -->
     <meta name="theme-color" content="#0a0b0f" />

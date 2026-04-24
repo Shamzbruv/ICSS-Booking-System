@@ -1,0 +1,59 @@
+# .dockerignore — Prevents sensitive and unnecessary files from being copied
+# into the Docker image. CRITICAL: this prevents local .env from leaking into prod.
+
+# Environment files — NEVER ship these into the image
+.env
+.env.*
+!.env.example
+
+# Dependencies — rebuilt inside the container
+node_modules
+frontend/node_modules
+**/node_modules
+
+# Git history
+.git
+.gitignore
+.gitattributes
+
+# Build artifacts — built inside container
+frontend/dist
+
+# Logs
+*.log
+logs/
+*.log.*
+
+# macOS junk
+.DS_Store
+**/.DS_Store
+
+# Editor junk
+.vscode/
+.idea/
+*.swp
+*.swo
+*.tmp
+
+# Test / CI artifacts
+coverage/
+.nyc_output/
+*.test.js
+*.spec.js
+__tests__/
+
+# Zip / archive files
+*.zip
+*.tar
+*.tar.gz
+*.rar
+
+# Railway / Render / fly.io config (not needed inside image)
+railway.json
+render.yaml
+fly.toml
+
+# Backup files from our optimization pass
+public/favicon-original-backup.png
+public/logo-original-backup.png
+public/favicon-96.png

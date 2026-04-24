@@ -15,7 +15,9 @@ import { ConsoleProvider, useConsole } from './ConsoleContext';
 import ImpersonationBanner from './ImpersonationBanner';
 import TenantDrawer from './TenantDrawer';
 import { api } from '../../api';
+import { useNoIndex } from '../../hooks/useNoIndex';
 import s from './PlatformConsole.module.css';
+
 
 // ── Login screen ──────────────────────────────────────────────────────────────
 function ConsoleLogin() {
@@ -463,6 +465,7 @@ function ConsoleShell() {
 
 // ── Page export ────────────────────────────────────────────────────────────────
 export default function PlatformConsole() {
+  useNoIndex(); // /platform is internal — must not be indexed
   return (
     <ConsoleProvider>
       <ConsoleShell />

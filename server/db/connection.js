@@ -19,19 +19,36 @@ function getPool() {
 
         if (!connectionString) {
             throw new Error(
-                'DATABASE_URL environment variable is required. ' +
-                'See .env.example for setup instructions.'
+                'DATABASE_URL environment variable is not set. ' +
+                'Add it to your Railway service variables. ' +
+                'See .env.example for the expected format.'
             );
+        }
+
+        // Log a redacted summary of the target so Railway deploy logs show
+        // what database the container is actually trying to reach.
+        try {
+            const u = new URL(connectionString);
+            console.log(
+                `🔌 DB target: host=${u.hostname} port=${u.port || 5432} ` +
+                `db=${u.pathname.replace('/', '')} ` +
+                `ssl=${process.env.NODE_ENV === 'production' ? 'on (rejectUnauthorized=false)' : 'off'}`
+            );
+        } catch {
+            // Malformed DATABASE_URL — let the pool throw a clearer error below
+            console.warn('⚠️  DATABASE_URL appears malformed — pool creation will fail.');
         }
 
         pool = new Pool({
             connectionString,
             ssl: process.env.NODE_ENV === 'production'
-                ? { rejectUnauthorized: false }  // Required for Railway/Render
+                ? { rejectUnauthorized: false }  // Required for Railway/Render/Supabase/Neon
                 : false,
-            max: 20,             // Max pool connections
+            max: 20,
             idleTimeoutMillis: 30000,
-            connectionTimeoutMillis: 5000,
+            // Raised from 5000 → 15000 ms for production cold-start reliability.
+            // A slow initial connection on Railway/Neon should not crash the process.
+            connectionTimeoutMillis: 15000,
         });
 
         pool.on('error', (err) => {
@@ -77,16 +94,41 @@ async function transaction(callback) {
  * Called once on server boot.
  */
 async function initDatabase() {
-    const client = await getPool().connect();
+    // Guard: fail fast with a clear message if DATABASE_URL is missing.
+    if (!process.env.DATABASE_URL) {
+        throw new Error(
+            'STARTUP FAILURE: DATABASE_URL is not set. ' +
+            'Configure it in Railway → Service → Variables before deploying.'
+        );
+    }
+
+    let client;
     try {
+        client = await getPool().connect();
         console.log('🔗 Connected to PostgreSQL database.');
         await runMigrations(client);
         console.log('✅ Database schema up to date.');
     } catch (err) {
-        console.error('❌ Database initialization failed:', err.message);
+        // Classify the error so Railway logs are actually readable.
+        const msg = err.message || '';
+        let diagnosis = 'Unknown error';
+
+        if (msg.includes('connection timeout') || msg.includes('ETIMEDOUT')) {
+            diagnosis = 'CONNECTION TIMEOUT — check DATABASE_URL host/port and network access rules (Railway → Networking)';
+        } else if (msg.includes('authentication') || msg.includes('password')) {
+            diagnosis = 'AUTHENTICATION FAILED — check DATABASE_URL username and password';
+        } else if (msg.includes('SSL') || msg.includes('ssl')) {
+            diagnosis = 'SSL NEGOTIATION FAILED — database may require sslmode=require, or rejectUnauthorized needs adjustment';
+        } else if (msg.includes('ENOTFOUND') || msg.includes('does not exist') || msg.includes('ECONNREFUSED')) {
+            diagnosis = 'HOST NOT FOUND / REFUSED — DATABASE_URL hostname may be wrong or DB not running';
+        } else if (msg.includes('does not exist')) {
+            diagnosis = 'DATABASE DOES NOT EXIST — check the database name in DATABASE_URL';
+        }
+
+        console.error(`❌ Database initialization failed [${diagnosis}]:`, msg);
         throw err;
     } finally {
-        client.release();
+        if (client) client.release();
     }
 }
 

@@ -14,8 +14,10 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useNoIndex } from '../../hooks/useNoIndex';
 import s from './OnboardingWizard.module.css';
 import { api } from '../../api';
+
 
 // PayPal plan config — read from Vite env so changes don't require code edits
 const PAYPAL_PLAN_ID   = import.meta.env.VITE_PAYPAL_PLAN_ID   || 'P-4EC410252Y479773KNHUVB4A';
