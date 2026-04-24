@@ -56,10 +56,9 @@ router.get('/tenants', async (req, res) => {
                 t.id, t.name, t.slug, t.active, t.plan_id, t.created_at,
                 t.branding,
                 th.name AS theme_name,
-                ps.plan_id AS payment_plan,
-                ps.payment_mode AS default_payment_mode,
-                ps.wipay_enabled,
-                ps.manual_payment_enabled,
+                t.default_payment_mode,
+                t.wipay_enabled,
+                t.manual_payment_enabled,
                 (SELECT COUNT(*) FROM bookings b WHERE b.tenant_id = t.id) AS total_bookings,
                 (SELECT COUNT(*) FROM services s WHERE s.tenant_id = t.id AND s.active = true) AS active_services,
                 (SELECT email FROM users u WHERE u.tenant_id = t.id AND u.role = 'tenant_admin' LIMIT 1) AS owner_email,
@@ -67,7 +66,6 @@ router.get('/tenants', async (req, res) => {
                 (SELECT status FROM pending_signups ps2 WHERE ps2.tenant_id = t.id ORDER BY ps2.created_at DESC LIMIT 1) AS provisioning_status
              FROM tenants t
              LEFT JOIN themes th ON th.id = t.theme_id
-             LEFT JOIN payment_settings ps ON ps.tenant_id = t.id
              WHERE ($1 = '' OR t.name ILIKE $2 OR t.slug ILIKE $2)
              ORDER BY t.created_at DESC
              LIMIT $3 OFFSET $4`,
@@ -97,15 +95,12 @@ router.get('/tenants/:tenantId', async (req, res) => {
         const result = await query(
             `SELECT t.*,
                 th.name AS theme_name, th.category AS theme_category,
-                ps.payment_mode AS default_payment_mode,
-                ps.wipay_enabled, ps.manual_payment_enabled,
-                ps.hold_timeout_minutes, ps.manual_transfer_instructions,
+                t.bank_transfer_instructions AS manual_transfer_instructions,
                 (SELECT email FROM users u WHERE u.tenant_id = t.id AND u.role = 'tenant_admin' LIMIT 1) AS owner_email,
                 (SELECT name  FROM users u WHERE u.tenant_id = t.id AND u.role = 'tenant_admin' LIMIT 1) AS owner_name,
                 (SELECT id    FROM users u WHERE u.tenant_id = t.id AND u.role = 'tenant_admin' LIMIT 1) AS owner_user_id
              FROM tenants t
              LEFT JOIN themes th ON th.id = t.theme_id
-             LEFT JOIN payment_settings ps ON ps.tenant_id = t.id
              WHERE t.id = $1`,
             [req.params.tenantId]
         );
@@ -123,9 +118,9 @@ router.get('/tenants/:tenantId/health', async (req, res) => {
     const warnings = [];
 
     try {
-        const [svcRes, psRes, brandRes, provRes, failedJobsRes] = await Promise.all([
+        const [svcRes, tenantRes, brandRes, provRes, failedJobsRes] = await Promise.all([
             query(`SELECT COUNT(*) AS cnt FROM services WHERE tenant_id = $1 AND active = true`, [tenantId]),
-            query(`SELECT * FROM payment_settings WHERE tenant_id = $1`, [tenantId]),
+            query(`SELECT default_payment_mode, wipay_enabled, manual_payment_enabled, bank_transfer_instructions, payment_settings FROM tenants WHERE id = $1`, [tenantId]),
             query(`SELECT branding FROM tenants WHERE id = $1`, [tenantId]),
             query(`SELECT status FROM pending_signups WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 1`, [tenantId]),
             query(`SELECT COUNT(*) AS cnt FROM bookings WHERE tenant_id = $1 AND status = 'pending_payment' AND expires_at < NOW()`, [tenantId]),
@@ -133,13 +128,14 @@ router.get('/tenants/:tenantId/health', async (req, res) => {
 
         if (parseInt(svcRes.rows[0].cnt) === 0) warnings.push({ code: 'NO_SERVICES', message: 'No active services configured.' });
 
-        const ps = psRes.rows[0];
+        const ps = tenantRes.rows[0];
         if (!ps) {
-            warnings.push({ code: 'NO_PAYMENT_SETTINGS', message: 'Payment settings not configured.' });
+            warnings.push({ code: 'NO_TENANT', message: 'Tenant not found.' });
         } else {
-            if (ps.wipay_enabled && !ps.wipay_account_number_enc) warnings.push({ code: 'WIPAY_NO_CREDS', message: 'WiPay enabled but account number missing.' });
-            if (ps.manual_payment_enabled && !ps.manual_transfer_instructions) warnings.push({ code: 'MANUAL_NO_INSTRUCTIONS', message: 'Manual transfer enabled but instructions are empty.' });
-            if (!ps.payment_mode) warnings.push({ code: 'NO_PAYMENT_MODE', message: 'No default payment mode set.' });
+            const settingsJson = ps.payment_settings || {};
+            if (ps.wipay_enabled && !settingsJson.wipay_account_number_enc) warnings.push({ code: 'WIPAY_NO_CREDS', message: 'WiPay enabled but account number missing.' });
+            if (ps.manual_payment_enabled && !ps.bank_transfer_instructions) warnings.push({ code: 'MANUAL_NO_INSTRUCTIONS', message: 'Manual transfer enabled but instructions are empty.' });
+            if (!ps.default_payment_mode || ps.default_payment_mode === 'none') warnings.push({ code: 'NO_PAYMENT_MODE', message: 'No default payment mode set.' });
         }
 
         const branding = brandRes.rows[0]?.branding || {};
@@ -196,10 +192,11 @@ router.get('/tenants/:tenantId/bookings', async (req, res) => {
 router.get('/tenants/:tenantId/payment-settings', async (req, res) => {
     try {
         const result = await query(
-            `SELECT payment_mode, wipay_enabled, manual_payment_enabled,
-                    hold_timeout_minutes, manual_transfer_instructions,
-                    wipay_country_code, wipay_currency
-             FROM payment_settings WHERE tenant_id = $1`,
+            `SELECT default_payment_mode AS payment_mode, wipay_enabled, manual_payment_enabled,
+                    hold_timeout_minutes, bank_transfer_instructions AS manual_transfer_instructions,
+                    payment_settings->>'wipay_country_code' AS wipay_country_code,
+                    payment_settings->>'wipay_currency' AS wipay_currency
+             FROM tenants WHERE id = $1`,
             [req.params.tenantId]
         );
         // Never expose encrypted credentials

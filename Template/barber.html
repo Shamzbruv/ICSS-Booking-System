@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Iron & Blade · Barber Booking</title>
+  <!-- Oswald & Manrope – bold, masculine, refined -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: #1a1a1a;
+      background-image: 
+        radial-gradient(ellipse at 30% 20%, rgba(180, 130, 70, 0.06) 0%, transparent 50%),
+        radial-gradient(ellipse at 70% 80%, rgba(140, 100, 50, 0.04) 0%, transparent 50%),
+        url('data:image/svg+xml;utf8,<svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"><path d="M0 20 L10 10 L20 20 L10 30 Z" fill="%23ffffff" opacity="0.008"/></svg>');
+      min-height: 100vh;
+      font-family: 'Manrope', sans-serif;
+      padding: 2rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #e0d5c8;
+    }
+
+    .barber-system {
+      max-width: 1350px;
+      width: 100%;
+      background: rgba(28, 28, 28, 0.85);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border-radius: 24px;
+      box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.7),
+                  0 10px 25px rgba(0, 0, 0, 0.5),
+                  inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+      padding: 2.2rem 2.5rem;
+      border: 1px solid rgba(180, 130, 70, 0.15);
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 2.2rem;
+      flex-wrap: wrap;
+      gap: 20px;
+      padding-bottom: 1.5rem;
+      border-bottom: 1px solid rgba(180, 130, 70, 0.2);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .brand-icon {
+      background: linear-gradient(135deg, #b48246, #8b5e2f);
+      width: 58px;
+      height: 58px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff5e8;
+      font-size: 26px;
+      box-shadow: 0 6px 0 #5a3d1e, 0 14px 24px -8px rgba(180, 130, 70, 0.3);
+      border: 2px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .brand-text h1 {
+      font-family: 'Oswald', sans-serif;
+      font-weight: 700;
+      font-size: 2.2rem;
+      letter-spacing: 1.5px;
+      color: #f5ede3;
+      line-height: 1.1;
+      text-transform: uppercase;
+    }
+
+    .brand-text p {
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: #b4946e;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 6px;
+      letter-spacing: 0.5px;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 12px;
+    }
+
+    .badge {
+      background: rgba(180, 130, 70, 0.08);
+      backdrop-filter: blur(4px);
+      padding: 10px 20px;
+      border-radius: 8px 20px 8px 20px;
+      font-weight: 600;
+      font-size: 0.8rem;
+      color: #c9a062;
+      box-shadow: inset 0 0 0 1px rgba(180, 130, 70, 0.2);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid rgba(180, 130, 70, 0.15);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .badge i {
+      color: #b48246;
+    }
+
+    /* Grid */
+    .booking-grid {
+      display: grid;
+      grid-template-columns: 1.15fr 0.9fr;
+      gap: 2rem;
+    }
+
+    /* Left Panel */
+    .selection-panel {
+      background: rgba(22, 22, 22, 0.5);
+      backdrop-filter: blur(4px);
+      border-radius: 20px;
+      padding: 1.8rem 1.8rem 2rem;
+      box-shadow: inset 0 1px 4px rgba(255, 255, 255, 0.02), 0 12px 24px -14px rgba(0, 0, 0, 0.5);
+      border: 1px solid rgba(180, 130, 70, 0.1);
+    }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 1.8rem;
+    }
+
+    .section-title i {
+      background: linear-gradient(135deg, #b48246, #8b5e2f);
+      padding: 10px;
+      border-radius: 10px;
+      color: #fff5e8;
+      font-size: 1.3rem;
+      width: 46px;
+      height: 46px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 0 #5a3d1e;
+    }
+
+    .section-title h2 {
+      font-family: 'Oswald', sans-serif;
+      font-weight: 600;
+      font-size: 1.6rem;
+      color: #f0e6d8;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    /* Service cards */
+    .service-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 2rem;
+    }
+
+    .service-card {
+      background: rgba(30, 30, 30, 0.8);
+      border-radius: 14px;
+      padding: 1.1rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 4px 0 rgba(180, 130, 70, 0.15), 0 10px 20px -10px rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(180, 130, 70, 0.12);
+      transition: all 0.2s;
+      cursor: pointer;
+      backdrop-filter: blur(4px);
+    }
+
+    .service-card:hover {
+      border-color: rgba(180, 130, 70, 0.3);
+    }
+
+    .service-card.selected {
+      background: rgba(180, 130, 70, 0.08);
+      box-shadow: 0 4px 0 #b48246, 0 12px 24px -8px rgba(180, 130, 70, 0.2);
+      border: 1.5px solid rgba(180, 130, 70, 0.5);
+    }
+
+    .service-info {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .service-icon {
+      background: linear-gradient(135deg, #b48246, #8b5e2f);
+      width: 50px;
+      height: 50px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff5e8;
+      font-size: 1.6rem;
+    }
+
+    .service-details h3 {
+      font-weight: 700;
+      font-size: 1.1rem;
+      color: #f0e6d8;
+      font-family: 'Oswald', sans-serif;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .service-details span {
+      font-size: 0.85rem;
+      color: #b4946e;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .service-price {
+      font-weight: 700;
+      background: rgba(180, 130, 70, 0.1);
+      padding: 8px 18px;
+      border-radius: 6px 18px 6px 18px;
+      color: #c9a062;
+      font-size: 1.2rem;
+      border: 1px solid rgba(180, 130, 70, 0.2);
+      font-family: 'Oswald', sans-serif;
+    }
+
+    /* Barber selection */
+    .barber-section {
+      margin: 24px 0 28px;
+    }
+
+    .barber-options {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+
+    .barber-chip {
+      background: rgba(30, 30, 30, 0.8);
+      border-radius: 8px 20px 8px 20px;
+      padding: 10px 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 3px 0 rgba(180, 130, 70, 0.15);
+      border: 1px solid rgba(180, 130, 70, 0.15);
+      cursor: pointer;
+      transition: all 0.15s;
+      color: #c0b09a;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    .barber-chip:hover {
+      border-color: rgba(180, 130, 70, 0.3);
+    }
+
+    .barber-chip.selected {
+      background: linear-gradient(135deg, #b48246, #8b5e2f);
+      box-shadow: 0 3px 0 #5a3d1e;
+      border-color: #c99854;
+      color: #fff5e8;
+    }
+
+    .barber-chip i {
+      color: inherit;
+    }
+
+    /* Date/Time */
+    .date-section {
+      margin-bottom: 28px;
+    }
+
+    .label-icon {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+      font-weight: 600;
+      color: #c9a062;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-size: 0.85rem;
+    }
+
+    .label-icon i {
+      color: #b48246;
+    }
+
+    .date-selector {
+      background: rgba(30, 30, 30, 0.8);
+      border-radius: 12px;
+      padding: 6px 18px 6px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 4px 0 rgba(180, 130, 70, 0.15);
+      border: 1px solid rgba(180, 130, 70, 0.12);
+    }
+
+    .date-selector input {
+      border: none;
+      background: transparent;
+      font-family: 'Manrope', sans-serif;
+      font-size: 1rem;
+      padding: 15px 0;
+      font-weight: 600;
+      color: #f0e6d8;
+      outline: none;
+      width: 100%;
+    }
+
+    .date-selector input::-webkit-calendar-picker-indicator {
+      filter: invert(0.6) sepia(1) saturate(3) hue-rotate(330deg);
+      opacity: 0.7;
+    }
+
+    .date-selector i {
+      color: #b48246;
+      font-size: 1.2rem;
+    }
+
+    .time-slots {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin: 18px 0 8px;
+    }
+
+    .time-slot {
+      background: rgba(30, 30, 30, 0.8);
+      border-radius: 8px 18px 8px 18px;
+      padding: 12px 5px;
+      text-align: center;
+      font-weight: 600;
+      color: #c0b09a;
+      box-shadow: 0 3px 0 rgba(180, 130, 70, 0.15), 0 6px 12px -6px rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(180, 130, 70, 0.12);
+      cursor: pointer;
+      transition: all 0.15s;
+      font-size: 0.9rem;
+    }
+
+    .time-slot:hover {
+      border-color: rgba(180, 130, 70, 0.3);
+    }
+
+    .time-slot.selected {
+      background: linear-gradient(135deg, #b48246, #8b5e2f);
+      box-shadow: 0 3px 0 #5a3d1e;
+      color: #fff5e8;
+      border-color: #c99854;
+    }
+
+    /* Right Panel - Form */
+    .booking-form-panel {
+      background: rgba(22, 22, 22, 0.5);
+      backdrop-filter: blur(4px);
+      border-radius: 20px;
+      padding: 1.8rem 2rem 2rem;
+      box-shadow: inset 0 1px 4px rgba(255, 255, 255, 0.02), 0 12px 24px -14px rgba(0, 0, 0, 0.5);
+      border: 1px solid rgba(180, 130, 70, 0.1);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .form-group {
+      margin-bottom: 1.4rem;
+    }
+
+    .form-group label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: #b4946e;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      font-size: 0.8rem;
+    }
+
+    .form-group label i {
+      color: #b48246;
+      font-size: 0.85rem;
+    }
+
+    .input-wrapper {
+      background: rgba(30, 30, 30, 0.8);
+      border-radius: 12px;
+      padding: 4px 18px;
+      box-shadow: 0 3px 0 rgba(180, 130, 70, 0.15);
+      border: 1px solid rgba(180, 130, 70, 0.12);
+      display: flex;
+      align-items: center;
+    }
+
+    .input-wrapper i {
+      color: #b48246;
+      margin-right: 12px;
+      font-size: 1rem;
+    }
+
+    .input-wrapper input,
+    .input-wrapper select,
+    .input-wrapper textarea {
+      border: none;
+      background: transparent;
+      padding: 15px 0;
+      font-family: 'Manrope', sans-serif;
+      font-size: 1rem;
+      width: 100%;
+      outline: none;
+      color: #f0e6d8;
+      resize: none;
+    }
+
+    .input-wrapper select {
+      color: #f0e6d8;
+    }
+
+    .input-wrapper select option {
+      background: #1e1e1e;
+      color: #f0e6d8;
+    }
+
+    .input-wrapper textarea {
+      min-height: 55px;
+      padding: 12px 0;
+    }
+
+    .input-wrapper input::placeholder,
+    .input-wrapper textarea::placeholder {
+      color: #6b5d4f;
+    }
+
+    /* Summary */
+    .booking-summary {
+      background: rgba(180, 130, 70, 0.05);
+      border-radius: 14px;
+      padding: 1.5rem;
+      margin: 20px 0 24px;
+      border: 1px dashed rgba(180, 130, 70, 0.25);
+      backdrop-filter: blur(4px);
+    }
+
+    .summary-line {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      font-size: 0.9rem;
+      color: #c0b09a;
+    }
+
+    .summary-line i {
+      width: 18px;
+      color: #b48246;
+      margin-right: 6px;
+    }
+
+    .summary-line.total {
+      font-weight: 700;
+      font-size: 1.5rem;
+      border-top: 1.5px solid rgba(180, 130, 70, 0.3);
+      padding-top: 16px;
+      margin-top: 8px;
+      color: #f5ede3;
+      font-family: 'Oswald', sans-serif;
+    }
+
+    .book-btn {
+      background: linear-gradient(135deg, #b48246, #8b5e2f);
+      border: none;
+      border-radius: 8px 24px 8px 24px;
+      padding: 16px 20px;
+      font-family: 'Oswald', sans-serif;
+      font-weight: 600;
+      font-size: 1.2rem;
+      color: #fff5e8;
+      box-shadow: 0 8px 0 #5a3d1e, 0 12px 24px -6px rgba(180, 130, 70, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      cursor: pointer;
+      transition: all 0.15s;
+      margin-top: auto;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+    }
+
+    .book-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 0 #5a3d1e, 0 16px 28px -6px rgba(180, 130, 70, 0.35);
+    }
+
+    .book-btn:active {
+      transform: translateY(2px);
+      box-shadow: 0 4px 0 #5a3d1e, 0 8px 20px -6px rgba(180, 130, 70, 0.3);
+    }
+
+    .footer-note {
+      margin-top: 14px;
+      text-align: center;
+      color: #8a7a65;
+      font-size: 0.8rem;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .footer-note i {
+      color: #b48246;
+      margin-right: 4px;
+    }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      .booking-grid {
+        grid-template-columns: 1fr;
+      }
+      .barber-system {
+        padding: 1.5rem;
+      }
+      .time-slots {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 480px) {
+      .time-slots {
+        grid-template-columns: 1fr 1fr;
+      }
+      .header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+    }
+  </style>
+</head>
+<body>
+<div class="barber-system">
+  <!-- Header -->
+  <div class="header">
+    <div class="brand">
+      <div class="brand-icon">
+        <i class="fas fa-cut"></i>
+      </div>
+      <div class="brand-text">
+        <h1>Iron & Blade</h1>
+        <p><i class="fas fa-location-dot"></i> 127 Division Street · Downtown  <i class="fas fa-circle" style="font-size: 4px; margin:0 8px;"></i> EST. 2015</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <div class="badge"><i class="fas fa-star"></i> 4.9 · 800+ reviews</div>
+      <div class="badge"><i class="fas fa-martini-glass"></i> complimentary drink</div>
+    </div>
+  </div>
+
+  <!-- Booking Grid -->
+  <div class="booking-grid">
+    <!-- Left Panel -->
+    <div class="selection-panel">
+      <div class="section-title">
+        <i class="fas fa-scissors"></i>
+        <h2>Choose your cut</h2>
+      </div>
+
+      <div class="service-list" id="serviceList"></div>
+
+      <!-- Barber selection -->
+      <div class="barber-section">
+        <div class="label-icon">
+          <i class="fas fa-user-ninja"></i>
+          <span>Select barber</span>
+        </div>
+        <div class="barber-options" id="barberOptions"></div>
+      </div>
+
+      <div class="date-section">
+        <div class="label-icon">
+          <i class="fas fa-calendar-alt"></i>
+          <span>Pick a date</span>
+        </div>
+        <div class="date-selector">
+          <input type="date" id="datePicker" value="2026-04-25" min="2026-04-20">
+          <i class="fas fa-chevron-down"></i>
+        </div>
+      </div>
+
+      <div>
+        <div class="label-icon">
+          <i class="fas fa-clock"></i>
+          <span>Choose time</span>
+        </div>
+        <div class="time-slots" id="timeSlotsContainer"></div>
+      </div>
+      <div style="margin-top: 16px; font-size: 0.8rem; color: #8a7a65;">
+        <i class="fas fa-walk" style="margin-right: 6px; color: #b48246;"></i> walk-ins welcome · appointments prioritized
+      </div>
+    </div>
+
+    <!-- Right Panel -->
+    <div class="booking-form-panel">
+      <div class="section-title" style="margin-bottom: 1.2rem;">
+        <i class="fas fa-user"></i>
+        <h2>Your details</h2>
+      </div>
+
+      <div class="form-group">
+        <label><i class="fas fa-user"></i> Full name</label>
+        <div class="input-wrapper">
+          <i class="fas fa-user-pen"></i>
+          <input type="text" id="fullName" placeholder="Marcus Johnson" value="Marcus Johnson">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label><i class="fas fa-envelope"></i> Email</label>
+        <div class="input-wrapper">
+          <i class="fas fa-paper-plane"></i>
+          <input type="email" id="email" placeholder="marcus@email.com" value="marcus.j@email.com">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label><i class="fas fa-phone"></i> Phone</label>
+        <div class="input-wrapper">
+          <i class="fas fa-mobile"></i>
+          <input type="tel" id="phone" placeholder="(555) 123-4567" value="(503) 555-0172">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label><i class="fas fa-gear"></i> Hair type / style notes</label>
+        <div class="input-wrapper">
+          <i class="fas fa-pen"></i>
+          <textarea id="hairNotes" placeholder="Describe your hair type, desired style, or any concerns...">low fade, keep length on top, hard part left side</textarea>
+        </div>
+      </div>
+
+      <!-- Summary -->
+      <div class="booking-summary" id="summaryBox">
+        <div class="summary-line">
+          <span><i class="fas fa-cut"></i> Service</span>
+          <span id="summaryService">—</span>
+        </div>
+        <div class="summary-line">
+          <span><i class="fas fa-user-check"></i> Barber</span>
+          <span id="summaryBarber">Anyone available</span>
+        </div>
+        <div class="summary-line">
+          <span><i class="fas fa-calendar"></i> Date & time</span>
+          <span id="summaryDateTime">—</span>
+        </div>
+        <div class="summary-line total">
+          <span>Total</span>
+          <span id="summaryTotal">$0</span>
+        </div>
+      </div>
+
+      <button class="book-btn" id="bookButton">
+        <i class="fas fa-calendar-check"></i> Book appointment
+      </button>
+      <div class="footer-note">
+        <span><i class="fas fa-shield"></i> Secure booking</span>
+        <span><i class="fas fa-undo-alt"></i> Free cancel 12h before</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function(){
+    "use strict";
+
+    // Barber services
+    const services = [
+      { id: 'cut', name: 'Signature Haircut', duration: '45 min', price: 40, icon: 'fa-cut', desc: 'Scissor cut, clipper work, hot towel' },
+      { id: 'fade', name: 'Fade & Blend', duration: '50 min', price: 45, icon: 'fa-grip-lines', desc: 'Skin fade, taper, or burst fade' },
+      { id: 'beard', name: 'Beard Trim & Shape', duration: '30 min', price: 25, icon: 'fa-beard', desc: 'Precision trim, line-up, balm' },
+      { id: 'combo', name: 'The Full Treatment', duration: '75 min', price: 60, icon: 'fa-crown', desc: 'Haircut + beard + hot towel shave' },
+      { id: 'shave', name: 'Hot Towel Shave', duration: '40 min', price: 35, icon: 'fa-razor', desc: 'Straight razor, pre-shave oil, aftershave' }
+    ];
+
+    const barbers = [
+      { id: 'any', name: 'First available', icon: 'fa-user-group' },
+      { id: 'marcus', name: 'Marcus (Owner)', icon: 'fa-crown' },
+      { id: 'dante', name: 'Dante (Fade specialist)', icon: 'fa-fire' },
+      { id: 'rico', name: 'Rico (Beard & shave)', icon: 'fa-beard' },
+      { id: 'troy', name: 'Troy (Classic cuts)', icon: 'fa-scissors' }
+    ];
+
+    const timeSlots = ["9:00 AM", "10:00 AM", "11:00 AM", "12:00 PM", "2:00 PM", "3:00 PM", "4:00 PM", "5:00 PM"];
+
+    // State
+    let selectedServiceId = services[3].id; // Default: The Full Treatment
+    let selectedBarberId = 'any';
+    let selectedDate = "2026-04-25";
+    let selectedTime = timeSlots[2]; // 11:00 AM
+
+    // DOM
+    const serviceListEl = document.getElementById('serviceList');
+    const barberOptions = document.getElementById('barberOptions');
+    const datePicker = document.getElementById('datePicker');
+    const timeSlotsContainer = document.getElementById('timeSlotsContainer');
+    const summaryService = document.getElementById('summaryService');
+    const summaryBarber = document.getElementById('summaryBarber');
+    const summaryDateTime = document.getElementById('summaryDateTime');
+    const summaryTotal = document.getElementById('summaryTotal');
+    const bookBtn = document.getElementById('bookButton');
+
+    function getSelectedService() {
+      return services.find(s => s.id === selectedServiceId) || services[0];
+    }
+
+    function renderServices() {
+      let html = '';
+      services.forEach(service => {
+        const selectedClass = service.id === selectedServiceId ? 'selected' : '';
+        html += \`
+          <div class="service-card \${selectedClass}" data-service-id="\${service.id}">
+            <div class="service-info">
+              <div class="service-icon"><i class="fas \${service.icon}"></i></div>
+              <div class="service-details">
+                <h3>\${service.name}</h3>
+                <span><i class="far fa-clock"></i> \${service.duration} · \${service.desc}</span>
+              </div>
+            </div>
+            <div class="service-price">$\${service.price}</div>
+          </div>
+        \`;
+      });
+      serviceListEl.innerHTML = html;
+
+      document.querySelectorAll('.service-card').forEach(card => {
+        card.addEventListener('click', () => {
+          const id = card.dataset.serviceId;
+          if (id) {
+            selectedServiceId = id;
+            renderServices();
+            updateSummary();
+          }
+        });
+      });
+    }
+
+    function renderBarbers() {
+      let html = '';
+      barbers.forEach(barber => {
+        const selectedClass = barber.id === selectedBarberId ? 'selected' : '';
+        html += \`
+          <div class="barber-chip \${selectedClass}" data-barber-id="\${barber.id}">
+            <i class="fas \${barber.icon}"></i>
+            <span>\${barber.name}</span>
+          </div>
+        \`;
+      });
+      barberOptions.innerHTML = html;
+
+      document.querySelectorAll('.barber-chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+          const id = chip.dataset.barberId;
+          if (id) {
+            selectedBarberId = id;
+            renderBarbers();
+            updateSummary();
+          }
+        });
+      });
+    }
+
+    function renderTimeSlots() {
+      let slotsHtml = '';
+      timeSlots.forEach(slot => {
+        const selectedClass = slot === selectedTime ? 'selected' : '';
+        slotsHtml += \`<div class="time-slot \${selectedClass}" data-time="\${slot}">\${slot}</div>\`;
+      });
+      timeSlotsContainer.innerHTML = slotsHtml;
+
+      document.querySelectorAll('.time-slot').forEach(slotEl => {
+        slotEl.addEventListener('click', () => {
+          const time = slotEl.dataset.time;
+          if (time) {
+            selectedTime = time;
+            renderTimeSlots();
+            updateSummary();
+          }
+        });
+      });
+    }
+
+    function updateSummary() {
+      const service = getSelectedService();
+      summaryService.textContent = \`\${service.name} · \${service.duration}\`;
+      
+      const barber = barbers.find(b => b.id === selectedBarberId);
+      summaryBarber.textContent = barber ? barber.name : 'Anyone available';
+      
+      const dateObj = selectedDate ? new Date(selectedDate + 'T12:00:00') : new Date();
+      const formattedDate = dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+      summaryDateTime.textContent = \`\${formattedDate} at \${selectedTime}\`;
+      
+      summaryTotal.textContent = \`$\${service.price}\`;
+    }
+
+    function initDatePicker() {
+      const today = new Date();
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, '0');
+      const dd = String(today.getDate()).padStart(2, '0');
+      datePicker.min = \`\${yyyy}-\${mm}-\${dd}\`;
+      if (!datePicker.value) datePicker.value = selectedDate;
+      else selectedDate = datePicker.value;
+
+      datePicker.addEventListener('change', (e) => {
+        selectedDate = e.target.value;
+        updateSummary();
+      });
+    }
+
+    function handleBooking() {
+      const service = getSelectedService();
+      const name = document.getElementById('fullName').value.trim() || 'Client';
+      const email = document.getElementById('email').value.trim() || '—';
+      const phone = document.getElementById('phone').value.trim() || '—';
+      const hairNotes = document.getElementById('hairNotes').value.trim() || 'None';
+      const barber = barbers.find(b => b.id === selectedBarberId)?.name || 'Anyone available';
+      
+      const dateObj = new Date(selectedDate + 'T12:00:00');
+      const niceDate = dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+      
+      alert(\`💈 𝐀𝐏𝐏𝐎𝐈𝐍𝐓𝐌𝐄𝐍𝐓 𝐂𝐎𝐍𝐅𝐈𝐑𝐌𝐄𝐃 💈\\n\\n\${service.name} · $\${service.price}\\n✂️ Barber: \${barber}\\n📅 \${niceDate} at \${selectedTime}\\n👤 \${name}\\n📧 \${email}\\n📝 Notes: \${hairNotes}\\n\\nSee you at the shop! Complimentary drink waiting.\`);
+    }
+
+    function initialize() {
+      renderServices();
+      renderBarbers();
+      renderTimeSlots();
+      initDatePicker();
+      updateSummary();
+    }
+
+    bookBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      handleBooking();
+    });
+
+    initialize();
+  })();
+</script>
+</body>
+</html>

@@ -66,12 +66,12 @@ app.use('/api/v1', (req, res, next) => {
 app.use('/admin', express.static(path.join(__dirname, '../admin')));
 app.use('/Template', express.static(path.join(__dirname, '../Template')));
 
-// Serve the compiled React application
+// Serve legacy public folder (landing page, images, etc.) FIRST
+app.use('/', express.static(path.join(__dirname, '../public')));
+
+// Serve the compiled React application (SPA)
 const frontendDist = path.join(__dirname, '../frontend/dist');
 app.use(express.static(frontendDist));
-
-// Serve legacy public folder (if still needed for any direct assets)
-app.use('/', express.static(path.join(__dirname, '../public')));
 
 // ─── API Routes ───────────────────────────────────────────────────────────────
 app.use('/api/v1/auth',         authRoutes);
