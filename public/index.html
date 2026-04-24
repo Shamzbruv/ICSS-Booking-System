@@ -190,6 +190,15 @@
         <button class="tab-btn" data-industry="legal">
           <i class="fas fa-scale-balanced"></i> Legal
         </button>
+        <button class="tab-btn" data-industry="barber">
+          <i class="fas fa-scissors"></i> Barber
+        </button>
+        <button class="tab-btn" data-industry="mechanic">
+          <i class="fas fa-wrench"></i> Mechanic
+        </button>
+        <button class="tab-btn" data-industry="nail">
+          <i class="fas fa-hand-sparkles"></i> Nail Tech
+        </button>
         <button class="tab-btn" data-industry="universal">
           <i class="fas fa-globe"></i> Universal
         </button>
@@ -701,6 +710,208 @@
                 </div>
                 <button class="mini-book-btn" onclick="alert('⚖️ Consultation scheduled with Meridian Law!')">
                   <i class="fas fa-handshake"></i> Schedule
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Barber Panel -->
+        <div class="preview-panel" id="barber-panel">
+          <div class="industry-card">
+            <div class="industry-header">
+              <div class="industry-icon" style="background: linear-gradient(135deg, #2c3e50, #1a252f);">
+                <i class="fas fa-scissors" style="color: #f1c40f;"></i>
+              </div>
+              <div class="industry-title">
+                <h3>Iron & Blade</h3>
+                <p>Classic Barbering · Downtown</p>
+              </div>
+            </div>
+            <div class="booking-grid-mini">
+              <div class="mini-service-list">
+                <div class="mini-service-item">
+                  <div class="mini-service-info">
+                    <div class="mini-service-icon" style="background: #34495e; color: #ecf0f1;">
+                      <i class="fas fa-cut"></i>
+                    </div>
+                    <div class="mini-service-details">
+                      <h4>Signature Haircut</h4>
+                      <span>45 min</span>
+                    </div>
+                  </div>
+                  <span class="mini-price">$40</span>
+                </div>
+                <div class="mini-service-item">
+                  <div class="mini-service-info">
+                    <div class="mini-service-icon" style="background: #34495e; color: #ecf0f1;">
+                      <i class="fas fa-razor"></i>
+                    </div>
+                    <div class="mini-service-details">
+                      <h4>Hot Towel Shave</h4>
+                      <span>40 min</span>
+                    </div>
+                  </div>
+                  <span class="mini-price">$35</span>
+                </div>
+              </div>
+              <div class="mini-form-panel">
+                <div class="mini-form-group">
+                  <label>Client name</label>
+                  <input type="text" class="mini-input" placeholder="Marcus Johnson" value="Marcus Johnson">
+                </div>
+                <div class="mini-form-group">
+                  <label>Barber</label>
+                  <select class="mini-input">
+                    <option>Tony (Master Barber)</option>
+                  </select>
+                </div>
+                <div class="mini-summary">
+                  <div class="mini-summary-line">
+                    <span>Signature Cut</span>
+                    <span>$40</span>
+                  </div>
+                  <div class="mini-summary-line total">
+                    <span>Total</span>
+                    <span>$40</span>
+                  </div>
+                </div>
+                <button class="mini-book-btn" onclick="alert('✂️ Appointment booked at Iron & Blade!')" style="background: #c0392b;">
+                  <i class="fas fa-check-circle"></i> Confirm booking
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Mechanic Panel -->
+        <div class="preview-panel" id="mechanic-panel">
+          <div class="industry-card">
+            <div class="industry-header">
+              <div class="industry-icon" style="background: linear-gradient(135deg, #e67e22, #d35400);">
+                <i class="fas fa-wrench" style="color: #fff;"></i>
+              </div>
+              <div class="industry-title">
+                <h3>Pro Auto Care</h3>
+                <p>Automotive Repair · Service Center</p>
+              </div>
+            </div>
+            <div class="booking-grid-mini">
+              <div class="mini-service-list">
+                <div class="mini-service-item">
+                  <div class="mini-service-info">
+                    <div class="mini-service-icon" style="background: #fdf2e9; color: #d35400;">
+                      <i class="fas fa-oil-can"></i>
+                    </div>
+                    <div class="mini-service-details">
+                      <h4>Oil Change & Inspection</h4>
+                      <span>45 min</span>
+                    </div>
+                  </div>
+                  <span class="mini-price">$120</span>
+                </div>
+                <div class="mini-service-item">
+                  <div class="mini-service-info">
+                    <div class="mini-service-icon" style="background: #fdf2e9; color: #d35400;">
+                      <i class="fas fa-car-crash"></i>
+                    </div>
+                    <div class="mini-service-details">
+                      <h4>Brake Pad Replacement</h4>
+                      <span>2 hours</span>
+                    </div>
+                  </div>
+                  <span class="mini-price">$250</span>
+                </div>
+              </div>
+              <div class="mini-form-panel">
+                <div class="mini-form-group">
+                  <label>Customer name</label>
+                  <input type="text" class="mini-input" placeholder="John Smith" value="John Smith">
+                </div>
+                <div class="mini-form-group">
+                  <label>Vehicle</label>
+                  <input type="text" class="mini-input" placeholder="Make & Model" value="2018 Honda Civic">
+                </div>
+                <div class="mini-summary">
+                  <div class="mini-summary-line">
+                    <span>Oil Change</span>
+                    <span>$120</span>
+                  </div>
+                  <div class="mini-summary-line total">
+                    <span>Est. Total</span>
+                    <span>$120</span>
+                  </div>
+                </div>
+                <button class="mini-book-btn" onclick="alert('🚗 Service scheduled at Pro Auto Care!')" style="background: #d35400;">
+                  <i class="fas fa-calendar-check"></i> Book service
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Nail Tech Panel -->
+        <div class="preview-panel" id="nail-panel">
+          <div class="industry-card">
+            <div class="industry-header">
+              <div class="industry-icon" style="background: linear-gradient(135deg, #fbc531, #e1b12c);">
+                <i class="fas fa-hand-sparkles" style="color: #2f3640;"></i>
+              </div>
+              <div class="industry-title">
+                <h3>Elegant Nails</h3>
+                <p>Luxury Nail Studio · Uptown</p>
+              </div>
+            </div>
+            <div class="booking-grid-mini">
+              <div class="mini-service-list">
+                <div class="mini-service-item">
+                  <div class="mini-service-info">
+                    <div class="mini-service-icon" style="background: #fef9e7; color: #e1b12c;">
+                      <i class="fas fa-paint-brush"></i>
+                    </div>
+                    <div class="mini-service-details">
+                      <h4>Acrylic Full Set</h4>
+                      <span>90 min</span>
+                    </div>
+                  </div>
+                  <span class="mini-price">$80</span>
+                </div>
+                <div class="mini-service-item">
+                  <div class="mini-service-info">
+                    <div class="mini-service-icon" style="background: #fef9e7; color: #e1b12c;">
+                      <i class="fas fa-gem"></i>
+                    </div>
+                    <div class="mini-service-details">
+                      <h4>Gel Manicure</h4>
+                      <span>60 min</span>
+                    </div>
+                  </div>
+                  <span class="mini-price">$50</span>
+                </div>
+              </div>
+              <div class="mini-form-panel">
+                <div class="mini-form-group">
+                  <label>Client name</label>
+                  <input type="text" class="mini-input" placeholder="Chloe Davis" value="Chloe Davis">
+                </div>
+                <div class="mini-form-group">
+                  <label>Artist</label>
+                  <select class="mini-input">
+                    <option>Mia (Lead Artist)</option>
+                  </select>
+                </div>
+                <div class="mini-summary">
+                  <div class="mini-summary-line">
+                    <span>Acrylic Set</span>
+                    <span>$80</span>
+                  </div>
+                  <div class="mini-summary-line total">
+                    <span>Total</span>
+                    <span>$80</span>
+                  </div>
+                </div>
+                <button class="mini-book-btn" onclick="alert('✨ Appointment booked at Elegant Nails!')" style="background: #2f3640; color: #fbc531;">
+                  <i class="fas fa-heart"></i> Reserve appointment
                 </button>
               </div>
             </div>

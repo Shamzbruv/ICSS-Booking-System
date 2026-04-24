@@ -8,6 +8,29 @@ async function updateThemes() {
     console.log('Starting theme registry update...');
     await client.query('BEGIN');
 
+    console.log('Cleaning up old duplicate themes...');
+    await client.query(`
+      DELETE FROM pending_signups WHERE theme_id IN (
+        SELECT id FROM themes WHERE name IN (
+          'Classic Cuts',
+          'Wellness Clinic',
+          'Iron Fitness',
+          'Legal Access',
+          'Universal Standard',
+          'Zen Spa'
+        )
+      );
+
+      DELETE FROM themes WHERE name IN (
+        'Classic Cuts',
+        'Wellness Clinic',
+        'Iron Fitness',
+        'Legal Access',
+        'Universal Standard',
+        'Zen Spa'
+      );
+    `);
+
     // Update Barber theme from 'Classic Cuts' to 'Iron & Blade' and set its template
     console.log('Updating Barber theme...');
     await client.query(`
