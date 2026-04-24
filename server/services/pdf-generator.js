@@ -415,11 +415,12 @@ function generateSubscriptionInvoicePDF(opts) {
             doc.on('end',  () => resolve(Buffer.concat(chunks)));
 
             const brand = getPlatformBillingBrand();
-            const w = doc.page.width;  // 595.28 for A4
-            const H = doc.page.height; // 841.89 for A4
-            const L = 48;              // left margin
-            const R = w - 48;          // right bound
-            const CW = R - L;          // content width
+            const w  = doc.page.width;
+            const H  = doc.page.height;
+            const L  = 48;
+            const R  = w - 48;
+            const CW = R - L;
+            const CP = 18; // card padding
 
             const paidDate  = paidAt ? new Date(paidAt) : new Date();
             const issueDate = new Date();
@@ -427,192 +428,195 @@ function generateSubscriptionInvoicePDF(opts) {
             const currSym   = currency === 'GBP' ? '£' : currency === 'JMD' ? 'J$' : '$';
             const amtStr    = `${currSym}${Number(amount).toFixed(2)}`;
 
-            // ── HEADER (full bleed dark block) ─────────────────────────────
+            // ── HEADER ────────────────────────────────────────────────────────
             const HEADER_H = 130;
             doc.rect(0, 0, w, HEADER_H).fillColor(brand.primaryColor).fill();
 
-            // Logo — left side of header
             if (brand.logoPath) {
-                try {
-                    doc.image(brand.logoPath, L, 26, { height: 52, fit: [180, 52] });
-                } catch (e) {
-                    // Logo failed to load — render text fallback
-                    doc.fillColor('#FFFFFF').fontSize(18).font('Helvetica-Bold')
-                        .text('ICSS', L, 44);
-                }
+                try   { doc.image(brand.logoPath, L, 26, { height: 52, fit: [180, 52] }); }
+                catch { doc.fillColor('#FFFFFF').fontSize(18).font('Helvetica-Bold').text('ICSS', L, 44); }
             } else {
                 doc.fillColor('#FFFFFF').fontSize(18).font('Helvetica-Bold').text('ICSS', L, 44);
             }
 
-            // Invoice title — right side of header
-            doc.fillColor('#FFFFFF')
-                .fontSize(22).font('Helvetica-Bold')
+            doc.fillColor('#FFFFFF').fontSize(20).font('Helvetica-Bold')
                 .text('SUBSCRIPTION INVOICE', 0, 38, { align: 'right', width: R });
-            doc.fillColor(brand.accentColor)
-                .fontSize(10).font('Helvetica')
-                .text(invoiceNumber, 0, 66, { align: 'right', width: R });
-            doc.fillColor(brand.mutedColor)
-                .fontSize(9)
-                .text(brand.website, 0, 82, { align: 'right', width: R });
+            doc.fillColor(brand.accentColor).fontSize(10).font('Helvetica')
+                .text(invoiceNumber, 0, 64, { align: 'right', width: R });
+            doc.fillColor(brand.mutedColor).fontSize(8.5)
+                .text(brand.website, 0, 80, { align: 'right', width: R });
 
-            // ── VIOLET ACCENT BAR ───────────────────────────────────────────
+            // ── VIOLET BAR ────────────────────────────────────────────────────
             doc.rect(0, HEADER_H, w, 4).fillColor(brand.accentColor).fill();
 
-            // ── META BLOCK (two columns) ────────────────────────────────────
-            let y = HEADER_H + 24;
-            const COL2 = L + CW / 2;
+            // ── META BLOCK ────────────────────────────────────────────────────
+            let y = HEADER_H + 22;
+            const COL2  = L + CW / 2 + 10;
+            const COL1W = CW / 2 - 20;
+            const COL2W = CW / 2 - 10;
 
-            // Left column
-            doc.fillColor(brand.mutedColor).fontSize(7.5).font('Helvetica')
-                .text('INVOICE DATE', L, y, { characterSpacing: 1.2 });
-            doc.fillColor('#000000').fontSize(10).font('Helvetica-Bold')
-                .text(fmtDate(issueDate), L, y + 12);
+            doc.fillColor(brand.mutedColor).fontSize(7).font('Helvetica')
+                .text('INVOICE DATE', L, y, { characterSpacing: 1.5, width: COL1W });
+            doc.fillColor('#111111').fontSize(10).font('Helvetica-Bold')
+                .text(fmtDate(issueDate), L, y + 11, { width: COL1W });
 
-            doc.fillColor(brand.mutedColor).fontSize(7.5).font('Helvetica')
-                .text('PAYMENT DATE', L, y + 32, { characterSpacing: 1.2 });
-            doc.fillColor('#000000').fontSize(10).font('Helvetica-Bold')
-                .text(fmtDate(paidDate), L, y + 44);
+            doc.fillColor(brand.mutedColor).fontSize(7).font('Helvetica')
+                .text('PAYMENT DATE', L, y + 31, { characterSpacing: 1.5, width: COL1W });
+            doc.fillColor('#111111').fontSize(10).font('Helvetica-Bold')
+                .text(fmtDate(paidDate), L, y + 42, { width: COL1W });
 
-            // Right column
-            doc.fillColor(brand.mutedColor).fontSize(7.5).font('Helvetica')
-                .text('INVOICE NUMBER', COL2, y, { characterSpacing: 1.2 });
-            doc.fillColor('#000000').fontSize(10).font('Helvetica-Bold')
-                .text(invoiceNumber, COL2, y + 12);
+            doc.fillColor(brand.mutedColor).fontSize(7).font('Helvetica')
+                .text('INVOICE NUMBER', COL2, y, { characterSpacing: 1.5, width: COL2W });
+            doc.fillColor('#111111').fontSize(10).font('Helvetica-Bold')
+                .text(invoiceNumber, COL2, y + 11, { width: COL2W });
 
-            // PAID badge
-            const badgeX = COL2;
-            const badgeY = y + 32;
-            doc.roundedRect(badgeX, badgeY, 58, 20, 3)
-                .fillColor(brand.successColor).fill();
+            const badgeY = y + 31;
+            doc.roundedRect(COL2, badgeY, 66, 22, 3).fillColor(brand.successColor).fill();
             doc.fillColor('#FFFFFF').fontSize(9).font('Helvetica-Bold')
-                .text('✓  PAID', badgeX + 6, badgeY + 5, { width: 46 });
+                .text('✓  PAID', COL2, badgeY + 6, { width: 66, align: 'center' });
 
-            y += 82;
+            y += 78;
+            doc.moveTo(L, y).lineTo(R, y).lineWidth(0.5).strokeColor('#DDDDE8').stroke();
+            y += 18;
 
-            // ── SECTION DIVIDER ─────────────────────────────────────────────
-            doc.moveTo(L, y).lineTo(R, y).lineWidth(0.5)
-                .strokeColor('#E0E0E8').stroke();
-            y += 20;
+            // ── BILL TO CARD (dynamic height) ─────────────────────────────────
+            const tName  = tenant?.name  || 'Your Business';
+            const oName  = owner?.name   || '';
+            const oEmail = owner?.email  || '';
 
-            // ── BILL TO CARD ────────────────────────────────────────────────
-            const CARD_PAD = 16;
-            const BILLTO_H = 78;
-            doc.roundedRect(L, y, CW, BILLTO_H, 4)
-                .fillColor('#F7F7FB').fill();
-            doc.moveTo(L, y).lineTo(L, y + BILLTO_H)
-                .lineWidth(3).strokeColor(brand.accentColor).stroke();
+            const bH = CP + 11 + 8
+                + doc.heightOfString(tName,  { width: CW - CP * 2, fontSize: 12  }) + 5
+                + (oName  ? doc.heightOfString(oName,  { width: CW - CP * 2, fontSize: 9.5 }) + 4 : 0)
+                + (oEmail ? doc.heightOfString(oEmail, { width: CW - CP * 2, fontSize: 9   }) + 2 : 0)
+                + CP;
 
-            doc.fillColor(brand.mutedColor).fontSize(7.5).font('Helvetica')
-                .text('BILL TO', L + CARD_PAD, y + CARD_PAD, { characterSpacing: 1.2 });
+            doc.roundedRect(L, y, CW, bH, 4).fillColor('#F7F7FB').fill();
+            doc.rect(L, y, 3, bH).fillColor(brand.accentColor).fill();
+
+            let by = y + CP;
+            doc.fillColor(brand.mutedColor).fontSize(7).font('Helvetica')
+                .text('BILL TO', L + CP, by, { characterSpacing: 1.5 });
+            by += 19;
             doc.fillColor('#0F0F1A').fontSize(12).font('Helvetica-Bold')
-                .text(tenant?.name || 'Your Business', L + CARD_PAD, y + CARD_PAD + 14);
-            doc.fillColor('#333333').fontSize(9.5).font('Helvetica')
-                .text(owner?.name || '', L + CARD_PAD, y + CARD_PAD + 30);
-            doc.fillColor(brand.mutedColor).fontSize(9).font('Helvetica')
-                .text(owner?.email || '', L + CARD_PAD, y + CARD_PAD + 44);
+                .text(tName, L + CP, by, { width: CW - CP * 2 });
+            by += doc.heightOfString(tName, { width: CW - CP * 2, fontSize: 12 }) + 5;
+            if (oName) {
+                doc.fillColor('#333333').fontSize(9.5).font('Helvetica')
+                    .text(oName, L + CP, by, { width: CW - CP * 2 });
+                by += doc.heightOfString(oName, { width: CW - CP * 2, fontSize: 9.5 }) + 4;
+            }
+            if (oEmail) {
+                doc.fillColor(brand.mutedColor).fontSize(9).font('Helvetica')
+                    .text(oEmail, L + CP, by, { width: CW - CP * 2 });
+            }
+            y += bH + 16;
 
-            y += BILLTO_H + 18;
+            // ── SUBSCRIPTION DETAILS CARD ─────────────────────────────────────
+            // Two strict columns: label (fixed 130pt) | value (remaining width)
+            // Each row is pre-measured with heightOfString so nothing overlaps.
+            const LCOL_W = 130;
+            const VCOL_X = L + CP + LCOL_W + 10;
+            const VCOL_W = CW - CP - LCOL_W - 10 - CP;
+            const LSIZ   = 8.5;
+            const VSIZ   = 9;
+            const RGAP   = 11;
 
-            // ── SUBSCRIPTION DETAILS CARD ───────────────────────────────────
-            const DETAILS_H = 118;
-            doc.roundedRect(L, y, CW, DETAILS_H, 4)
-                .fillColor('#F7F7FB').fill();
-            doc.moveTo(L, y).lineTo(L, y + DETAILS_H)
-                .lineWidth(3).strokeColor(brand.primaryColor).stroke();
-
-            doc.fillColor(brand.mutedColor).fontSize(7.5).font('Helvetica')
-                .text('SUBSCRIPTION DETAILS', L + CARD_PAD, y + CARD_PAD, { characterSpacing: 1.2 });
-
-            const details = [
-                ['Plan',              planName || 'Monthly'],
-                ['Billing Period',    billingPeriod || '—'],
-                ['Payment Provider',  'PayPal'],
-                ['Subscription ID',   subscriptionId || '—'],
-                ['Reference ID',      eventId || '—'],
+            const rows = [
+                ['Plan',             planName      || 'Monthly'],
+                ['Billing Period',   billingPeriod || '—'],
+                ['Payment Provider', 'PayPal'],
+                ['Subscription ID',  subscriptionId || '—'],
+                ['Reference ID',     eventId        || '—'],
             ];
 
-            let dy = y + CARD_PAD + 16;
-            const LABEL_W = 120;
-            details.forEach(([label, val]) => {
-                doc.fillColor('#555566').fontSize(8.5).font('Helvetica-Bold')
-                    .text(label + ':', L + CARD_PAD, dy, { continued: true, width: LABEL_W });
-                doc.fillColor('#111122').font('Helvetica')
-                    .text('  ' + val, { width: CW - CARD_PAD - LABEL_W - 8 });
-                dy += 16;
+            // Pre-measure every row height
+            const rowH = rows.map(([, v]) =>
+                Math.max(
+                    doc.heightOfString(String(v), { width: VCOL_W, fontSize: VSIZ }),
+                    doc.currentLineHeight(true)
+                )
+            );
+            const detailCardH = CP + 21 + rowH.reduce((s, h) => s + h + RGAP, 0) + CP;
+
+            doc.roundedRect(L, y, CW, detailCardH, 4).fillColor('#F7F7FB').fill();
+            doc.rect(L, y, 3, detailCardH).fillColor(brand.primaryColor).fill();
+
+            let ry = y + CP;
+            doc.fillColor(brand.mutedColor).fontSize(7).font('Helvetica')
+                .text('SUBSCRIPTION DETAILS', L + CP, ry, { characterSpacing: 1.5 });
+            ry += 21;
+
+            rows.forEach(([label, val], i) => {
+                // Label: single line, clipped to column width
+                doc.fillColor('#444455').fontSize(LSIZ).font('Helvetica-Bold')
+                    .text(label, L + CP, ry, { width: LCOL_W, lineBreak: false });
+                // Value: may wrap, drawn from exact column X
+                doc.fillColor('#111122').fontSize(VSIZ).font('Helvetica')
+                    .text(String(val), VCOL_X, ry, { width: VCOL_W });
+                ry += rowH[i] + RGAP;
             });
+            y += detailCardH + 16;
 
-            y += DETAILS_H + 18;
+            // ── AMOUNT BLOCK ──────────────────────────────────────────────────
+            const AMT_H    = 98;
+            const AMT_W    = CW - CP * 2; // row content width
+            doc.roundedRect(L, y, CW, AMT_H, 4).fillColor('#F7F7FB').fill();
 
-            // ── AMOUNT BLOCK ────────────────────────────────────────────────
-            const AMOUNT_H = 100;
-            doc.roundedRect(L, y, CW, AMOUNT_H, 4)
-                .fillColor('#F7F7FB').fill();
+            let ay = y + CP;
 
-            const AMT_LEFT  = L + CARD_PAD;
-            const AMT_RIGHT = R - CARD_PAD;
-
-            // Subtotal row
-            let ay = y + CARD_PAD;
+            // Subtotal — label left, value right, both at same Y, no continued
             doc.fillColor('#555566').fontSize(9).font('Helvetica')
-                .text('Subtotal', AMT_LEFT, ay);
+                .text('Subtotal', L + CP, ay, { width: AMT_W, lineBreak: false });
             doc.fillColor('#111122').fontSize(9).font('Helvetica')
-                .text(amtStr, AMT_LEFT, ay, { align: 'right', width: CW - CARD_PAD * 2 });
+                .text(amtStr, L + CP, ay, { width: AMT_W, align: 'right', lineBreak: false });
+            ay += 22;
 
-            ay += 20;
+            // Tax row
             doc.fillColor('#555566').fontSize(9).font('Helvetica')
-                .text('Tax', AMT_LEFT, ay);
+                .text('Tax', L + CP, ay, { width: AMT_W, lineBreak: false });
             doc.fillColor('#888899').fontSize(9).font('Helvetica')
-                .text('$0.00', AMT_LEFT, ay, { align: 'right', width: CW - CARD_PAD * 2 });
+                .text('$0.00', L + CP, ay, { width: AMT_W, align: 'right', lineBreak: false });
+            ay += 18;
 
             // Divider
-            ay += 16;
-            doc.moveTo(AMT_LEFT, ay).lineTo(AMT_RIGHT, ay)
-                .lineWidth(0.5).strokeColor('#D0D0E0').stroke();
-
-            // Total row
+            doc.moveTo(L + CP, ay).lineTo(R - CP, ay).lineWidth(0.5).strokeColor('#D0D0E0').stroke();
             ay += 12;
+
+            // TOTAL row — two independent draws, NO `continued`, NO layered fonts
             doc.fillColor(brand.mutedColor).fontSize(8).font('Helvetica')
-                .text('TOTAL PAID', AMT_LEFT, ay, { characterSpacing: 1 });
-            doc.fillColor(brand.accentColor).fontSize(20).font('Helvetica-Bold')
-                .text(amtStr + '  ', AMT_LEFT, ay - 4, { align: 'right', width: CW - CARD_PAD * 2, continued: true });
-            doc.fillColor(brand.mutedColor).fontSize(9).font('Helvetica')
-                .text(currency, { continued: false });
+                .text('TOTAL PAID', L + CP, ay + 7, { width: 100, lineBreak: false, characterSpacing: 0.8 });
+            doc.fillColor(brand.accentColor).fontSize(22).font('Helvetica-Bold')
+                .text(amtStr, L + CP, ay, { width: AMT_W, align: 'right', lineBreak: false });
 
-            y += AMOUNT_H + 20;
+            y += AMT_H + 18;
 
-            // ── PAID WATERMARK (diagonal ghost) ─────────────────────────────
+            // ── PAID WATERMARK ────────────────────────────────────────────────
             doc.save()
                 .rotate(-45, { origin: [w / 2, H / 2] })
                 .fontSize(100).font('Helvetica-Bold')
-                .fillColor(brand.successColor)
-                .opacity(0.045)
+                .fillColor(brand.successColor).opacity(0.04)
                 .text('PAID', 0, H / 2 - 50, { width: w, align: 'center' })
                 .restore();
 
-            // ── NOTE LINE ───────────────────────────────────────────────────
-            doc.fillColor('#888899').fontSize(8.5).font('Helvetica')
-                .text(
-                    'This invoice confirms your subscription payment was successfully processed by ICSS Booking System.',
-                    L, y, { width: CW, align: 'center' }
-                );
+            // ── CONFIRMATION NOTE ─────────────────────────────────────────────
+            if (y < H - 110) {
+                doc.fillColor('#9999AA').fontSize(8).font('Helvetica')
+                    .text(
+                        'This invoice confirms your subscription payment was successfully processed by ICSS Booking System.',
+                        L, y, { width: CW, align: 'center' }
+                    );
+            }
 
-            // ── FOOTER (full bleed dark) ─────────────────────────────────────
-            const FOOTER_TOP = H - 72;
-            doc.rect(0, FOOTER_TOP, w, 72).fillColor(brand.primaryColor).fill();
-
-            // Violet accent top edge
-            doc.rect(0, FOOTER_TOP, w, 3).fillColor(brand.accentColor).fill();
-
+            // ── FOOTER ────────────────────────────────────────────────────────
+            const FT = H - 68;
+            doc.rect(0, FT, w, 68).fillColor(brand.primaryColor).fill();
+            doc.rect(0, FT, w, 3).fillColor(brand.accentColor).fill();
             doc.fillColor('#FFFFFF').fontSize(9).font('Helvetica-Bold')
-                .text('ICSS Booking System', L, FOOTER_TOP + 14);
+                .text('ICSS Booking System', L, FT + 13, { width: CW / 2 });
             doc.fillColor(brand.mutedColor).fontSize(8).font('Helvetica')
-                .text(`${brand.website}  ·  ${brand.supportEmail}`, L, FOOTER_TOP + 28);
+                .text(`${brand.website}  ·  ${brand.supportEmail}`, L, FT + 28, { width: CW });
             doc.fillColor('#555566').fontSize(7.5)
-                .text(
-                    'Questions about this invoice? Contact us at billing@icssbookings.com',
-                    L, FOOTER_TOP + 44,
-                    { width: CW }
-                );
+                .text('Questions about this invoice? Contact us at billing@icssbookings.com', L, FT + 44, { width: CW });
 
             doc.end();
         } catch (err) {
