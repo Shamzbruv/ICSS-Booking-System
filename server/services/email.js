@@ -27,9 +27,9 @@ function getBrand(tenant) {
         name:        b.businessName  || tenant?.name || 'ICSS Booking',
         primaryColor: b.primaryColor || '#D4AF37',
         logoUrl:     b.logoUrl       || null,
-        replyEmail:  b.replyEmail    || process.env.ADMIN_EMAIL || 'noreply@icss.app',
-        sendingDomain: b.sendingDomain || 'icss.app',
-        bookingUrl:  b.bookingUrl    || 'https://icss.app'
+        replyEmail:  b.replyEmail    || process.env.ADMIN_EMAIL || 'noreply@icssbookings.com',
+        sendingDomain: b.sendingDomain || 'icssbookings.com',
+        bookingUrl:  b.bookingUrl    || 'https://icssbookings.com'
     };
 }
 
@@ -266,7 +266,7 @@ async function sendPasswordResetEmail(email, resetUrl) {
     }
 
     await resend.emails.send({
-        from:    'ICSS Booking <security@icss.app>',
+        from:    'ICSS Booking <security@icssbookings.com>',
         to:      [email],
         subject: `Password Reset Request - ICSS Booking System`,
         html: `
