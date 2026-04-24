@@ -77,10 +77,27 @@ export default function ThemeSelector() {
                 onClick={() => { setSelected(t); setPreview(t.template_path); }}
               >
                 <div className={s.card__preview}>
-                  {t.preview_image_url
-                    ? <img src={t.preview_image_url} alt={t.name} />
-                    : <div className={s.card__placeholder}>{t.category}</div>
-                  }
+                  {t.preview_image_url ? (
+                    <img src={t.preview_image_url} alt={t.name} />
+                  ) : t.template_path ? (
+                    <div style={{ position: 'relative', overflow: 'hidden', background: '#fff', width: '100%', height: '100%' }}>
+                      <iframe
+                        src={t.template_path}
+                        title={t.name}
+                        style={{
+                          position: 'absolute', top: 0, left: 0,
+                          width: '400%', height: '400%',
+                          transform: 'scale(0.25)', transformOrigin: 'top left',
+                          border: 'none', pointerEvents: 'none'
+                        }}
+                        tabIndex={-1}
+                        loading="lazy"
+                      />
+                      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.01)', zIndex: 10 }} />
+                    </div>
+                  ) : (
+                    <div className={s.card__placeholder}>{t.category}</div>
+                  )}
                   {selected?.id === t.id && <div className={s.card__badge}>✓ Selected</div>}
                 </div>
                 <div className={s.card__body}>
