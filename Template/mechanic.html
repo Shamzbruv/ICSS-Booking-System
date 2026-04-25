@@ -547,7 +547,7 @@
 
     @media (max-width: 480px) {
       .time-slots {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, 1fr);
       }
       .header {
         flex-direction: column;
@@ -555,13 +555,15 @@
       }
     }
   
-    /* Enhanced Mobile Optimizations */
+    /* ── Mobile Optimizations (650px and below) ── */
     @media (max-width: 650px) {
+      html { -webkit-text-size-adjust: 100%; }
       body {
         padding: 0 !important;
+        align-items: flex-start !important;
       }
-      body > div[class$="-system"] {
-        padding: 1.5rem 1.2rem !important;
+      .booking-system {
+        padding: 1.2rem 1rem !important;
         border-radius: 0 !important;
         border-left: none !important;
         border-right: none !important;
@@ -570,33 +572,95 @@
         margin: 0;
         width: 100% !important;
         max-width: 100% !important;
+        overflow-x: hidden;
       }
       .header {
         flex-direction: column !important;
         align-items: flex-start !important;
-        gap: 15px !important;
+        gap: 12px !important;
       }
-      .brand {
+      .header-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
         width: 100%;
       }
+      .badge {
+        padding: 7px 12px;
+        font-size: 0.75rem;
+      }
       .brand-text h1 {
-        font-size: 1.8rem !important;
+        font-size: 1.6rem !important;
       }
       .booking-grid {
         display: flex !important;
         flex-direction: column !important;
-        gap: 1.5rem !important;
+        gap: 1.2rem !important;
+      }
+      .selection-panel, .booking-form-panel {
+        padding: 1.2rem 1rem !important;
+        border-radius: 10px !important;
+      }
+      .service-card {
+        padding: 0.9rem 1rem !important;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+      .service-info {
+        gap: 10px;
+        min-width: 0;
+        flex: 1;
+      }
+      .service-icon {
+        width: 40px !important;
+        height: 40px !important;
+        font-size: 1.2rem !important;
+        flex-shrink: 0;
+      }
+      .service-details h3 { font-size: 0.9rem; }
+      .service-details span { font-size: 0.78rem; }
+      .service-price {
+        font-size: 1rem;
+        padding: 6px 12px;
+      }
+      .staff-chip {
+        padding: 8px 14px;
+        font-size: 0.82rem;
       }
       .time-slots {
         grid-template-columns: repeat(2, 1fr) !important;
       }
-      .selection-panel, .booking-form-panel {
-        padding: 1.5rem 1.2rem !important;
-        border-radius: 20px !important;
+      .time-slot {
+        padding: 13px 5px !important;
+        font-size: 0.85rem;
+        min-height: 46px;
       }
-      .service-card, .event-card, .rental-item {
-        padding: 1rem 1.2rem !important;
+      .input-wrapper input,
+      .input-wrapper textarea,
+      .input-wrapper select {
+        font-size: 16px !important;
       }
+      .date-selector input { font-size: 16px !important; }
+      .summary-line.total {
+        font-size: 1.2rem !important;
+      }
+      .book-btn {
+        padding: 15px 20px !important;
+        font-size: 1.05rem !important;
+        min-height: 52px;
+      }
+      .footer-note {
+        font-size: 0.78rem;
+        gap: 8px;
+      }
+    }
+
+    @media (max-width: 400px) {
+      .brand-text h1 { font-size: 1.3rem !important; }
+      .badge { font-size: 0.68rem; padding: 6px 8px; }
+      .selection-panel, .booking-form-panel { padding: 1rem 0.875rem !important; }
+      .service-card { padding: 0.8rem 0.875rem !important; }
+      .staff-chip { padding: 7px 10px; font-size: 0.76rem; }
     }
   </style>
 

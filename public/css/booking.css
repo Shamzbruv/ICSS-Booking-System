@@ -379,13 +379,30 @@ textarea { resize: vertical; }
 .confirm-row strong      { color: var(--text); }
 .confirm-note            { font-size: 12px; color: var(--text-dim); margin-bottom: 28px; }
 
-/* ── Responsive ─────────────────────────────────────────────────────────── */
+/* ── Responsive ─────────────────────────────────── */
 @media (max-width: 520px) {
-    .step-panel      { padding: 20px 18px; }
+    .step-panel      { padding: 20px 16px; }
     .form-row-2      { grid-template-columns: 1fr; }
-    .step-label      { display: none; }
+    .step-label      { font-size: 10px; }
     .slot-grid       { grid-template-columns: repeat(3, 1fr); }
-    .progress-connector { max-width: 24px; }
+    .progress-connector { max-width: 20px; }
+    .confirm-card    { padding: 16px 18px; width: 100%; max-width: 100%; }
+    .confirm-title   { font-size: 22px; }
+    .cal-day         { font-size: 12px; }
+    input, textarea, select { font-size: 16px !important; } /* Prevent iOS zoom */
+}
+
+@media (max-width: 380px) {
+    html             { font-size: 14px; }
+    .step-dot        { width: 28px; height: 28px; font-size: 11px; }
+    .step-label      { display: none; }
+    .progress-connector { max-width: 12px; }
+    .slot-grid       { grid-template-columns: repeat(2, 1fr); }
+    .booking-header  { padding: 24px 16px; }
+    .brand-name      { font-size: 18px; }
+    .step-title      { font-size: 17px; }
+    .cal-day-header  { font-size: 9px; letter-spacing: 0; }
+    .submit-btn      { font-size: 14px; padding: 14px; }
 }
 
 /* ── Welcome Greeting Modal ────────────────────────────────────────────────── */
