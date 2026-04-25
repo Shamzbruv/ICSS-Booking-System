@@ -114,6 +114,7 @@ async function finalizeDraft() {
     const ownerName   = document.getElementById('ownerName').value.trim();
     const email       = document.getElementById('adminEmail').value.trim();
     const pwd         = document.getElementById('adminPassword').value;
+    const confirmPwd  = document.getElementById('confirmPassword').value;
     const phone       = document.getElementById('tenantPhone').value.trim();
     const companySize = document.getElementById('companySize').value;
     
@@ -121,6 +122,14 @@ async function finalizeDraft() {
         goToStep(1);
         const err = document.getElementById('error1');
         err.textContent = 'All fields are required.';
+        err.style.display = 'block';
+        return;
+    }
+
+    if (pwd !== confirmPwd) {
+        goToStep(1);
+        const err = document.getElementById('error1');
+        err.textContent = 'Passwords do not match.';
         err.style.display = 'block';
         return;
     }
