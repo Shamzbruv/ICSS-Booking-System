@@ -102,7 +102,7 @@ function TenantsView() {
         <input
           ref={searchRef}
           className={s.searchInput}
-          placeholder="Search by name or slug…"
+          placeholder="Search by name or handle…"
           value={search}
           onChange={e => handleSearch(e.target.value)}
         />
@@ -114,7 +114,7 @@ function TenantsView() {
             <thead>
               <tr>
                 <th>Tenant</th>
-                <th>Slug</th>
+                <th>Handle</th>
                 <th>Owner</th>
                 <th>Theme</th>
                 <th>Svcs</th>
