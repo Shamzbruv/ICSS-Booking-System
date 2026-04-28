@@ -203,8 +203,11 @@ async function activateTrial() {
             throw new Error(data.error || 'Activation failed. Please try again.');
         }
 
+        // Store token in localStorage for the React frontend to read during polling
+        localStorage.setItem('icss_signup_token', state.signupToken);
+
         // Redirect to provisioning status page
-        window.location.href = `/provisioning?token=${state.signupToken}`;
+        window.location.href = '/provisioning';
     } catch (e) {
         btn.disabled = false;
         btn.textContent = 'Activate My Free Trial';
