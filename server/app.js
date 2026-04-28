@@ -29,6 +29,7 @@ const PORT = process.env.PORT || 3000;
 // ─── Security Headers ─────────────────────────────────────────────────────────
 app.use(helmet({
     contentSecurityPolicy: false, // Relaxed for admin panel — tighten in production
+    crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" } // Required for PayPal popup communication
 }));
 
 // ─── CORS ─────────────────────────────────────────────────────────────────────
