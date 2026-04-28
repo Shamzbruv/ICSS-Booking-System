@@ -87,7 +87,9 @@ async function processProvisioningJob(job) {
         const payload = job.payload || {};
         const paypalSubId = payload.paypal_subscription_id || null;
         const paypalPlanId = payload.paypal_plan_id || null;
-        const planId = signup.plan_id || 'starter';
+        // If the setup flow passed 'trial' as the plan, map it to 'starter'
+        // since 'trial' does not exist in the plans table and will violate the FK constraint.
+        const planId = (signup.plan_id === 'trial') ? 'starter' : (signup.plan_id || 'starter');
 
         // 1. Generate unique slug and create tenant using transaction-safe looping
         let baseSlug = slugifyBusinessName(signup.tenant_name);
