@@ -53,8 +53,8 @@
         <a href="availability.html" class="nav-item" id="nav-availability">
             <span class="nav-icon">🗓️</span> Availability
         </a>
-        <a href="designs.html" class="nav-item" id="nav-designs">
-            <span class="nav-icon">✏️</span> Design Inquiries
+        <a href="services.html" class="nav-item" id="nav-services">
+            <span class="nav-icon">📦</span> Services
         </a>
         <a href="tenants.html" class="nav-item super-admin-only hidden" id="nav-tenants">
             <span class="nav-icon">🏢</span> Tenants
@@ -101,13 +101,7 @@
                 <div class="stat-label">This Month</div>
             </div>
         </div>
-        <div class="stat-card" id="statDesigns">
-            <div class="stat-icon designs-icon">✏️</div>
-            <div class="stat-body">
-                <div class="stat-value" id="statDesignsVal">—</div>
-                <div class="stat-label">New Design Inquiries</div>
-            </div>
-        </div>
+
         <div class="stat-card" id="statCancelled">
             <div class="stat-icon cancelled-icon">✕</div>
             <div class="stat-body">
@@ -148,11 +142,11 @@
                 <div class="action-icon">🔒</div>
                 <div class="action-label">Block Availability</div>
             </a>
-            <a href="designs.html" class="action-card">
-                <div class="action-icon">🎨</div>
-                <div class="action-label">Design Inquiries</div>
+            <a href="services.html" class="action-card">
+                <div class="action-icon">📦</div>
+                <div class="action-label">Manage Services</div>
             </a>
-            <a href="../" target="_blank" class="action-card">
+            <a href="#" target="_blank" class="action-card" id="bookingPageLink">
                 <div class="action-icon">🌐</div>
                 <div class="action-label">View Booking Page</div>
             </a>
@@ -177,9 +171,12 @@
             document.getElementById('tenantPlan').textContent = (data.plan || 'starter').toUpperCase();
             document.getElementById('statConfirmedVal').textContent  = data.confirmedBookings ?? '—';
             document.getElementById('statMonthlyVal').textContent    = data.monthlyBookings ?? '—';
-            document.getElementById('statDesignsVal').textContent    = data.newDesigns ?? '—';
             document.getElementById('statCancelledVal').textContent  = data.cancelledBookings ?? '—';
             document.getElementById('planName').textContent = capitalize(data.plan || 'starter') + ' Plan';
+            
+            if (data.tenantSlug) {
+                document.getElementById('bookingPageLink').href = '/' + data.tenantSlug;
+            }
         } catch (e) {
             console.error('Summary load error:', e);
         }

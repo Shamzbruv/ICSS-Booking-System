@@ -39,7 +39,8 @@ router.get('/summary', async (req, res) => {
             activeBlocks:      parseInt(activeBlocks.rows[0].cnt),
             monthlyBookings:   parseInt(monthlyBookings.rows[0].cnt),
             plan:              req.tenant.plan_id,
-            tenantName:        req.tenant.name
+            tenantName:        req.tenant.name,
+            tenantSlug:        req.tenant.slug
         });
     } catch (err) {
         console.error('[Admin/Summary]', err.message);
