@@ -51,6 +51,7 @@
   letter-spacing: -0.02em;
   background: linear-gradient(135deg, #fff 40%, var(--accent, #7c6ef7));
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
   margin: 0 0 8px;
 }
@@ -145,7 +146,6 @@
 }
 
 /* ── Step common ───────────────────────────────────────────────────────────── */
-.step {}
 
 .step__title {
   font-size: 1.4rem;

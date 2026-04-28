@@ -142,7 +142,7 @@ async function finalizeDraft() {
     }
 
     document.getElementById('finalizeDraftBtn').disabled = true;
-    document.getElementById('finalizeDraftBtn').textContent = 'Creating...';
+    document.getElementById('finalizeDraftBtn').textContent = 'Setting up...';
 
     try {
         const res = await fetch('/api/v1/payments/paypal/create-subscription', {
@@ -154,7 +154,7 @@ async function finalizeDraft() {
                 admin_email:      email,
                 admin_password:   pwd,
                 theme_id:         state.selectedThemeId,
-                plan_id:          'monthly',
+                plan_id:          'trial',
                 phone:            phone,
                 company_size:     companySize
             })
@@ -167,37 +167,48 @@ async function finalizeDraft() {
         }
 
         state.signupToken = data.signup_token;
-        
-        // Single monthly plan — real PayPal plan ID
-        const PAYPAL_PLAN_ID = 'P-4EC410252Y479773KNHUVB4A';
-        const containerId    = `paypal-button-container-${PAYPAL_PLAN_ID}`;
 
-        document.getElementById(containerId).innerHTML = ''; // clear previous
-        
-        paypal.Buttons({
-            style: {
-                shape: 'rect',
-                color: 'blue',
-                layout: 'vertical',
-                label: 'subscribe'
-            },
-            createSubscription: function(data, actions) {
-                return actions.subscription.create({
-                    plan_id:   PAYPAL_PLAN_ID,
-                    custom_id: state.signupToken // Ties PayPal subscription to our pending_signups row
-                });
-            },
-            onApprove: function(data, actions) {
-                window.location.href = `/provisioning?token=${state.signupToken}`;
-            }
-        }).render(`#${containerId}`);
-
+        // ── TRIAL MODE: PayPal is temporarily disabled. ──
+        // Move to Step 3 which shows the free-trial activation button.
         goToStep(3);
 
     } catch (e) {
         document.getElementById('finalizeDraftBtn').disabled = false;
         document.getElementById('finalizeDraftBtn').textContent = 'Next: Finalize & Subscribe';
         const err = document.getElementById('error2');
+        err.textContent = e.message;
+        err.style.display = 'block';
+    }
+}
+
+// ── Trial activation (PayPal bypassed) ──────────────────────────────────────
+async function activateTrial() {
+    const btn = document.getElementById('activateTrialBtn');
+    if (!state.signupToken) {
+        alert('Something went wrong. Please go back and try again.');
+        return;
+    }
+    btn.disabled = true;
+    btn.textContent = 'Activating your account…';
+
+    try {
+        const res = await fetch('/api/v1/payments/trial/activate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ signup_token: state.signupToken })
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+            throw new Error(data.error || 'Activation failed. Please try again.');
+        }
+
+        // Redirect to provisioning status page
+        window.location.href = `/provisioning?token=${state.signupToken}`;
+    } catch (e) {
+        btn.disabled = false;
+        btn.textContent = 'Activate My Free Trial';
+        const err = document.getElementById('error3');
         err.textContent = e.message;
         err.style.display = 'block';
     }

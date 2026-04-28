@@ -507,4 +507,54 @@ router.post('/deposit/verify', paymentLimiter, async (req, res) => {
     }
 });
 
+// POST /api/v1/payments/trial/activate
+// ── TRIAL / TEST MODE ONLY ──────────────────────────────────────────────────
+// Bypasses PayPal subscription requirement and directly triggers provisioning.
+// The pending_signup row must already exist (created by /paypal/create-subscription).
+// Remove or gate behind a feature flag before going fully live with billing.
+router.post('/trial/activate', async (req, res) => {
+    const { signup_token } = req.body;
+
+    if (!signup_token) {
+        return res.status(400).json({ error: 'signup_token is required.' });
+    }
+
+    try {
+        // Verify the pending signup exists and hasn't already been provisioned
+        const psRes = await query(
+            `SELECT id, status, tenant_slug FROM pending_signups WHERE signup_token = $1`,
+            [signup_token]
+        );
+
+        if (psRes.rows.length === 0) {
+            return res.status(404).json({ error: 'Signup token not found. Please start over.' });
+        }
+
+        const ps = psRes.rows[0];
+
+        if (ps.status === 'provisioned') {
+            // Already done — just redirect them
+            return res.json({ ok: true, already_provisioned: true });
+        }
+
+        // Mark the pending signup as payment-bypassed so the provisioning worker
+        // knows this was activated as a trial rather than via PayPal webhook.
+        await query(
+            `UPDATE pending_signups SET status = 'pending_provision', paypal_subscription_id = 'TRIAL_BYPASS'
+             WHERE signup_token = $1`,
+            [signup_token]
+        );
+
+        // Enqueue the provisioning job
+        await enqueueProvisioningJob(ps.tenant_slug, signup_token, 'TRIAL_BYPASS', {});
+
+        console.log(`[Trial/Activate] Provisioning enqueued for token ${signup_token}`);
+
+        res.json({ ok: true, message: 'Trial activated. Provisioning started.' });
+    } catch (e) {
+        console.error('[Trial/Activate Error]', e);
+        res.status(500).json({ error: 'Failed to activate trial. Please try again.' });
+    }
+});
+
 module.exports = router;

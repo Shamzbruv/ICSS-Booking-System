@@ -37,7 +37,7 @@
         }
 
         .header { text-align: center; margin-bottom: 2rem; }
-        .header h1 { font-family: 'Clash Display', sans-serif; font-size: 2.5rem; font-weight: 700; background: linear-gradient(135deg, #ffffff, #a5b4fc); -webkit-background-clip: text; color: transparent; line-height: 1.15; }
+        .header h1 { font-family: 'Clash Display', sans-serif; font-size: 2.5rem; font-weight: 700; background: linear-gradient(135deg, #ffffff, #a5b4fc); -webkit-background-clip: text; background-clip: text; color: transparent; line-height: 1.15; }
         .header p { color: var(--text-muted); margin-top: 0.5rem; font-size: 1.1rem; }
 
         /* Step progress — compact number indicators on mobile */
@@ -173,7 +173,7 @@
     <div class="progress">
         <div class="step active" id="stepIndicator1">1. Branding</div>
         <div class="step" id="stepIndicator2">2. Theme</div>
-        <div class="step" id="stepIndicator3">3. Subscribe</div>
+        <div class="step" id="stepIndicator3">3. Activate</div>
     </div>
 
     <!-- Step 1: Branding and Admin Details -->
@@ -251,20 +251,23 @@
         </div>
     </div>
 
-    <!-- Step 3: Checkout -->
+    <!-- Step 3: Trial Activation (PayPal temporarily bypassed) -->
     <div class="panel" id="step3">
         <div class="error-msg" id="error3"></div>
 
         <div style="max-width: 540px; margin: 0 auto; text-align: center;">
-            <h2 style="margin-bottom: 0.5rem;">Complete Your Subscription</h2>
-            <p style="color: var(--text-muted); margin-bottom: 0.5rem;">You're almost there! Complete your payment to activate your booking platform.</p>
-            <p style="font-size: 1.1rem; font-weight: 700; color: #a5b4fc; margin-bottom: 2rem;">Monthly Plan &mdash; 7 days free, then $35.50 USD/month</p>
+            <div style="font-size: 3rem; margin-bottom: 1rem;">🎉</div>
+            <h2 style="margin-bottom: 0.75rem;">You're Almost In!</h2>
+            <p style="color: var(--text-muted); margin-bottom: 0.5rem; font-size: 1rem; line-height: 1.6;">Your booking platform is ready to be provisioned. Click below to activate your <strong style="color: #a5b4fc;">7-day free trial</strong> and get instant access.</p>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 2rem;">No payment required today. You can add billing details later.</p>
 
-            <div class="paypal-checkout-box">
-                <div id="paypal-button-container-P-4EC410252Y479773KNHUVB4A"></div>
+            <div style="margin-bottom: 1.5rem;">
+                <button class="btn btn-primary" id="activateTrialBtn" onclick="activateTrial()" style="width: 100%; max-width: 320px; font-size: 1.05rem; padding: 1rem 2rem;">
+                    🚀 Activate My Free Trial
+                </button>
             </div>
 
-            <button class="btn btn-secondary" onclick="goToStep(2)" style="margin: 0 auto;">← Back</button>
+            <button class="btn btn-secondary" onclick="goToStep(2)" style="margin: 0 auto;">&larr; Back</button>
         </div>
     </div>
 </div>
@@ -281,7 +284,7 @@
     <iframe id="previewIframe" class="preview-iframe" src=""></iframe>
 </div>
 
-<script src="https://www.paypal.com/sdk/js?client-id=AZM7kD2EdxPGkSVk3I64iMNN_snyRB8uO2LP37WmApdHqnBHpC8HC3BEMlpLbMGK3R3CVOOOuBc1cWhr&vault=true&intent=subscription" data-sdk-integration-source="button-factory"></script>
+<!-- PayPal SDK disabled for trial testing period -->
 <script src="/js/setup.js"></script>
 <script>
     function togglePw(inputId, btn) {
