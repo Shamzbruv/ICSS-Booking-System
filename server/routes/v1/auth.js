@@ -65,11 +65,14 @@ router.post('/register', authLimiter, async (req, res) => {
 
 // POST /api/v1/auth/login
 router.post('/login', authLimiter, async (req, res) => {
-    const { email, password, tenantSlug } = req.body;
+    const { email, password, tenantSlug, rememberMe } = req.body;
 
     if (!email || !password) {
         return res.status(400).json({ error: 'email and password are required.' });
     }
+
+    // Token lifespan: 30 days if "Keep me signed in", otherwise 7 days
+    const tokenExpiry = rememberMe ? '30d' : '7d';
 
     try {
         // ── Platform owner login — no tenant association required ─────────────
@@ -84,7 +87,7 @@ router.post('/login', authLimiter, async (req, res) => {
             const valid = await bcrypt.compare(password, owner.password_hash);
             if (!valid) return res.status(401).json({ error: 'Invalid email or password.' });
 
-            const token = signToken({ id: owner.id, email: owner.email, role: owner.role });
+            const token = signToken({ id: owner.id, email: owner.email, role: owner.role }, tokenExpiry);
             return res.json({ token, user: { id: owner.id, email: owner.email, name: owner.name, role: owner.role } });
         }
 
@@ -115,6 +118,14 @@ router.post('/login', authLimiter, async (req, res) => {
             return res.status(401).json({ error: 'Invalid email or password.' });
         }
 
+        // If multiple accounts share the same email across tenants, prompt for handle
+        if (result.rows.length > 1) {
+            return res.status(409).json({
+                error: 'Multiple accounts found for this email. Please enter your Business Handle to continue.',
+                requiresHandle: true
+            });
+        }
+
         const user = result.rows[0];
         const valid = await bcrypt.compare(password, user.password_hash);
         if (!valid) {
@@ -127,7 +138,7 @@ router.post('/login', authLimiter, async (req, res) => {
             role:        user.role,
             tenant_id:   user.tenant_id,
             tenant_slug: user.tenant_slug
-        });
+        }, tokenExpiry);
 
         res.json({
             token,
