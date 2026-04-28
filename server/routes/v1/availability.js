@@ -36,24 +36,56 @@ function getTzTimeStr(tz = 'America/Jamaica', addMinutes = 0, addDays = 0) {
     return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
 }
 
-function generateSlots() {
-    const slots    = [];
-    const startMin = DAY_START_HOUR * 60;
-    const endMin   = DAY_END_HOUR   * 60 + DAY_END_MINS;
+function generateSlots(businessHoursStr, requestedDateStr) {
+    // 1. Determine day of week
+    const d = new Date(requestedDateStr + 'T12:00:00Z');
+    const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const dayName = days[d.getUTCDay()];
+
+    // 2. Parse business hours, fallback to defaults
+    let hours;
+    try {
+        hours = typeof businessHoursStr === 'string' ? JSON.parse(businessHoursStr) : businessHoursStr;
+    } catch(e) {}
+    
+    if (!hours) {
+        hours = {
+            monday: { open: '09:00', close: '17:00', active: true },
+            tuesday: { open: '09:00', close: '17:00', active: true },
+            wednesday: { open: '09:00', close: '17:00', active: true },
+            thursday: { open: '09:00', close: '17:00', active: true },
+            friday: { open: '09:00', close: '17:00', active: true },
+            saturday: { open: '10:00', close: '14:00', active: false },
+            sunday: { open: '10:00', close: '14:00', active: false }
+        };
+    }
+
+    const todayHours = hours[dayName] || { active: false, open: '09:00', close: '17:00' };
+    const slots = [];
+
+    if (!todayHours.active) {
+        return { slots: [], isClosed: true, closeMins: 0 };
+    }
+
+    const [openH, openM] = (todayHours.open || '09:00').split(':').map(Number);
+    const [closeH, closeM] = (todayHours.close || '17:00').split(':').map(Number);
+
+    const startMin = openH * 60 + openM;
+    const endMin = closeH * 60 + closeM;
 
     for (let m = startMin; m <= endMin; m += SLOT_INTERVAL_MINS) {
-        const h    = Math.floor(m / 60);
-        const min  = m % 60;
+        const h = Math.floor(m / 60);
+        const min = m % 60;
         const time = `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
-        const h12  = h > 12 ? h - 12 : (h === 0 ? 12 : h);
+        const h12 = h > 12 ? h - 12 : (h === 0 ? 12 : h);
         const ampm = h >= 12 ? 'PM' : 'AM';
         slots.push({
             time,
-            label:     `${h12}:${String(min).padStart(2, '0')} ${ampm}`,
+            label: `${h12}:${String(min).padStart(2, '0')} ${ampm}`,
             available: true
         });
     }
-    return slots;
+    return { slots, isClosed: false, closeMins: endMin };
 }
 
 // GET /api/v1/availability?date=YYYY-MM-DD[&service_id=UUID]
@@ -95,7 +127,11 @@ router.get('/', async (req, res) => {
 
     const totalServiceMins = serviceDurationMins + serviceBufferMins;
 
-    const slots = generateSlots();
+    const { slots, isClosed, closeMins } = generateSlots(req.tenant.business_hours, date);
+
+    if (isClosed) {
+        return res.json({ date, slots: [], dayBlocked: true, message: 'Business is closed on this day.' });
+    }
 
     // Mark past/too-close slots
     const bufferedNow = getTzTimeStr(timezone, MIN_BUFFER_MINS);
@@ -111,7 +147,7 @@ router.get('/', async (req, res) => {
         if (!slot.available) return;
         const [h, m] = slot.time.split(':').map(Number);
         const slotStartMins = h * 60 + m;
-        if (slotStartMins + totalServiceMins > BUSINESS_CLOSE_MINS) {
+        if (slotStartMins + totalServiceMins > closeMins) {
             slot.available = false;
             slot.reason    = 'TOO_LATE';
         }

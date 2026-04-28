@@ -57,8 +57,8 @@
 </main>
 
 <!-- Create/Edit Modal -->
-<div id="serviceModal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
-    <div style="background: var(--color-surface); padding: 2rem; border-radius: 8px; width: 100%; max-width: 600px;">
+<div id="serviceModal" class="modal-overlay">
+    <div class="modal">
         <h2 id="modalTitle" style="margin-bottom: 1.5rem;">Add Service</h2>
         <form id="serviceForm">
             <input type="hidden" id="serviceId">
@@ -117,7 +117,7 @@
             </div>
             
             <div style="margin-top: 1.5rem; display: flex; justify-content: flex-end; gap: 1rem;">
-                <button type="button" class="btn" onclick="document.getElementById('serviceModal').style.display='none'">Cancel</button>
+                <button type="button" class="btn" onclick="document.getElementById('serviceModal').classList.remove('open')">Cancel</button>
                 <button type="submit" class="btn btn-primary">Save Service</button>
             </div>
         </form>
@@ -155,8 +155,8 @@
                     <td style="padding: 1rem;">${svc.currency} ${svc.price}</td>
                     <td style="padding: 1rem;"><span class="badge" style="background: #eef2ff; color: #4f46e5; padding: 4px 8px; border-radius: 4px;">${svc.payment_mode}</span></td>
                     <td style="padding: 1rem;">${svc.payment_requirement_type} ${svc.deposit_amount > 0 ? '('+svc.deposit_amount+')' : ''}</td>
-                    <td style="padding: 1rem;">
-                        <button class="btn" onclick="editService('${svc.id}')">Edit</button>
+                        <button class="btn btn-secondary btn-sm" onclick="editService('${svc.id}')">Edit</button>
+                        <button class="btn btn-danger btn-sm" onclick="deleteService('${svc.id}')">Delete</button>
                     </td>
                 `;
                 tbody.appendChild(tr);
@@ -170,7 +170,7 @@
         document.getElementById('serviceForm').reset();
         document.getElementById('serviceId').value = '';
         document.getElementById('modalTitle').textContent = 'Add Service';
-        document.getElementById('serviceModal').style.display = 'flex';
+        document.getElementById('serviceModal').classList.add('open');
     }
 
     async function editService(id) {
@@ -191,9 +191,19 @@
             document.getElementById('description').value = service.description || '';
             
             document.getElementById('modalTitle').textContent = 'Edit Service';
-            document.getElementById('serviceModal').style.display = 'flex';
+            document.getElementById('serviceModal').classList.add('open');
         } catch (err) {
             alert('Error loading service: ' + err.message);
+        }
+    }
+
+    async function deleteService(id) {
+        if (!confirm('Are you sure you want to delete this service?')) return;
+        try {
+            await apiFetch(`/api/v1/services/${id}`, { method: 'DELETE' });
+            await loadServices();
+        } catch (err) {
+            alert('Failed to delete: ' + err.message);
         }
     }
 
@@ -217,7 +227,7 @@
             } else {
                 await apiFetch(`/api/v1/services`, { method: 'POST', body: payload });
             }
-            document.getElementById('serviceModal').style.display = 'none';
+            document.getElementById('serviceModal').classList.remove('open');
             await loadServices();
         } catch (err) {
             alert('Error saving service: ' + err.message);

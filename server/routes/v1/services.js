@@ -86,4 +86,23 @@ router.patch('/:id', async (req, res) => {
     }
 });
 
+// DELETE /api/v1/services/:id
+router.delete('/:id', async (req, res) => {
+    try {
+        // Attempt to delete the service. If there are bookings tied to it, we might want to prevent it or set them to null.
+        // Assuming we just hard-delete it if no foreign key cascade issues exist, or catch the constraint error.
+        const result = await query(
+            `DELETE FROM services WHERE id = $1 AND tenant_id = $2 RETURNING id`,
+            [req.params.id, req.tenant.id]
+        );
+        if (result.rows.length === 0) return res.status(404).json({ error: 'Service not found.' });
+        res.json({ success: true, message: 'Service deleted successfully.' });
+    } catch (err) {
+        if (err.code === '23503') { // Foreign key violation
+            return res.status(409).json({ error: 'Cannot delete service because it is currently linked to existing bookings.' });
+        }
+        res.status(500).json({ error: 'Failed to delete service.' });
+    }
+});
+
 module.exports = router;

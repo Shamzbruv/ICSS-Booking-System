@@ -302,7 +302,7 @@ router.get('/:slug/payment-settings', authenticate, async (req, res) => {
     try {
         const result = await query(
             `SELECT default_payment_mode, wipay_enabled, manual_payment_enabled, 
-                    hold_timeout_minutes, bank_transfer_instructions, payment_settings 
+                    hold_timeout_minutes, bank_transfer_instructions, payment_settings, business_hours 
              FROM tenants WHERE slug = $1`, 
             [req.params.slug]
         );
@@ -334,7 +334,7 @@ router.patch('/:slug/payment-settings', authenticate, async (req, res) => {
     }
     const { 
         default_payment_mode, wipay_enabled, manual_payment_enabled, 
-        hold_timeout_minutes, bank_transfer_instructions, payment_settings 
+        hold_timeout_minutes, bank_transfer_instructions, payment_settings, business_hours 
     } = req.body;
     
     try {
@@ -360,8 +360,9 @@ router.patch('/:slug/payment-settings', authenticate, async (req, res) => {
                  manual_payment_enabled = COALESCE($3, manual_payment_enabled),
                  hold_timeout_minutes = COALESCE($4, hold_timeout_minutes),
                  bank_transfer_instructions = COALESCE($5, bank_transfer_instructions),
-                 payment_settings = $6
-             WHERE slug = $7 RETURNING id`,
+                 payment_settings = $6,
+                 business_hours = COALESCE($7, business_hours)
+             WHERE slug = $8 RETURNING id`,
             [
                 default_payment_mode, 
                 wipay_enabled !== undefined ? Boolean(wipay_enabled) : null,
@@ -369,6 +370,7 @@ router.patch('/:slug/payment-settings', authenticate, async (req, res) => {
                 hold_timeout_minutes ? parseInt(hold_timeout_minutes) : null,
                 bank_transfer_instructions,
                 JSON.stringify(newSettings),
+                business_hours ? JSON.stringify(business_hours) : null,
                 req.params.slug
             ]
         );
