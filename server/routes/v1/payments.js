@@ -537,10 +537,9 @@ router.post('/trial/activate', async (req, res) => {
             return res.json({ ok: true, already_provisioned: true });
         }
 
-        // Mark the pending signup as payment-bypassed so the provisioning worker
-        // knows this was activated as a trial rather than via PayPal webhook.
+        // Mark the pending signup to show we've started processing
         await query(
-            `UPDATE pending_signups SET status = 'pending_provision', paypal_subscription_id = 'TRIAL_BYPASS'
+            `UPDATE pending_signups SET status = 'pending'
              WHERE signup_token = $1`,
             [signup_token]
         );
