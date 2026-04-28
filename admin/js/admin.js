@@ -59,9 +59,11 @@ function populateUserUI() {
 // ── API Fetch ──────────────────────────────────────────────────────────────────
 async function apiFetch(path, options = {}) {
     const token = getToken();
+    const user = getUser();
     const headers = {
         'Content-Type': 'application/json',
         ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        ...(user && user.tenant_slug ? { 'X-Tenant-Slug': user.tenant_slug } : {}),
         ...options.headers
     };
 
