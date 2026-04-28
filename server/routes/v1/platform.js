@@ -63,7 +63,7 @@ router.get('/tenants', async (req, res) => {
                 (SELECT COUNT(*) FROM services s WHERE s.tenant_id = t.id AND s.active = true) AS active_services,
                 (SELECT email FROM users u WHERE u.tenant_id = t.id AND u.role = 'tenant_admin' LIMIT 1) AS owner_email,
                 (SELECT name  FROM users u WHERE u.tenant_id = t.id AND u.role = 'tenant_admin' LIMIT 1) AS owner_name,
-                (SELECT status FROM pending_signups ps2 WHERE ps2.tenant_id = t.id ORDER BY ps2.created_at DESC LIMIT 1) AS provisioning_status
+                (SELECT status FROM pending_signups ps2 WHERE ps2.tenant_slug = t.slug ORDER BY ps2.created_at DESC LIMIT 1) AS provisioning_status
              FROM tenants t
              LEFT JOIN themes th ON th.id = t.theme_id
              WHERE ($1 = '' OR t.name ILIKE $2 OR t.slug ILIKE $2)

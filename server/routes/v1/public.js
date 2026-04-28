@@ -31,7 +31,7 @@ router.get('/services', async (req, res) => {
             `SELECT id, name, description, duration_minutes, price, currency
              FROM services
              WHERE tenant_id = $1 AND active = true
-             ORDER BY sort_order ASC NULLS LAST, name ASC`,
+             ORDER BY name ASC`,
             [req.tenant.id]
         );
         res.json({ services: result.rows });

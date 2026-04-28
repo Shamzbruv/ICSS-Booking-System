@@ -173,14 +173,11 @@
             html += `<div class="${cls}" data-date="${dateStr}" onclick="selectDay('${dateStr}')">${d}</div>`;
         }
 
-        // Rebuild grid
-        const grid = document.getElementById('calGrid');
-        grid.outerHTML = `<div id="calGrid" style="display:contents;">${html}</div>`;
         // Re-mount (hacky but avoids React)
         document.querySelector('.calendar-grid').innerHTML =
             `<div class="cal-header">Sun</div><div class="cal-header">Mon</div><div class="cal-header">Tue</div>
              <div class="cal-header">Wed</div><div class="cal-header">Thu</div><div class="cal-header">Fri</div>
-             <div class="cal-header">Sat</div>${html}`;
+             <div class="cal-header">Sat</div><div id="calGrid" style="display:contents;">${html}</div>`;
     }
 
     async function selectDay(dateStr) {

@@ -173,6 +173,30 @@
         document.getElementById('serviceModal').style.display = 'flex';
     }
 
+    async function editService(id) {
+        try {
+            const res = await apiFetch(`/api/v1/services`);
+            const service = res.services.find(s => s.id === id);
+            if (!service) return alert('Service not found.');
+            
+            document.getElementById('serviceId').value = service.id;
+            document.getElementById('name').value = service.name || '';
+            document.getElementById('price').value = service.price || 0;
+            document.getElementById('duration_minutes').value = service.duration_minutes || 30;
+            document.getElementById('buffer_time_minutes').value = service.buffer_time_minutes || 0;
+            document.getElementById('payment_mode').value = service.payment_mode || 'tenant_default';
+            document.getElementById('payment_requirement_type').value = service.payment_requirement_type || 'none';
+            document.getElementById('deposit_type').value = service.deposit_type || 'percentage';
+            document.getElementById('deposit_amount').value = service.deposit_amount || 0;
+            document.getElementById('description').value = service.description || '';
+            
+            document.getElementById('modalTitle').textContent = 'Edit Service';
+            document.getElementById('serviceModal').style.display = 'flex';
+        } catch (err) {
+            alert('Error loading service: ' + err.message);
+        }
+    }
+
     async function saveService() {
         const id = document.getElementById('serviceId').value;
         const payload = {
