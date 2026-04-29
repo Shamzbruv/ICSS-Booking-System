@@ -8,6 +8,8 @@ const API_BASE = '';  // Same-origin; update if API is on a separate domain
 
 // ── Auth Helpers ──────────────────────────────────────────────────────────────
 function getToken() {
+    const params = new URLSearchParams(window.location.search);
+    if (params.has('_impToken')) return params.get('_impToken');
     return localStorage.getItem('icss_token');
 }
 

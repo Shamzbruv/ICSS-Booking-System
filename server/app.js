@@ -24,6 +24,7 @@ const servicesRoutes    = require('./routes/v1/services');
 const platformRoutes    = require('./routes/v1/platform');
 
 const app = express();
+app.set('trust proxy', 1); // Trust first proxy for reverse proxy rate limiting
 const PORT = process.env.PORT || 3000;
 
 // ─── Security Headers ─────────────────────────────────────────────────────────

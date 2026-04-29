@@ -52,6 +52,39 @@ export default function TenantDrawer({ tenant, onClose }) {
   const openEditor     = () => window.open(`/editor?_tenant=${tenant.slug}`, '_blank');
   const openAdmin      = () => window.open(`/admin?tenant=${tenant.slug}`, '_blank');
 
+  const handleResetPassword = async () => {
+    if (!confirm('Are you sure you want to send a password reset email to this tenant owner?')) return;
+    try {
+      const res = await api.platform.resetTenantPassword(tenant.id);
+      alert(res.message || 'Password reset link sent.');
+    } catch (e) {
+      alert('Failed to send reset email.');
+    }
+  };
+
+  const handleToggleStatus = async () => {
+    const newStatus = !tenant.active;
+    if (!confirm(`Are you sure you want to ${newStatus ? 'activate' : 'suspend'} this account?`)) return;
+    try {
+      await api.platform.updateTenantStatus(tenant.id, newStatus);
+      alert('Tenant status updated. Please refresh the platform console to see changes.');
+    } catch (e) {
+      alert('Failed to update status.');
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!confirm('DANGER: Are you sure you want to completely delete this account? This cannot be undone.')) return;
+    if (!confirm('Please confirm one more time: DELETE this tenant permanently?')) return;
+    try {
+      await api.platform.deleteTenant(tenant.id);
+      alert('Tenant deleted. Please refresh the platform console.');
+      onClose();
+    } catch (e) {
+      alert('Failed to delete account. There may be dependencies blocking deletion.');
+    }
+  };
+
   if (!tenant) return null;
 
   const branding = tenant.branding || {};
@@ -122,6 +155,17 @@ export default function TenantDrawer({ tenant, onClose }) {
                       <img src={branding.logo_url} alt="Logo" className={s.brandPreview__logo} />
                     </div>
                   )}
+
+                  <div style={{ marginTop: 32 }}>
+                    <div className={s.healthWarnings__title} style={{ color: '#ef4444', marginBottom: 12 }}>Danger Zone & Actions</div>
+                    <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                      <button className={s.actionBtn} onClick={handleResetPassword}>📧 Send Password Reset</button>
+                      <button className={s.actionBtn} onClick={handleToggleStatus} style={{ borderColor: '#fb923c', color: '#fb923c' }}>
+                        {tenant.active ? '⏸ Put on Hold (Suspend)' : '▶️ Reactivate Account'}
+                      </button>
+                      <button className={s.actionBtn} onClick={handleDelete} style={{ background: '#ef4444', color: '#fff', border: 'none' }}>🗑 Delete Account</button>
+                    </div>
+                  </div>
                 </div>
               )}
 

@@ -91,8 +91,9 @@ function TenantsView() {
     debounceRef.current = setTimeout(() => load(v), 350);
   };
 
-  const quickImpersonate = async (tenant) => {
-    await startImpersonation(tenant.id, 'read_only', '');
+  const quickImpersonate = async (tenant, mode = 'read_only') => {
+    const session = await startImpersonation(tenant.id, mode, 'Console Quick Access');
+    window.open(`/admin?tenant=${tenant.slug}&_impToken=${session.token}`, '_blank');
   };
 
   return (
@@ -151,8 +152,8 @@ function TenantsView() {
                     <div className={s.rowActions}>
                       <a href={`/${t.slug}`} target="_blank" rel="noreferrer" className={s.rowBtn} title="Open Public Page">🌐</a>
                       <a href={`/editor?_tenant=${t.slug}`} target="_blank" rel="noreferrer" className={s.rowBtn} title="Open Editor">🎨</a>
-                      <a href={`/admin?tenant=${t.slug}`} target="_blank" rel="noreferrer" className={s.rowBtn} title="Open Admin">🛠</a>
-                      <button className={`${s.rowBtn} ${s['rowBtn--imp']}`} title="Impersonate Read-Only" onClick={() => quickImpersonate(t)}>👁</button>
+                      <button className={s.rowBtn} title="Open Admin (Edit)" onClick={() => quickImpersonate(t, 'edit')}>🛠</button>
+                      <button className={`${s.rowBtn} ${s['rowBtn--imp']}`} title="Impersonate (Read-Only)" onClick={() => quickImpersonate(t, 'read_only')}>👁</button>
                     </div>
                   </td>
                 </tr>

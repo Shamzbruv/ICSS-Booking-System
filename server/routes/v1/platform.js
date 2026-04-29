@@ -122,7 +122,7 @@ router.get('/tenants/:tenantId/health', async (req, res) => {
             query(`SELECT COUNT(*) AS cnt FROM services WHERE tenant_id = $1 AND active = true`, [tenantId]),
             query(`SELECT default_payment_mode, wipay_enabled, manual_payment_enabled, bank_transfer_instructions, payment_settings FROM tenants WHERE id = $1`, [tenantId]),
             query(`SELECT branding FROM tenants WHERE id = $1`, [tenantId]),
-            query(`SELECT status FROM pending_signups WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 1`, [tenantId]),
+            query(`SELECT status FROM pending_signups WHERE tenant_slug = (SELECT slug FROM tenants WHERE id = $1) ORDER BY created_at DESC LIMIT 1`, [tenantId]),
             query(`SELECT COUNT(*) AS cnt FROM bookings WHERE tenant_id = $1 AND status = 'pending_payment' AND expires_at < NOW()`, [tenantId]),
         ]);
 
@@ -248,14 +248,80 @@ router.get('/themes/:themeId/tenants', async (req, res) => {
     try {
         const result = await query(
             `SELECT t.id, t.name, t.slug, t.active
-             FROM tenants t WHERE t.theme_id = $1 ORDER BY t.name`,
+             FROM tenants t
+             WHERE t.theme_id = $1
+             ORDER BY t.created_at DESC`,
             [req.params.themeId]
         );
         res.json({ tenants: result.rows });
     } catch (err) {
-        res.status(500).json({ error: 'Failed to fetch theme tenants.' });
+        res.status(500).json({ error: 'Failed to fetch tenants for theme.' });
     }
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TENANT ADMINISTRATIVE ACTIONS
+// ─────────────────────────────────────────────────────────────────────────────
+
+// POST /api/v1/platform/tenants/:tenantId/reset-password
+router.post('/tenants/:tenantId/reset-password', async (req, res) => {
+    try {
+        // Find owner of tenant
+        const userRes = await query(`SELECT email FROM users WHERE tenant_id = $1 ORDER BY created_at ASC LIMIT 1`, [req.params.tenantId]);
+        if (userRes.rows.length === 0) return res.status(404).json({ error: 'No user found for this tenant.' });
+        
+        const email = userRes.rows[0].email;
+        
+        // Use the same logic as forgot-password, by making an internal request or extracting the logic.
+        // It's easiest to just import and call the service
+        const crypto = require('crypto');
+        const { sendPasswordResetEmail } = require('../../services/email');
+        const userRow = await query(`SELECT id FROM users WHERE email = $1`, [email]);
+        const userId = userRow.rows[0].id;
+        
+        await query(`UPDATE password_reset_tokens SET used = true WHERE user_id = $1`, [userId]);
+        const rawToken = crypto.randomBytes(32).toString('hex');
+        const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+        
+        await query(
+            `INSERT INTO password_reset_tokens (user_id, token_hash, expires_at) VALUES ($1, $2, NOW() + INTERVAL '1 hour')`,
+            [userId, tokenHash]
+        );
+        
+        const baseUrl = process.env.PUBLIC_APP_URL || process.env.BASE_URL || 'https://icssbookings.com';
+        const resetUrl = `${baseUrl}/reset-password?token=${rawToken}&email=${encodeURIComponent(email)}`;
+        await sendPasswordResetEmail(email, resetUrl);
+        
+        res.json({ success: true, email: email, message: 'Password reset link sent.' });
+    } catch (err) {
+        console.error('[Platform/Tenant/ResetPassword]', err.message);
+        res.status(500).json({ error: 'Failed to send reset email.' });
+    }
+});
+
+// PATCH /api/v1/platform/tenants/:tenantId/status
+router.patch('/tenants/:tenantId/status', async (req, res) => {
+    try {
+        const { active } = req.body;
+        await query(`UPDATE tenants SET active = $1, updated_at = NOW() WHERE id = $2`, [active, req.params.tenantId]);
+        res.json({ success: true, active });
+    } catch (err) {
+        console.error('[Platform/Tenant/Status]', err.message);
+        res.status(500).json({ error: 'Failed to update tenant status.' });
+    }
+});
+
+// DELETE /api/v1/platform/tenants/:tenantId
+router.delete('/tenants/:tenantId', async (req, res) => {
+    try {
+        await query(`DELETE FROM tenants WHERE id = $1`, [req.params.tenantId]);
+        res.json({ success: true });
+    } catch (err) {
+        console.error('[Platform/Tenant/Delete]', err.message);
+        res.status(500).json({ error: 'Failed to delete tenant. Please ensure no dependencies prevent deletion.' });
+    }
+});
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // DIAGNOSTICS
