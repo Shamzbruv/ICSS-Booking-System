@@ -154,7 +154,7 @@ async function finalizeDraft() {
                 admin_email:      email,
                 admin_password:   pwd,
                 theme_id:         state.selectedThemeId,
-                plan_id:          'monthly',
+                plan_id:          'starter',
                 phone:            phone,
                 company_size:     companySize
             })

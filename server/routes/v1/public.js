@@ -9,8 +9,21 @@ const router  = express.Router();
 const { query } = require('../../db/connection');
 
 // GET /api/v1/public/tenant — Expose safe branding for the booking widget
-router.get('/tenant', (req, res) => {
-    const { id, name, slug, plan_id, branding } = req.tenant;
+router.get('/tenant', async (req, res) => {
+    const { id, name, slug, plan_id, branding, theme_id } = req.tenant;
+
+    let themeSlug = 'universal_booking';
+    if (theme_id) {
+        try {
+            const tRes = await query(`SELECT name FROM themes WHERE id = $1`, [theme_id]);
+            if (tRes.rows.length > 0) {
+                // Convert names like "Iron & Blade" to "barber" or whatever the template name is.
+                // Or just use the theme name to derive the component name.
+                // Wait, it's better to get the actual file name. Let's just return the raw name.
+                themeSlug = tRes.rows[0].name;
+            }
+        } catch(e) {}
+    }
 
     const safeBranding = {
         businessName:   name,
@@ -21,7 +34,7 @@ router.get('/tenant', (req, res) => {
         timezone:       branding?.timezone       || 'America/Jamaica'
     };
 
-    res.json({ slug, plan: plan_id, branding: safeBranding, layout: req.tenant.layout });
+    res.json({ slug, plan: plan_id, branding: safeBranding, layout: req.tenant.layout, themeName: themeSlug });
 });
 
 // GET /api/v1/public/services — List tenant's active services

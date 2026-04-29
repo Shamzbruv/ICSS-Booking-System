@@ -1,0 +1,624 @@
+
+    .ThemeLawWrapper * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    .ThemeLawBody {
+      background: linear-gradient(135deg, #1a232c 0%, #243442 50%, #1a232c 100%);
+      min-height: 100vh;
+      font-family: 'Work Sans', sans-serif;
+      padding: 2rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #e6e9ec;
+      position: relative;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-image: url('data:image/svg+xml;utf8,<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><path d="M15 25 L25 15 L35 25 L25 35 Z" fill="%23c9a96e" opacity="0.02"/><line x1="60" y1="20" x2="80" y2="40" stroke="%23c9a96e" stroke-width="1" opacity="0.03"/><circle cx="70" cy="70" r="6" fill="none" stroke="%23c9a96e" stroke-width="1" opacity="0.03"/></svg>');
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .legal-system {
+      max-width: 1420px;
+      width: 100%;
+      background: rgba(20, 28, 36, 0.75);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-radius: 32px;
+      box-shadow: 0 30px 50px -12px rgba(0, 0, 0, 0.5),
+                  0 8px 20px rgba(0, 0, 0, 0.3),
+                  inset 0 0 0 1px rgba(201, 169, 110, 0.15);
+      padding: 2.2rem 2.5rem;
+      border: 1px solid rgba(201, 169, 110, 0.2);
+      position: relative;
+      z-index: 2;
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 2.2rem;
+      flex-wrap: wrap;
+      gap: 20px;
+      border-bottom: 1px solid rgba(201, 169, 110, 0.25);
+      padding-bottom: 1.5rem;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+    }
+
+    .brand-icon {
+      background: linear-gradient(135deg, #c9a96e, #a8844e);
+      width: 62px;
+      height: 62px;
+      border-radius: 8px 20px 8px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #1a232c;
+      font-size: 28px;
+      box-shadow: 0 6px 0 #6b5333, 0 16px 28px -10px rgba(201, 169, 110, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+
+    .brand-text h1 {
+      font-family: 'Crimson Pro', serif;
+      font-weight: 600;
+      font-size: 2.3rem;
+      letter-spacing: -0.3px;
+      color: #ffffff;
+      line-height: 1.1;
+    }
+
+    .brand-text p {
+      font-size: 0.85rem;
+      font-weight: 400;
+      color: #b8c4d0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 6px;
+      letter-spacing: 0.3px;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 14px;
+    }
+
+    .legal-badge {
+      background: rgba(201, 169, 110, 0.08);
+      backdrop-filter: blur(4px);
+      padding: 10px 22px;
+      border-radius: 4px 20px 4px 20px;
+      font-weight: 500;
+      font-size: 0.8rem;
+      color: #c9a96e;
+      box-shadow: inset 0 0 0 1px rgba(201, 169, 110, 0.2);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border: 1px solid rgba(201, 169, 110, 0.15);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+    }
+
+    .legal-badge i {
+      color: #c9a96e;
+    }
+
+    /* grid */
+    .booking-grid {
+      display: grid;
+      grid-template-columns: 1.15fr 0.9fr;
+      gap: 2rem;
+    }
+
+    /* Left panel */
+    .selection-panel {
+      background: rgba(25, 35, 45, 0.5);
+      backdrop-filter: blur(4px);
+      border-radius: 24px;
+      padding: 1.8rem 1.8rem 2rem;
+      box-shadow: inset 0 1px 4px rgba(255, 255, 255, 0.03), 0 14px 24px -14px rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(201, 169, 110, 0.1);
+    }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 1.8rem;
+    }
+
+    .section-title i {
+      background: linear-gradient(135deg, #c9a96e, #a8844e);
+      padding: 10px;
+      border-radius: 12px;
+      color: #1a232c;
+      font-size: 1.3rem;
+      width: 48px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 0 #6b5333;
+    }
+
+    .section-title h2 {
+      font-family: 'Crimson Pro', serif;
+      font-weight: 600;
+      font-size: 1.8rem;
+      color: #ffffff;
+    }
+
+    /* consultation cards */
+    .consult-list {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      margin-bottom: 2.2rem;
+    }
+
+    .consult-card {
+      background: rgba(30, 42, 54, 0.8);
+      border-radius: 16px;
+      padding: 1.2rem 1.6rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 4px 0 rgba(201, 169, 110, 0.2), 0 12px 22px -10px rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(201, 169, 110, 0.12);
+      transition: all 0.2s;
+      cursor: pointer;
+      backdrop-filter: blur(4px);
+    }
+
+    .consult-card.selected {
+      background: rgba(201, 169, 110, 0.1);
+      box-shadow: 0 4px 0 #c9a96e, 0 14px 26px -8px rgba(201, 169, 110, 0.25);
+      border: 1.5px solid rgba(201, 169, 110, 0.5);
+    }
+
+    .consult-info {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .consult-icon {
+      background: linear-gradient(135deg, #c9a96e, #a8844e);
+      width: 54px;
+      height: 54px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #1a232c;
+      font-size: 1.7rem;
+    }
+
+    .consult-details h3 {
+      font-weight: 600;
+      font-size: 1.15rem;
+      color: #ffffff;
+      font-family: 'Crimson Pro', serif;
+    }
+
+    .consult-details span {
+      font-size: 0.85rem;
+      color: #a8b9c9;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .consult-fee {
+      font-weight: 600;
+      background: rgba(201, 169, 110, 0.1);
+      padding: 8px 18px;
+      border-radius: 6px 20px 6px 20px;
+      color: #c9a96e;
+      font-size: 1.1rem;
+      border: 1px solid rgba(201, 169, 110, 0.25);
+    }
+
+    /* attorney */
+    .attorney-section {
+      margin: 24px 0 28px;
+    }
+
+    .attorney-options {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+
+    .attorney-chip {
+      background: rgba(30, 42, 54, 0.8);
+      border-radius: 6px 20px 6px 20px;
+      padding: 10px 22px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 3px 0 rgba(201, 169, 110, 0.2);
+      border: 1px solid rgba(201, 169, 110, 0.15);
+      cursor: pointer;
+      transition: 0.1s;
+      color: #c0d0e0;
+    }
+
+    .attorney-chip.selected {
+      background: #c9a96e;
+      box-shadow: 0 3px 0 #7a623f;
+      border-color: #d4b87e;
+      color: #1a232c;
+      font-weight: 600;
+    }
+
+    .attorney-chip i {
+      color: inherit;
+    }
+
+    /* date/time */
+    .date-section {
+      margin-bottom: 28px;
+    }
+
+    .label-icon {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 14px;
+      font-weight: 500;
+      color: #c9a96e;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      font-size: 0.85rem;
+    }
+
+    .date-selector {
+      background: rgba(30, 42, 54, 0.8);
+      border-radius: 16px;
+      padding: 6px 20px 6px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 4px 0 rgba(201, 169, 110, 0.2), inset 0 1px 3px rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(201, 169, 110, 0.15);
+    }
+
+    .date-selector input {
+      border: none;
+      background: transparent;
+      font-family: 'Work Sans', sans-serif;
+      font-size: 1rem;
+      padding: 16px 0;
+      font-weight: 500;
+      color: #ffffff;
+      outline: none;
+      width: 100%;
+    }
+
+    .date-selector input::-webkit-calendar-picker-indicator {
+      filter: invert(0.7) sepia(1) saturate(3) hue-rotate(340deg);
+      opacity: 0.8;
+    }
+
+    .date-selector i {
+      color: #c9a96e;
+      font-size: 1.3rem;
+    }
+
+    .time-slots {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin: 20px 0 8px;
+    }
+
+    .time-slot {
+      background: rgba(30, 42, 54, 0.8);
+      border-radius: 8px 20px 8px 20px;
+      padding: 12px 5px;
+      text-align: center;
+      font-weight: 500;
+      color: #c0d0e0;
+      box-shadow: 0 3px 0 rgba(201, 169, 110, 0.2), 0 8px 14px -6px rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(201, 169, 110, 0.15);
+      cursor: pointer;
+    }
+
+    .time-slot.selected {
+      background: #c9a96e;
+      box-shadow: 0 3px 0 #7a623f;
+      color: #1a232c;
+      border-color: #d4b87e;
+      font-weight: 600;
+    }
+
+    /* Right panel */
+    .booking-form-panel {
+      background: rgba(25, 35, 45, 0.5);
+      backdrop-filter: blur(4px);
+      border-radius: 24px;
+      padding: 1.8rem 2rem 2rem;
+      box-shadow: inset 0 1px 4px rgba(255, 255, 255, 0.03), 0 14px 24px -14px rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(201, 169, 110, 0.1);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .form-group {
+      margin-bottom: 1.6rem;
+    }
+
+    .form-group label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 500;
+      margin-bottom: 10px;
+      color: #c9a96e;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      font-size: 0.8rem;
+    }
+
+    .input-wrapper {
+      background: rgba(30, 42, 54, 0.8);
+      border-radius: 12px;
+      padding: 4px 20px;
+      box-shadow: 0 3px 0 rgba(201, 169, 110, 0.2), inset 0 1px 3px rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(201, 169, 110, 0.15);
+      display: flex;
+      align-items: center;
+    }
+
+    .input-wrapper i {
+      color: #c9a96e;
+      margin-right: 14px;
+      font-size: 1rem;
+    }
+
+    .input-wrapper input,
+    .input-wrapper select,
+    .input-wrapper textarea {
+      border: none;
+      background: transparent;
+      padding: 16px 0;
+      font-family: 'Work Sans', sans-serif;
+      font-size: 1rem;
+      width: 100%;
+      outline: none;
+      color: #ffffff;
+      resize: none;
+    }
+
+    .input-wrapper select option {
+      background: #1e2a36;
+      color: #ffffff;
+    }
+
+    .input-wrapper textarea {
+      min-height: 70px;
+      padding: 12px 0;
+    }
+
+    .input-wrapper input::placeholder,
+    .input-wrapper textarea::placeholder {
+      color: #7a8fa3;
+    }
+
+    /* summary */
+    .booking-summary {
+      background: rgba(201, 169, 110, 0.05);
+      border-radius: 16px;
+      padding: 1.7rem;
+      margin: 22px 0 28px;
+      border: 1px dashed rgba(201, 169, 110, 0.3);
+      backdrop-filter: blur(4px);
+    }
+
+    .summary-line {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 14px;
+      font-size: 0.95rem;
+      color: #c0d0e0;
+    }
+
+    .summary-line.total {
+      font-weight: 700;
+      font-size: 1.5rem;
+      border-top: 1.5px solid rgba(201, 169, 110, 0.4);
+      padding-top: 18px;
+      margin-top: 8px;
+      color: #ffffff;
+      font-family: 'Crimson Pro', serif;
+    }
+
+    .summary-line.total span:last-child {
+      color: #c9a96e;
+    }
+
+    .book-btn {
+      background: linear-gradient(135deg, #c9a96e, #a8844e);
+      border: none;
+      border-radius: 8px 24px 8px 24px;
+      padding: 18px 20px;
+      font-family: 'Work Sans', sans-serif;
+      font-weight: 600;
+      font-size: 1.15rem;
+      color: #1a232c;
+      box-shadow: 0 8px 0 #6b5333, 0 14px 28px -8px rgba(201, 169, 110, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      cursor: pointer;
+      transition: 0.1s;
+      margin-top: auto;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .book-btn:active {
+      transform: translateY(4px);
+      box-shadow: 0 4px 0 #6b5333, 0 14px 28px -8px rgba(201, 169, 110, 0.3);
+    }
+
+    .footer-note {
+      margin-top: 16px;
+      text-align: center;
+      color: #8fa3b8;
+      font-size: 0.8rem;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    @media (max-width: 950px) {
+      .booking-grid {
+        grid-template-columns: 1fr;
+      }
+      .legal-system {
+        padding: 1.5rem;
+      }
+      .time-slots {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+
+    @media (max-width: 480px) {
+      .time-slots { grid-template-columns: repeat(2, 1fr); }
+      .header { flex-direction: column; align-items: flex-start; }
+    }
+  
+    /* ── Mobile Optimizations (650px and below) ── */
+    @media (max-width: 650px) {
+      html { -webkit-text-size-adjust: 100%; }
+      .ThemeLawBody {
+        padding: 0 !important;
+        align-items: flex-start !important;
+      }
+      .legal-system {
+        padding: 1.2rem 1rem !important;
+        border-radius: 0 !important;
+        border-left: none !important;
+        border-right: none !important;
+        box-shadow: none !important;
+        min-height: 100vh;
+        margin: 0;
+        width: 100% !important;
+        max-width: 100% !important;
+        overflow-x: hidden;
+      }
+      .header {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 12px !important;
+      }
+      .header-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        width: 100%;
+      }
+      .legal-badge {
+        padding: 7px 12px;
+        font-size: 0.73rem;
+        letter-spacing: 0.4px;
+      }
+      .brand-text h1 {
+        font-size: 1.6rem !important;
+      }
+      .booking-grid {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 1.2rem !important;
+      }
+      .selection-panel, .booking-form-panel {
+        padding: 1.2rem 1rem !important;
+        border-radius: 18px !important;
+      }
+      .consult-card {
+        padding: 0.9rem 1rem !important;
+        flex-wrap: wrap;
+        gap: 10px;
+        border-radius: 12px !important;
+      }
+      .consult-info {
+        gap: 12px;
+        min-width: 0;
+        flex: 1;
+      }
+      .consult-icon {
+        width: 42px !important;
+        height: 42px !important;
+        font-size: 1.2rem !important;
+        flex-shrink: 0;
+        border-radius: 10px !important;
+      }
+      .consult-details h3 { font-size: 0.92rem; }
+      .consult-details span { font-size: 0.75rem; }
+      .consult-fee {
+        font-size: 0.95rem;
+        padding: 5px 10px;
+      }
+      .attorney-chip {
+        padding: 7px 12px;
+        font-size: 0.8rem;
+      }
+      .time-slots {
+        grid-template-columns: repeat(2, 1fr) !important;
+      }
+      .time-slot {
+        padding: 13px 5px !important;
+        font-size: 0.85rem;
+        min-height: 46px;
+      }
+      .input-wrapper input,
+      .input-wrapper textarea,
+      .input-wrapper select {
+        font-size: 16px !important;
+      }
+      .date-selector input { font-size: 16px !important; }
+      .summary-line.total {
+        font-size: 1.2rem !important;
+      }
+      .book-btn {
+        padding: 15px 20px !important;
+        font-size: 1rem !important;
+        min-height: 52px;
+      }
+      .footer-note {
+        font-size: 0.75rem;
+        gap: 8px;
+      }
+    }
+
+    @media (max-width: 400px) {
+      .brand-text h1 { font-size: 1.3rem !important; }
+      .legal-badge { font-size: 0.65rem; padding: 5px 8px; }
+      .selection-panel, .booking-form-panel { padding: 1rem 0.875rem !important; }
+      .consult-card { padding: 0.8rem 0.875rem !important; }
+    }
+  

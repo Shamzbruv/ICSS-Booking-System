@@ -51,6 +51,7 @@ export const api = {
 
   // Onboarding – create pending signup + PayPal subscription
   createPendingSignup: (body) => apiFetch('/payments/paypal/create-subscription', { method: 'POST', body }),
+  approvePayPalSubscription: (body) => apiFetch('/payments/paypal/approve', { method: 'POST', body }),
 
   // Editor – layout CRUD
   getLayout:  (slug)         => apiFetch(`/tenants/${slug}/layout`),

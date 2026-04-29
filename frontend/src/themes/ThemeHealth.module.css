@@ -1,0 +1,539 @@
+
+    .ThemeHealthWrapper * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    .ThemeHealthBody {
+      background: #eef5f7;
+      background-image: radial-gradient(circle at 10% 20%, rgba(200, 230, 240, 0.4) 0%, transparent 30%),
+                        radial-gradient(circle at 90% 70%, rgba(180, 215, 200, 0.3) 0%, transparent 40%);
+      min-height: 100vh;
+      font-family: 'Inter', sans-serif;
+      padding: 2rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #1e2f3a;
+    }
+
+    .wellness-system {
+      max-width: 1350px;
+      width: 100%;
+      background: rgba(255, 255, 255, 0.9);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-radius: 36px;
+      box-shadow: 0 20px 40px -10px rgba(30, 60, 70, 0.15),
+                  0 6px 12px rgba(0, 30, 40, 0.05),
+                  inset 0 0 0 1px rgba(255, 255, 255, 0.6);
+      padding: 2.2rem 2.5rem;
+      border: 1px solid #d5e9ee;
+    }
+
+    /* Header — serene & medical */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 2.2rem;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .brand-icon {
+      background: #c3dde4;
+      width: 58px;
+      height: 58px;
+      border-radius: 24px 8px 24px 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #1e5b6e;
+      font-size: 30px;
+      box-shadow: 0 4px 0 #a0bcc7, 0 12px 18px -8px #b6d2dc;
+    }
+
+    .brand-text h1 {
+      font-family: 'Merriweather', serif;
+      font-weight: 500;
+      font-size: 2rem;
+      letter-spacing: -0.3px;
+      color: #19424e;
+      line-height: 1.2;
+    }
+
+    .brand-text p {
+      font-size: 0.9rem;
+      font-weight: 400;
+      color: #3f6f7f;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 6px;
+    }
+
+    .badge-med {
+      background: #dff0f5;
+      padding: 8px 18px;
+      border-radius: 50px;
+      font-weight: 500;
+      font-size: 0.9rem;
+      color: #1d5a69;
+      box-shadow: inset 0 0 0 1px #b5d7e3;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .badge-med i {
+      color: #2a7f8c;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 12px;
+    }
+
+    /* grid layout */
+    .booking-grid {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 2rem;
+    }
+
+    /* Left panel */
+    .selection-panel {
+      background: #f9fdfe;
+      border-radius: 30px;
+      padding: 1.8rem 1.8rem 2rem;
+      box-shadow: inset 0 1px 4px #ffffff, 0 10px 18px -12px #9bbec9;
+      border: 1px solid #cee3ea;
+    }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 1.8rem;
+    }
+
+    .section-title i {
+      background: #d7ecf3;
+      padding: 10px;
+      border-radius: 18px;
+      color: #1c6b7c;
+      font-size: 1.4rem;
+      width: 46px;
+      height: 46px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 0 #aac6d1;
+    }
+
+    .section-title h2 {
+      font-family: 'Merriweather', serif;
+      font-weight: 500;
+      font-size: 1.7rem;
+      color: #153e4b;
+    }
+
+    /* visit type cards */
+    .visit-list {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      margin-bottom: 2.2rem;
+    }
+
+    .visit-card {
+      background: white;
+      border-radius: 24px;
+      padding: 1rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 4px 0 #c7dee6, 0 8px 16px -8px #a2c2cf;
+      border: 1px solid #cde1e9;
+      transition: all 0.15s;
+      cursor: pointer;
+    }
+
+    .visit-card.selected {
+      background: #e2f2f8;
+      box-shadow: 0 4px 0 #7faebb, 0 8px 20px -6px #8fb7c5;
+      border: 1.5px solid #5497aa;
+    }
+
+    .visit-info {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .visit-icon {
+      background: #d6ecf3;
+      width: 54px;
+      height: 54px;
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #196c7e;
+      font-size: 1.8rem;
+    }
+
+    .visit-details h3 {
+      font-weight: 600;
+      font-size: 1.2rem;
+      color: #173f4b;
+    }
+
+    .visit-details span {
+      font-size: 0.85rem;
+      color: #3d7787;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .visit-duration {
+      font-weight: 500;
+      background: #eaf3f7;
+      padding: 8px 16px;
+      border-radius: 40px;
+      color: #135f6e;
+      font-size: 1rem;
+    }
+
+    /* date & time */
+    .date-section {
+      margin-bottom: 28px;
+    }
+
+    .label-icon {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+      font-weight: 500;
+      color: #1f5663;
+    }
+
+    .date-selector {
+      background: white;
+      border-radius: 24px;
+      padding: 8px 18px 8px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 4px 0 #c1dae3, inset 0 1px 3px #f4fbfd;
+      border: 1px solid #bed8e2;
+    }
+
+    .date-selector input {
+      border: none;
+      background: transparent;
+      font-family: 'Inter', sans-serif;
+      font-size: 1rem;
+      padding: 14px 0;
+      font-weight: 500;
+      color: #173e4a;
+      outline: none;
+      width: 100%;
+    }
+
+    .date-selector i {
+      color: #2c7e8f;
+      font-size: 1.4rem;
+    }
+
+    .time-slots {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin: 20px 0 10px;
+    }
+
+    .time-slot {
+      background: white;
+      border-radius: 40px;
+      padding: 12px 5px;
+      text-align: center;
+      font-weight: 500;
+      color: #1d4958;
+      box-shadow: 0 4px 0 #bdd6e1, 0 6px 12px -6px #9ebfcc;
+      border: 1px solid #d3e6ee;
+      cursor: pointer;
+      transition: 0.1s;
+    }
+
+    .time-slot.selected {
+      background: #398092;
+      box-shadow: 0 4px 0 #1f5767;
+      color: white;
+      border-color: #317586;
+    }
+
+    .time-slot:hover {
+      background: #d2eaf3;
+    }
+
+    /* Right panel — form */
+    .booking-form-panel {
+      background: #f5fbfd;
+      border-radius: 30px;
+      padding: 1.8rem 2rem 2rem;
+      box-shadow: inset 0 1px 4px #fff, 0 12px 20px -12px #9bbcc9;
+      border: 1px solid #cae0e8;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .form-group {
+      margin-bottom: 1.5rem;
+    }
+
+    .form-group label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 500;
+      margin-bottom: 8px;
+      color: #1a4d5b;
+    }
+
+    .input-wrapper {
+      background: white;
+      border-radius: 40px;
+      padding: 4px 20px;
+      box-shadow: 0 4px 0 #c1dae3, inset 0 1px 3px #fff;
+      border: 1px solid #d2e3ea;
+      display: flex;
+      align-items: center;
+    }
+
+    .input-wrapper i {
+      color: #367f91;
+      margin-right: 12px;
+      font-size: 1.1rem;
+    }
+
+    .input-wrapper input,
+    .input-wrapper select,
+    .input-wrapper textarea {
+      border: none;
+      background: transparent;
+      padding: 14px 0;
+      font-family: 'Inter', sans-serif;
+      font-size: 1rem;
+      width: 100%;
+      outline: none;
+      color: #153e48;
+      resize: none;
+    }
+
+    .input-wrapper textarea {
+      min-height: 60px;
+      padding: 10px 0;
+    }
+
+    .input-wrapper select {
+      cursor: pointer;
+    }
+
+    /* summary card */
+    .booking-summary {
+      background: #e6f3f8e0;
+      border-radius: 24px;
+      padding: 1.5rem;
+      margin: 20px 0 24px;
+      border: 1px dashed #619aab;
+      backdrop-filter: blur(4px);
+    }
+
+    .summary-line {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 14px;
+      font-size: 1rem;
+    }
+
+    .summary-line.total {
+      font-weight: 700;
+      font-size: 1.3rem;
+      border-top: 1.5px solid #8bb7c7;
+      padding-top: 14px;
+      margin-top: 6px;
+      color: #124453;
+    }
+
+    .book-btn {
+      background: #2f7f8f;
+      border: none;
+      border-radius: 60px;
+      padding: 18px 20px;
+      font-family: 'Inter', sans-serif;
+      font-weight: 600;
+      font-size: 1.25rem;
+      color: white;
+      box-shadow: 0 10px 0 #195a68, 0 12px 25px -6px #6da2b3;
+      border: 1px solid #9ecbd9;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      cursor: pointer;
+      transition: 0.1s;
+      margin-top: auto;
+    }
+
+    .book-btn:active {
+      transform: translateY(4px);
+      box-shadow: 0 6px 0 #195a68, 0 12px 20px -6px #6da2b3;
+    }
+
+    .book-btn i {
+      font-size: 1.5rem;
+    }
+
+    .footer-note {
+      margin-top: 15px;
+      text-align: center;
+      color: #3f7888;
+      font-size: 0.8rem;
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+    }
+
+    @media (max-width: 850px) {
+      .booking-grid {
+        grid-template-columns: 1fr;
+      }
+      .ThemeHealthBody {
+        padding: 1rem;
+      }
+      .wellness-system {
+        padding: 1.5rem;
+      }
+    }
+
+    /* calm pattern */
+    .calm-pattern {
+      background-image: url('data:image/svg+xml;utf8,<svg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"><circle cx="8" cy="8" r="2.5" fill="%23b3d9e8" opacity="0.2"/><circle cx="48" cy="48" r="2" fill="%239bc1d1" opacity="0.15"/></svg>');
+    }
+  
+    /* ── Mobile Optimizations (650px and below) ── */
+    @media (max-width: 650px) {
+      html { -webkit-text-size-adjust: 100%; }
+      .ThemeHealthBody {
+        padding: 0 !important;
+        align-items: flex-start !important;
+      }
+      .wellness-system {
+        padding: 1.2rem 1rem !important;
+        border-radius: 0 !important;
+        border-left: none !important;
+        border-right: none !important;
+        box-shadow: none !important;
+        min-height: 100vh;
+        margin: 0;
+        width: 100% !important;
+        max-width: 100% !important;
+        overflow-x: hidden;
+      }
+      .header {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 12px !important;
+      }
+      .header-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        width: 100%;
+      }
+      .badge-med {
+        padding: 7px 12px;
+        font-size: 0.75rem;
+      }
+      .brand-text h1 {
+        font-size: 1.6rem !important;
+      }
+      .booking-grid {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 1.2rem !important;
+      }
+      .selection-panel, .booking-form-panel {
+        padding: 1.2rem 1rem !important;
+        border-radius: 22px !important;
+      }
+      .visit-card {
+        padding: 0.9rem 1rem !important;
+        flex-wrap: wrap;
+        gap: 10px;
+        border-radius: 18px !important;
+      }
+      .visit-info {
+        gap: 12px;
+        min-width: 0;
+        flex: 1;
+      }
+      .visit-icon {
+        width: 42px !important;
+        height: 42px !important;
+        font-size: 1.3rem !important;
+        flex-shrink: 0;
+        border-radius: 14px !important;
+      }
+      .visit-details h3 { font-size: 0.95rem; }
+      .visit-details span { font-size: 0.78rem; }
+      .visit-duration {
+        font-size: 0.88rem;
+        padding: 6px 10px;
+      }
+      .time-slots {
+        grid-template-columns: repeat(2, 1fr) !important;
+      }
+      .time-slot {
+        padding: 13px 5px !important;
+        font-size: 0.85rem;
+        min-height: 46px;
+      }
+      .input-wrapper input,
+      .input-wrapper textarea,
+      .input-wrapper select {
+        font-size: 16px !important;
+      }
+      .date-selector input { font-size: 16px !important; }
+      .summary-line.total {
+        font-size: 1rem !important;
+      }
+      .book-btn {
+        padding: 15px 20px !important;
+        font-size: 1.05rem !important;
+        min-height: 52px;
+      }
+      .footer-note {
+        font-size: 0.78rem;
+        gap: 8px;
+        justify-content: flex-start;
+      }
+    }
+
+    @media (max-width: 400px) {
+      .brand-text h1 { font-size: 1.3rem !important; }
+      .badge-med { font-size: 0.7rem; padding: 6px 8px; }
+      .selection-panel, .booking-form-panel { padding: 1rem 0.875rem !important; }
+    }
+  

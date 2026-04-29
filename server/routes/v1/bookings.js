@@ -32,7 +32,7 @@ function getTzTimeStr(tz = 'America/Jamaica', addMinutes = 0, addDays = 0) {
 
 // POST /api/v1/bookings — Create a new booking
 router.post('/', enforceBookingLimit, async (req, res) => {
-    const { name, email, phone, date, time, notes, region, service_id } = req.body;
+    const { name, email, phone, date, time, notes, region, service_id, receipt_image } = req.body;
     const tenant = req.tenant;
     const tenantId = tenant.id;
     const timezone = tenant.branding?.timezone || 'America/Jamaica';
@@ -41,8 +41,8 @@ router.post('/', enforceBookingLimit, async (req, res) => {
         return res.status(400).json({ error: 'name, email, phone, date, time, and service_id are required.' });
     }
 
-    const dateRegex = /^\\d{4}-\\d{2}-\\d{2}$/;
-    const timeRegex = /^([01]\\d|2[0-3]):[0-5]\\d$/;
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    const timeRegex = /^([01]\d|2[0-3]):[0-5]\d$/;
 
     if (!dateRegex.test(date)) return res.status(400).json({ error: 'Invalid date format. Use YYYY-MM-DD.' });
     if (!timeRegex.test(time)) return res.status(400).json({ error: 'Invalid time format. Use HH:MM (24h).' });
@@ -86,8 +86,12 @@ router.post('/', enforceBookingLimit, async (req, res) => {
                 status = 'pending_payment';
                 expiresAt = new Date(Date.now() + holdTimeout * 60000);
             } else if (paymentMode === 'manual' && tenant.manual_payment_enabled) {
+                if (!receipt_image) {
+                    const err = new Error('A payment receipt screenshot is required for bank transfers.'); err.status = 400; throw err;
+                }
                 status = 'pending_manual_confirmation';
-                expiresAt = new Date(Date.now() + holdTimeout * 60000);
+                // Wait for admin approval; do not auto-expire
+                expiresAt = null;
             } else {
                 paymentMode = 'none'; // Fallback if disabled
             }
@@ -146,9 +150,9 @@ router.post('/', enforceBookingLimit, async (req, res) => {
                 }
 
                 const paymentRes = await client.query(
-                    `INSERT INTO booking_payments (booking_id, tenant_id, provider, payment_type, amount_due, status)
-                     VALUES ($1, $2, $3, $4, $5, 'pending') RETURNING *`,
-                    [booking.id, tenantId, paymentMode, service.payment_requirement_type || 'full', amountDue]
+                    `INSERT INTO booking_payments (booking_id, tenant_id, provider, payment_type, amount_due, status, gateway_response)
+                     VALUES ($1, $2, $3, $4, $5, 'pending', $6) RETURNING *`,
+                    [booking.id, tenantId, paymentMode, service.payment_requirement_type || 'full', amountDue, paymentMode === 'manual' ? JSON.stringify({ receipt_image }) : null]
                 );
                 const payment = paymentRes.rows[0];
 

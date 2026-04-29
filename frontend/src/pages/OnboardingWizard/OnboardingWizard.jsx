@@ -190,7 +190,17 @@ function StepPayPal({ data, onNext }) {
       style: { shape: 'rect', color: 'blue', layout: 'vertical', label: 'subscribe' },
       createSubscription: (_data, actions) =>
         actions.subscription.create({ plan_id: PAYPAL_PLAN_ID, custom_id: token }),
-      onApprove: () => onNext(),
+      onApprove: async (authData) => {
+        try {
+          await api.approvePayPalSubscription({
+            signup_token: token,
+            subscription_id: authData.subscriptionID
+          });
+        } catch (e) {
+          console.warn('Manual provisioning trigger failed, relying on webhook.', e);
+        }
+        onNext();
+      },
       onError: () => setErr('PayPal checkout encountered an error. Please try again.'),
     }).render(`#${containerId}`);
   };

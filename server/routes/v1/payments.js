@@ -177,6 +177,26 @@ router.post('/paypal/webhook', async (req, res) => {
     }
 });
 
+// POST /api/v1/payments/paypal/approve
+// Manual trigger from frontend to ensure provisioning starts immediately
+// without waiting for the async webhook (which might fail locally).
+router.post('/paypal/approve', async (req, res) => {
+    try {
+        const { signup_token, subscription_id } = req.body;
+        if (!signup_token) return res.status(400).json({ error: 'Missing signup_token' });
+
+        const pendingRes = await query(`SELECT tenant_slug FROM pending_signups WHERE signup_token = $1`, [signup_token]);
+        if (pendingRes.rows.length > 0) {
+            const slug = pendingRes.rows[0].tenant_slug || null;
+            await enqueueProvisioningJob(slug, signup_token, subscription_id, { manual_trigger: true });
+        }
+        res.json({ success: true });
+    } catch (e) {
+        console.error('[PayPal Approve Error]', e);
+        res.status(500).json({ error: 'Failed to queue provisioning' });
+    }
+});
+
 // POST /api/v1/payments/paypal/create-subscription
 // This endpoint is used by the frontend setup form to securely lodge the tenant config,
 // generate a token, and return it. The frontend will pass this token to the PayPal JS SDK.

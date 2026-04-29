@@ -20,6 +20,18 @@ import { useParams }  from 'react-router-dom';
 import { api }        from '../../api';
 import s              from './PublicBookingPage.module.css';
 
+import ThemeBarber from '../../themes/ThemeBarber';
+import ThemeSpa from '../../themes/ThemeSpa';
+import ThemeMechanic from '../../themes/ThemeMechanic';
+import ThemeEvents from '../../themes/ThemeEvents';
+import ThemeFitness from '../../themes/ThemeFitness';
+import ThemeHairdresser from '../../themes/ThemeHairdresser';
+import ThemeHealth from '../../themes/ThemeHealth';
+import ThemeLaw from '../../themes/ThemeLaw';
+import ThemeNailTech from '../../themes/ThemeNailTech';
+import ThemePhotography from '../../themes/ThemePhotography';
+import ThemeUniversal from '../../themes/ThemeUniversal';
+
 const STEPS = ['Service', 'Date & Time', 'Your Details', 'Confirm'];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -460,44 +472,40 @@ export default function PublicBookingPage() {
     );
   }
 
-  return (
-    <div className={s.page} style={buildAccentVars(tenant)}>
-      <PageHeader tenant={tenant} />
+  // --- THEME ROUTER ---
+  if (tenant.themeName === 'Iron & Blade') {
+    return <ThemeBarber tenant={tenant} services={services} />;
+  }
+  if (tenant.themeName === 'Botanica Spa') {
+    return <ThemeSpa tenant={tenant} services={services} />;
+  }
+  if (tenant.themeName === 'Pro Auto Care') {
+    return <ThemeMechanic tenant={tenant} services={services} />;
+  }
+  if (tenant.themeName === 'Gather & Grace') {
+    return <ThemeEvents tenant={tenant} services={services} />;
+  }
+  if (tenant.themeName === 'Pulse Studio') {
+    return <ThemeFitness tenant={tenant} services={services} />;
+  }
+  if (tenant.themeName === 'Blush & Braids') {
+    return <ThemeHairdresser tenant={tenant} services={services} />;
+  }
+  if (tenant.themeName === 'Serenity Health') {
+    return <ThemeHealth tenant={tenant} services={services} />;
+  }
+  if (tenant.themeName === 'Meridian Law') {
+    return <ThemeLaw tenant={tenant} services={services} />;
+  }
+  if (tenant.themeName === 'Polished & Pure') {
+    return <ThemeNailTech tenant={tenant} services={services} />;
+  }
+  if (tenant.themeName === 'Lumina Lens') {
+    return <ThemePhotography tenant={tenant} services={services} />;
+  }
 
-      <div className={s.wizardWrap}>
-        <StepBar step={step} />
-
-        <div className={s.wizardCard}>
-          {step === 0 && (
-            <StepService services={services} onSelect={handleSelectService} />
-          )}
-          {step === 1 && (
-            <MonthCalendar slug={slug} serviceId={selectedService?.id} onConfirm={handleDateTimeConfirm} />
-          )}
-          {step === 2 && (
-            <StepDetails
-              service={selectedService}
-              date={selectedDate}
-              slot={selectedSlot}
-              onSubmit={handleDetailsSubmit}
-              submitting={submitting}
-              error={submitError}
-            />
-          )}
-          {step === 3 && bookingResult && (
-            <StepConfirm result={bookingResult} slug={slug} />
-          )}
-
-          {/* Back navigation — visible on steps 1 and 2 only */}
-          {step > 0 && step < 3 && (
-            <button className={s.btnGhost} onClick={goBack} style={{ marginTop: 24 }}>
-              ← Back
-            </button>
-          )}
-        </div>
-      </div>
-    </div>
-  );
+  // Fallback to Universal theme
+  return <ThemeUniversal tenant={tenant} services={services} />;
 }
 
 // ── Page Header (tenant branding) ─────────────────────────────────────────────
