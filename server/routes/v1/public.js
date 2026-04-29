@@ -30,7 +30,10 @@ router.get('/tenant', async (req, res) => {
         primaryColor:   branding?.primaryColor   || '#D4AF37',
         accentColor:    branding?.accentColor    || '#D4AF37',
         logoUrl:        branding?.logoUrl        || null,
-        bookingTagline: branding?.bookingTagline || 'Book your appointment below',
+        bookingTagline: branding?.bookingTagline || null,
+        location:       branding?.location       || null,
+        badge1:         branding?.badge1         || null,
+        badge2:         branding?.badge2         || null,
         timezone:       branding?.timezone       || 'America/Jamaica'
     };
 

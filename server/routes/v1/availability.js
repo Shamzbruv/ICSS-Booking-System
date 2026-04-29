@@ -13,13 +13,13 @@ const { query } = require('../../db/connection');
 
 // ─── Business Rule Constants ───────────────────────────────────────────────────
 const SLOT_INTERVAL_MINS   = 30;
-const DAY_START_HOUR       = 12;   // 12:00 PM
-const DAY_END_HOUR         = 18;
-const DAY_END_MINS         = 30;   // 6:30 PM last possible slot start
+const DAY_START_HOUR       = 9;    // 9:00 AM
+const DAY_END_HOUR         = 19;
+const DAY_END_MINS         = 0;    // 7:00 PM last possible slot start
 const MAX_BOOKINGS_PER_DAY = 14;
-const MIN_BUFFER_MINS      = 60;   // Reject slots within 60 min of now
+const MIN_BUFFER_MINS      = 15;   // Reject slots within 15 min of now
 const MAX_DAYS_AHEAD       = 30;
-const BUSINESS_CLOSE_MINS  = 19 * 60; // 7:00 PM — no service can run past this
+const BUSINESS_CLOSE_MINS  = 20 * 60; // 8:00 PM — no service can run past this
 
 function getTzTimeStr(tz = 'America/Jamaica', addMinutes = 0, addDays = 0) {
     const now = new Date();
@@ -50,13 +50,13 @@ function generateSlots(businessHoursStr, requestedDateStr) {
     
     if (!hours) {
         hours = {
-            monday: { open: '09:00', close: '17:00', active: true },
-            tuesday: { open: '09:00', close: '17:00', active: true },
-            wednesday: { open: '09:00', close: '17:00', active: true },
-            thursday: { open: '09:00', close: '17:00', active: true },
-            friday: { open: '09:00', close: '17:00', active: true },
-            saturday: { open: '10:00', close: '14:00', active: false },
-            sunday: { open: '10:00', close: '14:00', active: false }
+            monday:    { open: '09:00', close: '19:00', active: true },
+            tuesday:   { open: '09:00', close: '19:00', active: true },
+            wednesday: { open: '09:00', close: '19:00', active: true },
+            thursday:  { open: '09:00', close: '19:00', active: true },
+            friday:    { open: '09:00', close: '19:00', active: true },
+            saturday:  { open: '09:00', close: '19:00', active: true },
+            sunday:    { open: '10:00', close: '16:00', active: false }
         };
     }
 

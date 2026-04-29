@@ -99,6 +99,100 @@
         </form>
     </section>
 
+    <!-- Booking Page Branding -->
+    <section class="card" style="max-width: 800px; margin: 2rem auto 0;">
+        <h2 style="font-size: 18px; margin-bottom: 6px; font-weight: 600;">Booking Page Branding</h2>
+        <p class="page-subtitle" style="margin-bottom: 1.5rem;">Customise exactly what clients see in the header of your public booking page.</p>
+
+        <form id="brandingForm" class="form-grid">
+
+            <!-- Logo -->
+            <div class="form-group" style="grid-column: 1 / -1;">
+                <label>Logo URL</label>
+                <input type="url" id="branding_logo_url" class="form-control" placeholder="https://example.com/your-logo.png">
+                <small style="color: var(--text-dim); margin-top: 6px; display: block;">
+                    Paste a direct image link. Your logo will appear in the top-left corner of the booking page.
+                    If blank, a generic icon is shown instead.
+                </small>
+                <div id="logoPreviewWrap" style="margin-top: 12px; display: none;">
+                    <img id="logoPreview" src="" alt="Logo Preview"
+                         style="max-height: 80px; max-width: 200px; border-radius: 10px; border: 1px solid var(--border); padding: 6px; background: var(--surface);">
+                </div>
+            </div>
+
+            <!-- Tagline -->
+            <div class="form-group" style="grid-column: 1 / -1;">
+                <label>Tagline / Slogan</label>
+                <input type="text" id="branding_tagline" class="form-control" maxlength="100"
+                       placeholder="e.g. organic · holistic · results-driven">
+                <small style="color: var(--text-dim); margin-top: 6px; display: block;">Displayed beneath your business name in the header.</small>
+            </div>
+
+            <!-- Location -->
+            <div class="form-group">
+                <label>Location / City</label>
+                <input type="text" id="branding_location" class="form-control" maxlength="80"
+                       placeholder="e.g. Kingston, Jamaica">
+            </div>
+
+            <!-- Timezone -->
+            <div class="form-group">
+                <label>Timezone</label>
+                <select id="branding_timezone" class="form-control">
+                    <option value="America/Jamaica">Jamaica (UTC-5)</option>
+                    <option value="America/New_York">Eastern US (UTC-5/-4)</option>
+                    <option value="America/Chicago">Central US (UTC-6/-5)</option>
+                    <option value="America/Denver">Mountain US (UTC-7/-6)</option>
+                    <option value="America/Los_Angeles">Pacific US (UTC-8/-7)</option>
+                    <option value="America/Toronto">Toronto (UTC-5/-4)</option>
+                    <option value="America/Barbados">Barbados (UTC-4)</option>
+                    <option value="America/Port_of_Spain">Trinidad (UTC-4)</option>
+                    <option value="America/Guyana">Guyana (UTC-4)</option>
+                    <option value="Europe/London">London (UTC+0/+1)</option>
+                </select>
+            </div>
+
+            <div style="grid-column: 1 / -1;"><hr style="border: 0; border-top: 1px solid var(--border); margin: 0.5rem 0;"></div>
+            <h3 style="grid-column: 1 / -1; font-size: 15px; font-weight: 600; color: var(--text-dim);">Header Badges (optional)</h3>
+            <p class="page-subtitle" style="grid-column: 1 / -1; margin-bottom: 0.5rem;">
+                These appear as pill buttons in the top-right of your booking page header. Leave blank to hide.
+            </p>
+
+            <!-- Badge 1 -->
+            <div class="form-group">
+                <label>Badge 1</label>
+                <input type="text" id="branding_badge1" class="form-control" maxlength="50"
+                       placeholder="e.g. 💎 Members Club">
+            </div>
+
+            <!-- Badge 2 -->
+            <div class="form-group">
+                <label>Badge 2</label>
+                <input type="text" id="branding_badge2" class="form-control" maxlength="50"
+                       placeholder="e.g. 💝 10% Off First Visit">
+            </div>
+
+            <!-- Preview -->
+            <div style="grid-column: 1 / -1; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px;">
+                <p style="font-size: 12px; color: var(--text-dim); margin-bottom: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">Live Preview</p>
+                <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <div id="preview_logo_wrap" style="width:46px;height:46px;border-radius:14px;background:#fec7d7;display:flex;align-items:center;justify-content:center;overflow:hidden;font-size:20px;">🌸</div>
+                        <div>
+                            <div id="preview_name" style="font-weight: 700; font-size: 1.1rem;"></div>
+                            <div id="preview_sub" style="font-size: 0.8rem; color: var(--text-dim); margin-top: 2px;"></div>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap;" id="preview_badges"></div>
+                </div>
+            </div>
+
+            <div class="form-actions" style="grid-column: 1 / -1; margin-top: 0.5rem;">
+                <button type="submit" class="btn btn-primary" style="width: 100%;">Save Branding</button>
+            </div>
+        </form>
+    </section>
+
     <!-- Business Schedule -->
     <section class="card" style="max-width: 800px; margin: 2rem auto 0;">
         <h2 style="font-size: 18px; margin-bottom: 6px; font-weight: 600;">Business Schedule</h2>
@@ -134,6 +228,14 @@
         document.getElementById('settingsForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             await saveSettings();
+        });
+        document.getElementById('brandingForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await saveBranding();
+        });
+        // Live preview wiring
+        ['branding_logo_url','branding_tagline','branding_location','branding_badge1','branding_badge2'].forEach(id => {
+            document.getElementById(id).addEventListener('input', updateBrandingPreview);
         });
     });
 
@@ -194,6 +296,27 @@
             if (s.business_hours) {
                 buildScheduleGrid(s.business_hours);
             }
+
+            // ── Load branding fields ───────────────────────────────────────────
+            try {
+                const pub = await fetch(`/api/v1/public/tenant`, { headers: { 'X-Tenant-Slug': currentSlug } }).then(r => r.json());
+                const b = pub.branding || {};
+                document.getElementById('branding_logo_url').value  = b.logoUrl        || '';
+                document.getElementById('branding_tagline').value    = b.bookingTagline || '';
+                document.getElementById('branding_location').value   = b.location       || '';
+                document.getElementById('branding_badge1').value     = b.badge1         || '';
+                document.getElementById('branding_badge2').value     = b.badge2         || '';
+                if (b.timezone) document.getElementById('branding_timezone').value = b.timezone;
+                updateBrandingPreview();
+                // Show logo preview if set
+                if (b.logoUrl) {
+                    document.getElementById('logoPreview').src = b.logoUrl;
+                    document.getElementById('logoPreviewWrap').style.display = 'block';
+                    document.getElementById('preview_logo_wrap').innerHTML = `<img src="${b.logoUrl}" style="width:100%;height:100%;object-fit:cover;">`;
+                }
+                // Set tenant name in preview
+                document.getElementById('preview_name').textContent = me.tenant.name || '';
+            } catch (e) { /* branding load is non-critical */ }
         } catch (err) {
             console.error('Failed to load settings:', err);
         }
@@ -234,6 +357,58 @@
             alert('Schedule saved! Booking slots will now reflect your hours.');
         } catch (err) {
             alert('Failed to save schedule: ' + err.message);
+        }
+    }
+
+    function updateBrandingPreview() {
+        const logo     = document.getElementById('branding_logo_url').value.trim();
+        const tagline  = document.getElementById('branding_tagline').value.trim();
+        const location = document.getElementById('branding_location').value.trim();
+        const badge1   = document.getElementById('branding_badge1').value.trim();
+        const badge2   = document.getElementById('branding_badge2').value.trim();
+
+        // Logo preview
+        const logoWrap = document.getElementById('preview_logo_wrap');
+        if (logo) {
+            logoWrap.innerHTML = `<img src="${logo}" style="width:100%;height:100%;object-fit:cover;" onerror="this.parentNode.innerHTML='🌸'">`;
+            document.getElementById('logoPreview').src = logo;
+            document.getElementById('logoPreviewWrap').style.display = 'block';
+        } else {
+            logoWrap.innerHTML = '🌸';
+            document.getElementById('logoPreviewWrap').style.display = 'none';
+        }
+
+        // Sub text
+        const parts = [];
+        if (location) parts.push('📍 ' + location);
+        if (tagline)  parts.push(tagline);
+        document.getElementById('preview_sub').textContent = parts.join('  ·  ');
+
+        // Badges
+        const badgesEl = document.getElementById('preview_badges');
+        badgesEl.innerHTML = '';
+        [badge1, badge2].filter(Boolean).forEach(b => {
+            const pill = document.createElement('span');
+            pill.textContent = b;
+            pill.style.cssText = 'background:var(--surface);border:1px solid var(--border);padding:6px 14px;border-radius:40px;font-size:0.82rem;';
+            badgesEl.appendChild(pill);
+        });
+    }
+
+    async function saveBranding() {
+        const payload = {
+            logoUrl:        document.getElementById('branding_logo_url').value.trim() || null,
+            bookingTagline: document.getElementById('branding_tagline').value.trim()  || null,
+            location:       document.getElementById('branding_location').value.trim() || null,
+            badge1:         document.getElementById('branding_badge1').value.trim()   || null,
+            badge2:         document.getElementById('branding_badge2').value.trim()   || null,
+            timezone:       document.getElementById('branding_timezone').value,
+        };
+        try {
+            await apiFetch(`/api/v1/tenants/${currentSlug}/branding`, { method: 'PATCH', body: JSON.stringify(payload) });
+            showToast('Branding saved! Your booking page will update shortly.', 'success');
+        } catch (err) {
+            showToast('Failed to save branding: ' + err.message, 'error');
         }
     }
 </script>

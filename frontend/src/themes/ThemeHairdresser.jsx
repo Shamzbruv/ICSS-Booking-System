@@ -73,16 +73,24 @@ export default function ThemeHairdresser({ tenant, services, onBook }) {
                 <div className={styles.header}>
                     <div className={styles.brand}>
                         <div className={styles['brand-icon']}>
-                            <i className="fas fa-spa"></i>
+                            {tenant.branding?.logoUrl
+                                ? <img src={tenant.branding.logoUrl} alt={tenant.name} style={{width:'100%',height:'100%',objectFit:'cover',borderRadius:'inherit'}} />
+                                : <i className="fas fa-spa"></i>
+                            }
                         </div>
                         <div className={styles['brand-text']}>
                             <h1>{tenant.name}</h1>
-                            <p><i className="fas fa-map-pin"></i> {tenant.branding?.location || 'Premium Salon'} <i className="fas fa-star" style={{marginLeft: '8px'}}></i><i className="fas fa-star"></i><i className="fas fa-star"></i></p>
+                            {(tenant.branding?.bookingTagline || tenant.branding?.location) && (
+                                <p>
+                                    {tenant.branding?.location && <><i className="fas fa-map-pin"></i> {tenant.branding.location}</>}
+                                    {tenant.branding?.bookingTagline && <><i className="fas fa-circle" style={{fontSize:'5px',margin:'0 8px'}}></i>{tenant.branding.bookingTagline}</>}
+                                </p>
+                            )}
                         </div>
                     </div>
                     <div className={styles['header-actions']}>
-                        <div className={styles['pill-badge']}><i className="fas fa-gem"></i> members club</div>
-                        <div className={styles['pill-badge']}><i className="fas fa-heart"></i> 10% off first visit</div>
+                        {tenant.branding?.badge1 && <div className={styles['pill-badge']}>{tenant.branding.badge1}</div>}
+                        {tenant.branding?.badge2 && <div className={styles['pill-badge']}>{tenant.branding.badge2}</div>}
                     </div>
                 </div>
 

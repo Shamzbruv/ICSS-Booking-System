@@ -382,4 +382,51 @@ router.patch('/:slug/payment-settings', authenticate, async (req, res) => {
     }
 });
 
+// PATCH /api/v1/tenants/:slug/branding — Save booking-page branding (logo, tagline, etc.)
+router.patch('/:slug/branding', authenticate, async (req, res) => {
+    if (req.tenant.slug !== req.params.slug && req.user.role !== 'platform_owner' && req.user.role !== 'super_admin') {
+        return res.status(403).json({ error: 'Unauthorized to update branding for this tenant.' });
+    }
+    const {
+        logoUrl,
+        bookingTagline,
+        location,
+        accentColor,
+        primaryColor,
+        badge1,
+        badge2,
+        timezone,
+    } = req.body;
+
+    try {
+        // Fetch existing branding to deep-merge
+        const cur = await query(`SELECT branding FROM tenants WHERE slug = $1`, [req.params.slug]);
+        if (cur.rows.length === 0) return res.status(404).json({ error: 'Tenant not found.' });
+        const existing = cur.rows[0].branding || {};
+
+        const merged = {
+            ...existing,
+            ...(logoUrl        !== undefined && { logoUrl }),
+            ...(bookingTagline !== undefined && { bookingTagline }),
+            ...(location       !== undefined && { location }),
+            ...(accentColor    !== undefined && { accentColor }),
+            ...(primaryColor   !== undefined && { primaryColor }),
+            ...(badge1         !== undefined && { badge1 }),
+            ...(badge2         !== undefined && { badge2 }),
+            ...(timezone       !== undefined && { timezone }),
+        };
+
+        await query(
+            `UPDATE tenants SET branding = $1 WHERE slug = $2`,
+            [JSON.stringify(merged), req.params.slug]
+        );
+
+        invalidateTenantCache(req.params.slug);
+        res.json({ success: true, branding: merged });
+    } catch (err) {
+        console.error('[Tenants/Branding]', err.message);
+        res.status(500).json({ error: 'Failed to save branding.' });
+    }
+});
+
 module.exports = router;
