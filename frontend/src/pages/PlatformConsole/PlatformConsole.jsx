@@ -96,6 +96,32 @@ function TenantsView() {
     window.open(`/admin?tenant=${tenant.slug}&_impToken=${session.token}`, '_blank');
   };
 
+  const quickResetPassword = async (tenant) => {
+    if (!window.confirm(`Send password reset email to ${tenant.owner_email}?`)) return;
+    try {
+      await api.platform.resetTenantPassword(tenant.id);
+      alert('Password reset email sent.');
+    } catch (e) { alert(e.message); }
+  };
+
+  const quickToggleStatus = async (tenant) => {
+    const action = tenant.active ? 'Suspend' : 'Activate';
+    if (!window.confirm(`Are you sure you want to ${action} ${tenant.name}?`)) return;
+    try {
+      await api.platform.updateTenantStatus(tenant.id, !tenant.active);
+      load();
+    } catch (e) { alert(e.message); }
+  };
+
+  const quickDelete = async (tenant) => {
+    const code = window.prompt(`Type "DELETE" to permanently delete ${tenant.name} and ALL their data.`);
+    if (code !== 'DELETE') return;
+    try {
+      await api.platform.deleteTenant(tenant.id);
+      load();
+    } catch (e) { alert(e.message); }
+  };
+
   return (
     <div className={s.view}>
       <div className={s.view__header}>
@@ -152,6 +178,9 @@ function TenantsView() {
                     <div className={s.rowActions}>
                       <a href={`/${t.slug}`} target="_blank" rel="noreferrer" className={s.rowBtn} title="Open Public Page">🌐</a>
                       <a href={`/editor?_tenant=${t.slug}`} target="_blank" rel="noreferrer" className={s.rowBtn} title="Open Editor">🎨</a>
+                      <button className={s.rowBtn} title="Reset Password" onClick={() => quickResetPassword(t)}>🔑</button>
+                      <button className={s.rowBtn} title={t.active ? "Suspend Account" : "Activate Account"} onClick={() => quickToggleStatus(t)}>{t.active ? '🛑' : '✅'}</button>
+                      <button className={s.rowBtn} title="Delete Account" onClick={() => quickDelete(t)}>🗑️</button>
                       <button className={s.rowBtn} title="Open Admin (Edit)" onClick={() => quickImpersonate(t, 'edit')}>🛠</button>
                       <button className={`${s.rowBtn} ${s['rowBtn--imp']}`} title="Impersonate (Read-Only)" onClick={() => quickImpersonate(t, 'read_only')}>👁</button>
                     </div>

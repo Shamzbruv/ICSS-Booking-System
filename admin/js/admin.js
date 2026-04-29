@@ -59,13 +59,20 @@ function populateUserUI() {
 }
 
 // ── API Fetch ──────────────────────────────────────────────────────────────────
+function getTenantSlug() {
+    const params = new URLSearchParams(window.location.search);
+    if (params.has('tenant')) return params.get('tenant');
+    const user = getUser();
+    return user ? user.tenant_slug : null;
+}
+
 async function apiFetch(path, options = {}) {
     const token = getToken();
-    const user = getUser();
+    const tenantSlug = getTenantSlug();
     const headers = {
         'Content-Type': 'application/json',
         ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-        ...(user && user.tenant_slug ? { 'X-Tenant-Slug': user.tenant_slug } : {}),
+        ...(tenantSlug ? { 'X-Tenant-Slug': tenantSlug } : {}),
         ...options.headers
     };
 
