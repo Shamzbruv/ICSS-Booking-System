@@ -14,6 +14,23 @@ function getToken() {
 }
 
 function getUser() {
+    const params = new URLSearchParams(window.location.search);
+    if (params.has('_impToken')) {
+        try {
+            const token = params.get('_impToken');
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            return {
+                id: payload.id,
+                email: payload.email,
+                role: payload.role,
+                tenant_id: payload.tenant_id,
+                name: (payload.email || 'Tenant Admin').split('@')[0]
+            };
+        } catch (e) {
+            console.error('Failed to parse impersonation token', e);
+        }
+    }
+
     const raw = localStorage.getItem('icss_user');
     try { return raw ? JSON.parse(raw) : null; } catch { return null; }
 }
