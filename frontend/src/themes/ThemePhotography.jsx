@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import styles from './ThemePhotography.module.css';
-import api from '../api';
+import { api } from '../api';
 
 export default function ThemePhotography({ tenant, services, onBook }) {
     const [selectedService, setSelectedService] = useState(services[0] || null);
