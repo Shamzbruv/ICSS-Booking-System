@@ -5,6 +5,7 @@
  */
 
 const { query } = require('../db/connection');
+const { sendWelcomeEmail } = require('./email');
 const RESERVED_SLUGS = new Set([
     'admin', 'api', 'login', 'signup', 'dashboard', 'settings', 'www', 'app',
     'auth', 'billing', 'support', 'help', 'docs', 'blog', 'static', 'assets'
@@ -134,6 +135,14 @@ async function processProvisioningJob(job) {
         await query(`UPDATE provisioning_jobs SET status = 'completed', updated_at = NOW() WHERE id = $1`, [jobId]);
         // Write the final slug back so the status polling endpoint can return it
         await query(`UPDATE pending_signups SET status = 'provisioned', tenant_slug = $1 WHERE id = $2`, [finalSlug, signup.id]);
+
+        // 5. Send Welcome Email
+        try {
+            const firstName = (signup.admin_owner_name || signup.admin_email).split(' ')[0];
+            await sendWelcomeEmail(signup.admin_email, firstName, signup.tenant_name);
+        } catch (emailErr) {
+            console.error('[Provisioning] Failed to send welcome email:', emailErr);
+        }
 
         console.log(`[Provisioning] Successfully completed provisioning for tenant ${finalSlug}.`);
 

@@ -211,6 +211,11 @@ router.post('/paypal/create-subscription', async (req, res) => {
             return res.status(400).json({ error: 'Missing required onboarding fields.' });
         }
 
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(admin_email)) {
+            return res.status(400).json({ error: 'Please enter a valid email address.' });
+        }
+
         const bcrypt = require('bcryptjs');
         const hash = await bcrypt.hash(admin_password, 12);
         

@@ -291,6 +291,41 @@ async function sendPasswordResetEmail(email, resetUrl) {
     console.log(`[Email] Password reset sent to ${email}`);
 }
 
+async function sendWelcomeEmail(email, firstName, tenantName) {
+    const resend = getResend();
+    if (!resend) {
+        console.warn('[Email] No RESEND_API_KEY — skipping welcome email to:', email);
+        return;
+    }
+
+    await resend.emails.send({
+        from:    'ICSS Booking <welcome@icssbookings.com>',
+        to:      [email],
+        subject: `Welcome to ICSS Booking System!`,
+        html: `
+        <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;border:1px solid #e8e8e8;border-radius:8px;overflow:hidden;">
+            <div style="background:#050505;padding:24px;text-align:center;">
+                <h2 style="color:#fff;margin:0;font-family:Georgia,serif;letter-spacing:2px;">WELCOME ABOARD</h2>
+            </div>
+            <div style="padding:32px 36px;background:#fff;color:#333;">
+                <p>Hello ${firstName || 'there'},</p>
+                <p>Welcome to the ICSS Booking System! We are thrilled to have <strong>${tenantName}</strong> on our platform.</p>
+                <p>Your account has been successfully provisioned. You can now access your dashboard to configure your services, set up your calendar, and start accepting bookings.</p>
+                <div style="text-align:center;margin:30px 0;">
+                    <a href="https://icssbookings.com/admin" style="background:#7C6EF7;color:#fff;text-decoration:none;padding:14px 28px;border-radius:4px;font-weight:bold;display:inline-block;letter-spacing:1px;">GO TO DASHBOARD</a>
+                </div>
+                <p>If you have any questions, feel free to reply to this email. We're here to help you succeed.</p>
+                <p>Warm regards,<br><strong>The ICSS Team</strong></p>
+            </div>
+            <div style="background:#f9f9f9;padding:20px;text-align:center;font-size:12px;color:#999;border-top:1px solid #eee;">
+                <p style="margin:0;">&copy; ${new Date().getFullYear()} ICSS Booking System. All rights reserved.</p>
+            </div>
+        </div>`
+    });
+
+    console.log(`[Email] Welcome email sent to ${email}`);
+}
+
 async function sendSubscriptionInvoiceEmail({ to, ownerName, businessName, amount, currency = 'USD',
                                                invoiceNumber, paidAt, pdfBuffer }) {
     const resend = getResend();
@@ -419,5 +454,6 @@ module.exports = {
     sendOrderConfirmation,
     sendDesignInquiryEmail,
     sendPasswordResetEmail,
+    sendWelcomeEmail,
     sendSubscriptionInvoiceEmail,
 };
