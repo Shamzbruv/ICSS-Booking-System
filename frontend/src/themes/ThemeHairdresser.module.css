@@ -369,8 +369,23 @@
     .summary-line {
       display: flex;
       justify-content: space-between;
+      align-items: flex-start;
       margin-bottom: 14px;
-      font-size: 1rem;
+      font-size: 0.95rem;
+      color: #4a2535;
+      gap: 12px;
+    }
+
+    .summary-line span:first-child {
+      color: #7a4060;
+      font-weight: 500;
+      flex-shrink: 0;
+    }
+
+    .summary-line span:last-child {
+      color: #3d1f2d;
+      font-weight: 600;
+      text-align: right;
     }
 
     .summary-line.total {
@@ -381,6 +396,9 @@
       margin-top: 6px;
       color: #772e4e;
     }
+
+    .summary-line.total span:first-child { color: #772e4e; }
+    .summary-line.total span:last-child  { color: #772e4e; }
 
     .book-btn {
       background: #d86694;

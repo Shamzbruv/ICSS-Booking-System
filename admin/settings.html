@@ -191,6 +191,21 @@
                 </div>
             </div>
 
+            <!-- Stylists / Team Members -->
+            <div style="grid-column: 1 / -1; margin-top: 0.5rem;">
+                <h3 style="font-size: 15px; font-weight: 600; color: var(--text-dim); margin-bottom: 6px;">Stylists / Team Members <span style="font-weight:400; font-size:12px;">(optional)</span></h3>
+                <p class="page-subtitle" style="margin-bottom: 1rem;">
+                    Add the names of your team members. Clients will see a <strong>"Stylist Preference"</strong> dropdown when booking.
+                    Leave this empty if you work <strong>by yourself</strong> — the dropdown will be hidden automatically.
+                </p>
+                <div id="stylistsList" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px;"></div>
+                <div style="display: flex; gap: 8px;">
+                    <input type="text" id="newStylistName" class="form-control" placeholder="e.g. Krystal, Maya, Sasha..." style="flex:1;" maxlength="50"
+                           onkeydown="if(event.key==='Enter'){event.preventDefault();addStylist();}">
+                    <button type="button" class="btn btn-secondary" onclick="addStylist()" style="white-space:nowrap;">+ Add</button>
+                </div>
+            </div>
+
             <div class="form-actions" style="grid-column: 1 / -1; margin-top: 0.5rem;">
                 <button type="submit" class="btn btn-primary" style="width: 100%;">Save Branding</button>
             </div>
@@ -311,6 +326,8 @@
                 document.getElementById('branding_badge1').value     = b.badge1         || '';
                 document.getElementById('branding_badge2').value     = b.badge2         || '';
                 if (b.timezone) document.getElementById('branding_timezone').value = b.timezone;
+                // Load stylists
+                (b.stylists || []).forEach(name => addStylistTag(name));
                 updateBrandingPreview();
                 // Show logo preview if set
                 if (b.logoUrl) {
@@ -364,6 +381,33 @@
         }
     }
 
+    // ── Stylists management ────────────────────────────────────────────────────
+    let _stylists = [];
+
+    function addStylist() {
+        const input = document.getElementById('newStylistName');
+        const name = input.value.trim();
+        if (!name) return;
+        if (_stylists.includes(name)) { input.value = ''; return; }
+        addStylistTag(name);
+        input.value = '';
+    }
+
+    function addStylistTag(name) {
+        if (_stylists.includes(name)) return;
+        _stylists.push(name);
+        const list = document.getElementById('stylistsList');
+        const tag = document.createElement('div');
+        tag.style.cssText = 'display:flex;align-items:center;justify-content:space-between;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;gap:8px;';
+        tag.innerHTML = `<span style="font-size:14px;">👤 ${name}</span><button type="button" onclick="removeStylist('${name}', this.parentNode)" style="background:none;border:none;color:var(--danger);font-size:18px;cursor:pointer;line-height:1;">×</button>`;
+        list.appendChild(tag);
+    }
+
+    function removeStylist(name, el) {
+        _stylists = _stylists.filter(s => s !== name);
+        el.remove();
+    }
+
     function updateBrandingPreview() {
         const logo     = document.getElementById('branding_logo_url').value.trim();
         const tagline  = document.getElementById('branding_tagline').value.trim();
@@ -407,9 +451,10 @@
             badge1:         document.getElementById('branding_badge1').value.trim()   || null,
             badge2:         document.getElementById('branding_badge2').value.trim()   || null,
             timezone:       document.getElementById('branding_timezone').value,
+            stylists:       _stylists.length > 0 ? _stylists : [],
         };
         try {
-            await apiFetch(`/api/v1/tenants/${currentSlug}/branding`, { method: 'PATCH', body: JSON.stringify(payload) });
+            await apiFetch(`/api/v1/tenants/${currentSlug}/branding`, { method: 'PATCH', body: payload });
             showToast('Branding saved! Your booking page will update shortly.', 'success');
         } catch (err) {
             showToast('Failed to save branding: ' + err.message, 'error');

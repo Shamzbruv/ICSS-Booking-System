@@ -16,12 +16,12 @@ export default function ThemeHairdresser({ tenant, services, onBook }) {
     const [phone, setPhone] = useState('');
     const [receiptImage, setReceiptImage] = useState(null);
 
-    const stylists = [
-      { id: 'any', name: '🌸 Any available (recommended)' },
-      { id: 'chloe', name: '💇‍♀️ Chloe (balayage queen)' },
-      { id: 'maya', name: '✨ Maya (curls & bridal)' },
-      { id: 'sasha', name: '🎀 Sasha (precision cuts)' }
-    ];
+    // Stylists come from tenant branding settings.
+    // If tenant has no stylists configured (solo operator), hide the field.
+    const rawStylists = tenant.branding?.stylists || [];
+    const stylists = rawStylists.length > 0
+      ? [{ id: 'any', name: 'Any available (recommended)' }, ...rawStylists.map((s, i) => ({ id: `s${i}`, name: s }))]
+      : [];
 
     useEffect(() => {
         if (!selectedDate || !selectedService) return;
@@ -192,17 +192,19 @@ export default function ThemeHairdresser({ tenant, services, onBook }) {
                                 </div>
                             </div>
 
-                            <div className={styles['form-group']}>
-                                <label><i className="fas fa-user-tag"></i> stylist preference</label>
-                                <div className={styles['input-wrapper']}>
-                                    <i className="fas fa-star"></i>
-                                    <select value={selectedStylist} onChange={e => setSelectedStylist(e.target.value)}>
-                                        {stylists.map(s => (
-                                            <option key={s.id} value={s.name}>{s.name}</option>
-                                        ))}
-                                    </select>
+                            {stylists.length > 0 && (
+                                <div className={styles['form-group']}>
+                                    <label><i className="fas fa-user-tag"></i> stylist preference</label>
+                                    <div className={styles['input-wrapper']}>
+                                        <i className="fas fa-star"></i>
+                                        <select value={selectedStylist} onChange={e => setSelectedStylist(e.target.value)}>
+                                            {stylists.map(s => (
+                                                <option key={s.id} value={s.name}>{s.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
                                 </div>
-                            </div>
+                            )}
 
                             {tenant.manual_payment_enabled && tenant.default_payment_mode === 'manual' && (
                                 <div className={styles['form-group']}>
