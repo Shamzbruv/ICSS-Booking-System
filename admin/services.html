@@ -94,8 +94,26 @@
                     <input type="number" id="svc_price" class="form-control" required placeholder="0" min="0" step="0.01">
                 </div>
                 <div class="form-group">
-                    <label>Duration (mins)</label>
-                    <input type="number" id="svc_duration" class="form-control" required value="30" min="5">
+                    <label>Duration</label>
+                    <div style="display:flex;gap:8px;">
+                        <select id="svc_duration_h" class="form-control" style="flex:1;">
+                            <option value="0">0 hr</option>
+                            <option value="60">1 hr</option>
+                            <option value="120">2 hrs</option>
+                            <option value="180">3 hrs</option>
+                            <option value="240">4 hrs</option>
+                            <option value="300">5 hrs</option>
+                            <option value="360">6 hrs</option>
+                            <option value="420">7 hrs</option>
+                            <option value="480">8 hrs</option>
+                        </select>
+                        <select id="svc_duration_m" class="form-control" style="flex:1;">
+                            <option value="0">0 min</option>
+                            <option value="15">15 min</option>
+                            <option value="30">30 min</option>
+                            <option value="45">45 min</option>
+                        </select>
+                    </div>
                 </div>
                 <div class="form-group">
                     <label>Buffer Time (mins)</label>
@@ -229,7 +247,8 @@
         document.getElementById('serviceForm').reset();
         document.getElementById('serviceId').value = '';
         document.getElementById('modalTitle').textContent = 'Add Service';
-        document.getElementById('svc_duration').value = 30;
+        document.getElementById('svc_duration_h').value = '60'; // default 1hr
+        document.getElementById('svc_duration_m').value = '0';
         document.getElementById('svc_buffer').value = 0;
         document.getElementById('svc_deposit_amount').value = 0;
         document.getElementById('serviceModal').classList.add('open');
@@ -244,7 +263,14 @@
             document.getElementById('serviceId').value              = service.id;
             document.getElementById('svc_name').value               = service.name || '';
             document.getElementById('svc_price').value              = service.price || 0;
-            document.getElementById('svc_duration').value           = service.duration_minutes || 30;
+            // Decompose total minutes into hrs + mins dropdowns
+            const totalMins = service.duration_minutes || 60;
+            const dHrs = Math.floor(totalMins / 60) * 60;
+            const dMin = totalMins % 60;
+            // Snap minutes to nearest 15
+            const snappedMin = [0,15,30,45].reduce((a,b) => Math.abs(b-dMin)<Math.abs(a-dMin)?b:a, 0);
+            document.getElementById('svc_duration_h').value = String(dHrs);
+            document.getElementById('svc_duration_m').value = String(snappedMin);
             document.getElementById('svc_buffer').value             = service.buffer_time_minutes || 0;
             document.getElementById('svc_payment_mode').value       = service.payment_mode || 'tenant_default';
             document.getElementById('svc_payment_req').value        = service.payment_requirement_type || 'none';
@@ -274,7 +300,7 @@
         const payload = {
             name:                     document.getElementById('svc_name').value.trim(),
             price:                    parseFloat(document.getElementById('svc_price').value) || 0,
-            duration_minutes:         parseInt(document.getElementById('svc_duration').value) || 30,
+            duration_minutes:         (parseInt(document.getElementById('svc_duration_h').value)||0) + (parseInt(document.getElementById('svc_duration_m').value)||0),
             buffer_time_minutes:      parseInt(document.getElementById('svc_buffer').value) || 0,
             payment_mode:             document.getElementById('svc_payment_mode').value,
             payment_requirement_type: document.getElementById('svc_payment_req').value,

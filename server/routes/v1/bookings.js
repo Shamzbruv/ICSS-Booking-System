@@ -165,7 +165,7 @@ router.post('/', enforceBookingLimit, async (req, res) => {
                 }
             }
 
-            return { booking, checkoutUrl, bankInstructions };
+            return { booking, checkoutUrl, bankInstructions, service_name: service.name };
         });
 
         // 7. Enqueue Expiration Job if there is a hold
@@ -179,7 +179,9 @@ router.post('/', enforceBookingLimit, async (req, res) => {
 
         // 8. If confirmed immediately, send emails
         if (result.booking.status === 'confirmed') {
-            sendBookingConfirmation(result.booking, req.tenant).catch(console.error);
+            // Attach service_name so the email template can display it
+            const enrichedBooking = { ...result.booking, service_name: result.service_name };
+            sendBookingConfirmation(enrichedBooking, req.tenant).catch(console.error);
         }
 
         res.status(201).json({ success: true, ...result });

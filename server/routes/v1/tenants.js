@@ -397,6 +397,7 @@ router.patch('/:slug/branding', authenticate, async (req, res) => {
         badge2,
         timezone,
         stylists,
+        bookingFooterNote,
     } = req.body;
 
     try {
@@ -416,6 +417,7 @@ router.patch('/:slug/branding', authenticate, async (req, res) => {
             ...(badge2         !== undefined && { badge2 }),
             ...(timezone       !== undefined && { timezone }),
             ...(Array.isArray(stylists)       && { stylists }),
+            ...(bookingFooterNote !== undefined && { bookingFooterNote }),
         };
 
         await query(

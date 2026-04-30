@@ -57,9 +57,14 @@ function footerHtml(brand) {
 
 function formatDate(dateStr) {
     try {
-        const d = new Date(dateStr + 'T00:00:00');
+        // booking_date can arrive as a Date object or a string like '2026-04-30' or '2026-04-30T00:00:00.000Z'
+        const raw = dateStr instanceof Date ? dateStr.toISOString().split('T')[0]
+                  : String(dateStr).includes('T') ? String(dateStr).split('T')[0]
+                  : String(dateStr);
+        const d = new Date(raw + 'T00:00:00');
+        if (isNaN(d.getTime())) return String(dateStr);
         return d.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-    } catch { return dateStr; }
+    } catch { return String(dateStr); }
 }
 
 function formatTime(timeStr) {
@@ -98,9 +103,10 @@ async function sendBookingConfirmation(booking, tenant) {
             ${headerHtml(brand)}
             <div style="padding:40px 36px;background:#fff;">
                 <p style="font-size:15px;">Dear ${firstName},</p>
-                <p style="font-size:15px;line-height:1.7;">Your appointment has been <strong>confirmed</strong>. We look forward to seeing you.</p>
+                <p style="font-size:15px;line-height:1.7;">Your appointment with <strong>${brand.name}</strong> has been <strong>confirmed</strong>. We look forward to seeing you!</p>
                 <div style="background:#f9f9f9;border-left:4px solid ${brand.primaryColor};padding:18px 22px;margin:24px 0;border-radius:2px;">
                     <p style="margin:0 0 4px;font-size:13px;text-transform:uppercase;letter-spacing:1.5px;color:#86868B;">Appointment Details</p>
+                    ${booking.service_name ? `<p style="margin:6px 0;font-size:15px;"><strong>Service:</strong> ${booking.service_name}</p>` : ''}
                     <p style="margin:6px 0;font-size:15px;"><strong>Date:</strong> ${displayDate}</p>
                     <p style="margin:6px 0;font-size:15px;"><strong>Time:</strong> ${displayTime}</p>
                     ${booking.region ? `<p style="margin:6px 0;font-size:15px;"><strong>Location:</strong> ${booking.region}</p>` : ''}

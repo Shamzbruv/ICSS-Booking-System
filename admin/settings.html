@@ -126,10 +126,17 @@
 
             <!-- Tagline -->
             <div class="form-group" style="grid-column: 1 / -1;">
-                <label>Tagline / Slogan</label>
+                <label>Booking Tagline <span style="color:var(--text-dim);font-weight:400;">(shown under business name)</span></label>
                 <input type="text" id="branding_tagline" class="form-control" maxlength="100"
-                       placeholder="e.g. organic · holistic · results-driven">
-                <small style="color: var(--text-dim); margin-top: 6px; display: block;">Displayed beneath your business name in the header.</small>
+                       placeholder="e.g. Where beauty meets luxury">
+            </div>
+
+            <!-- Booking Footer Note -->
+            <div class="form-group" style="grid-column: 1 / -1;">
+                <label>Booking Page Footer Note <span style="color:var(--text-dim);font-weight:400;">(optional — appears below the time slots)</span></label>
+                <input type="text" id="branding_footer_note" class="form-control" maxlength="150"
+                       placeholder="e.g. All appointments include a complimentary drink ✨">
+                <p style="font-size:12px;color:var(--text-dim);margin-top:4px;">Leave blank to hide this line on your booking page.</p>
             </div>
 
             <!-- Location -->
@@ -325,6 +332,7 @@
                 document.getElementById('branding_location').value   = b.location       || '';
                 document.getElementById('branding_badge1').value     = b.badge1         || '';
                 document.getElementById('branding_badge2').value     = b.badge2         || '';
+                document.getElementById('branding_footer_note').value = b.bookingFooterNote || '';
                 if (b.timezone) document.getElementById('branding_timezone').value = b.timezone;
                 // Load stylists
                 (b.stylists || []).forEach(name => addStylistTag(name));
@@ -447,6 +455,7 @@
         const payload = {
             logoUrl:        document.getElementById('branding_logo_url').value.trim() || null,
             bookingTagline: document.getElementById('branding_tagline').value.trim()  || null,
+            bookingFooterNote: document.getElementById('branding_footer_note').value.trim() || null,
             location:       document.getElementById('branding_location').value.trim() || null,
             badge1:         document.getElementById('branding_badge1').value.trim()   || null,
             badge2:         document.getElementById('branding_badge2').value.trim()   || null,

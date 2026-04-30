@@ -2,6 +2,50 @@ import React, { useState, useEffect } from 'react';
 import styles from './ThemeHairdresser.module.css';
 import { api } from '../api';
 
+// ── Calendar helper ────────────────────────────────────────────
+function generateICS(serviceName, date, time, tenantName, location) {
+    const [h, m] = time.split(':').map(Number);
+    const [yr, mo, da] = date.split('-').map(Number);
+    const pad = n => String(n).padStart(2, '0');
+    const dtStart = `${yr}${pad(mo)}${pad(da)}T${pad(h)}${pad(m)}00`;
+    const endH = h + 1; // assume 1hr default end
+    const dtEnd   = `${yr}${pad(mo)}${pad(da)}T${pad(endH)}${pad(m)}00`;
+    const uid = `${Date.now()}@icssbookings.com`;
+    const ics = [
+        'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//ICSS Bookings//EN',
+        'BEGIN:VEVENT',
+        `UID:${uid}`,
+        `DTSTART:${dtStart}`,
+        `DTEND:${dtEnd}`,
+        `SUMMARY:${serviceName} @ ${tenantName}`,
+        `LOCATION:${location || tenantName}`,
+        'STATUS:CONFIRMED',
+        'END:VEVENT',
+        'END:VCALENDAR'
+    ].join('\r\n');
+    const blob = new Blob([ics], { type: 'text/calendar' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url; a.download = 'appointment.ics'; a.click();
+    URL.revokeObjectURL(url);
+}
+
+function googleCalUrl(serviceName, date, time, tenantName, location) {
+    const [h, m] = time.split(':').map(Number);
+    const [yr, mo, da] = date.split('-').map(Number);
+    const pad = n => String(n).padStart(2, '0');
+    const dtStart = `${yr}${pad(mo)}${pad(da)}T${pad(h)}${pad(m)}00`;
+    const endH = h + 1;
+    const dtEnd   = `${yr}${pad(mo)}${pad(da)}T${pad(endH)}${pad(m)}00`;
+    const params = new URLSearchParams({
+        action: 'TEMPLATE',
+        text: `${serviceName} @ ${tenantName}`,
+        dates: `${dtStart}/${dtEnd}`,
+        location: location || tenantName,
+    });
+    return `https://calendar.google.com/calendar/render?${params}`;
+}
+
 export default function ThemeHairdresser({ tenant, services, onBook }) {
     const [selectedService, setSelectedService] = useState(services[0] || null);
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
@@ -9,7 +53,9 @@ export default function ThemeHairdresser({ tenant, services, onBook }) {
     const [selectedStylist, setSelectedStylist] = useState('Any available (recommended)');
     const [availability, setAvailability] = useState([]);
     const [loadingSlots, setLoadingSlots] = useState(false);
-    
+
+    // Booking confirmation modal state
+    const [confirmModal, setConfirmModal] = useState(null); // { service, date, time }
     // Form state
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
@@ -32,9 +78,18 @@ export default function ThemeHairdresser({ tenant, services, onBook }) {
             .finally(() => setLoadingSlots(false));
     }, [tenant.slug, selectedDate, selectedService]);
 
+    // Determine if manual payment is required (service-level override beats tenant default)
+    const resolvedPaymentMode = (() => {
+        const svcMode = selectedService?.payment_mode;
+        if (svcMode && svcMode !== 'tenant_default') return svcMode;
+        return tenant.default_payment_mode || 'none';
+    })();
+    const needsReceipt = resolvedPaymentMode === 'manual' && tenant.manual_payment_enabled;
+
     const handleBooking = async (e) => {
         e.preventDefault();
         if (!selectedTime) return alert('Please select a time.');
+        if (needsReceipt && !receiptImage) return alert('Please attach your bank transfer receipt.');
         
         let receiptBase64 = null;
         if (receiptImage) {
@@ -45,7 +100,7 @@ export default function ThemeHairdresser({ tenant, services, onBook }) {
             });
         }
 
-        const combinedNotes = `Stylist: ${selectedStylist}`;
+        const combinedNotes = stylists.length > 0 ? `Stylist: ${selectedStylist}` : null;
 
         try {
             const res = await api.publicCreateBooking(tenant.slug, {
@@ -59,8 +114,8 @@ export default function ThemeHairdresser({ tenant, services, onBook }) {
             if (res.checkoutUrl) {
                 window.location.href = res.checkoutUrl;
             } else {
-                alert('✨ BOOKING CONFIRMED ✨\nA confirmation has been sent. See you soon, beauty! 💖');
-                window.location.reload();
+                // Show themed confirmation modal instead of browser alert
+                setConfirmModal({ service: selectedService.name, date: selectedDate, time: selectedTime });
             }
         } catch (err) {
             alert(err.message || 'Failed to book appointment.');
@@ -68,8 +123,9 @@ export default function ThemeHairdresser({ tenant, services, onBook }) {
     };
 
     return (
-        <div className={styles.ThemeHairdresserWrapper}>
-            <div className={`${styles['booking-system']} ${styles.glitter}`}>
+        <>
+            <div className={styles.ThemeHairdresserWrapper}>
+                <div className={`${styles['booking-system']} ${styles.glitter}`}>
                 <div className={styles.header}>
                     <div className={styles.brand}>
                         <div className={styles['brand-icon']}>
@@ -156,9 +212,12 @@ export default function ThemeHairdresser({ tenant, services, onBook }) {
                                 </div>
                             )}
                         </div>
-                        <div style={{marginTop: '14px', fontSize: '0.85rem', color: '#a04d6b'}}>
-                            <i className="fas fa-sparkles" style={{marginRight: '6px'}}></i> all appointments include a complimentary drink
-                        </div>
+                        {tenant.branding?.bookingFooterNote && (
+                            <div style={{marginTop: '14px', fontSize: '0.85rem', color: '#a04d6b'}}>
+                                <i className="fas fa-sparkles" style={{marginRight: '6px'}}></i>
+                                {tenant.branding.bookingFooterNote}
+                            </div>
+                        )}
                     </div>
 
                     <div className={styles['booking-form-panel']}>
@@ -206,11 +265,11 @@ export default function ThemeHairdresser({ tenant, services, onBook }) {
                                 </div>
                             )}
 
-                            {tenant.manual_payment_enabled && tenant.default_payment_mode === 'manual' && (
+                            {needsReceipt && (
                                 <div className={styles['form-group']}>
-                                    <label><i className="fas fa-file-invoice-dollar"></i> deposit receipt</label>
+                                    <label><i className="fas fa-file-invoice-dollar"></i> bank transfer receipt</label>
                                     <div style={{color: '#a04d6b', fontSize: '0.85rem', marginBottom: '8px'}}>
-                                        {tenant.bank_transfer_instructions || 'Please attach your transfer screenshot.'}
+                                        {tenant.bank_transfer_instructions || 'Please attach a screenshot of your bank transfer before booking.'}
                                     </div>
                                     <div className={styles['input-wrapper']}>
                                         <i className="fas fa-upload"></i>
@@ -245,5 +304,52 @@ export default function ThemeHairdresser({ tenant, services, onBook }) {
                 </div>
             </div>
         </div>
+        {/* ✨ Themed Confirmation Modal */}
+        {confirmModal && (
+            <div style={{
+                position:'fixed', inset:0, zIndex:9999,
+                background:'rgba(80,30,55,0.45)', backdropFilter:'blur(6px)',
+                display:'flex', alignItems:'center', justifyContent:'center', padding:'1rem'
+            }}>
+                <div style={{
+                    background:'linear-gradient(145deg,#fff9fc,#ffe6f2)',
+                    borderRadius:'32px', padding:'2.2rem 2rem', maxWidth:'380px', width:'100%',
+                    boxShadow:'0 30px 60px -10px rgba(210,100,150,0.35), 0 0 0 1px #fff3f9',
+                    textAlign:'center', position:'relative'
+                }}>
+                    <div style={{fontSize:'3rem', marginBottom:'0.5rem'}}>✨</div>
+                    <h2 style={{fontFamily:"'Playfair Display',serif", color:'#572c41', fontSize:'1.7rem', marginBottom:'0.5rem'}}>Booking Confirmed!</h2>
+                    <p style={{color:'#a04d6b', fontSize:'0.95rem', marginBottom:'1.2rem', lineHeight:1.6}}>
+                        A confirmation email is on its way. We can't wait to see you! 💖
+                    </p>
+                    <div style={{background:'#ffecf3', borderRadius:'18px', padding:'1rem 1.2rem', marginBottom:'1.4rem', textAlign:'left', border:'1px dashed #e387aa'}}>
+                        <p style={{margin:'0 0 6px', fontSize:'0.85rem', color:'#7a4060', fontWeight:600, textTransform:'uppercase', letterSpacing:'0.08em'}}>Your appointment</p>
+                        <p style={{margin:'3px 0', color:'#3d1f2d', fontWeight:600}}>{confirmModal.service}</p>
+                        <p style={{margin:'3px 0', color:'#7a4060', fontSize:'0.9rem'}}>
+                            {new Date(confirmModal.date + 'T00:00:00').toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}
+                            {' at '}
+                            {(() => { const [h,m]=confirmModal.time.split(':'); const hr=parseInt(h); return `${hr>12?hr-12:hr}:${m} ${hr>=12?'PM':'AM'}`; })()}
+                        </p>
+                    </div>
+                    <p style={{color:'#a04d6b', fontSize:'0.85rem', marginBottom:'0.9rem', fontWeight:500}}>Add to your calendar:</p>
+                    <div style={{display:'flex', gap:'10px', justifyContent:'center', marginBottom:'1.4rem', flexWrap:'wrap'}}>
+                        <button onClick={() => generateICS(confirmModal.service, confirmModal.date, confirmModal.time, tenant.name, tenant.branding?.location)} style={{
+                            background:'#fff', border:'1.5px solid #dca0c0', borderRadius:'40px', padding:'9px 18px',
+                            color:'#7a4060', fontWeight:600, fontSize:'0.82rem', cursor:'pointer', display:'flex', alignItems:'center', gap:'6px'
+                        }}>📅 Apple / Outlook</button>
+                        <a href={googleCalUrl(confirmModal.service, confirmModal.date, confirmModal.time, tenant.name, tenant.branding?.location)} target="_blank" rel="noreferrer" style={{
+                            background:'#fff', border:'1.5px solid #dca0c0', borderRadius:'40px', padding:'9px 18px',
+                            color:'#7a4060', fontWeight:600, fontSize:'0.82rem', cursor:'pointer', display:'flex', alignItems:'center', gap:'6px', textDecoration:'none'
+                        }}>🗓️ Google Calendar</a>
+                    </div>
+                    <button onClick={() => { setConfirmModal(null); window.location.reload(); }} style={{
+                        background:'#d86694', border:'none', borderRadius:'60px', padding:'13px 32px',
+                        color:'#fff', fontWeight:700, fontSize:'1rem', cursor:'pointer', width:'100%',
+                        boxShadow:'0 8px 0 #9b4265'
+                    }}>Done 💕</button>
+                </div>
+            </div>
+        )}
+        </>
     );
 }
