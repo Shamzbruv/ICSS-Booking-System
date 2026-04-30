@@ -349,6 +349,7 @@ async function runMigrations(client) {
     try { await client.query(`ALTER TABLE services ADD COLUMN payment_requirement_type TEXT DEFAULT 'none'`); } catch(e){}
     try { await client.query(`ALTER TABLE services ADD COLUMN deposit_type TEXT DEFAULT 'percentage'`); } catch(e){}
     try { await client.query(`ALTER TABLE services ADD COLUMN deposit_amount NUMERIC DEFAULT 0`); } catch(e){}
+    try { await client.query(`ALTER TABLE tenants ADD COLUMN business_hours JSONB DEFAULT NULL`); } catch(e){}
 
     // ── Booking Payments ──────────────────────────────────────────────────────
     await client.query(`

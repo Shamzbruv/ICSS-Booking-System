@@ -31,7 +31,7 @@ router.post('/', async (req, res) => {
         payment_mode, payment_requirement_type, deposit_type, deposit_amount 
     } = req.body;
 
-    if (!name) return res.status(400).json({ error: 'Name is required.' });
+    if (!name || !name.trim()) return res.status(400).json({ error: 'Name is required.' });
 
     try {
         const result = await query(
@@ -40,14 +40,26 @@ router.post('/', async (req, res) => {
                 price, currency, payment_mode, payment_requirement_type, deposit_type, deposit_amount
             ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
             [
-                req.tenant.id, name, description, duration_minutes || 30, buffer_time_minutes || 0,
-                price || 0, currency || 'JMD', payment_mode || 'tenant_default', 
-                payment_requirement_type || 'none', deposit_type || 'percentage', deposit_amount || 0
+                req.tenant.id,
+                name.trim(),
+                description || null,
+                parseInt(duration_minutes) || 30,
+                parseInt(buffer_time_minutes) || 0,
+                parseFloat(price) || 0,
+                currency || 'JMD',
+                payment_mode || 'tenant_default',
+                payment_requirement_type || 'none',
+                deposit_type || 'percentage',
+                parseFloat(deposit_amount) || 0
             ]
         );
         res.status(201).json({ success: true, service: result.rows[0] });
     } catch (err) {
-        res.status(500).json({ error: 'Failed to create service.' });
+        console.error('[Services/Create] DB Error:', err.message, '| Code:', err.code);
+        if (err.code === '42703') {
+            return res.status(500).json({ error: `Database column missing: ${err.message}` });
+        }
+        res.status(500).json({ error: 'An internal server error occurred.' });
     }
 });
 
@@ -74,15 +86,28 @@ router.patch('/:id', async (req, res) => {
                 active = COALESCE($11, active)
              WHERE id = $12 AND tenant_id = $13 RETURNING *`,
             [
-                name, description, duration_minutes, buffer_time_minutes, price, currency,
-                payment_mode, payment_requirement_type, deposit_type, deposit_amount, active,
+                name ? name.trim() : null,
+                description !== undefined ? description : null,
+                duration_minutes ? parseInt(duration_minutes) : null,
+                buffer_time_minutes !== undefined ? parseInt(buffer_time_minutes) : null,
+                price !== undefined ? parseFloat(price) : null,
+                currency || null,
+                payment_mode || null,
+                payment_requirement_type || null,
+                deposit_type || null,
+                deposit_amount !== undefined ? parseFloat(deposit_amount) : null,
+                active !== undefined ? Boolean(active) : null,
                 req.params.id, req.tenant.id
             ]
         );
         if (result.rows.length === 0) return res.status(404).json({ error: 'Service not found.' });
         res.json({ success: true, service: result.rows[0] });
     } catch (err) {
-        res.status(500).json({ error: 'Failed to update service.' });
+        console.error('[Services/Update] DB Error:', err.message, '| Code:', err.code);
+        if (err.code === '42703') {
+            return res.status(500).json({ error: `Database column missing: ${err.message}` });
+        }
+        res.status(500).json({ error: 'An internal server error occurred.' });
     }
 });
 

@@ -172,3 +172,27 @@ function statusBadge(status) {
 function confirmDialog(message) {
     return window.confirm(message);
 }
+
+// ── Mobile Navigation ─────────────────────────────────────────────────────────
+function setupMobileNav() {
+    const hamburger = document.getElementById('hamburgerBtn');
+    const sidebar   = document.getElementById('sidebar');
+    const backdrop  = document.getElementById('sidebarBackdrop');
+    if (!hamburger || !sidebar) return;
+
+    hamburger.addEventListener('click', () => {
+        sidebar.classList.toggle('open');
+        if (backdrop) backdrop.classList.toggle('show');
+    });
+    if (backdrop) {
+        backdrop.addEventListener('click', () => {
+            sidebar.classList.remove('open');
+            backdrop.classList.remove('show');
+        });
+    }
+}
+
+// Auto-init mobile nav on every page (runs after DOM ready)
+document.addEventListener('DOMContentLoaded', () => {
+    setupMobileNav();
+});
