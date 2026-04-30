@@ -93,7 +93,13 @@ async function apiFetch(path, options = {}) {
         ...options.headers
     };
 
-    const res = await fetch(API_BASE + path, { ...options, headers });
+    // Serialize body to JSON string if it's a plain object
+    let body = options.body;
+    if (body !== undefined && body !== null && typeof body === 'object' && !(body instanceof FormData) && !(body instanceof URLSearchParams)) {
+        body = JSON.stringify(body);
+    }
+
+    const res = await fetch(API_BASE + path, { ...options, headers, body });
 
     if (res.status === 401) {
         clearAuth();
