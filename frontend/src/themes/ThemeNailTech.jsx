@@ -30,8 +30,8 @@ export default function ThemeNailTech({ tenant, services, onBook }) {
         if (!selectedDate || !selectedService) return;
         setLoadingSlots(true);
         api.publicAvailability(tenant.slug, selectedDate, selectedService.id)
-            .then(data => setAvailability(data.availability || []))
-            .catch(console.error)
+            .then(data => setAvailability(((data.slots || []).filter(s => s.available))))
+            .catch(err => { console.error("[Availability]", err.message); setAvailability([]); })
             .finally(() => setLoadingSlots(false));
     }, [tenant.slug, selectedDate, selectedService]);
 
@@ -165,7 +165,7 @@ export default function ThemeNailTech({ tenant, services, onBook }) {
                                             className={`${styles['time-slot']} ${selectedTime === slot.time ? styles.selected : ''}`}
                                             onClick={() => setSelectedTime(slot.time)}
                                         >
-                                            {slot.time}
+{slot.label || slot.time}
                                         </div>
                                     ))}
                                     {availability.length === 0 && <p style={{color: '#b06888'}}>No slots available.</p>}
