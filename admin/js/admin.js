@@ -6,25 +6,39 @@
 // ── Config ────────────────────────────────────────────────────────────────────
 const API_BASE = '';  // Same-origin; update if API is on a separate domain
 
-// ── Auth Helpers ──────────────────────────────────────────────────────────────
-function getToken() {
+// ── Impersonation Token Persistence ──────────────────────────────────────────
+// When the platform console opens an admin page with ?_impToken=xxx&tenant=xxx,
+// save both to sessionStorage so they survive page-to-page navigation.
+(function bootstrapImpersonation() {
     const params = new URLSearchParams(window.location.search);
-    if (params.has('_impToken')) return params.get('_impToken');
+    const tok = params.get('_impToken');
+    const ten = params.get('tenant');
+    if (tok) sessionStorage.setItem('_impToken', tok);
+    if (ten) sessionStorage.setItem('_impTenant', ten);
+})();
+
+// ── Auth Helpers ──────────────────────────────────────────────────────────────
+function getImpToken()  { return new URLSearchParams(window.location.search).get('_impToken') || sessionStorage.getItem('_impToken'); }
+function getImpTenant() { return new URLSearchParams(window.location.search).get('tenant')    || sessionStorage.getItem('_impTenant'); }
+
+function getToken() {
+    const imp = getImpToken();
+    if (imp) return imp;
     return localStorage.getItem('icss_token');
 }
 
 function getUser() {
-    const params = new URLSearchParams(window.location.search);
-    if (params.has('_impToken')) {
+    const imp = getImpToken();
+    if (imp) {
         try {
-            const token = params.get('_impToken');
-            const payload = JSON.parse(atob(token.split('.')[1]));
+            const payload = JSON.parse(atob(imp.split('.')[1]));
             return {
                 id: payload.id,
                 email: payload.email,
                 role: payload.role,
                 tenant_id: payload.tenant_id,
-                name: (payload.email || 'Tenant Admin').split('@')[0]
+                tenant_slug: payload.tenant_slug || getImpTenant(),
+                name: (payload.name || payload.email || 'Tenant Admin').split('@')[0]
             };
         } catch (e) {
             console.error('Failed to parse impersonation token', e);
@@ -43,6 +57,8 @@ function setAuth(token, user) {
 function clearAuth() {
     localStorage.removeItem('icss_token');
     localStorage.removeItem('icss_user');
+    sessionStorage.removeItem('_impToken');
+    sessionStorage.removeItem('_impTenant');
 }
 
 function requireAuth() {
@@ -77,8 +93,11 @@ function populateUserUI() {
 
 // ── API Fetch ──────────────────────────────────────────────────────────────────
 function getTenantSlug() {
+    // Priority: URL param → sessionStorage impersonation → user object
     const params = new URLSearchParams(window.location.search);
     if (params.has('tenant')) return params.get('tenant');
+    const imp = sessionStorage.getItem('_impTenant');
+    if (imp) return imp;
     const user = getUser();
     return user ? user.tenant_slug : null;
 }

@@ -92,8 +92,12 @@ function TenantsView() {
   };
 
   const quickImpersonate = async (tenant, mode = 'read_only') => {
-    const session = await startImpersonation(tenant.id, mode, 'Console Quick Access');
-    window.open(`/admin?tenant=${tenant.slug}&_impToken=${session.token}`, '_blank');
+    try {
+      const session = await startImpersonation(tenant.id, mode, 'Console Quick Access');
+      window.open(`/admin/index.html?tenant=${tenant.slug}&_impToken=${session.token}`, '_blank');
+    } catch (err) {
+      alert('Failed to open admin: ' + (err.message || 'Unknown error'));
+    }
   };
 
   const quickResetPassword = async (tenant) => {
