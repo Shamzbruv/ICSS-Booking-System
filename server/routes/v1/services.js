@@ -27,7 +27,7 @@ router.get('/', async (req, res) => {
 // POST /api/v1/services
 router.post('/', async (req, res) => {
     const { 
-        name, description, duration_minutes, buffer_time_minutes, price, currency,
+        name, description, image_url, duration_minutes, buffer_time_minutes, price, currency,
         payment_mode, payment_requirement_type, deposit_type, deposit_amount 
     } = req.body;
 
@@ -36,13 +36,14 @@ router.post('/', async (req, res) => {
     try {
         const result = await query(
             `INSERT INTO services (
-                tenant_id, name, description, duration_minutes, buffer_time_minutes,
+                tenant_id, name, description, image_url, duration_minutes, buffer_time_minutes,
                 price, currency, payment_mode, payment_requirement_type, deposit_type, deposit_amount
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
             [
                 req.tenant.id,
                 name.trim(),
                 description || null,
+                image_url || null,
                 parseInt(duration_minutes) || 30,
                 parseInt(buffer_time_minutes) || 0,
                 parseFloat(price) || 0,
@@ -66,7 +67,7 @@ router.post('/', async (req, res) => {
 // PATCH /api/v1/services/:id
 router.patch('/:id', async (req, res) => {
     const { 
-        name, description, duration_minutes, buffer_time_minutes, price, currency,
+        name, description, image_url, duration_minutes, buffer_time_minutes, price, currency,
         payment_mode, payment_requirement_type, deposit_type, deposit_amount, active
     } = req.body;
 
@@ -75,19 +76,21 @@ router.patch('/:id', async (req, res) => {
             `UPDATE services SET
                 name = COALESCE($1, name),
                 description = COALESCE($2, description),
-                duration_minutes = COALESCE($3, duration_minutes),
-                buffer_time_minutes = COALESCE($4, buffer_time_minutes),
-                price = COALESCE($5, price),
-                currency = COALESCE($6, currency),
-                payment_mode = COALESCE($7, payment_mode),
-                payment_requirement_type = COALESCE($8, payment_requirement_type),
-                deposit_type = COALESCE($9, deposit_type),
-                deposit_amount = COALESCE($10, deposit_amount),
-                active = COALESCE($11, active)
-             WHERE id = $12 AND tenant_id = $13 RETURNING *`,
+                image_url = $3,
+                duration_minutes = COALESCE($4, duration_minutes),
+                buffer_time_minutes = COALESCE($5, buffer_time_minutes),
+                price = COALESCE($6, price),
+                currency = COALESCE($7, currency),
+                payment_mode = COALESCE($8, payment_mode),
+                payment_requirement_type = COALESCE($9, payment_requirement_type),
+                deposit_type = COALESCE($10, deposit_type),
+                deposit_amount = COALESCE($11, deposit_amount),
+                active = COALESCE($12, active)
+             WHERE id = $13 AND tenant_id = $14 RETURNING *`,
             [
                 name ? name.trim() : null,
                 description !== undefined ? description : null,
+                image_url !== undefined ? image_url : null,
                 duration_minutes ? parseInt(duration_minutes) : null,
                 buffer_time_minutes !== undefined ? parseInt(buffer_time_minutes) : null,
                 price !== undefined ? parseFloat(price) : null,

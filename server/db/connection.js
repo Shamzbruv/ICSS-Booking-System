@@ -277,6 +277,7 @@ async function runMigrations(client) {
             tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
             name TEXT NOT NULL,
             description TEXT,
+            image_url TEXT,
             duration_minutes INT DEFAULT 30,
             buffer_time_minutes INT DEFAULT 0,
             price NUMERIC DEFAULT 0,
@@ -349,6 +350,7 @@ async function runMigrations(client) {
     try { await client.query(`ALTER TABLE services ADD COLUMN payment_requirement_type TEXT DEFAULT 'none'`); } catch(e){}
     try { await client.query(`ALTER TABLE services ADD COLUMN deposit_type TEXT DEFAULT 'percentage'`); } catch(e){}
     try { await client.query(`ALTER TABLE services ADD COLUMN deposit_amount NUMERIC DEFAULT 0`); } catch(e){}
+    try { await client.query(`ALTER TABLE services ADD COLUMN image_url TEXT`); } catch(e){}
     try { await client.query(`ALTER TABLE tenants ADD COLUMN business_hours JSONB DEFAULT NULL`); } catch(e){}
 
     // ── Booking Payments ──────────────────────────────────────────────────────

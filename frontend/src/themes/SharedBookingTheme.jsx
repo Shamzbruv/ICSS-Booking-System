@@ -85,6 +85,115 @@ function formatDuration(minutes) {
   return parts.join(' ');
 }
 
+function formatCurrency(amount, currency = 'JMD') {
+  const numericAmount = Number(amount || 0);
+  if (numericAmount === 0) return 'Free';
+  return `${currency} ${numericAmount.toLocaleString()}`;
+}
+
+function calculateRequiredAmount(service) {
+  const servicePrice = Math.max(0, Number(service?.price || 0));
+  const requirement = service?.payment_requirement_type || 'none';
+
+  if (requirement === 'deposit') {
+    const rawAmount = service?.deposit_type === 'percentage'
+      ? servicePrice * (Math.max(0, Number(service?.deposit_amount || 0)) / 100)
+      : Math.max(0, Number(service?.deposit_amount || 0));
+    return Math.min(servicePrice, rawAmount);
+  }
+
+  if (requirement === 'full') {
+    return servicePrice;
+  }
+
+  return 0;
+}
+
+function resolvePaymentDetails(service, tenant) {
+  if (!service) {
+    return {
+      mode: 'none',
+      requirement: 'none',
+      dueToday: 0,
+      collectNow: false,
+      hasConfigurationIssue: false,
+      summaryLabel: null,
+      calloutTitle: null,
+      calloutCopy: null,
+      buttonLabel: 'Complete Booking',
+      balanceLater: 0
+    };
+  }
+
+  const requirement = service.payment_requirement_type || 'none';
+  const rawMode = service.payment_mode && service.payment_mode !== 'tenant_default'
+    ? service.payment_mode
+    : (tenant.default_payment_mode || 'none');
+  const dueToday = calculateRequiredAmount(service);
+  const collectNow = dueToday > 0;
+  const modeAvailable = rawMode === 'wipay'
+    ? Boolean(tenant.wipay_enabled)
+    : rawMode === 'manual'
+      ? Boolean(tenant.manual_payment_enabled)
+      : rawMode === 'none';
+  const hasConfigurationIssue = collectNow && (!rawMode || rawMode === 'none' || !modeAvailable);
+  const balanceLater = Math.max(0, Number(service.price || 0) - dueToday);
+
+  let summaryLabel = null;
+  let calloutTitle = null;
+  let calloutCopy = null;
+  let buttonLabel = 'Complete Booking';
+
+  if (collectNow) {
+    summaryLabel = requirement === 'deposit' ? 'Deposit due today' : 'Payment due today';
+
+    if (rawMode === 'manual' && modeAvailable) {
+      calloutTitle = requirement === 'deposit' ? 'Deposit required before confirmation' : 'Payment proof required before confirmation';
+      calloutCopy = tenant.bank_transfer_instructions || 'Upload your transfer receipt to submit this booking for review.';
+      buttonLabel = requirement === 'deposit' ? 'Submit Deposit' : 'Submit Payment Proof';
+    } else if (rawMode === 'wipay' && modeAvailable) {
+      calloutTitle = requirement === 'deposit' ? 'Deposit required to reserve this time' : 'Payment required to complete this booking';
+      calloutCopy = 'You will be redirected to secure checkout after submitting your details.';
+      buttonLabel = requirement === 'deposit' ? 'Pay Deposit' : 'Pay Now';
+    } else {
+      calloutTitle = 'Payment setup needed';
+      calloutCopy = 'This service requires payment before booking, but the payment method is not available right now.';
+      buttonLabel = 'Payment unavailable';
+    }
+  }
+
+  return {
+    mode: rawMode,
+    requirement,
+    dueToday,
+    collectNow,
+    hasConfigurationIssue,
+    summaryLabel,
+    calloutTitle,
+    calloutCopy,
+    buttonLabel,
+    balanceLater
+  };
+}
+
+function IconGlyph({ kind, className }) {
+  const paths = {
+    brand: 'M6 3.75A2.25 2.25 0 0 0 3.75 6v12A2.25 2.25 0 0 0 6 20.25h12A2.25 2.25 0 0 0 20.25 18V9.31a2.25 2.25 0 0 0-.659-1.591l-3.31-3.31A2.25 2.25 0 0 0 14.69 3.75H6Zm3 3a.75.75 0 0 1 .75-.75h3.75a.75.75 0 0 1 .75.75v2.25a.75.75 0 0 1-.75.75H9.75A.75.75 0 0 1 9 9V6.75Zm3 5.25a3.75 3.75 0 1 1 0 7.5 3.75 3.75 0 0 1 0-7.5Z',
+    service: 'M4.5 6.75A2.25 2.25 0 0 1 6.75 4.5h10.5a2.25 2.25 0 0 1 2.25 2.25v10.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 17.25V6.75Zm3 1.5a.75.75 0 0 0 0 1.5h9a.75.75 0 0 0 0-1.5h-9Zm0 3.75a.75.75 0 0 0 0 1.5h9a.75.75 0 0 0 0-1.5h-9Zm0 3.75a.75.75 0 0 0 0 1.5h5.25a.75.75 0 0 0 0-1.5H7.5Z',
+    item: 'M12 3.75 14.52 8.85l5.63.82-4.08 3.98.96 5.61L12 16.61l-5.03 2.65.96-5.61-4.08-3.98 5.63-.82L12 3.75Z',
+    location: 'M12 21s6-5.686 6-11.143C18 6.07 15.314 3.75 12 3.75S6 6.07 6 9.857C6 15.314 12 21 12 21Zm0-8.25a2.893 2.893 0 1 0 0-5.786 2.893 2.893 0 0 0 0 5.786Z',
+    calendar: 'M7.5 3.75a.75.75 0 0 1 .75.75V6h6V4.5a.75.75 0 0 1 1.5 0V6h.75A2.25 2.25 0 0 1 19.5 8.25v9A2.25 2.25 0 0 1 17.25 19.5H6.75A2.25 2.25 0 0 1 4.5 17.25v-9A2.25 2.25 0 0 1 6.75 6h.75V4.5a.75.75 0 0 1 .75-.75Zm9.75 6H6v7.5a.75.75 0 0 0 .75.75h10.5a.75.75 0 0 0 .75-.75v-7.5Z',
+    details: 'M12 3.75a4.125 4.125 0 1 1 0 8.25 4.125 4.125 0 0 1 0-8.25ZM5.25 18A5.25 5.25 0 0 1 10.5 12.75h3A5.25 5.25 0 0 1 18.75 18v.75H5.25V18Z',
+    check: 'M16.28 8.97a.75.75 0 1 0-1.06-1.06l-4.47 4.47-1.97-1.97a.75.75 0 1 0-1.06 1.06l2.5 2.5a.75.75 0 0 0 1.06 0l5-5Z'
+  };
+
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className={className}>
+      <path d={paths[kind] || paths.service} />
+    </svg>
+  );
+}
+
 function readFileAsDataUrl(file) {
   return new Promise((resolve) => {
     const reader = new FileReader();
@@ -278,13 +387,8 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
   const totalAmount = theme.calculateTotal
     ? theme.calculateTotal({ selectedService, selectedAddonItems, addonItems, extraState })
     : baseTotal + addonsTotal;
-
-  const resolvedPaymentMode = (() => {
-    const serviceMode = selectedService?.payment_mode;
-    if (serviceMode && serviceMode !== 'tenant_default') return serviceMode;
-    return tenant.default_payment_mode || 'none';
-  })();
-  const needsReceipt = resolvedPaymentMode === 'manual' && tenant.manual_payment_enabled;
+  const paymentDetails = resolvePaymentDetails(selectedService, tenant);
+  const needsReceipt = paymentDetails.collectNow && paymentDetails.mode === 'manual' && !paymentDetails.hasConfigurationIssue;
 
   const handleExtraFieldChange = (nameToSet, value) => {
     setExtraState((prev) => ({ ...prev, [nameToSet]: value }));
@@ -351,7 +455,18 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
       if (res.checkoutUrl) {
         window.location.href = res.checkoutUrl;
       } else {
-        setConfirmModal({ service: selectedService.name, date: selectedDate, time: selectedTime });
+        setConfirmModal({
+          service: selectedService.name,
+          date: selectedDate,
+          time: selectedTime,
+          status: res.booking?.status || 'confirmed',
+          title: res.booking?.status === 'pending_manual_confirmation'
+            ? (paymentDetails.requirement === 'deposit' ? 'Deposit Submitted' : 'Payment Submitted')
+            : (theme.confirmationTitle || 'Booking Confirmed'),
+          text: res.booking?.status === 'pending_manual_confirmation'
+            ? 'Your booking is pending review. We will confirm it once your payment receipt is approved.'
+            : (theme.confirmationText || 'A confirmation email is on its way with all of your appointment details.')
+        });
       }
     } catch (err) {
       alert(err.message || 'Failed to complete booking.');
@@ -380,7 +495,7 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
               <div className={styles.brandIcon}>
                 {tenant.branding?.logoUrl
                   ? <img src={tenant.branding.logoUrl} alt={tenant.name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 'inherit' }} />
-                  : <i className={`fas ${theme.icon || 'fa-calendar-check'}`}></i>}
+                  : <IconGlyph kind="brand" className={styles.iconGlyph} />}
               </div>
               <div className={styles.brandText}>
                 <h1>{tenant.name}</h1>
@@ -389,7 +504,7 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
                 )}
                 {tenant.branding?.location && (
                   <div className={styles.brandLocation}>
-                    <i className="fas fa-location-dot"></i>
+                    <IconGlyph kind="location" className={styles.inlineIcon} />
                     <span>{tenant.branding.location}</span>
                   </div>
                 )}
@@ -405,7 +520,11 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
           <div className={styles.grid}>
             <section className={styles.panel}>
               <div className={styles.sectionHeader}>
-                <i className={`fas ${theme.serviceIcon || theme.icon || 'fa-list'}`}></i>
+                <div className={styles.sectionHeaderMedia}>
+                  {tenant.branding?.serviceSectionImageUrl
+                    ? <img src={tenant.branding.serviceSectionImageUrl} alt="" className={styles.sectionHeaderImage} />
+                    : <IconGlyph kind="service" className={styles.iconGlyph} />}
+                </div>
                 <h2>{theme.serviceSectionTitle || 'Choose a Service'}</h2>
               </div>
 
@@ -419,7 +538,9 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
                   >
                     <div className={styles.serviceInfo}>
                       <div className={styles.serviceGlyph}>
-                        <i className={`fas ${theme.itemIcon || theme.icon || 'fa-star'}`}></i>
+                        {service.image_url
+                          ? <img src={service.image_url} alt="" className={styles.serviceGlyphImage} />
+                          : <IconGlyph kind="item" className={styles.iconGlyph} />}
                       </div>
                       <div className={styles.serviceText}>
                         <h3>{service.name}</h3>
@@ -463,7 +584,7 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
                     value={selectedDate}
                     onChange={(e) => setSelectedDate(e.target.value)}
                   />
-                  <i className="fas fa-calendar-alt"></i>
+                  <IconGlyph kind="calendar" className={styles.inputIcon} />
                 </div>
               </div>
 
@@ -493,7 +614,9 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
 
             <section className={`${styles.panel} ${styles.formPanel}`}>
               <div className={styles.sectionHeader}>
-                <i className={`fas ${theme.detailsIcon || 'fa-user-pen'}`}></i>
+                <div className={styles.sectionHeaderMedia}>
+                  <IconGlyph kind="details" className={styles.iconGlyph} />
+                </div>
                 <h2>{theme.detailsSectionTitle || 'Your Details'}</h2>
               </div>
 
@@ -542,6 +665,13 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
                   </div>
                 ))}
 
+                {paymentDetails.calloutTitle && (
+                  <div className={`${styles.paymentNotice} ${paymentDetails.hasConfigurationIssue ? styles.paymentNoticeError : ''}`}>
+                    <strong>{paymentDetails.calloutTitle}</strong>
+                    <p>{paymentDetails.calloutCopy}</p>
+                  </div>
+                )}
+
                 {needsReceipt && (
                   <div className={styles.field}>
                     <label>{theme.receiptLabel || 'Bank transfer receipt'}</label>
@@ -569,14 +699,26 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
                       <strong>{row.value}</strong>
                     </div>
                   ))}
+                  {paymentDetails.collectNow && (
+                    <div className={styles.summaryRow}>
+                      <span>{paymentDetails.summaryLabel}</span>
+                      <strong>{formatCurrency(paymentDetails.dueToday, selectedService?.currency || 'JMD')}</strong>
+                    </div>
+                  )}
+                  {paymentDetails.collectNow && paymentDetails.requirement === 'deposit' && paymentDetails.balanceLater > 0 && (
+                    <div className={styles.summaryRow}>
+                      <span>Remaining later</span>
+                      <strong>{formatCurrency(paymentDetails.balanceLater, selectedService?.currency || 'JMD')}</strong>
+                    </div>
+                  )}
                   <div className={`${styles.summaryRow} ${styles.totalRow}`}>
                     <span>{theme.totalLabel || 'Total'}</span>
                     <strong>{theme.totalFormatter ? theme.totalFormatter(totalAmount, selectedService) : `$${Number(totalAmount).toLocaleString()}`}</strong>
                   </div>
                 </div>
 
-                <button type="submit" className={styles.primaryButton} disabled={!selectedService}>
-                  {theme.bookButtonLabel || 'Complete Booking'}
+                <button type="submit" className={styles.primaryButton} disabled={!selectedService || paymentDetails.hasConfigurationIssue}>
+                  {theme.bookButtonLabel || paymentDetails.buttonLabel}
                 </button>
                 <div className={styles.footerNote}>
                   {theme.footerNote || 'Secure booking. Cancellation policy applies.'}
@@ -590,10 +732,10 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
       {confirmModal && (
         <div className={styles.modalOverlay}>
           <div className={styles.modalCard}>
-            <div className={styles.modalIcon}><i className="fas fa-check"></i></div>
-            <h2>{theme.confirmationTitle || 'Booking Confirmed'}</h2>
+            <div className={styles.modalIcon}><IconGlyph kind="check" className={styles.iconGlyph} /></div>
+            <h2>{confirmModal.title}</h2>
             <p className={styles.modalLead}>
-              {theme.confirmationText || 'A confirmation email is on its way with all of your appointment details.'}
+              {confirmModal.text}
             </p>
             <div className={styles.modalSummary}>
               <p className={styles.modalLabel}>Your appointment</p>
@@ -604,24 +746,28 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
                 {formatDisplayTime(confirmModal.time)}
               </p>
             </div>
-            <p className={styles.modalToolsLabel}>Add to your calendar</p>
-            <div className={styles.modalActions}>
-              <button
-                type="button"
-                onClick={() => generateICS(confirmModal.service, confirmModal.date, confirmModal.time, tenant.name, tenant.branding?.location)}
-                className={styles.secondaryButton}
-              >
-                Apple / Outlook
-              </button>
-              <a
-                href={googleCalUrl(confirmModal.service, confirmModal.date, confirmModal.time, tenant.name, tenant.branding?.location)}
-                target="_blank"
-                rel="noreferrer"
-                className={styles.secondaryButton}
-              >
-                Google Calendar
-              </a>
-            </div>
+            {confirmModal.status === 'confirmed' && (
+              <>
+                <p className={styles.modalToolsLabel}>Add to your calendar</p>
+                <div className={styles.modalActions}>
+                  <button
+                    type="button"
+                    onClick={() => generateICS(confirmModal.service, confirmModal.date, confirmModal.time, tenant.name, tenant.branding?.location)}
+                    className={styles.secondaryButton}
+                  >
+                    Apple / Outlook
+                  </button>
+                  <a
+                    href={googleCalUrl(confirmModal.service, confirmModal.date, confirmModal.time, tenant.name, tenant.branding?.location)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className={styles.secondaryButton}
+                  >
+                    Google Calendar
+                  </a>
+                </div>
+              </>
+            )}
             <button type="button" onClick={() => { setConfirmModal(null); window.location.reload(); }} className={styles.primaryButton}>
               Done
             </button>

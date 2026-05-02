@@ -398,6 +398,7 @@ router.patch('/:slug/branding', authenticate, async (req, res) => {
         timezone,
         stylists,
         bookingFooterNote,
+        serviceSectionImageUrl,
     } = req.body;
 
     try {
@@ -418,6 +419,7 @@ router.patch('/:slug/branding', authenticate, async (req, res) => {
             ...(timezone       !== undefined && { timezone }),
             ...(Array.isArray(stylists)       && { stylists }),
             ...(bookingFooterNote !== undefined && { bookingFooterNote }),
+            ...(serviceSectionImageUrl !== undefined && { serviceSectionImageUrl }),
         };
 
         await query(

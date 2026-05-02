@@ -155,6 +155,22 @@
                 <label>Description</label>
                 <textarea id="svc_description" class="form-control" rows="3" placeholder="Short description of this service..."></textarea>
             </div>
+            <div class="form-group" style="margin-top: 1rem;">
+                <label>Service Image <span style="color:var(--text-dim);font-weight:400;">(optional card photo)</span></label>
+                <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+                    <input type="file" id="svc_image_file" class="form-control" accept="image/*" style="flex:1;min-width:240px;padding:7px 10px;">
+                    <button type="button" class="btn btn-secondary" id="svcImageRemoveBtn" style="display:none;" onclick="removeServiceImage()">Remove</button>
+                </div>
+                <small style="display:block;margin-top:6px;color:var(--text-dim);">
+                    Use a square or portrait image to make the service stand out. If blank, the booking page shows a built-in icon.
+                </small>
+                <small id="svc_image_status" class="upload-status" style="display:none;"></small>
+                <input type="hidden" id="svc_image_url">
+                <div id="svcImagePreviewWrap" style="margin-top:12px;display:none;">
+                    <img id="svcImagePreview" src="" alt="Service Image Preview"
+                         style="max-height: 96px; max-width: 160px; border-radius: 12px; border: 1px solid var(--border); padding: 6px; background: var(--surface);">
+                </div>
+            </div>
 
             <div style="margin-top: 1.5rem; display: flex; justify-content: flex-end; gap: 0.75rem;">
                 <button type="button" class="btn btn-secondary" id="modalCancelBtn">Cancel</button>
@@ -184,7 +200,15 @@
             e.preventDefault();
             await saveService();
         });
+
+        document.getElementById('svc_image_file').addEventListener('change', async (e) => {
+            await handleServiceImageSelection(e.target.files[0]);
+        });
     });
+
+    const SERVICE_IMAGE_MAX_BYTES = 700 * 1024;
+    const SERVICE_IMAGE_MAX_DIMENSION = 1200;
+    const SERVICE_IMAGE_MIN_QUALITY = 0.55;
 
     function setupMobileNav() {
         const hamburger = document.getElementById('hamburgerBtn');
@@ -204,6 +228,169 @@
 
     function closeModal() {
         document.getElementById('serviceModal').classList.remove('open');
+    }
+
+    function setServiceImageStatus(message, state = 'info') {
+        const el = document.getElementById('svc_image_status');
+        if (!el) return;
+        if (!message) {
+            el.textContent = '';
+            el.style.display = 'none';
+            el.className = 'upload-status';
+            return;
+        }
+        el.textContent = message;
+        el.className = `upload-status upload-status-${state}`;
+        el.style.display = 'block';
+    }
+
+    function formatBytes(bytes) {
+        if (bytes < 1024) return `${bytes} B`;
+        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+        return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    }
+
+    function syncServiceImagePreview() {
+        const value = document.getElementById('svc_image_url').value.trim();
+        const wrap = document.getElementById('svcImagePreviewWrap');
+        const img = document.getElementById('svcImagePreview');
+        const removeBtn = document.getElementById('svcImageRemoveBtn');
+        if (value) {
+            img.src = value;
+            wrap.style.display = 'block';
+            removeBtn.style.display = 'inline-flex';
+        } else {
+            img.src = '';
+            wrap.style.display = 'none';
+            removeBtn.style.display = 'none';
+        }
+    }
+
+    function readFileAsDataUrl(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = () => reject(new Error('Failed to read the selected image.'));
+            reader.readAsDataURL(file);
+        });
+    }
+
+    function loadImage(dataUrl) {
+        return new Promise((resolve, reject) => {
+            const image = new Image();
+            image.onload = () => resolve(image);
+            image.onerror = () => reject(new Error('This image format could not be processed. Try PNG or JPG.'));
+            image.src = dataUrl;
+        });
+    }
+
+    function canvasToDataUrl(canvas, mimeType, quality) {
+        return canvas.toDataURL(mimeType, quality);
+    }
+
+    async function prepareServiceImage(file) {
+        if (!file.type.startsWith('image/')) {
+            throw new Error('Please choose an image file.');
+        }
+
+        if (file.type === 'image/svg+xml') {
+            if (file.size > SERVICE_IMAGE_MAX_BYTES) {
+                throw new Error('SVG service images need to be under 700 KB.');
+            }
+            return {
+                dataUrl: await readFileAsDataUrl(file),
+                message: `Image ready: ${formatBytes(file.size)}`
+            };
+        }
+
+        const originalDataUrl = await readFileAsDataUrl(file);
+        const image = await loadImage(originalDataUrl);
+        const scale = Math.min(1, SERVICE_IMAGE_MAX_DIMENSION / Math.max(image.width, image.height));
+        const targetWidth = Math.max(1, Math.round(image.width * scale));
+        const targetHeight = Math.max(1, Math.round(image.height * scale));
+
+        const canvas = document.createElement('canvas');
+        canvas.width = targetWidth;
+        canvas.height = targetHeight;
+
+        const context = canvas.getContext('2d', { alpha: true });
+        context.clearRect(0, 0, targetWidth, targetHeight);
+        context.drawImage(image, 0, 0, targetWidth, targetHeight);
+
+        let mimeType = file.type === 'image/png' ? 'image/png' : 'image/jpeg';
+        let quality = 0.9;
+        let dataUrl = canvasToDataUrl(canvas, mimeType, quality);
+
+        while (dataUrl.length > SERVICE_IMAGE_MAX_BYTES * 1.37 && mimeType === 'image/jpeg' && quality > SERVICE_IMAGE_MIN_QUALITY) {
+            quality = Math.max(SERVICE_IMAGE_MIN_QUALITY, quality - 0.1);
+            dataUrl = canvasToDataUrl(canvas, mimeType, quality);
+        }
+
+        if (dataUrl.length > SERVICE_IMAGE_MAX_BYTES * 1.37 && mimeType === 'image/png') {
+            mimeType = 'image/jpeg';
+            quality = 0.88;
+            dataUrl = canvasToDataUrl(canvas, mimeType, quality);
+            while (dataUrl.length > SERVICE_IMAGE_MAX_BYTES * 1.37 && quality > SERVICE_IMAGE_MIN_QUALITY) {
+                quality = Math.max(SERVICE_IMAGE_MIN_QUALITY, quality - 0.1);
+                dataUrl = canvasToDataUrl(canvas, mimeType, quality);
+            }
+        }
+
+        if (dataUrl.length > SERVICE_IMAGE_MAX_BYTES * 1.37) {
+            throw new Error('This image is still too large after optimization. Try cropping it first.');
+        }
+
+        const approxBytes = Math.round((dataUrl.length * 3) / 4);
+        return {
+            dataUrl,
+            message: `Image ready: ${targetWidth}×${targetHeight} (${formatBytes(approxBytes)}).`
+        };
+    }
+
+    async function handleServiceImageSelection(file) {
+        if (!file) return;
+
+        try {
+            setServiceImageStatus('Optimizing image...', 'info');
+            const optimized = await prepareServiceImage(file);
+            document.getElementById('svc_image_url').value = optimized.dataUrl;
+            syncServiceImagePreview();
+            setServiceImageStatus(optimized.message, 'success');
+        } catch (err) {
+            document.getElementById('svc_image_file').value = '';
+            document.getElementById('svc_image_url').value = '';
+            syncServiceImagePreview();
+            setServiceImageStatus(err.message, 'error');
+            if (typeof showToast === 'function') showToast(err.message, 'error');
+            else alert(err.message);
+        }
+    }
+
+    function removeServiceImage() {
+        document.getElementById('svc_image_file').value = '';
+        document.getElementById('svc_image_url').value = '';
+        syncServiceImagePreview();
+        setServiceImageStatus('');
+    }
+
+    function serviceVisualMarkup(service) {
+        if (service.image_url) {
+            return `<img src="${escHtml(service.image_url)}" alt="" style="width:48px;height:48px;border-radius:14px;object-fit:cover;border:1px solid var(--border);background:var(--surface);flex-shrink:0;">`;
+        }
+        return `<div style="width:48px;height:48px;border-radius:14px;background:rgba(255,255,255,0.04);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">✦</div>`;
+    }
+
+    function formatDepositRule(service) {
+        if (service.payment_requirement_type === 'deposit') {
+            if (service.deposit_type === 'percentage') {
+                return `Deposit (${Number(service.deposit_amount || 0)}%)`;
+            }
+            return `Deposit (${escHtml(service.currency || 'JMD')} ${Number(service.deposit_amount || 0).toLocaleString()})`;
+        }
+        if (service.payment_requirement_type === 'full') {
+            return 'Full payment';
+        }
+        return '—';
     }
 
     function formatDuration(minutes) {
@@ -234,11 +421,19 @@
             data.services.forEach(svc => {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td data-label="Service" style="padding: 1rem;"><strong>${escHtml(svc.name)}</strong>${svc.description ? `<div style="font-size:12px;color:var(--text-dim);margin-top:2px;">${escHtml(svc.description.substring(0,60))}${svc.description.length>60?'…':''}</div>` : ''}</td>
+                    <td data-label="Service" style="padding: 1rem;">
+                        <div style="display:flex;align-items:flex-start;gap:12px;min-width:0;">
+                            ${serviceVisualMarkup(svc)}
+                            <div style="min-width:0;">
+                                <strong>${escHtml(svc.name)}</strong>
+                                ${svc.description ? `<div style="font-size:12px;color:var(--text-dim);margin-top:2px;">${escHtml(svc.description.substring(0,60))}${svc.description.length>60?'…':''}</div>` : ''}
+                            </div>
+                        </div>
+                    </td>
                     <td data-label="Duration" style="padding: 1rem;">${formatDuration(svc.duration_minutes)}${svc.buffer_time_minutes > 0 ? ` + ${formatDuration(svc.buffer_time_minutes)} buffer` : ''}</td>
                     <td data-label="Price" style="padding: 1rem;">${escHtml(svc.currency || 'JMD')} ${Number(svc.price).toLocaleString()}</td>
                     <td data-label="Payment" style="padding: 1rem;"><span style="background:var(--gold-glow);color:var(--gold);padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;">${escHtml(svc.payment_mode || 'default')}</span></td>
-                    <td data-label="Deposit" style="padding: 1rem;">${svc.payment_requirement_type !== 'none' ? `${escHtml(svc.payment_requirement_type)} ${svc.deposit_amount > 0 ? '(' + svc.deposit_amount + ')' : ''}` : '—'}</td>
+                    <td data-label="Deposit" style="padding: 1rem;">${formatDepositRule(svc)}</td>
                     <td style="padding: 1rem;">
                         <button class="btn btn-secondary btn-sm" onclick="editService('${svc.id}')">✏️ Edit</button>
                         <button class="btn btn-danger btn-sm" onclick="deleteService('${svc.id}')" style="margin-left:6px;">🗑️ Delete</button>
@@ -265,6 +460,10 @@
         document.getElementById('svc_duration_m').value = '0';
         document.getElementById('svc_buffer').value = 0;
         document.getElementById('svc_deposit_amount').value = 0;
+        document.getElementById('svc_image_file').value = '';
+        document.getElementById('svc_image_url').value = '';
+        syncServiceImagePreview();
+        setServiceImageStatus('');
         document.getElementById('serviceModal').classList.add('open');
     }
 
@@ -291,6 +490,10 @@
             document.getElementById('svc_deposit_type').value       = service.deposit_type || 'percentage';
             document.getElementById('svc_deposit_amount').value     = service.deposit_amount || 0;
             document.getElementById('svc_description').value        = service.description || '';
+            document.getElementById('svc_image_file').value         = '';
+            document.getElementById('svc_image_url').value          = service.image_url || '';
+            syncServiceImagePreview();
+            setServiceImageStatus(service.image_url ? 'Existing service image loaded.' : '');
 
             document.getElementById('modalTitle').textContent = 'Edit Service';
             document.getElementById('serviceModal').classList.add('open');
@@ -314,6 +517,7 @@
         const payload = {
             name:                     document.getElementById('svc_name').value.trim(),
             price:                    parseFloat(document.getElementById('svc_price').value) || 0,
+            image_url:                document.getElementById('svc_image_url').value.trim() || null,
             duration_minutes:         (parseInt(document.getElementById('svc_duration_h').value)||0) + (parseInt(document.getElementById('svc_duration_m').value)||0),
             buffer_time_minutes:      parseInt(document.getElementById('svc_buffer').value) || 0,
             payment_mode:             document.getElementById('svc_payment_mode').value,
@@ -322,6 +526,11 @@
             deposit_amount:           parseFloat(document.getElementById('svc_deposit_amount').value) || 0,
             description:              document.getElementById('svc_description').value.trim() || null,
         };
+
+        if (payload.payment_requirement_type === 'deposit' && payload.deposit_type === 'percentage' && (payload.deposit_amount <= 0 || payload.deposit_amount > 100)) {
+            alert('Percentage-based deposits must be between 1 and 100.');
+            return;
+        }
 
         const submitBtn = document.querySelector('#serviceForm button[type="submit"]');
         submitBtn.disabled = true;

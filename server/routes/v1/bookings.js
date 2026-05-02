@@ -16,6 +16,28 @@ const MAX_BOOKINGS_PER_DAY = 14;
 const MAX_DAYS_AHEAD       = 30;
 const MIN_BUFFER_MINS      = 60;
 
+function getPaymentRequirement(service) {
+    return service.payment_requirement_type || 'none';
+}
+
+function calculateAmountDue(service) {
+    const servicePrice = Math.max(0, Number(service.price || 0));
+    const requirement = getPaymentRequirement(service);
+
+    if (requirement === 'deposit') {
+        const rawAmount = service.deposit_type === 'percentage'
+            ? servicePrice * (Math.max(0, Number(service.deposit_amount || 0)) / 100.0)
+            : Math.max(0, Number(service.deposit_amount || 0));
+        return Math.min(servicePrice, rawAmount);
+    }
+
+    if (requirement === 'full') {
+        return servicePrice;
+    }
+
+    return 0;
+}
+
 function getTzTimeStr(tz = 'America/Jamaica', addMinutes = 0, addDays = 0) {
     const now = new Date();
     if (addMinutes) now.setMinutes(now.getMinutes() + addMinutes);
@@ -73,6 +95,7 @@ router.post('/', enforceBookingLimit, async (req, res) => {
             const service = svcRes.rows[0];
 
             // 2. Determine Payment Mode & Timeouts
+            const paymentRequirement = getPaymentRequirement(service);
             let paymentMode = service.payment_mode;
             if (!paymentMode || paymentMode === 'tenant_default') {
                 paymentMode = tenant.default_payment_mode || 'none';
@@ -81,19 +104,23 @@ router.post('/', enforceBookingLimit, async (req, res) => {
             let status = 'confirmed';
             let expiresAt = null;
             const holdTimeout = tenant.hold_timeout_minutes || 15;
-            
-            if (paymentMode === 'wipay' && tenant.wipay_enabled) {
+
+            const amountDue = calculateAmountDue(service);
+            const paymentRequested = amountDue > 0;
+
+            if (paymentRequested && paymentMode === 'wipay' && tenant.wipay_enabled) {
                 status = 'pending_payment';
                 expiresAt = new Date(Date.now() + holdTimeout * 60000);
-            } else if (paymentMode === 'manual' && tenant.manual_payment_enabled) {
+            } else if (paymentRequested && paymentMode === 'manual' && tenant.manual_payment_enabled) {
                 if (!receipt_image) {
                     const err = new Error('A payment receipt screenshot is required for bank transfers.'); err.status = 400; throw err;
                 }
                 status = 'pending_manual_confirmation';
-                // Wait for admin approval; do not auto-expire
                 expiresAt = null;
+            } else if (paymentRequested) {
+                const err = new Error('This service requires payment before booking, but the configured payment method is unavailable.'); err.status = 400; throw err;
             } else {
-                paymentMode = 'none'; // Fallback if disabled
+                paymentMode = 'none';
             }
 
             // 3. Calculate Start & End Times for Overlap Protection
@@ -139,20 +166,11 @@ router.post('/', enforceBookingLimit, async (req, res) => {
             let bankInstructions = null;
 
             // 6. Handle Payment Records
-            if (paymentMode !== 'none') {
-                let amountDue = service.price;
-                if (service.payment_requirement_type === 'deposit') {
-                    if (service.deposit_type === 'percentage') {
-                        amountDue = service.price * (service.deposit_amount / 100.0);
-                    } else {
-                        amountDue = service.deposit_amount;
-                    }
-                }
-
+            if (paymentMode !== 'none' && amountDue > 0) {
                 const paymentRes = await client.query(
                     `INSERT INTO booking_payments (booking_id, tenant_id, provider, payment_type, amount_due, status, gateway_response)
                      VALUES ($1, $2, $3, $4, $5, 'pending', $6) RETURNING *`,
-                    [booking.id, tenantId, paymentMode, service.payment_requirement_type || 'full', amountDue, paymentMode === 'manual' ? JSON.stringify({ receipt_image }) : null]
+                    [booking.id, tenantId, paymentMode, paymentRequirement, amountDue, paymentMode === 'manual' ? JSON.stringify({ receipt_image }) : null]
                 );
                 const payment = paymentRes.rows[0];
 
@@ -169,9 +187,8 @@ router.post('/', enforceBookingLimit, async (req, res) => {
         });
 
         // 7. Enqueue Expiration Job if there is a hold
-        if (result.booking.status.startsWith('pending_')) {
+        if (result.booking.status === 'pending_payment' && result.booking.expires_at) {
             const { enqueue } = require('../../services/queue');
-            // Enqueue to run exactly at expires_at
             await enqueue('expire-booking-hold', { bookingId: result.booking.id }, {
                 startAfter: result.booking.expires_at
             });

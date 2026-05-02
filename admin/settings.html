@@ -129,6 +129,23 @@
                 </div>
             </div>
 
+            <div class="form-group" style="grid-column: 1 / -1;">
+                <label>Service Section Image <span style="color:var(--text-dim);font-weight:400;">(optional image beside “Choose a Service”)</span></label>
+                <div class="settings-inline-row">
+                    <input type="file" id="branding_service_section_image_file" class="form-control" accept="image/*" style="flex: 1; padding: 7px 10px;">
+                    <button type="button" class="btn btn-secondary" id="removeServiceSectionImageBtn" style="display: none; height: 38px;" onclick="removeServiceSectionImage()">Remove</button>
+                </div>
+                <small style="color: var(--text-dim); margin-top: 6px; display: block;">
+                    Add a hero image for the service panel. If blank, the booking page uses a built-in service icon instead.
+                </small>
+                <small id="branding_service_section_image_status" class="upload-status" style="display: none;"></small>
+                <input type="hidden" id="branding_service_section_image_url">
+                <div id="serviceSectionImagePreviewWrap" style="margin-top: 12px; display: none;">
+                    <img id="serviceSectionImagePreview" src="" alt="Service Section Preview"
+                         style="max-height: 80px; max-width: 200px; border-radius: 10px; border: 1px solid var(--border); padding: 6px; background: var(--surface);">
+                </div>
+            </div>
+
             <!-- Tagline -->
             <div class="form-group" style="grid-column: 1 / -1;">
                 <label>Booking Tagline <span style="color:var(--text-dim);font-weight:400;">(shown under business name)</span></label>
@@ -288,23 +305,26 @@
 
         // File upload handling
         document.getElementById('branding_logo_file').addEventListener('change', async function() {
-            const file = this.files[0];
-            if (!file) return;
+            await handleBrandingImageSelection({
+                file: this.files[0],
+                inputId: 'branding_logo_url',
+                statusId: 'branding_logo_status',
+                previewWrapId: 'logoPreviewWrap',
+                previewImageId: 'logoPreview',
+                removeButtonId: 'removeLogoBtn',
+                onSuccess: updateBrandingPreview
+            });
+        });
 
-            try {
-                setLogoStatus('Optimizing image...', 'info');
-                const optimized = await prepareBrandingImage(file);
-                document.getElementById('branding_logo_url').value = optimized.dataUrl;
-                updateBrandingPreview();
-                setLogoStatus(optimized.message, 'success');
-            } catch (err) {
-                this.value = '';
-                document.getElementById('branding_logo_url').value = '';
-                updateBrandingPreview();
-                setLogoStatus(err.message, 'error');
-                if (typeof showToast === 'function') showToast(err.message, 'error');
-                else alert(err.message);
-            }
+        document.getElementById('branding_service_section_image_file').addEventListener('change', async function() {
+            await handleBrandingImageSelection({
+                file: this.files[0],
+                inputId: 'branding_service_section_image_url',
+                statusId: 'branding_service_section_image_status',
+                previewWrapId: 'serviceSectionImagePreviewWrap',
+                previewImageId: 'serviceSectionImagePreview',
+                removeButtonId: 'removeServiceSectionImageBtn'
+            });
         });
     });
 
@@ -318,8 +338,8 @@
         return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
     }
 
-    function setLogoStatus(message, state = 'info') {
-        const el = document.getElementById('branding_logo_status');
+    function setUploadStatus(statusId, message, state = 'info') {
+        const el = document.getElementById(statusId);
         if (!el) return;
         if (!message) {
             el.textContent = '';
@@ -330,6 +350,47 @@
         el.textContent = message;
         el.className = `upload-status upload-status-${state}`;
         el.style.display = 'block';
+    }
+
+    function syncImagePreview({ inputId, previewWrapId, previewImageId, removeButtonId }) {
+        const value = document.getElementById(inputId)?.value.trim();
+        const previewWrap = document.getElementById(previewWrapId);
+        const previewImage = document.getElementById(previewImageId);
+        const removeButton = document.getElementById(removeButtonId);
+        if (!previewWrap || !previewImage) return;
+
+        if (value) {
+            previewImage.src = value;
+            previewWrap.style.display = 'block';
+            if (removeButton) removeButton.style.display = 'inline-block';
+        } else {
+            previewImage.src = '';
+            previewWrap.style.display = 'none';
+            if (removeButton) removeButton.style.display = 'none';
+        }
+    }
+
+    async function handleBrandingImageSelection({ file, inputId, statusId, previewWrapId, previewImageId, removeButtonId, onSuccess }) {
+        if (!file) return;
+
+        try {
+            setUploadStatus(statusId, 'Optimizing image...', 'info');
+            const optimized = await prepareBrandingImage(file);
+            document.getElementById(inputId).value = optimized.dataUrl;
+            syncImagePreview({ inputId, previewWrapId, previewImageId, removeButtonId });
+            if (typeof onSuccess === 'function') onSuccess();
+            setUploadStatus(statusId, optimized.message, 'success');
+        } catch (err) {
+            const fileInputId = inputId.replace('_url', '_file');
+            const fileInput = document.getElementById(fileInputId);
+            if (fileInput) fileInput.value = '';
+            document.getElementById(inputId).value = '';
+            syncImagePreview({ inputId, previewWrapId, previewImageId, removeButtonId });
+            if (typeof onSuccess === 'function') onSuccess();
+            setUploadStatus(statusId, err.message, 'error');
+            if (typeof showToast === 'function') showToast(err.message, 'error');
+            else alert(err.message);
+        }
     }
 
     function readFileAsDataUrl(file) {
@@ -528,6 +589,7 @@
                 const pub = await fetch(`/api/v1/public/tenant`, { headers: { 'X-Tenant-Slug': getTenantSlug() } }).then(r => r.json());
                 const b = pub.branding || {};
                 document.getElementById('branding_logo_url').value  = b.logoUrl        || '';
+                document.getElementById('branding_service_section_image_url').value = b.serviceSectionImageUrl || '';
                 document.getElementById('branding_tagline').value    = b.bookingTagline || '';
                 document.getElementById('branding_location').value   = b.location       || '';
                 document.getElementById('branding_badge1').value     = b.badge1         || '';
@@ -537,12 +599,8 @@
                 // Load stylists
                 (b.stylists || []).forEach(name => addStylistTag(name));
                 updateBrandingPreview();
-                // Show logo preview if set
-                if (b.logoUrl) {
-                    document.getElementById('logoPreview').src = b.logoUrl;
-                    document.getElementById('logoPreviewWrap').style.display = 'block';
-                    document.getElementById('preview_logo_wrap').innerHTML = `<img src="${b.logoUrl}" style="width:100%;height:100%;object-fit:cover;">`;
-                }
+                syncImagePreview({ inputId: 'branding_logo_url', previewWrapId: 'logoPreviewWrap', previewImageId: 'logoPreview', removeButtonId: 'removeLogoBtn' });
+                syncImagePreview({ inputId: 'branding_service_section_image_url', previewWrapId: 'serviceSectionImagePreviewWrap', previewImageId: 'serviceSectionImagePreview', removeButtonId: 'removeServiceSectionImageBtn' });
                 // Set tenant name in preview
                 document.getElementById('preview_name').textContent = me.tenant.name || '';
             } catch (e) { /* branding load is non-critical */ }
@@ -651,16 +709,10 @@
 
         // Logo preview
         const logoWrap = document.getElementById('preview_logo_wrap');
-        const removeBtn = document.getElementById('removeLogoBtn');
         if (logo) {
             logoWrap.innerHTML = `<img src="${logo}" style="width:100%;height:100%;object-fit:cover;" onerror="this.parentNode.innerHTML='🌸'">`;
-            document.getElementById('logoPreview').src = logo;
-            document.getElementById('logoPreviewWrap').style.display = 'block';
-            if (removeBtn) removeBtn.style.display = 'inline-block';
         } else {
             logoWrap.innerHTML = '🌸';
-            document.getElementById('logoPreviewWrap').style.display = 'none';
-            if (removeBtn) removeBtn.style.display = 'none';
         }
 
         // Sub text
@@ -683,6 +735,7 @@
     async function saveBranding() {
         const payload = {
             logoUrl:        document.getElementById('branding_logo_url').value.trim() || null,
+            serviceSectionImageUrl: document.getElementById('branding_service_section_image_url').value.trim() || null,
             bookingTagline: document.getElementById('branding_tagline').value.trim()  || null,
             bookingFooterNote: document.getElementById('branding_footer_note').value.trim() || null,
             location:       document.getElementById('branding_location').value.trim() || null,
@@ -704,8 +757,21 @@
     function removeLogo() {
         document.getElementById('branding_logo_file').value = '';
         document.getElementById('branding_logo_url').value = '';
-        setLogoStatus('');
+        syncImagePreview({ inputId: 'branding_logo_url', previewWrapId: 'logoPreviewWrap', previewImageId: 'logoPreview', removeButtonId: 'removeLogoBtn' });
+        setUploadStatus('branding_logo_status', '');
         updateBrandingPreview();
+    }
+
+    function removeServiceSectionImage() {
+        document.getElementById('branding_service_section_image_file').value = '';
+        document.getElementById('branding_service_section_image_url').value = '';
+        syncImagePreview({
+            inputId: 'branding_service_section_image_url',
+            previewWrapId: 'serviceSectionImagePreviewWrap',
+            previewImageId: 'serviceSectionImagePreview',
+            removeButtonId: 'removeServiceSectionImageBtn'
+        });
+        setUploadStatus('branding_service_section_image_status', '');
     }
 </script>
 </body>

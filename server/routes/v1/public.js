@@ -10,7 +10,10 @@ const { query } = require('../../db/connection');
 
 // GET /api/v1/public/tenant — Expose safe branding for the booking widget
 router.get('/tenant', async (req, res) => {
-    const { id, name, slug, plan_id, branding, theme_id } = req.tenant;
+    const {
+        id, name, slug, plan_id, branding, theme_id,
+        default_payment_mode, wipay_enabled, manual_payment_enabled, bank_transfer_instructions
+    } = req.tenant;
 
     let themeSlug = 'universal_booking';
     if (theme_id) {
@@ -34,17 +37,32 @@ router.get('/tenant', async (req, res) => {
         location:       branding?.location       || null,
         badge1:         branding?.badge1         || null,
         badge2:         branding?.badge2         || null,
-        timezone:       branding?.timezone       || 'America/Jamaica'
+        timezone:       branding?.timezone       || 'America/Jamaica',
+        bookingFooterNote: branding?.bookingFooterNote || null,
+        stylists:       branding?.stylists       || [],
+        serviceSectionImageUrl: branding?.serviceSectionImageUrl || null
     };
 
-    res.json({ slug, plan: plan_id, branding: safeBranding, layout: req.tenant.layout, themeName: themeSlug });
+    res.json({
+        name,
+        slug,
+        plan: plan_id,
+        branding: safeBranding,
+        layout: req.tenant.layout,
+        themeName: themeSlug,
+        default_payment_mode: default_payment_mode || 'none',
+        wipay_enabled: Boolean(wipay_enabled),
+        manual_payment_enabled: Boolean(manual_payment_enabled),
+        bank_transfer_instructions: bank_transfer_instructions || null
+    });
 });
 
 // GET /api/v1/public/services — List tenant's active services
 router.get('/services', async (req, res) => {
     try {
         const result = await query(
-            `SELECT id, name, description, duration_minutes, price, currency
+            `SELECT id, name, description, image_url, duration_minutes, buffer_time_minutes, price, currency,
+                    payment_mode, payment_requirement_type, deposit_type, deposit_amount
              FROM services
              WHERE tenant_id = $1 AND active = true
              ORDER BY name ASC`,

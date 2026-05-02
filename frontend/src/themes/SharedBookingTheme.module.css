@@ -62,6 +62,12 @@
   font-size: 24px;
 }
 
+.iconGlyph {
+  width: 24px;
+  height: 24px;
+  display: block;
+}
+
 .brandText h1 {
   margin: 0;
   font-family: "Fraunces", "Playfair Display", Georgia, serif;
@@ -88,9 +94,14 @@
   line-height: 1.45;
 }
 
-.brandLocation i {
+.inlineIcon {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+
+.brandLocation .inlineIcon {
   color: var(--theme-accent);
-  font-size: 0.85rem;
 }
 
 .badge {
@@ -142,7 +153,7 @@
   margin-bottom: 22px;
 }
 
-.sectionHeader i {
+.sectionHeaderMedia {
   width: 38px;
   height: 38px;
   border-radius: 12px;
@@ -151,7 +162,14 @@
   justify-content: center;
   background: var(--theme-accent-soft);
   color: var(--theme-accent);
-  font-size: 1rem;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.sectionHeaderImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .sectionHeader h2 {
@@ -228,6 +246,13 @@
   background: var(--theme-accent-soft);
   color: var(--theme-accent);
   font-size: 1rem;
+  overflow: hidden;
+}
+
+.serviceGlyphImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .serviceText h3 {
@@ -292,7 +317,10 @@
   padding: 14px 18px;
 }
 
-.inputShell i {
+.inputIcon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
   color: var(--theme-accent);
 }
 
@@ -385,6 +413,33 @@
   border-radius: 20px;
   border: 1px solid var(--theme-accent-border);
   background: color-mix(in srgb, var(--theme-soft-bg) 70%, white);
+}
+
+.paymentNotice {
+  margin-bottom: 18px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px solid var(--theme-accent-border);
+  background: color-mix(in srgb, var(--theme-soft-bg) 78%, white);
+}
+
+.paymentNotice strong {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--theme-text-main);
+  font-size: 0.94rem;
+}
+
+.paymentNotice p {
+  margin: 0;
+  color: var(--theme-text-subtle);
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.paymentNoticeError {
+  border-color: rgba(201, 77, 77, 0.22);
+  background: rgba(201, 77, 77, 0.08);
 }
 
 .summaryRow {
