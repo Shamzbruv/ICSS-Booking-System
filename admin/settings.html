@@ -43,7 +43,7 @@
     </nav>
 </aside>
 
-<main class="main-content">
+<main class="main-content settings-page">
     <header class="page-header">
         <div>
             <h1 class="page-title">Settings</h1>
@@ -51,8 +51,8 @@
         </div>
     </header>
 
-    <section class="card" style="max-width: 800px; margin: 0 auto;">
-        <h2 style="font-size: 18px; margin-bottom: 1.5rem; font-weight: 600;">Payment Settings</h2>
+    <section class="card settings-card" style="max-width: 800px; margin: 0 auto;">
+        <h2 class="settings-section-title" style="margin-bottom: 1.5rem;">Payment Settings</h2>
         <form id="settingsForm" class="form-grid">
             <div class="form-group" style="grid-column: 1 / -1;">
                 <label>Default Payment Mode</label>
@@ -63,7 +63,7 @@
                 </select>
             </div>
 
-            <div class="form-group" style="grid-column: 1 / -1; display: flex; gap: 1.5rem;">
+            <div class="form-group settings-toggle-row" style="grid-column: 1 / -1;">
                 <label style="display: flex; align-items: center; gap: 0.5rem; font-weight: 600; font-size: 14px; text-transform: none; letter-spacing: 0;">
                     <input type="checkbox" id="wipay_enabled" style="width: 18px; height: 18px;"> Enable WiPay
                 </label>
@@ -104,8 +104,8 @@
     </section>
 
     <!-- Booking Page Branding -->
-    <section class="card" style="max-width: 800px; margin: 2rem auto 0;">
-        <h2 style="font-size: 18px; margin-bottom: 6px; font-weight: 600;">Booking Page Branding</h2>
+    <section class="card settings-card" style="max-width: 800px; margin: 2rem auto 0;">
+        <h2 class="settings-section-title" style="margin-bottom: 6px;">Booking Page Branding</h2>
         <p class="page-subtitle" style="margin-bottom: 1.5rem;">Customise exactly what clients see in the header of your public booking page.</p>
 
         <form id="brandingForm" class="form-grid">
@@ -113,7 +113,7 @@
             <!-- Logo -->
             <div class="form-group" style="grid-column: 1 / -1;">
                 <label>Business Logo</label>
-                <div style="display: flex; gap: 10px; align-items: center;">
+                <div class="settings-inline-row">
                     <input type="file" id="branding_logo_file" class="form-control" accept="image/*" style="flex: 1; padding: 7px 10px;">
                     <button type="button" class="btn btn-secondary" id="removeLogoBtn" style="display: none; height: 38px;" onclick="removeLogo()">Remove</button>
                 </div>
@@ -188,9 +188,9 @@
             </div>
 
             <!-- Preview -->
-            <div style="grid-column: 1 / -1; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px;">
+            <div class="branding-preview" style="grid-column: 1 / -1;">
                 <p style="font-size: 12px; color: var(--text-dim); margin-bottom: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">Live Preview</p>
-                <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+                <div class="branding-preview-row">
                     <div style="display: flex; align-items: center; gap: 12px;">
                         <div id="preview_logo_wrap" style="width:46px;height:46px;border-radius:14px;background:#fec7d7;display:flex;align-items:center;justify-content:center;overflow:hidden;font-size:20px;">🌸</div>
                         <div>
@@ -210,7 +210,7 @@
                     Leave this empty if you work <strong>by yourself</strong> — the dropdown will be hidden automatically.
                 </p>
                 <div id="stylistsList" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px;"></div>
-                <div style="display: flex; gap: 8px;">
+                <div class="stylist-input-row">
                     <input type="text" id="newStylistName" class="form-control" placeholder="e.g. Krystal, Maya, Sasha..." style="flex:1;" maxlength="50"
                            onkeydown="if(event.key==='Enter'){event.preventDefault();addStylist();}">
                     <button type="button" class="btn btn-secondary" onclick="addStylist()" style="white-space:nowrap;">+ Add</button>
@@ -224,11 +224,24 @@
     </section>
 
     <!-- Business Schedule -->
-    <section class="card" style="max-width: 800px; margin: 2rem auto 0;">
-        <h2 style="font-size: 18px; margin-bottom: 6px; font-weight: 600;">Business Schedule</h2>
-        <p class="page-subtitle" style="margin-bottom: 1.5rem;">Set your opening hours per day. Clients can only book slots within these hours. Toggle off a day to mark it as closed.</p>
+    <section class="card settings-card schedule-card" style="max-width: 800px; margin: 2rem auto 0;">
+        <div class="settings-section-head">
+            <div>
+                <p class="settings-section-kicker">Availability</p>
+                <h2 class="settings-section-title">Business Schedule</h2>
+                <p class="page-subtitle settings-section-copy">Set your opening hours per day. Clients can only book slots within these hours. Toggle off a day to mark it as closed.</p>
+            </div>
+            <div class="schedule-legend">
+                <span class="schedule-legend-pill"><span class="schedule-legend-dot schedule-legend-dot--custom"></span>Custom hours</span>
+                <span class="schedule-legend-pill"><span class="schedule-legend-dot schedule-legend-dot--always"></span>24 hours</span>
+            </div>
+        </div>
 
-        <div id="scheduleGrid" style="display: flex; flex-direction: column; gap: 10px;"></div>
+        <div class="schedule-notice">
+            Switch off a day to close it, or turn on <strong>24 Hours</strong> when bookings should stay open all day.
+        </div>
+
+        <div id="scheduleGrid" class="schedule-grid"></div>
 
         <div style="margin-top: 1.5rem;">
             <button type="button" class="btn btn-primary" style="width: 100%;" onclick="saveSchedule()">Save Schedule</button>
@@ -242,13 +255,13 @@
     const DAY_LABELS = { monday:'Monday', tuesday:'Tuesday', wednesday:'Wednesday', thursday:'Thursday', friday:'Friday', saturday:'Saturday', sunday:'Sunday' };
 
     const DEFAULT_HOURS = {
-        monday:    { open:'09:00', close:'17:00', active: true },
-        tuesday:   { open:'09:00', close:'17:00', active: true },
-        wednesday: { open:'09:00', close:'17:00', active: true },
-        thursday:  { open:'09:00', close:'17:00', active: true },
-        friday:    { open:'09:00', close:'17:00', active: true },
-        saturday:  { open:'10:00', close:'14:00', active: false },
-        sunday:    { open:'10:00', close:'14:00', active: false }
+        monday:    { open:'09:00', close:'17:00', active: true, is24Hours: false },
+        tuesday:   { open:'09:00', close:'17:00', active: true, is24Hours: false },
+        wednesday: { open:'09:00', close:'17:00', active: true, is24Hours: false },
+        thursday:  { open:'09:00', close:'17:00', active: true, is24Hours: false },
+        friday:    { open:'09:00', close:'17:00', active: true, is24Hours: false },
+        saturday:  { open:'10:00', close:'14:00', active: false, is24Hours: false },
+        sunday:    { open:'10:00', close:'14:00', active: false, is24Hours: false }
     };
 
     document.addEventListener('DOMContentLoaded', async () => {
@@ -299,33 +312,81 @@
         DAYS.forEach(day => {
             const h = (hours && hours[day]) ? hours[day] : DEFAULT_HOURS[day];
             const row = document.createElement('div');
-            row.style.cssText = 'display:flex;align-items:center;gap:16px;padding:12px 16px;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;';
+            const statusText = !h.active ? 'Closed' : h.is24Hours ? '24 Hours' : 'Custom Hours';
+            const statusClass = !h.active ? 'status-closed' : h.is24Hours ? 'status-24' : 'status-custom';
+            row.id = `schedule_row_${day}`;
+            row.className = `schedule-row${h.active ? ' is-active' : ' is-closed'}${(h.active && h.is24Hours) ? ' is-24-hours' : ''}`;
             row.innerHTML = `
-                <label style="display:flex;align-items:center;gap:8px;min-width:140px;cursor:pointer;text-transform:none;letter-spacing:0;font-size:14px;font-weight:600;">
-                    <input type="checkbox" id="day_active_${day}" ${h.active ? 'checked' : ''} onchange="toggleDayRow('${day}')" style="width:16px;height:16px;accent-color:var(--gold);">
-                    ${DAY_LABELS[day]}
-                </label>
-                <div id="day_times_${day}" style="display:${h.active ? 'flex' : 'none'};align-items:center;gap:12px;flex:1;">
-                    <div style="display:flex;align-items:center;gap:6px;">
-                        <span style="font-size:12px;color:var(--text-dim);">Open</span>
-                        <input type="time" id="day_open_${day}" value="${h.open}" style="background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:6px 10px;font-size:13px;">
-                    </div>
-                    <span style="color:var(--text-dim);">—</span>
-                    <div style="display:flex;align-items:center;gap:6px;">
-                        <span style="font-size:12px;color:var(--text-dim);">Close</span>
-                        <input type="time" id="day_close_${day}" value="${h.close}" style="background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:6px 10px;font-size:13px;">
+                <div class="schedule-row-head">
+                    <label class="schedule-day-toggle">
+                        <input type="checkbox" id="day_active_${day}" class="schedule-day-checkbox" ${h.active ? 'checked' : ''} onchange="toggleDayRow('${day}')" style="accent-color:var(--gold);">
+                        <span class="schedule-day-name">${DAY_LABELS[day]}</span>
+                    </label>
+                    <div class="schedule-row-meta">
+                        <span class="schedule-status ${statusClass}" id="day_status_${day}">${statusText}</span>
+                        <label class="hours-24-toggle" id="day_24_wrap_${day}" style="display:${h.active ? 'inline-flex' : 'none'};">
+                            <input type="checkbox" id="day_24_${day}" ${h.is24Hours ? 'checked' : ''} onchange="toggle24Hours('${day}')">
+                            <span>24 Hours</span>
+                        </label>
                     </div>
                 </div>
-                <span id="day_closed_${day}" style="display:${h.active ? 'none' : 'block'};font-size:12px;color:var(--text-dim);font-style:italic;">Closed</span>
+                <div class="schedule-row-body">
+                <div class="schedule-times" id="day_times_${day}" style="display:${(h.active && !h.is24Hours) ? 'grid' : 'none'};">
+                    <div class="schedule-time-input">
+                        <span class="schedule-time-label">Open</span>
+                        <input type="time" id="day_open_${day}" value="${h.open || '09:00'}">
+                    </div>
+                    <span class="time-dash" aria-hidden="true">→</span>
+                    <div class="schedule-time-input">
+                        <span class="schedule-time-label">Close</span>
+                        <input type="time" id="day_close_${day}" value="${h.close || '17:00'}">
+                    </div>
+                </div>
+                <span id="day_closed_${day}" class="schedule-state-text schedule-state-closed" style="display:${h.active ? 'none' : 'inline-flex'};">Closed for the day</span>
+                <span id="day_24_text_${day}" class="schedule-state-text schedule-state-24" style="display:${(h.active && h.is24Hours) ? 'inline-flex' : 'none'};">Accepting bookings all day</span>
+                </div>
             `;
             grid.appendChild(row);
         });
     }
 
-    function toggleDayRow(day) {
+    function updateScheduleRowState(day) {
         const active = document.getElementById(`day_active_${day}`).checked;
-        document.getElementById(`day_times_${day}`).style.display = active ? 'flex' : 'none';
-        document.getElementById(`day_closed_${day}`).style.display = active ? 'none' : 'block';
+        const is24 = document.getElementById(`day_24_${day}`).checked;
+        const row = document.getElementById(`schedule_row_${day}`);
+        const status = document.getElementById(`day_status_${day}`);
+
+        row.classList.toggle('is-active', active);
+        row.classList.toggle('is-closed', !active);
+        row.classList.toggle('is-24-hours', active && is24);
+
+        status.textContent = !active ? 'Closed' : is24 ? '24 Hours' : 'Custom Hours';
+        status.className = `schedule-status ${!active ? 'status-closed' : is24 ? 'status-24' : 'status-custom'}`;
+
+        document.getElementById(`day_24_wrap_${day}`).style.display = active ? 'inline-flex' : 'none';
+        
+        if (!active) {
+            document.getElementById(`day_times_${day}`).style.display = 'none';
+            document.getElementById(`day_24_text_${day}`).style.display = 'none';
+            document.getElementById(`day_closed_${day}`).style.display = 'inline-flex';
+        } else {
+            document.getElementById(`day_closed_${day}`).style.display = 'none';
+            if (is24) {
+                document.getElementById(`day_times_${day}`).style.display = 'none';
+                document.getElementById(`day_24_text_${day}`).style.display = 'inline-flex';
+            } else {
+                document.getElementById(`day_times_${day}`).style.display = 'grid';
+                document.getElementById(`day_24_text_${day}`).style.display = 'none';
+            }
+        }
+    }
+
+    function toggleDayRow(day) {
+        updateScheduleRowState(day);
+    }
+
+    function toggle24Hours(day) {
+        updateScheduleRowState(day);
     }
 
     async function loadSettings() {
@@ -404,19 +465,41 @@
         const business_hours = {};
         DAYS.forEach(day => {
             const active = document.getElementById(`day_active_${day}`).checked;
+            const is24Hours = document.getElementById(`day_24_${day}`).checked;
             business_hours[day] = {
                 active,
+                is24Hours,
                 open:  document.getElementById(`day_open_${day}`).value  || '09:00',
                 close: document.getElementById(`day_close_${day}`).value || '17:00'
             };
         });
+
+        for (const day of DAYS) {
+            const hours = business_hours[day];
+            if (!hours.active || hours.is24Hours) continue;
+
+            const [openHour, openMinute] = hours.open.split(':').map(Number);
+            const [closeHour, closeMinute] = hours.close.split(':').map(Number);
+            const openTotal = (openHour * 60) + openMinute;
+            const closeTotal = (closeHour * 60) + closeMinute;
+
+            if (closeTotal <= openTotal) {
+                const message = `${DAY_LABELS[day]} closing time must be after opening time. Use 24 Hours for all-day availability.`;
+                if (typeof showToast === 'function') showToast(message, 'error');
+                else alert(message);
+                return;
+            }
+        }
+
         try {
             const slug = getTenantSlug();
             if (!slug) { alert('Error: Tenant not found'); return; }
             await apiFetch(`/api/v1/tenants/${slug}/payment-settings`, { method: 'PATCH', body: JSON.stringify({ business_hours }) });
-            alert('Schedule saved! Booking slots will now reflect your hours.');
+            if (typeof showToast === 'function') showToast('Schedule saved. Booking slots now reflect your hours.', 'success');
+            else alert('Schedule saved! Booking slots will now reflect your hours.');
         } catch (err) {
-            alert('Failed to save schedule: ' + err.message);
+            if (typeof showToast === 'function') showToast('Failed to save schedule: ' + err.message, 'error');
+            else alert('Failed to save schedule: ' + err.message);
         }
     }
 

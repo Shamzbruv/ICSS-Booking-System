@@ -67,13 +67,15 @@ function generateSlots(businessHoursStr, requestedDateStr) {
         return { slots: [], isClosed: true, closeMins: 0 };
     }
 
+    const is24Hours = Boolean(todayHours.is24Hours);
     const [openH, openM] = (todayHours.open || '09:00').split(':').map(Number);
     const [closeH, closeM] = (todayHours.close || '17:00').split(':').map(Number);
 
-    const startMin = openH * 60 + openM;
-    const endMin = closeH * 60 + closeM;
+    const startMin = is24Hours ? 0 : (openH * 60 + openM);
+    const endMin = is24Hours ? (24 * 60) : (closeH * 60 + closeM);
+    const lastSlotMin = is24Hours ? (endMin - SLOT_INTERVAL_MINS) : endMin;
 
-    for (let m = startMin; m <= endMin; m += SLOT_INTERVAL_MINS) {
+    for (let m = startMin; m <= lastSlotMin; m += SLOT_INTERVAL_MINS) {
         const h = Math.floor(m / 60);
         const min = m % 60;
         const time = `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
