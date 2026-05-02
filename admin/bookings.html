@@ -29,7 +29,7 @@
 <button class="hamburger" id="hamburgerBtn" aria-label="Open menu"><span></span><span></span><span></span></button>
 <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
 <div class="grid-pattern"></div>
-<aside class="sidebar">
+<aside class="sidebar" id="sidebar">
     <div class="sidebar-brand">
         <div style="display: flex; align-items: center; gap: 10px;">
               <img src="./favicon.png" alt="ICSS Icon" style="width: 36px; height: 36px; border-radius: 8px; object-fit: contain;">
@@ -165,14 +165,14 @@
 
         const rows = bookings.map(b => `
             <tr>
-                <td><strong>${escHtml(b.name)}</strong></td>
-                <td style="color:var(--text-dim);">${escHtml(b.email)}</td>
-                <td>${escHtml(b.phone || '—')}</td>
-                <td>${formatDate(b.booking_date)}</td>
-                <td>${formatTime(b.booking_time)}</td>
-                <td>${escHtml(b.region || '—')}</td>
-                <td>${statusBadge(b.status)}</td>
-                <td>
+                <td data-label="Name"><strong>${escHtml(b.name)}</strong></td>
+                <td data-label="Email" style="color:var(--text-dim);">${escHtml(b.email)}</td>
+                <td data-label="Phone">${escHtml(b.phone || '—')}</td>
+                <td data-label="Date">${formatDate(b.booking_date)}</td>
+                <td data-label="Time">${formatTime(b.booking_time)}</td>
+                <td data-label="Region">${escHtml(b.region || '—')}</td>
+                <td data-label="Status">${statusBadge(b.status)}</td>
+                <td data-label="Actions">
                     ${b.status === 'confirmed' ? `
                         <button class="btn btn-secondary btn-sm" onclick="updateStatus('${b.id}', 'completed')">✓ Complete</button>
                         <button class="btn btn-danger btn-sm" onclick="openCancelModal('${b.id}')">✕ Cancel</button>
