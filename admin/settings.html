@@ -112,12 +112,16 @@
 
             <!-- Logo -->
             <div class="form-group" style="grid-column: 1 / -1;">
-                <label>Logo URL</label>
-                <input type="url" id="branding_logo_url" class="form-control" placeholder="https://example.com/your-logo.png">
+                <label>Business Logo</label>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <input type="file" id="branding_logo_file" class="form-control" accept="image/*" style="flex: 1; padding: 7px 10px;">
+                    <button type="button" class="btn btn-secondary" id="removeLogoBtn" style="display: none; height: 38px;" onclick="removeLogo()">Remove</button>
+                </div>
                 <small style="color: var(--text-dim); margin-top: 6px; display: block;">
-                    Paste a direct image link. Your logo will appear in the top-left corner of the booking page.
+                    Upload an image file (PNG, JPG, etc.). Your logo will appear in the top-left corner of the booking page.
                     If blank, a generic icon is shown instead.
                 </small>
+                <input type="hidden" id="branding_logo_url">
                 <div id="logoPreviewWrap" style="margin-top: 12px; display: none;">
                     <img id="logoPreview" src="" alt="Logo Preview"
                          style="max-height: 80px; max-width: 200px; border-radius: 10px; border: 1px solid var(--border); padding: 6px; background: var(--surface);">
@@ -261,7 +265,29 @@
         });
         // Live preview wiring
         ['branding_logo_url','branding_tagline','branding_location','branding_badge1','branding_badge2'].forEach(id => {
-            document.getElementById(id).addEventListener('input', updateBrandingPreview);
+            if (document.getElementById(id)) {
+                document.getElementById(id).addEventListener('input', updateBrandingPreview);
+                document.getElementById(id).addEventListener('change', updateBrandingPreview);
+            }
+        });
+
+        // File upload handling
+        document.getElementById('branding_logo_file').addEventListener('change', function() {
+            const file = this.files[0];
+            if (file) {
+                // Check size (max 2MB)
+                if (file.size > 2 * 1024 * 1024) {
+                    alert('Image is too large. Please upload an image under 2MB.');
+                    this.value = '';
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('branding_logo_url').value = e.target.result;
+                    updateBrandingPreview();
+                };
+                reader.readAsDataURL(file);
+            }
         });
     });
 
@@ -430,13 +456,16 @@
 
         // Logo preview
         const logoWrap = document.getElementById('preview_logo_wrap');
+        const removeBtn = document.getElementById('removeLogoBtn');
         if (logo) {
             logoWrap.innerHTML = `<img src="${logo}" style="width:100%;height:100%;object-fit:cover;" onerror="this.parentNode.innerHTML='🌸'">`;
             document.getElementById('logoPreview').src = logo;
             document.getElementById('logoPreviewWrap').style.display = 'block';
+            if (removeBtn) removeBtn.style.display = 'inline-block';
         } else {
             logoWrap.innerHTML = '🌸';
             document.getElementById('logoPreviewWrap').style.display = 'none';
+            if (removeBtn) removeBtn.style.display = 'none';
         }
 
         // Sub text
@@ -475,6 +504,12 @@
         } catch (err) {
             showToast('Failed to save branding: ' + err.message, 'error');
         }
+    }
+
+    function removeLogo() {
+        document.getElementById('branding_logo_file').value = '';
+        document.getElementById('branding_logo_url').value = '';
+        updateBrandingPreview();
     }
 </script>
 </body>
