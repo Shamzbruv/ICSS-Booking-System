@@ -265,7 +265,7 @@
         });
     });
 
-    let currentSlug = '';
+    // Using getTenantSlug() from admin.js
 
     function buildScheduleGrid(hours) {
         const grid = document.getElementById('scheduleGrid');
@@ -306,11 +306,12 @@
         try {
             const me = await apiFetch('/api/v1/auth/me');
             if (!me || !me.tenant) return;
-            currentSlug = me.tenant.slug;
+            const slug = getTenantSlug();
+            if (!slug) return;
             document.getElementById('tenantName').textContent = me.tenant.name || 'Booking System';
             if (me.tenant.plan_id) document.getElementById('tenantPlan').textContent = me.tenant.plan_id.toUpperCase();
-
-            const data = await apiFetch(`/api/v1/tenants/${currentSlug}/payment-settings`);
+            
+            const data = await apiFetch(`/api/v1/tenants/${slug}/payment-settings`);
             const s = data.settings || {};
 
             document.getElementById('default_payment_mode').value = s.default_payment_mode || 'none';
@@ -325,7 +326,7 @@
 
             // ── Load branding fields ───────────────────────────────────────────
             try {
-                const pub = await fetch(`/api/v1/public/tenant`, { headers: { 'X-Tenant-Slug': currentSlug } }).then(r => r.json());
+                const pub = await fetch(`/api/v1/public/tenant`, { headers: { 'X-Tenant-Slug': getTenantSlug() } }).then(r => r.json());
                 const b = pub.branding || {};
                 document.getElementById('branding_logo_url').value  = b.logoUrl        || '';
                 document.getElementById('branding_tagline').value    = b.bookingTagline || '';
@@ -364,7 +365,9 @@
             }
         };
         try {
-            await apiFetch(`/api/v1/tenants/${currentSlug}/payment-settings`, { method: 'PATCH', body: JSON.stringify(payload) });
+            const slug = getTenantSlug();
+            if (!slug) { alert('Error: Tenant not found'); return; }
+            await apiFetch(`/api/v1/tenants/${slug}/payment-settings`, { method: 'PATCH', body: JSON.stringify(payload) });
             alert('Payment settings saved!');
         } catch (err) {
             alert('Failed to save: ' + err.message);
@@ -382,7 +385,9 @@
             };
         });
         try {
-            await apiFetch(`/api/v1/tenants/${currentSlug}/payment-settings`, { method: 'PATCH', body: JSON.stringify({ business_hours }) });
+            const slug = getTenantSlug();
+            if (!slug) { alert('Error: Tenant not found'); return; }
+            await apiFetch(`/api/v1/tenants/${slug}/payment-settings`, { method: 'PATCH', body: JSON.stringify({ business_hours }) });
             alert('Schedule saved! Booking slots will now reflect your hours.');
         } catch (err) {
             alert('Failed to save schedule: ' + err.message);
@@ -463,7 +468,9 @@
             stylists:       _stylists.length > 0 ? _stylists : [],
         };
         try {
-            await apiFetch(`/api/v1/tenants/${currentSlug}/branding`, { method: 'PATCH', body: payload });
+            const slug = getTenantSlug();
+            if (!slug) { showToast('Error: Tenant not found', 'error'); return; }
+            await apiFetch(`/api/v1/tenants/${slug}/branding`, { method: 'PATCH', body: payload });
             showToast('Branding saved! Your booking page will update shortly.', 'success');
         } catch (err) {
             showToast('Failed to save branding: ' + err.message, 'error');
