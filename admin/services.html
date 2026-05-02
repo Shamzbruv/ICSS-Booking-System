@@ -206,6 +206,20 @@
         document.getElementById('serviceModal').classList.remove('open');
     }
 
+    function formatDuration(minutes) {
+        const totalMinutes = Number(minutes || 0);
+        if (totalMinutes <= 0) return '0 min';
+
+        const hours = Math.floor(totalMinutes / 60);
+        const remainingMinutes = totalMinutes % 60;
+        const parts = [];
+
+        if (hours > 0) parts.push(`${hours} hr${hours === 1 ? '' : 's'}`);
+        if (remainingMinutes > 0) parts.push(`${remainingMinutes} min`);
+
+        return parts.join(' ');
+    }
+
     async function loadServices() {
         try {
             const data = await apiFetch('/api/v1/services');
@@ -221,7 +235,7 @@
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td data-label="Service" style="padding: 1rem;"><strong>${escHtml(svc.name)}</strong>${svc.description ? `<div style="font-size:12px;color:var(--text-dim);margin-top:2px;">${escHtml(svc.description.substring(0,60))}${svc.description.length>60?'…':''}</div>` : ''}</td>
-                    <td data-label="Duration" style="padding: 1rem;">${svc.duration_minutes}m${svc.buffer_time_minutes > 0 ? ` + ${svc.buffer_time_minutes}m buffer` : ''}</td>
+                    <td data-label="Duration" style="padding: 1rem;">${formatDuration(svc.duration_minutes)}${svc.buffer_time_minutes > 0 ? ` + ${formatDuration(svc.buffer_time_minutes)} buffer` : ''}</td>
                     <td data-label="Price" style="padding: 1rem;">${escHtml(svc.currency || 'JMD')} ${Number(svc.price).toLocaleString()}</td>
                     <td data-label="Payment" style="padding: 1rem;"><span style="background:var(--gold-glow);color:var(--gold);padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;">${escHtml(svc.payment_mode || 'default')}</span></td>
                     <td data-label="Deposit" style="padding: 1rem;">${svc.payment_requirement_type !== 'none' ? `${escHtml(svc.payment_requirement_type)} ${svc.deposit_amount > 0 ? '(' + svc.deposit_amount + ')' : ''}` : '—'}</td>

@@ -71,6 +71,20 @@ function formatDisplayTime(timeString) {
   });
 }
 
+function formatDuration(minutes) {
+  const totalMinutes = Number(minutes || 0);
+  if (totalMinutes <= 0) return '0 min';
+
+  const hours = Math.floor(totalMinutes / 60);
+  const remainingMinutes = totalMinutes % 60;
+  const parts = [];
+
+  if (hours > 0) parts.push(`${hours} hr${hours === 1 ? '' : 's'}`);
+  if (remainingMinutes > 0) parts.push(`${remainingMinutes} min`);
+
+  return parts.join(' ');
+}
+
 function readFileAsDataUrl(file) {
   return new Promise((resolve) => {
     const reader = new FileReader();
@@ -409,7 +423,7 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
                       </div>
                       <div className={styles.serviceText}>
                         <h3>{service.name}</h3>
-                        <span>{service.duration_minutes} min</span>
+                        <span>{formatDuration(service.duration_minutes)}</span>
                       </div>
                     </div>
                     <div className={styles.servicePrice}>{priceFormatter(service)}</div>
