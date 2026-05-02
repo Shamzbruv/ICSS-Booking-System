@@ -192,14 +192,15 @@
             <div class="branding-preview" style="grid-column: 1 / -1;">
                 <p style="font-size: 12px; color: var(--text-dim); margin-bottom: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">Live Preview</p>
                 <div class="branding-preview-row">
-                    <div style="display: flex; align-items: center; gap: 12px;">
+                    <div class="branding-preview-brand">
                         <div id="preview_logo_wrap" style="width:46px;height:46px;border-radius:14px;background:#fec7d7;display:flex;align-items:center;justify-content:center;overflow:hidden;font-size:20px;">🌸</div>
-                        <div>
+                        <div class="branding-preview-copy">
                             <div id="preview_name" style="font-weight: 700; font-size: 1.1rem;"></div>
-                            <div id="preview_sub" style="font-size: 0.8rem; color: var(--text-dim); margin-top: 2px;"></div>
+                            <div id="preview_tagline" class="branding-preview-tagline"></div>
+                            <div id="preview_location" class="branding-preview-location"></div>
                         </div>
                     </div>
-                    <div style="display: flex; gap: 8px; flex-wrap: wrap;" id="preview_badges"></div>
+                    <div class="branding-preview-badges" id="preview_badges"></div>
                 </div>
             </div>
 
@@ -663,10 +664,10 @@
         }
 
         // Sub text
-        const parts = [];
-        if (location) parts.push('📍 ' + location);
-        if (tagline)  parts.push(tagline);
-        document.getElementById('preview_sub').textContent = parts.join('  ·  ');
+        document.getElementById('preview_tagline').textContent = tagline;
+        document.getElementById('preview_tagline').style.display = tagline ? 'block' : 'none';
+        document.getElementById('preview_location').textContent = location ? `📍 ${location}` : '';
+        document.getElementById('preview_location').style.display = location ? 'block' : 'none';
 
         // Badges
         const badgesEl = document.getElementById('preview_badges');

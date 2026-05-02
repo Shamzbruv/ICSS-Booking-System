@@ -469,6 +469,38 @@ tbody tr:hover td { background: var(--surface-2); }
     padding: 14px 16px;
 }
 
+.branding-preview-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.branding-preview-copy {
+    min-width: 0;
+}
+
+.branding-preview-tagline {
+    margin-top: 4px;
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.45;
+}
+
+.branding-preview-location {
+    margin-top: 3px;
+    font-size: 12px;
+    color: var(--text-dim);
+    line-height: 1.4;
+}
+
+.branding-preview-badges {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
 .settings-page .form-actions .btn {
     min-height: 48px;
     font-size: 15px;
