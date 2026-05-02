@@ -376,6 +376,11 @@ tbody tr:hover td { background: var(--surface-2); }
     gap: 28px;
 }
 
+.settings-page > .settings-card {
+    width: min(100%, 800px);
+    align-self: center;
+}
+
 .settings-card {
     position: relative;
     overflow: hidden;
@@ -435,6 +440,7 @@ tbody tr:hover td { background: var(--surface-2); }
 
 .settings-toggle-row {
     display: flex;
+    flex-direction: row;
     gap: 12px;
     align-items: stretch;
     flex-wrap: wrap;
@@ -467,6 +473,48 @@ tbody tr:hover td { background: var(--surface-2); }
     min-height: 48px;
     font-size: 15px;
 }
+
+.payment-settings-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.payment-method-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.payment-method-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 64px;
+    padding: 16px 18px;
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    background: rgba(255, 255, 255, 0.035);
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    text-transform: none;
+    letter-spacing: 0;
+    cursor: pointer;
+}
+
+.payment-method-card:hover {
+    border-color: rgba(129, 140, 248, 0.3);
+    background: rgba(99, 102, 241, 0.08);
+}
+
+.upload-status {
+    margin-top: 6px;
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+.upload-status-info { color: #cbd5e1; }
+.upload-status-success { color: #86efac; }
+.upload-status-error { color: #fca5a5; }
 
 /* ── Schedule Grid ──────────────────────────────────────────────────────────── */
 .schedule-grid {
@@ -1031,6 +1079,7 @@ select option { background: var(--surface-2); }
     .settings-page .form-grid { grid-template-columns: 1fr; gap: 14px; }
     .settings-section-head { margin-bottom: 16px; }
     .settings-section-title { font-size: 19px; }
+    .payment-method-grid { grid-template-columns: 1fr; }
 
     .settings-toggle-row,
     .settings-inline-row,
@@ -1146,4 +1195,3 @@ select option { background: var(--surface-2); }
 .modal-close:hover { color: var(--text); }
 
 .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px; }
-
