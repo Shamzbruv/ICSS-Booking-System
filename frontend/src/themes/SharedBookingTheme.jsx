@@ -91,14 +91,30 @@ function formatCurrency(amount, currency = 'JMD') {
   return `${currency} ${numericAmount.toLocaleString()}`;
 }
 
+function normalizeDepositConfig(service) {
+  if (!service) return service;
+  const depositAmount = Math.max(0, Number(service.deposit_amount || 0));
+  const depositType = service.deposit_type === 'percentage' && depositAmount > 100
+    ? 'fixed'
+    : (service.deposit_type || 'percentage');
+
+  return {
+    ...service,
+    deposit_type: depositType,
+    deposit_amount: depositAmount,
+    payment_requirement_type: service.payment_requirement_type || 'none'
+  };
+}
+
 function calculateRequiredAmount(service) {
-  const servicePrice = Math.max(0, Number(service?.price || 0));
-  const requirement = service?.payment_requirement_type || 'none';
+  const normalized = normalizeDepositConfig(service);
+  const servicePrice = Math.max(0, Number(normalized?.price || 0));
+  const requirement = normalized?.payment_requirement_type || 'none';
 
   if (requirement === 'deposit') {
-    const rawAmount = service?.deposit_type === 'percentage'
-      ? servicePrice * (Math.max(0, Number(service?.deposit_amount || 0)) / 100)
-      : Math.max(0, Number(service?.deposit_amount || 0));
+    const rawAmount = normalized?.deposit_type === 'percentage'
+      ? servicePrice * (normalized.deposit_amount / 100)
+      : normalized.deposit_amount;
     return Math.min(servicePrice, rawAmount);
   }
 
@@ -125,11 +141,12 @@ function resolvePaymentDetails(service, tenant) {
     };
   }
 
-  const requirement = service.payment_requirement_type || 'none';
-  const rawMode = service.payment_mode && service.payment_mode !== 'tenant_default'
-    ? service.payment_mode
+  const normalizedService = normalizeDepositConfig(service);
+  const requirement = normalizedService.payment_requirement_type || 'none';
+  const rawMode = normalizedService.payment_mode && normalizedService.payment_mode !== 'tenant_default'
+    ? normalizedService.payment_mode
     : (tenant.default_payment_mode || 'none');
-  const dueToday = calculateRequiredAmount(service);
+  const dueToday = calculateRequiredAmount(normalizedService);
   const collectNow = dueToday > 0;
   const modeAvailable = rawMode === 'wipay'
     ? Boolean(tenant.wipay_enabled)
@@ -137,7 +154,7 @@ function resolvePaymentDetails(service, tenant) {
       ? Boolean(tenant.manual_payment_enabled)
       : rawMode === 'none';
   const hasConfigurationIssue = collectNow && (!rawMode || rawMode === 'none' || !modeAvailable);
-  const balanceLater = Math.max(0, Number(service.price || 0) - dueToday);
+  const balanceLater = Math.max(0, Number(normalizedService.price || 0) - dueToday);
 
   let summaryLabel = null;
   let calloutTitle = null;

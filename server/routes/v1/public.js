@@ -7,6 +7,7 @@
 const express = require('express');
 const router  = express.Router();
 const { query } = require('../../db/connection');
+const { normalizeDepositConfig } = require('../../services/paymentRules');
 
 // GET /api/v1/public/tenant — Expose safe branding for the booking widget
 router.get('/tenant', async (req, res) => {
@@ -68,7 +69,7 @@ router.get('/services', async (req, res) => {
              ORDER BY name ASC`,
             [req.tenant.id]
         );
-        res.json({ services: result.rows });
+        res.json({ services: result.rows.map(normalizeDepositConfig) });
     } catch (err) {
         res.status(500).json({ error: 'Failed to fetch services.' });
     }

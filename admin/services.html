@@ -381,11 +381,14 @@
     }
 
     function formatDepositRule(service) {
+        const depositAmount = Number(service.deposit_amount || 0);
+        const depositType = service.deposit_type === 'percentage' && depositAmount > 100 ? 'fixed' : (service.deposit_type || 'percentage');
+
         if (service.payment_requirement_type === 'deposit') {
-            if (service.deposit_type === 'percentage') {
-                return `Deposit (${Number(service.deposit_amount || 0)}%)`;
+            if (depositType === 'percentage') {
+                return `Deposit (${depositAmount}%)`;
             }
-            return `Deposit (${escHtml(service.currency || 'JMD')} ${Number(service.deposit_amount || 0).toLocaleString()})`;
+            return `Deposit (${escHtml(service.currency || 'JMD')} ${depositAmount.toLocaleString()})`;
         }
         if (service.payment_requirement_type === 'full') {
             return 'Full payment';
@@ -487,7 +490,7 @@
             document.getElementById('svc_buffer').value             = service.buffer_time_minutes || 0;
             document.getElementById('svc_payment_mode').value       = service.payment_mode || 'tenant_default';
             document.getElementById('svc_payment_req').value        = service.payment_requirement_type || 'none';
-            document.getElementById('svc_deposit_type').value       = service.deposit_type || 'percentage';
+            document.getElementById('svc_deposit_type').value       = service.deposit_type === 'percentage' && Number(service.deposit_amount || 0) > 100 ? 'fixed' : (service.deposit_type || 'percentage');
             document.getElementById('svc_deposit_amount').value     = service.deposit_amount || 0;
             document.getElementById('svc_description').value        = service.description || '';
             document.getElementById('svc_image_file').value         = '';

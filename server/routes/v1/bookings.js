@@ -11,32 +11,11 @@ const { enforceBookingLimit }   = require('../../services/subscription');
 const { sendBookingConfirmation, sendBookingCancellationEmail } = require('../../services/email');
 const calendarSync              = require('../../services/calendarSync');
 const wipay                     = require('../../services/wipay');
+const { normalizeDepositConfig, calculateAmountDue } = require('../../services/paymentRules');
 
 const MAX_BOOKINGS_PER_DAY = 14;
 const MAX_DAYS_AHEAD       = 30;
 const MIN_BUFFER_MINS      = 60;
-
-function getPaymentRequirement(service) {
-    return service.payment_requirement_type || 'none';
-}
-
-function calculateAmountDue(service) {
-    const servicePrice = Math.max(0, Number(service.price || 0));
-    const requirement = getPaymentRequirement(service);
-
-    if (requirement === 'deposit') {
-        const rawAmount = service.deposit_type === 'percentage'
-            ? servicePrice * (Math.max(0, Number(service.deposit_amount || 0)) / 100.0)
-            : Math.max(0, Number(service.deposit_amount || 0));
-        return Math.min(servicePrice, rawAmount);
-    }
-
-    if (requirement === 'full') {
-        return servicePrice;
-    }
-
-    return 0;
-}
 
 function getTzTimeStr(tz = 'America/Jamaica', addMinutes = 0, addDays = 0) {
     const now = new Date();
@@ -92,10 +71,10 @@ router.post('/', enforceBookingLimit, async (req, res) => {
             if (svcRes.rows.length === 0) {
                 const err = new Error('Service not found.'); err.status = 404; throw err;
             }
-            const service = svcRes.rows[0];
+            const service = normalizeDepositConfig(svcRes.rows[0]);
 
             // 2. Determine Payment Mode & Timeouts
-            const paymentRequirement = getPaymentRequirement(service);
+            const paymentRequirement = service.payment_requirement_type || 'none';
             let paymentMode = service.payment_mode;
             if (!paymentMode || paymentMode === 'tenant_default') {
                 paymentMode = tenant.default_payment_mode || 'none';

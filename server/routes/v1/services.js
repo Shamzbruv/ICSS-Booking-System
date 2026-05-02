@@ -7,6 +7,7 @@ const express = require('express');
 const router  = express.Router();
 const { query }  = require('../../db/connection');
 const { authenticate, requireRole } = require('../../middleware/auth');
+const { normalizeDepositConfig } = require('../../services/paymentRules');
 
 router.use(authenticate);
 router.use(requireRole('staff', 'tenant_admin'));
@@ -18,7 +19,7 @@ router.get('/', async (req, res) => {
             `SELECT * FROM services WHERE tenant_id = $1 ORDER BY created_at ASC`,
             [req.tenant.id]
         );
-        res.json({ services: result.rows });
+        res.json({ services: result.rows.map(normalizeDepositConfig) });
     } catch (err) {
         res.status(500).json({ error: 'Failed to fetch services.' });
     }
@@ -32,6 +33,12 @@ router.post('/', async (req, res) => {
     } = req.body;
 
     if (!name || !name.trim()) return res.status(400).json({ error: 'Name is required.' });
+
+    const normalized = normalizeDepositConfig({
+        payment_requirement_type,
+        deposit_type,
+        deposit_amount
+    });
 
     try {
         const result = await query(
@@ -49,12 +56,12 @@ router.post('/', async (req, res) => {
                 parseFloat(price) || 0,
                 currency || 'JMD',
                 payment_mode || 'tenant_default',
-                payment_requirement_type || 'none',
-                deposit_type || 'percentage',
-                parseFloat(deposit_amount) || 0
+                normalized.payment_requirement_type,
+                normalized.deposit_type,
+                normalized.deposit_amount
             ]
         );
-        res.status(201).json({ success: true, service: result.rows[0] });
+        res.status(201).json({ success: true, service: normalizeDepositConfig(result.rows[0]) });
     } catch (err) {
         console.error('[Services/Create] DB Error:', err.message, '| Code:', err.code);
         if (err.code === '42703') {
@@ -70,6 +77,12 @@ router.patch('/:id', async (req, res) => {
         name, description, image_url, duration_minutes, buffer_time_minutes, price, currency,
         payment_mode, payment_requirement_type, deposit_type, deposit_amount, active
     } = req.body;
+
+    const normalized = normalizeDepositConfig({
+        payment_requirement_type,
+        deposit_type,
+        deposit_amount
+    });
 
     try {
         const result = await query(
@@ -96,15 +109,15 @@ router.patch('/:id', async (req, res) => {
                 price !== undefined ? parseFloat(price) : null,
                 currency || null,
                 payment_mode || null,
-                payment_requirement_type || null,
-                deposit_type || null,
-                deposit_amount !== undefined ? parseFloat(deposit_amount) : null,
+                payment_requirement_type !== undefined ? normalized.payment_requirement_type : null,
+                deposit_type !== undefined ? normalized.deposit_type : null,
+                deposit_amount !== undefined ? normalized.deposit_amount : null,
                 active !== undefined ? Boolean(active) : null,
                 req.params.id, req.tenant.id
             ]
         );
         if (result.rows.length === 0) return res.status(404).json({ error: 'Service not found.' });
-        res.json({ success: true, service: result.rows[0] });
+        res.json({ success: true, service: normalizeDepositConfig(result.rows[0]) });
     } catch (err) {
         console.error('[Services/Update] DB Error:', err.message, '| Code:', err.code);
         if (err.code === '42703') {
