@@ -100,6 +100,53 @@ async function getBookingServiceName(booking) {
     }
 }
 
+function buildAttachmentFromDataUrl(dataUrl, fallbackBaseName = 'attachment') {
+    const raw = String(dataUrl || '').trim();
+    if (!raw) return null;
+
+    const dataUrlMatch = raw.match(/^data:([^;]+);base64,(.+)$/);
+    const mimeType = dataUrlMatch?.[1] || 'application/octet-stream';
+    const base64Content = (dataUrlMatch?.[2] || raw).trim();
+    if (!base64Content) return null;
+
+    const extensionMap = {
+        'image/jpeg': 'jpg',
+        'image/jpg': 'jpg',
+        'image/png': 'png',
+        'image/gif': 'gif',
+        'image/webp': 'webp',
+        'application/pdf': 'pdf'
+    };
+    const extension = extensionMap[mimeType.toLowerCase()] || 'bin';
+
+    return {
+        filename: `${fallbackBaseName}.${extension}`,
+        content: base64Content
+    };
+}
+
+async function getBookingReceiptAttachment(booking) {
+    if (!booking?.id) return null;
+
+    try {
+        const result = await query(
+            `SELECT gateway_response
+             FROM booking_payments
+             WHERE booking_id = $1
+             ORDER BY created_at DESC
+             LIMIT 1`,
+            [booking.id]
+        );
+
+        const gatewayResponse = result.rows[0]?.gateway_response || {};
+        const receiptImage = gatewayResponse.receipt_image || gatewayResponse.receiptImage || null;
+        return buildAttachmentFromDataUrl(receiptImage, `bank-transfer-receipt-${booking.id}`);
+    } catch (err) {
+        console.error('[Email] Failed to load booking receipt attachment:', err.message);
+        return null;
+    }
+}
+
 function headerHtml(brand) {
     return `
     <div style="background:#050505;padding:28px 36px;text-align:center;">
@@ -209,6 +256,7 @@ async function sendBookingPendingReviewEmail(booking, tenant) {
     const customerEmail = (booking.email || '').toLowerCase().trim();
     const tenantRecipients = (await getTenantNotificationRecipients(tenant))
         .filter((recipient) => recipient !== customerEmail);
+    const receiptAttachment = await getBookingReceiptAttachment(booking);
 
     await resend.emails.send({
         from:    getSenderAddress('appointments', brand),
@@ -234,6 +282,36 @@ async function sendBookingPendingReviewEmail(booking, tenant) {
             ${footerHtml(brand)}
         </div>`
     });
+
+    if (tenantRecipients.length > 0) {
+        await resend.emails.send({
+            from:    getSenderAddress('appointments', brand),
+            to:      tenantRecipients,
+            replyTo: brand.replyEmail,
+            subject: `Receipt Review Needed — ${brand.name}`,
+            html: `
+            <div style="font-family:Arial,sans-serif;color:#1a1a1a;max-width:600px;margin:0 auto;border:1px solid #e8e8e8;">
+                ${headerHtml(brand)}
+                <div style="padding:40px 36px;background:#fff;">
+                    <h3 style="margin-top:0;">Manual transfer review required</h3>
+                    <p style="font-size:15px;line-height:1.7;">A client submitted a bank transfer receipt for review.</p>
+                    <div style="background:#f9f9f9;border-left:4px solid ${brand.primaryColor};padding:18px 22px;margin:24px 0;border-radius:2px;">
+                        <p style="margin:6px 0;font-size:15px;"><strong>Client:</strong> ${booking.name || 'Unknown client'}</p>
+                        <p style="margin:6px 0;font-size:15px;"><strong>Email:</strong> ${booking.email || '—'}</p>
+                        <p style="margin:6px 0;font-size:15px;"><strong>Phone:</strong> ${booking.phone || '—'}</p>
+                        ${serviceName ? `<p style="margin:6px 0;font-size:15px;"><strong>Service:</strong> ${serviceName}</p>` : ''}
+                        <p style="margin:6px 0;font-size:15px;"><strong>Date:</strong> ${displayDate}</p>
+                        <p style="margin:6px 0;font-size:15px;"><strong>Time:</strong> ${displayTime}</p>
+                    </div>
+                    <p style="font-size:14px;color:#555;line-height:1.7;">
+                        ${receiptAttachment ? 'The uploaded transfer receipt is attached to this email for review.' : 'No receipt attachment could be recovered from the booking record.'}
+                    </p>
+                </div>
+                ${footerHtml(brand)}
+            </div>`,
+            attachments: receiptAttachment ? [receiptAttachment] : undefined
+        });
+    }
 
     console.log(`[Email] Pending review notice sent to ${booking.email}`);
 }
