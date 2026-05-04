@@ -5,6 +5,18 @@ const { query } = require('../../db/connection');
 
 const { authenticate } = require('../../middleware/auth');
 
+function resolvePublicBaseUrl(req) {
+    const configuredBaseUrl = String(process.env.PUBLIC_APP_URL || process.env.BASE_URL || '').trim();
+    if (configuredBaseUrl) {
+        const normalized = /^https?:\/\//i.test(configuredBaseUrl)
+            ? configuredBaseUrl
+            : `https://${configuredBaseUrl.replace(/^\/+/, '')}`;
+        return normalized.replace(/\/+$/, '');
+    }
+
+    return `${req.headers['x-forwarded-proto'] || req.protocol}://${req.get('host')}`;
+}
+
 /**
  * 1. OAuth Connect
  * GET /api/v1/calendar/connect/:provider
@@ -71,7 +83,7 @@ router.get('/status', authenticate, async (req, res) => {
         ]);
 
         const feedToken = tenantResult.rows[0]?.feed_token || null;
-        const baseUrl = process.env.PUBLIC_APP_URL || process.env.BASE_URL || `${req.headers['x-forwarded-proto'] || req.protocol}://${req.get('host')}`;
+        const baseUrl = resolvePublicBaseUrl(req);
         const feedUrl = feedToken ? `${baseUrl}/api/v1/calendar/feed/${feedToken}.ics` : null;
         const feedWebcalUrl = feedUrl ? feedUrl.replace(/^https?:\/\//i, 'webcal://') : null;
 

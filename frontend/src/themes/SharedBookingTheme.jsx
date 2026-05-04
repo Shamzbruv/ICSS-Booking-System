@@ -69,6 +69,44 @@ function formatDisplayDate(dateString) {
   });
 }
 
+function formatLongDisplayDate(dateString) {
+  if (!dateString) return 'Choose a date';
+  const match = String(dateString).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!match) return dateString;
+
+  const [, year, month, day] = match;
+  return new Date(Number(year), Number(month) - 1, Number(day), 12, 0, 0).toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+}
+
+function getDateInputValue(timeZone) {
+  try {
+    const formatter = new Intl.DateTimeFormat('en-CA', {
+      timeZone: timeZone || undefined,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    });
+    const parts = formatter.formatToParts(new Date());
+    const year = parts.find((part) => part.type === 'year')?.value;
+    const month = parts.find((part) => part.type === 'month')?.value;
+    const day = parts.find((part) => part.type === 'day')?.value;
+    if (year && month && day) return `${year}-${month}-${day}`;
+  } catch (err) {
+    console.warn('[SharedBookingTheme] Falling back to local date input value:', err);
+  }
+
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 function formatDisplayTime(timeString) {
   if (!timeString) return 'Choose a time';
   const [hour, minute] = timeString.split(':').map(Number);
@@ -364,9 +402,11 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
   }));
   const addonItems = typeof theme.addons?.items === 'function' ? theme.addons.items(tenant) : (theme.addons?.items || []);
   const themeVars = buildThemeVars(palette);
+  const tenantTimezone = tenant.branding?.timezone || 'America/Jamaica';
+  const todayInputValue = getDateInputValue(tenantTimezone);
 
   const [selectedService, setSelectedService] = useState(services[0] || null);
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState(() => getDateInputValue(tenant.branding?.timezone || 'America/Jamaica'));
   const [selectedTime, setSelectedTime] = useState(null);
   const [availability, setAvailability] = useState([]);
   const [availabilityMessage, setAvailabilityMessage] = useState('');
@@ -389,6 +429,10 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
   useEffect(() => {
     setSelectedService(services[0] || null);
   }, [services]);
+
+  useEffect(() => {
+    setSelectedDate((current) => (!current || current < todayInputValue ? todayInputValue : current));
+  }, [todayInputValue, tenant.slug]);
 
   useEffect(() => {
     setSelectedOption(optionConfig?.options?.[0] || null);
@@ -711,7 +755,7 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
                   <input
                     ref={dateInputRef}
                     type="date"
-                    min={new Date().toISOString().split('T')[0]}
+                    min={todayInputValue}
                     value={selectedDate}
                     onChange={(e) => {
                       setHasDateInteraction(true);
@@ -888,7 +932,7 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
               <p className={styles.modalLabel}>Your appointment</p>
               <p className={styles.modalService}>{confirmModal.service}</p>
               <p className={styles.modalTime}>
-                {new Date(`${confirmModal.date}T00:00:00`).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                {formatLongDisplayDate(confirmModal.date)}
                 {' at '}
                 {formatDisplayTime(confirmModal.time)}
               </p>

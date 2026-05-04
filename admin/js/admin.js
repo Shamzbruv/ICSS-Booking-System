@@ -137,10 +137,33 @@ function capitalize(str) {
     return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
+function extractDateParts(dateValue) {
+    if (!dateValue) return null;
+
+    if (dateValue instanceof Date && !Number.isNaN(dateValue.getTime())) {
+        return {
+            year: dateValue.getUTCFullYear(),
+            month: dateValue.getUTCMonth() + 1,
+            day: dateValue.getUTCDate()
+        };
+    }
+
+    const match = String(dateValue).trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (!match) return null;
+
+    return {
+        year: Number(match[1]),
+        month: Number(match[2]),
+        day: Number(match[3])
+    };
+}
+
 function formatDate(dateStr) {
     if (!dateStr) return '—';
     try {
-        const d = new Date(dateStr + (dateStr.length === 10 ? 'T00:00:00' : ''));
+        const parts = extractDateParts(dateStr);
+        if (!parts) return dateStr;
+        const d = new Date(parts.year, parts.month - 1, parts.day, 12, 0, 0);
         return d.toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
     } catch { return dateStr; }
 }

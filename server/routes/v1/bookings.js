@@ -17,6 +17,34 @@ const MAX_BOOKINGS_PER_DAY = 14;
 const MAX_DAYS_AHEAD       = 30;
 const MIN_BUFFER_MINS      = 15;
 
+function formatDateOnlyValue(value) {
+    if (!value) return value;
+
+    if (value instanceof Date && !Number.isNaN(value.getTime())) {
+        const year = value.getUTCFullYear();
+        const month = String(value.getUTCMonth() + 1).padStart(2, '0');
+        const day = String(value.getUTCDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+
+    const match = String(value).trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
+    return match ? `${match[1]}-${match[2]}-${match[3]}` : String(value);
+}
+
+function formatTimeOnlyValue(value) {
+    if (!value) return value;
+    return String(value).trim().slice(0, 8);
+}
+
+function serializeBooking(booking) {
+    if (!booking) return booking;
+    return {
+        ...booking,
+        booking_date: formatDateOnlyValue(booking.booking_date),
+        booking_time: formatTimeOnlyValue(booking.booking_time)
+    };
+}
+
 function getTzTimeStr(tz = 'America/Jamaica', addMinutes = 0, addDays = 0) {
     const now = new Date();
     if (addMinutes) now.setMinutes(now.getMinutes() + addMinutes);
@@ -259,7 +287,7 @@ router.post('/', enforceBookingLimit, async (req, res) => {
             sendBookingPendingReviewEmail(enrichedBooking, req.tenant).catch(console.error);
         }
 
-        res.status(201).json({ success: true, ...result });
+        res.status(201).json({ success: true, ...result, booking: serializeBooking(result.booking) });
 
     } catch (err) {
         if (err.status) return res.status(err.status).json({ error: err.message });
@@ -326,7 +354,7 @@ router.post('/:id/verify-payment', async (req, res) => {
             sendBookingConfirmation(result, tRes.rows[0]).catch(console.error);
         }
 
-        res.json({ success: true, booking: result });
+        res.json({ success: true, booking: serializeBooking(result) });
     } catch (err) {
         if (err.status) return res.status(err.status).json({ error: err.message });
         console.error('[Bookings/Verify]', err.message);
@@ -370,7 +398,7 @@ router.get('/', authenticate, requireRole('staff', 'tenant_admin', 'super_admin'
         ]);
 
         res.json({
-            bookings: rows.rows,
+            bookings: rows.rows.map(serializeBooking),
             total:    parseInt(total.rows[0].cnt),
             page:     parseInt(page),
             limit:    parseInt(limit)
@@ -389,7 +417,7 @@ router.get('/:id', authenticate, requireRole('staff', 'tenant_admin'), async (re
             [req.params.id, req.tenant.id]
         );
         if (result.rows.length === 0) return res.status(404).json({ error: 'Booking not found.' });
-        res.json({ booking: result.rows[0] });
+        res.json({ booking: serializeBooking(result.rows[0]) });
     } catch (err) {
         res.status(500).json({ error: 'Failed to fetch booking.' });
     }
@@ -441,7 +469,7 @@ router.patch('/:id/status', authenticate, requireRole('staff', 'tenant_admin'), 
             sendBookingCancellationEmail(result, note, req.tenant).catch(console.error);
         }
 
-        res.json({ success: true, booking: result });
+        res.json({ success: true, booking: serializeBooking(result) });
     } catch (err) {
         if (err.status) return res.status(err.status).json({ error: err.message });
         console.error('[Bookings/StatusUpdate]', err.message);

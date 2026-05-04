@@ -16,6 +16,34 @@ const router  = express.Router();
 const { query } = require('../../db/connection');
 const { authenticate, requirePlatformOwner, signToken } = require('../../middleware/auth');
 
+function formatDateOnlyValue(value) {
+    if (!value) return value;
+
+    if (value instanceof Date && !Number.isNaN(value.getTime())) {
+        const year = value.getUTCFullYear();
+        const month = String(value.getUTCMonth() + 1).padStart(2, '0');
+        const day = String(value.getUTCDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+
+    const match = String(value).trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
+    return match ? `${match[1]}-${match[2]}-${match[3]}` : String(value);
+}
+
+function formatTimeOnlyValue(value) {
+    if (!value) return value;
+    return String(value).trim().slice(0, 8);
+}
+
+function serializeBooking(booking) {
+    if (!booking) return booking;
+    return {
+        ...booking,
+        booking_date: formatDateOnlyValue(booking.booking_date),
+        booking_time: formatTimeOnlyValue(booking.booking_time)
+    };
+}
+
 // All platform routes: authenticated + platform_owner only
 router.use(authenticate, requirePlatformOwner);
 
@@ -182,7 +210,7 @@ router.get('/tenants/:tenantId/bookings', async (req, res) => {
              ORDER BY b.created_at DESC LIMIT $2`,
             [req.params.tenantId, limit]
         );
-        res.json({ bookings: result.rows });
+        res.json({ bookings: result.rows.map(serializeBooking) });
     } catch (err) {
         res.status(500).json({ error: 'Failed to fetch bookings.' });
     }

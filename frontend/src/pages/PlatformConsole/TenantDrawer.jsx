@@ -14,6 +14,16 @@ const STATUS_COLOR = {
   rejected: '#f87171', expired: '#71717a', cancelled: '#71717a',
 };
 
+function formatDateOnlyLabel(dateValue) {
+  if (!dateValue) return '—';
+
+  const match = String(dateValue).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!match) return '—';
+
+  const [, year, month, day] = match;
+  return new Date(Number(year), Number(month) - 1, Number(day), 12, 0, 0).toLocaleDateString();
+}
+
 export default function TenantDrawer({ tenant, onClose }) {
   const { startImpersonation } = useConsole();
   const [tab, setTab]       = useState('overview');
@@ -202,7 +212,7 @@ export default function TenantDrawer({ tenant, onClose }) {
                           <tr key={b.id}>
                             <td>{b.name}</td>
                             <td>{b.service_name || '—'}</td>
-                            <td>{b.booking_date ? new Date(b.booking_date).toLocaleDateString() : '—'}</td>
+                            <td>{formatDateOnlyLabel(b.booking_date)}</td>
                             <td>
                               <span className={s.statusDot} style={{ background: STATUS_COLOR[b.status] || '#71717a' }} />
                               {b.status}

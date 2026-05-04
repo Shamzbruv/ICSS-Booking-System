@@ -272,41 +272,20 @@
             <div>
                 <p class="settings-section-kicker">Calendar</p>
                 <h2 class="settings-section-title">Calendar Subscription</h2>
-                <p class="page-subtitle settings-section-copy">Use the private feed below if you want the “accept once and keep receiving events” setup. Subscribe once in your calendar app and future confirmed bookings will continue to appear automatically.</p>
+                <p class="page-subtitle settings-section-copy">Subscribe once and future confirmed bookings will continue to appear in the calendar app you use.</p>
             </div>
         </div>
 
         <div id="calendarConnections" class="schedule-notice" style="margin-bottom: 1rem;">
-            No calendar connected yet.
+            Subscribe once to keep this calendar updated automatically.
         </div>
 
-        <div class="schedule-notice" style="margin-bottom: 1rem;">
-            <strong>Recommended:</strong> this private subscription feed does not require you to set up your own Google or Apple API credentials.
+        <div style="margin-bottom: 1rem;">
+            <button type="button" id="subscribeCalendarBtn" class="btn btn-primary" style="width: 100%; pointer-events: none; opacity: 0.6;" onclick="subscribeToCalendar()">Subscribe to Calendar</button>
         </div>
 
-        <div class="payment-method-grid" style="margin-bottom: 1rem;">
-            <a id="appleCalendarLink" href="#" class="btn btn-primary" style="pointer-events: none; opacity: 0.6;">Subscribe in Apple Calendar</a>
-            <button type="button" class="btn btn-secondary" onclick="copyCalendarFeed()">Copy Subscription Feed</button>
-        </div>
-
-        <div class="settings-inline-row" style="align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 1rem;">
-            <a id="calendarFeedLink" href="#" target="_blank" rel="noreferrer" class="btn btn-secondary" style="pointer-events: none; opacity: 0.6;">Open Subscription Feed</a>
-        </div>
-
-        <p style="margin-top: 0; margin-bottom: 1.25rem; color: var(--text-dim); font-size: 0.9rem;">
-            Apple Calendar can subscribe directly. Google Calendar and Outlook can also subscribe using the same feed URL.
-        </p>
-
-        <div class="schedule-notice" style="margin-bottom: 1rem;">
-            <strong>Advanced only:</strong> direct provider sync creates events inside a specific Google or Outlook account and requires provider authorization.
-        </div>
-
-        <div class="payment-method-grid" style="margin-bottom: 1rem;">
-            <button type="button" class="btn btn-secondary" onclick="connectCalendar('google')">Link Google Calendar</button>
-            <button type="button" class="btn btn-secondary" onclick="connectCalendar('microsoft')">Link Outlook Calendar</button>
-        </div>
-        <p style="margin-top: 10px; color: var(--text-dim); font-size: 0.9rem;">
-            Google and Outlook direct sync need provider authorization. The subscription feed does not.
+        <p style="margin-top: 0; margin-bottom: 0; color: var(--text-dim); font-size: 0.9rem;">
+            This opens your default calendar app and subscribes it to future confirmed bookings automatically.
         </p>
     </section>
 </main>
@@ -330,7 +309,6 @@
         requireAuth();
         buildScheduleGrid(DEFAULT_HOURS);
         await loadSettings();
-        handleCalendarStatusMessage();
         document.getElementById('settingsForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             await saveSettings();
@@ -606,53 +584,28 @@
         updateScheduleRowState(day);
     }
 
-    function handleCalendarStatusMessage() {
-        const params = new URLSearchParams(window.location.search);
-        const provider = params.get('provider');
-        if (params.get('calendar') === 'connected' && provider) {
-            if (typeof showToast === 'function') showToast(`${provider === 'google' ? 'Google Calendar' : 'Outlook Calendar'} connected successfully.`, 'success');
-            params.delete('calendar');
-            params.delete('provider');
-            const nextUrl = `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ''}`;
-            window.history.replaceState({}, document.title, nextUrl);
-        }
-    }
-
     function renderCalendarConnections(data) {
         const wrap = document.getElementById('calendarConnections');
-        const feedLink = document.getElementById('calendarFeedLink');
-        const appleLink = document.getElementById('appleCalendarLink');
-        const connections = data.connections || [];
+        const subscribeBtn = document.getElementById('subscribeCalendarBtn');
 
-        if (connections.length === 0) {
-            wrap.textContent = 'No calendar connected yet.';
-        } else {
-            wrap.innerHTML = connections.map((connection) => {
-                const providerName = connection.provider === 'google' ? 'Google Calendar' : 'Outlook Calendar';
-                return `<div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;"><strong>${providerName}</strong><span style="color:var(--text-dim);">${connection.provider_account_id || 'Connected'}</span></div>`;
-            }).join('');
+        if (wrap) {
+            wrap.textContent = data.feed_url
+                ? 'Calendar subscription is ready. Click the button below once to subscribe.'
+                : 'Calendar subscription is not available right now.';
         }
 
+        if (!subscribeBtn) return;
+
         if (data.feed_url) {
-            feedLink.href = data.feed_url;
-            feedLink.style.pointerEvents = 'auto';
-            feedLink.style.opacity = '1';
-            feedLink.dataset.feedUrl = data.feed_url;
-            if (appleLink) {
-                appleLink.href = data.feed_webcal_url || data.feed_url;
-                appleLink.style.pointerEvents = 'auto';
-                appleLink.style.opacity = '1';
-            }
+            subscribeBtn.dataset.feedUrl = data.feed_url;
+            subscribeBtn.dataset.webcalUrl = data.feed_webcal_url || data.feed_url;
+            subscribeBtn.style.pointerEvents = 'auto';
+            subscribeBtn.style.opacity = '1';
         } else {
-            feedLink.href = '#';
-            feedLink.style.pointerEvents = 'none';
-            feedLink.style.opacity = '0.6';
-            delete feedLink.dataset.feedUrl;
-            if (appleLink) {
-                appleLink.href = '#';
-                appleLink.style.pointerEvents = 'none';
-                appleLink.style.opacity = '0.6';
-            }
+            delete subscribeBtn.dataset.feedUrl;
+            delete subscribeBtn.dataset.webcalUrl;
+            subscribeBtn.style.pointerEvents = 'none';
+            subscribeBtn.style.opacity = '0.6';
         }
     }
 
@@ -666,38 +619,17 @@
         }
     }
 
-    function buildCalendarReturnTo(provider) {
-        const url = new URL(window.location.href);
-        url.searchParams.set('calendar', 'connected');
-        url.searchParams.set('provider', provider);
-        return `${url.pathname}${url.search}`;
-    }
+    function subscribeToCalendar() {
+        const subscribeBtn = document.getElementById('subscribeCalendarBtn');
+        const targetUrl = subscribeBtn?.dataset.webcalUrl || subscribeBtn?.dataset.feedUrl;
 
-    async function connectCalendar(provider) {
-        try {
-            const data = await apiFetch(`/api/v1/calendar/connect/${provider}?format=json&return_to=${encodeURIComponent(buildCalendarReturnTo(provider))}`);
-            if (!data.authUrl) throw new Error('Calendar authorization URL was not returned.');
-            window.location.href = data.authUrl;
-        } catch (err) {
-            if (typeof showToast === 'function') showToast(`Failed to start calendar connection: ${err.message}`, 'error');
-            else alert(`Failed to start calendar connection: ${err.message}`);
-        }
-    }
-
-    async function copyCalendarFeed() {
-        const feedUrl = document.getElementById('calendarFeedLink')?.dataset.feedUrl;
-        if (!feedUrl) {
-            if (typeof showToast === 'function') showToast('Calendar feed is not available yet.', 'error');
-            else alert('Calendar feed is not available yet.');
+        if (!targetUrl) {
+            if (typeof showToast === 'function') showToast('Calendar subscription is not available yet.', 'error');
+            else alert('Calendar subscription is not available yet.');
             return;
         }
 
-        try {
-            await navigator.clipboard.writeText(feedUrl);
-            if (typeof showToast === 'function') showToast('Calendar feed copied.', 'success');
-        } catch (err) {
-            if (typeof showToast === 'function') showToast('Failed to copy the calendar feed link.', 'error');
-        }
+        window.location.href = targetUrl;
     }
 
     async function loadSettings() {
