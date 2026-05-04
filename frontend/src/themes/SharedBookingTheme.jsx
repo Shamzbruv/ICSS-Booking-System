@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import styles from './SharedBookingTheme.module.css';
 import { api } from '../api';
 
@@ -384,6 +384,7 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
     resolvedFields.map((field) => [field.name, field.defaultValue ?? (field.type === 'select' ? field.options?.[0]?.value || '' : '')])
   ));
   const dateInputRef = useRef(null);
+  const selectedTimeRef = useRef(null);
 
   useEffect(() => {
     setSelectedService(services[0] || null);
@@ -400,21 +401,37 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
   }, [tenant.slug, theme.name]);
 
   useEffect(() => {
+    selectedTimeRef.current = selectedTime;
+  }, [selectedTime]);
+
+  const refreshAvailability = useCallback(({ background = false } = {}) => {
     if (!selectedDate || !selectedService) return;
-    setLoadingSlots(true);
-    setAvailabilityMessage('');
+
+    if (!background) {
+      setLoadingSlots(true);
+      setAvailabilityMessage('');
+    }
+
     api.publicAvailability(tenant.slug, selectedDate, selectedService.id)
       .then((data) => {
         const availableSlots = (data.slots || []).filter((slot) => slot.available);
         const nextMessage = data.dayBlocked
           ? (data.message || theme.unavailableDateAlert || 'This date is unavailable.')
           : (availableSlots.length === 0 ? (data.message || theme.noSlotsText || 'No slots available for this date.') : '');
+        const selectedTimeStillAvailable = selectedTimeRef.current
+          ? availableSlots.some((slot) => slot.time === selectedTimeRef.current)
+          : true;
 
         setAvailability(availableSlots);
         setAvailabilityMessage(nextMessage);
         setSelectedTime((current) => availableSlots.some((slot) => slot.time === current) ? current : null);
 
-        if (hasDateInteraction && nextMessage && (data.dayBlocked || availableSlots.length === 0)) {
+        if (!selectedTimeStillAvailable && selectedTimeRef.current) {
+          setNoticeModal({
+            title: theme.timeUnavailableTitle || 'Time No Longer Available',
+            message: theme.timeUnavailableText || 'That time was just booked and has been removed. Please choose another available time.'
+          });
+        } else if (!background && hasDateInteraction && nextMessage && (data.dayBlocked || availableSlots.length === 0)) {
           setNoticeModal({
             title: theme.unavailableDateTitle || 'Date Unavailable',
             message: nextMessage
@@ -426,8 +443,48 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
         setAvailability([]);
         setAvailabilityMessage(theme.availabilityErrorText || 'We could not load availability for this date.');
       })
-      .finally(() => setLoadingSlots(false));
-  }, [tenant.slug, selectedDate, selectedService, hasDateInteraction, theme.availabilityErrorText, theme.noSlotsText, theme.unavailableDateAlert, theme.unavailableDateTitle]);
+      .finally(() => {
+        if (!background) setLoadingSlots(false);
+      });
+  }, [
+    hasDateInteraction,
+    selectedDate,
+    selectedService,
+    tenant.slug,
+    theme.availabilityErrorText,
+    theme.noSlotsText,
+    theme.timeUnavailableText,
+    theme.timeUnavailableTitle,
+    theme.unavailableDateAlert,
+    theme.unavailableDateTitle
+  ]);
+
+  useEffect(() => {
+    refreshAvailability();
+  }, [refreshAvailability]);
+
+  useEffect(() => {
+    if (!selectedDate || !selectedService) return undefined;
+
+    const intervalId = window.setInterval(() => {
+      refreshAvailability({ background: true });
+    }, 10000);
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        refreshAvailability({ background: true });
+      }
+    };
+
+    window.addEventListener('focus', handleVisibility);
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener('focus', handleVisibility);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [refreshAvailability, selectedDate, selectedService]);
 
   const selectedAddonItems = addonItems.filter((item) => selectedAddons.has(item.id));
   const priceFormatter = theme.priceFormatter || defaultPriceFormatter;
