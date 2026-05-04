@@ -83,20 +83,43 @@ async function getTenantNotificationRecipients(tenant) {
     return Array.from(recipients);
 }
 
-async function getBookingServiceName(booking) {
-    if (booking?.service_name || !booking?.service_id || !booking?.tenant_id) {
-        return booking?.service_name || null;
+async function getBookingServiceDetails(booking) {
+    if ((!booking?.service_id || !booking?.tenant_id) && booking?.service_name) {
+        return {
+            name: booking.service_name,
+            durationMinutes: Number(booking.duration_minutes || 0) || null
+        };
+    }
+
+    if (booking?.service_name && booking?.duration_minutes !== undefined && booking?.duration_minutes !== null) {
+        return {
+            name: booking.service_name,
+            durationMinutes: Number(booking.duration_minutes || 0) || null
+        };
+    }
+
+    if (!booking?.service_id || !booking?.tenant_id) {
+        return {
+            name: booking?.service_name || null,
+            durationMinutes: Number(booking?.duration_minutes || 0) || null
+        };
     }
 
     try {
         const result = await query(
-            `SELECT name FROM services WHERE id = $1 AND tenant_id = $2`,
+            `SELECT name, duration_minutes FROM services WHERE id = $1 AND tenant_id = $2`,
             [booking.service_id, booking.tenant_id]
         );
-        return result.rows[0]?.name || null;
+        return {
+            name: result.rows[0]?.name || booking?.service_name || null,
+            durationMinutes: Number(result.rows[0]?.duration_minutes || booking?.duration_minutes || 0) || null
+        };
     } catch (err) {
-        console.error('[Email] Failed to load service name:', err.message);
-        return null;
+        console.error('[Email] Failed to load service details:', err.message);
+        return {
+            name: booking?.service_name || null,
+            durationMinutes: Number(booking?.duration_minutes || 0) || null
+        };
     }
 }
 
@@ -122,6 +145,136 @@ function buildAttachmentFromDataUrl(dataUrl, fallbackBaseName = 'attachment') {
     return {
         filename: `${fallbackBaseName}.${extension}`,
         content: base64Content
+    };
+}
+
+function getBookingDateString(dateValue) {
+    if (!dateValue) return null;
+
+    if (dateValue instanceof Date && !Number.isNaN(dateValue.getTime())) {
+        return dateValue.toISOString().split('T')[0];
+    }
+
+    const match = String(dateValue).trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
+    return match ? `${match[1]}-${match[2]}-${match[3]}` : null;
+}
+
+function getBookingTimeString(timeValue) {
+    if (!timeValue) return null;
+
+    const match = String(timeValue).trim().match(/^(\d{2}):(\d{2})(?::(\d{2}))?/);
+    if (!match) return null;
+
+    return `${match[1]}:${match[2]}:${match[3] || '00'}`;
+}
+
+function zonedDateTimeToUtc(dateValue, timeValue, timeZone = 'America/Jamaica') {
+    const dateStr = getBookingDateString(dateValue);
+    const timeStr = getBookingTimeString(timeValue);
+    if (!dateStr || !timeStr) return null;
+
+    const [year, month, day] = dateStr.split('-').map(Number);
+    const [hours, minutes, seconds] = timeStr.split(':').map(Number);
+    const utcGuess = new Date(Date.UTC(year, month - 1, day, hours, minutes, seconds || 0));
+
+    const formatter = new Intl.DateTimeFormat('en-CA', {
+        timeZone,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+    });
+    const parts = Object.fromEntries(
+        formatter
+            .formatToParts(utcGuess)
+            .filter((part) => part.type !== 'literal')
+            .map((part) => [part.type, part.value])
+    );
+
+    const renderedUtc = Date.UTC(
+        Number(parts.year),
+        Number(parts.month) - 1,
+        Number(parts.day),
+        Number(parts.hour),
+        Number(parts.minute),
+        Number(parts.second)
+    );
+
+    return new Date(utcGuess.getTime() - (renderedUtc - utcGuess.getTime()));
+}
+
+function formatUtcCalendarStamp(date) {
+    const pad = (value) => String(value).padStart(2, '0');
+    return [
+        date.getUTCFullYear(),
+        pad(date.getUTCMonth() + 1),
+        pad(date.getUTCDate())
+    ].join('') + `T${pad(date.getUTCHours())}${pad(date.getUTCMinutes())}${pad(date.getUTCSeconds())}Z`;
+}
+
+function escapeCalendarText(value) {
+    return String(value || '')
+        .replace(/\\/g, '\\\\')
+        .replace(/\r?\n/g, '\\n')
+        .replace(/,/g, '\\,')
+        .replace(/;/g, '\\;');
+}
+
+function buildBookingCalendarAssets({ booking, tenant, brand, serviceName, durationMinutes }) {
+    const timeZone = tenant?.branding?.timezone || 'America/Jamaica';
+    const startUtc = zonedDateTimeToUtc(booking?.booking_date, booking?.booking_time, timeZone);
+    if (!startUtc) {
+        return { googleCalendarUrl: null, icsAttachment: null };
+    }
+
+    const safeDurationMinutes = Math.max(30, Number(durationMinutes || 0) || 60);
+    const endUtc = new Date(startUtc.getTime() + (safeDurationMinutes * 60 * 1000));
+    const summary = `${serviceName || 'Appointment'} @ ${tenant?.name || brand.name}`;
+    const location = booking?.region || tenant?.branding?.location || tenant?.name || brand.name;
+    const details = [
+        `Appointment confirmed with ${tenant?.name || brand.name}.`,
+        serviceName ? `Service: ${serviceName}` : null,
+        `Date: ${formatDate(booking?.booking_date)}`,
+        `Time: ${formatTime(getBookingTimeString(booking?.booking_time) || String(booking?.booking_time || ''))}`
+    ].filter(Boolean).join('\n');
+
+    const googleParams = new URLSearchParams({
+        action: 'TEMPLATE',
+        text: summary,
+        dates: `${formatUtcCalendarStamp(startUtc)}/${formatUtcCalendarStamp(endUtc)}`,
+        details,
+        location,
+        ctz: timeZone
+    });
+
+    const calendarFile = [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'PRODID:-//ICSS Booking System//EN',
+        'CALSCALE:GREGORIAN',
+        'METHOD:PUBLISH',
+        'BEGIN:VEVENT',
+        `UID:${booking?.id || Date.now()}@icssbookings.com`,
+        `DTSTAMP:${formatUtcCalendarStamp(new Date())}`,
+        `DTSTART:${formatUtcCalendarStamp(startUtc)}`,
+        `DTEND:${formatUtcCalendarStamp(endUtc)}`,
+        `SUMMARY:${escapeCalendarText(summary)}`,
+        `DESCRIPTION:${escapeCalendarText(details)}`,
+        `LOCATION:${escapeCalendarText(location)}`,
+        'STATUS:CONFIRMED',
+        'END:VEVENT',
+        'END:VCALENDAR'
+    ].join('\r\n');
+
+    return {
+        googleCalendarUrl: `https://calendar.google.com/calendar/render?${googleParams.toString()}`,
+        icsAttachment: {
+            filename: `appointment-${booking?.id || 'confirmed'}.ics`,
+            content: Buffer.from(calendarFile, 'utf8').toString('base64')
+        }
     };
 }
 
@@ -195,16 +348,24 @@ async function sendBookingConfirmation(booking, tenant) {
         return;
     }
 
-    const brand       = getBrand(tenant);
-    const serviceName = await getBookingServiceName(booking);
+    const brand = getBrand(tenant);
+    const serviceDetails = await getBookingServiceDetails(booking);
+    const serviceName = serviceDetails.name;
     const displayDate = formatDate(booking.booking_date);
     const displayTime = formatTime(typeof booking.booking_time === 'string'
         ? booking.booking_time.slice(0, 5)
         : String(booking.booking_time));
-    const firstName   = (booking.name || '').split(' ')[0];
+    const firstName = (booking.name || '').split(' ')[0];
     const customerEmail = (booking.email || '').toLowerCase().trim();
     const tenantRecipients = (await getTenantNotificationRecipients(tenant))
         .filter((recipient) => recipient !== customerEmail);
+    const { googleCalendarUrl, icsAttachment } = buildBookingCalendarAssets({
+        booking,
+        tenant,
+        brand,
+        serviceName,
+        durationMinutes: serviceDetails.durationMinutes
+    });
 
     await resend.emails.send({
         from:    getSenderAddress('appointments', brand),
@@ -225,6 +386,18 @@ async function sendBookingConfirmation(booking, tenant) {
                     <p style="margin:6px 0;font-size:15px;"><strong>Time:</strong> ${displayTime}</p>
                     ${booking.region ? `<p style="margin:6px 0;font-size:15px;"><strong>Location:</strong> ${booking.region}</p>` : ''}
                 </div>
+                ${(googleCalendarUrl || icsAttachment) ? `
+                <div style="background:#fffaf0;border:1px solid rgba(0,0,0,0.08);padding:18px 22px;margin:24px 0;border-radius:6px;">
+                    <p style="margin:0 0 12px;font-size:13px;text-transform:uppercase;letter-spacing:1.5px;color:#86868B;">Add to Calendar</p>
+                    ${googleCalendarUrl ? `
+                    <div style="margin-bottom:12px;">
+                        <a href="${googleCalendarUrl}" style="background:${brand.primaryColor};color:#050505;padding:12px 20px;text-decoration:none;font-weight:bold;font-size:13px;letter-spacing:1px;text-transform:uppercase;border-radius:4px;display:inline-block;">Add to Google Calendar</a>
+                    </div>` : ''}
+                    ${icsAttachment ? `
+                    <p style="margin:0;font-size:14px;color:#555;line-height:1.7;">
+                        An <strong>.ics</strong> calendar file is attached to this email for Apple Calendar, Outlook, and other calendar apps.
+                    </p>` : ''}
+                </div>` : ''}
                 <p style="font-size:14px;color:#555;line-height:1.7;">If you need to reschedule or cancel, please reply to this email or contact us directly.</p>
                 <div style="text-align:center;margin:32px 0;">
                     <a href="${brand.bookingUrl}" style="background:${brand.primaryColor};color:#050505;padding:13px 30px;text-decoration:none;font-weight:bold;font-size:13px;letter-spacing:1px;text-transform:uppercase;border-radius:3px;display:inline-block;">Visit Our Website</a>
@@ -232,7 +405,8 @@ async function sendBookingConfirmation(booking, tenant) {
                 <p style="font-size:14px;color:#333;margin-top:28px;">Warm regards,<br><strong>${brand.name} Team</strong></p>
             </div>
             ${footerHtml(brand)}
-        </div>`
+        </div>`,
+        attachments: icsAttachment ? [icsAttachment] : undefined
     });
 
     console.log(`[Email] Booking confirmation sent to ${booking.email}`);
@@ -247,7 +421,8 @@ async function sendBookingPendingReviewEmail(booking, tenant) {
     }
 
     const brand = getBrand(tenant);
-    const serviceName = await getBookingServiceName(booking);
+    const serviceDetails = await getBookingServiceDetails(booking);
+    const serviceName = serviceDetails.name;
     const displayDate = formatDate(booking.booking_date);
     const displayTime = formatTime(typeof booking.booking_time === 'string'
         ? booking.booking_time.slice(0, 5)
