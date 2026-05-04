@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const calendarSync = require('../../services/calendarSync');
+const { query } = require('../../db/connection');
 
 const { authenticate } = require('../../middleware/auth');
 
@@ -14,12 +15,18 @@ router.get('/connect/:provider', authenticate, async (req, res) => {
         const { provider } = req.params;
         const tenant_id = req.tenant?.id || req.query.tenant_id;
         const user_id = req.user?.id || req.query.user_id;
+        const returnTo = typeof req.query.return_to === 'string' && req.query.return_to.startsWith('/')
+            ? req.query.return_to
+            : null;
         
         if (!tenant_id || !user_id) {
             return res.status(400).json({ error: 'tenant_id and user_id required' });
         }
 
-        const authUrl = await calendarSync.generateAuthUrl(provider, tenant_id, user_id);
+        const authUrl = await calendarSync.generateAuthUrl(provider, tenant_id, user_id, returnTo);
+        if (req.query.format === 'json') {
+            return res.json({ authUrl });
+        }
         res.redirect(authUrl);
     } catch (e) {
         res.status(500).json({ error: e.message });
@@ -41,9 +48,35 @@ router.get('/oauth2callback/:provider', async (req, res) => {
         }
 
         const connectionInfo = await calendarSync.handleCallback(provider, code, state);
-        
-        // In a real app we'd redirect to a frontend success page.
+        if (connectionInfo.return_to && connectionInfo.return_to.startsWith('/')) {
+            return res.redirect(connectionInfo.return_to);
+        }
         res.json({ message: 'Calendar sync connected successfully!', data: connectionInfo });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+router.get('/status', authenticate, async (req, res) => {
+    try {
+        const [connectionsResult, tenantResult] = await Promise.all([
+            query(
+                `SELECT provider, provider_account_id, created_at, updated_at
+                 FROM calendar_connections
+                 WHERE tenant_id = $1
+                 ORDER BY created_at ASC`,
+                [req.tenant.id]
+            ),
+            query(`SELECT feed_token FROM tenants WHERE id = $1`, [req.tenant.id])
+        ]);
+
+        const feedToken = tenantResult.rows[0]?.feed_token || null;
+        const baseUrl = process.env.PUBLIC_APP_URL || process.env.BASE_URL || `${req.headers['x-forwarded-proto'] || req.protocol}://${req.get('host')}`;
+
+        res.json({
+            connections: connectionsResult.rows,
+            feed_url: feedToken ? `${baseUrl}/api/v1/calendar/feed/${feedToken}.ics` : null
+        });
     } catch (e) {
         res.status(500).json({ error: e.message });
     }

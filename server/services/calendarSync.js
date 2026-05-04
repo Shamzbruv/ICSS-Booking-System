@@ -62,8 +62,8 @@ function decryptToken(encryptedString) {
 /**
  * Generate OAuth Authorization URL
  */
-async function generateAuthUrl(provider, tenant_id, user_id) {
-    const state = JSON.stringify({ tenant_id, user_id });
+async function generateAuthUrl(provider, tenant_id, user_id, return_to = null) {
+    const state = JSON.stringify({ tenant_id, user_id, return_to });
     const encodedState = Buffer.from(state).toString('base64');
     
     if (provider === 'google') {
@@ -92,7 +92,7 @@ async function handleCallback(provider, code, stateBase64) {
         throw new Error('Invalid state parameter');
     }
 
-    const { tenant_id, user_id } = stateParam;
+    const { tenant_id, user_id, return_to } = stateParam;
 
     let accessToken, refreshToken, expiresIn, providerAccountId;
 
@@ -175,7 +175,7 @@ async function handleCallback(provider, code, stateBase64) {
     // Setup webhook right after connect
     await subscribeToWebhooks(tenant_id, provider);
 
-    return { tenant_id, user_id, provider };
+    return { tenant_id, user_id, provider, return_to };
 }
 
 /**

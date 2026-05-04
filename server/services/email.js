@@ -11,6 +11,7 @@
  */
 
 const { Resend } = require('resend');
+const { query } = require('../db/connection');
 
 function getResend() {
     const key = process.env.RESEND_API_KEY;
@@ -35,6 +36,57 @@ function getBrand(tenant) {
 
 function getSenderAddress(prefix, brand) {
     return `${brand.name} <${prefix}@${brand.sendingDomain}>`;
+}
+
+function splitEmails(value) {
+    return String(value || '')
+        .split(',')
+        .map((entry) => entry.trim().toLowerCase())
+        .filter(Boolean);
+}
+
+async function getTenantNotificationRecipients(tenant) {
+    const recipients = new Set(splitEmails(tenant?.branding?.replyEmail || process.env.ADMIN_EMAIL));
+
+    if (!tenant?.id) {
+        return Array.from(recipients);
+    }
+
+    try {
+        const result = await query(
+            `SELECT DISTINCT LOWER(email) AS email
+             FROM users
+             WHERE tenant_id = $1
+               AND active = true
+               AND role IN ('tenant_admin', 'staff', 'super_admin')`,
+            [tenant.id]
+        );
+
+        result.rows.forEach((row) => {
+            if (row.email) recipients.add(row.email);
+        });
+    } catch (err) {
+        console.error('[Email] Failed to load tenant notification recipients:', err.message);
+    }
+
+    return Array.from(recipients);
+}
+
+async function getBookingServiceName(booking) {
+    if (booking?.service_name || !booking?.service_id || !booking?.tenant_id) {
+        return booking?.service_name || null;
+    }
+
+    try {
+        const result = await query(
+            `SELECT name FROM services WHERE id = $1 AND tenant_id = $2`,
+            [booking.service_id, booking.tenant_id]
+        );
+        return result.rows[0]?.name || null;
+    } catch (err) {
+        console.error('[Email] Failed to load service name:', err.message);
+        return null;
+    }
 }
 
 function headerHtml(brand) {
@@ -86,16 +138,20 @@ async function sendBookingConfirmation(booking, tenant) {
     }
 
     const brand       = getBrand(tenant);
+    const serviceName = await getBookingServiceName(booking);
     const displayDate = formatDate(booking.booking_date);
     const displayTime = formatTime(typeof booking.booking_time === 'string'
         ? booking.booking_time.slice(0, 5)
         : String(booking.booking_time));
     const firstName   = (booking.name || '').split(' ')[0];
+    const customerEmail = (booking.email || '').toLowerCase().trim();
+    const tenantRecipients = (await getTenantNotificationRecipients(tenant))
+        .filter((recipient) => recipient !== customerEmail);
 
     await resend.emails.send({
         from:    getSenderAddress('appointments', brand),
         to:      [booking.email],
-        cc:      [brand.replyEmail],
+        cc:      tenantRecipients.length > 0 ? tenantRecipients : undefined,
         replyTo: brand.replyEmail,
         subject: `Appointment Confirmed — ${brand.name}`,
         html: `
@@ -106,7 +162,7 @@ async function sendBookingConfirmation(booking, tenant) {
                 <p style="font-size:15px;line-height:1.7;">Your appointment with <strong>${brand.name}</strong> has been <strong>confirmed</strong>. We look forward to seeing you!</p>
                 <div style="background:#f9f9f9;border-left:4px solid ${brand.primaryColor};padding:18px 22px;margin:24px 0;border-radius:2px;">
                     <p style="margin:0 0 4px;font-size:13px;text-transform:uppercase;letter-spacing:1.5px;color:#86868B;">Appointment Details</p>
-                    ${booking.service_name ? `<p style="margin:6px 0;font-size:15px;"><strong>Service:</strong> ${booking.service_name}</p>` : ''}
+                    ${serviceName ? `<p style="margin:6px 0;font-size:15px;"><strong>Service:</strong> ${serviceName}</p>` : ''}
                     <p style="margin:6px 0;font-size:15px;"><strong>Date:</strong> ${displayDate}</p>
                     <p style="margin:6px 0;font-size:15px;"><strong>Time:</strong> ${displayTime}</p>
                     ${booking.region ? `<p style="margin:6px 0;font-size:15px;"><strong>Location:</strong> ${booking.region}</p>` : ''}
@@ -124,6 +180,53 @@ async function sendBookingConfirmation(booking, tenant) {
     console.log(`[Email] Booking confirmation sent to ${booking.email}`);
 }
 
+// ── Booking Pending Review ────────────────────────────────────────────────────
+async function sendBookingPendingReviewEmail(booking, tenant) {
+    const resend = getResend();
+    if (!resend) {
+        console.warn('[Email] No RESEND_API_KEY — skipping pending review email to:', booking.email);
+        return;
+    }
+
+    const brand = getBrand(tenant);
+    const serviceName = await getBookingServiceName(booking);
+    const displayDate = formatDate(booking.booking_date);
+    const displayTime = formatTime(typeof booking.booking_time === 'string'
+        ? booking.booking_time.slice(0, 5)
+        : String(booking.booking_time));
+    const firstName = (booking.name || '').split(' ')[0] || 'there';
+    const customerEmail = (booking.email || '').toLowerCase().trim();
+    const tenantRecipients = (await getTenantNotificationRecipients(tenant))
+        .filter((recipient) => recipient !== customerEmail);
+
+    await resend.emails.send({
+        from:    getSenderAddress('appointments', brand),
+        to:      [booking.email],
+        cc:      tenantRecipients.length > 0 ? tenantRecipients : undefined,
+        replyTo: brand.replyEmail,
+        subject: `Booking Received — Pending Review · ${brand.name}`,
+        html: `
+        <div style="font-family:Arial,sans-serif;color:#1a1a1a;max-width:600px;margin:0 auto;border:1px solid #e8e8e8;">
+            ${headerHtml(brand)}
+            <div style="padding:40px 36px;background:#fff;">
+                <p style="font-size:15px;">Dear ${firstName},</p>
+                <p style="font-size:15px;line-height:1.7;">We received your booking request and your payment proof has been submitted for review.</p>
+                <div style="background:#f9f9f9;border-left:4px solid ${brand.primaryColor};padding:18px 22px;margin:24px 0;border-radius:2px;">
+                    <p style="margin:0 0 4px;font-size:13px;text-transform:uppercase;letter-spacing:1.5px;color:#86868B;">Booking Details</p>
+                    ${serviceName ? `<p style="margin:6px 0;font-size:15px;"><strong>Service:</strong> ${serviceName}</p>` : ''}
+                    <p style="margin:6px 0;font-size:15px;"><strong>Date:</strong> ${displayDate}</p>
+                    <p style="margin:6px 0;font-size:15px;"><strong>Time:</strong> ${displayTime}</p>
+                </div>
+                <p style="font-size:14px;color:#555;line-height:1.7;">We will confirm the booking as soon as the receipt is approved. A copy of this email has also been sent to the business team.</p>
+                <p style="font-size:14px;color:#333;margin-top:28px;">Warm regards,<br><strong>${brand.name} Team</strong></p>
+            </div>
+            ${footerHtml(brand)}
+        </div>`
+    });
+
+    console.log(`[Email] Pending review notice sent to ${booking.email}`);
+}
+
 // ── Booking Cancellation ───────────────────────────────────────────────────────
 async function sendBookingCancellationEmail(booking, reason, tenant) {
     const resend = getResend();
@@ -138,10 +241,14 @@ async function sendBookingCancellationEmail(booking, reason, tenant) {
         ? booking.booking_time.slice(0, 5)
         : String(booking.booking_time));
     const firstName   = (booking.name || '').split(' ')[0] || 'Valued Client';
+    const customerEmail = (booking.email || '').toLowerCase().trim();
+    const tenantRecipients = (await getTenantNotificationRecipients(tenant))
+        .filter((recipient) => recipient !== customerEmail);
 
     await resend.emails.send({
         from:    getSenderAddress('appointments', brand),
         to:      [booking.email],
+        cc:      tenantRecipients.length > 0 ? tenantRecipients : undefined,
         replyTo: brand.replyEmail,
         subject: `Appointment Update — ${brand.name}`,
         html: `
@@ -456,6 +563,7 @@ async function sendSubscriptionInvoiceEmail({ to, ownerName, businessName, amoun
 
 module.exports = {
     sendBookingConfirmation,
+    sendBookingPendingReviewEmail,
     sendBookingCancellationEmail,
     sendOrderConfirmation,
     sendDesignInquiryEmail,

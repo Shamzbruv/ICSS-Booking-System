@@ -8,14 +8,14 @@ const router  = express.Router();
 const { query, transaction }    = require('../../db/connection');
 const { authenticate, requireRole } = require('../../middleware/auth');
 const { enforceBookingLimit }   = require('../../services/subscription');
-const { sendBookingConfirmation, sendBookingCancellationEmail } = require('../../services/email');
+const { sendBookingConfirmation, sendBookingCancellationEmail, sendBookingPendingReviewEmail } = require('../../services/email');
 const calendarSync              = require('../../services/calendarSync');
 const wipay                     = require('../../services/wipay');
 const { normalizeDepositConfig, calculateAmountDue } = require('../../services/paymentRules');
 
 const MAX_BOOKINGS_PER_DAY = 14;
 const MAX_DAYS_AHEAD       = 30;
-const MIN_BUFFER_MINS      = 60;
+const MIN_BUFFER_MINS      = 15;
 
 function getTzTimeStr(tz = 'America/Jamaica', addMinutes = 0, addDays = 0) {
     const now = new Date();
@@ -29,6 +29,87 @@ function getTzTimeStr(tz = 'America/Jamaica', addMinutes = 0, addDays = 0) {
     const hh   = String(d.getHours()).padStart(2, '0');
     const min  = String(d.getMinutes()).padStart(2, '0');
     return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
+}
+
+function getDefaultBusinessHours() {
+    return {
+        monday:    { open: '09:00', close: '19:00', active: true },
+        tuesday:   { open: '09:00', close: '19:00', active: true },
+        wednesday: { open: '09:00', close: '19:00', active: true },
+        thursday:  { open: '09:00', close: '19:00', active: true },
+        friday:    { open: '09:00', close: '19:00', active: true },
+        saturday:  { open: '09:00', close: '19:00', active: true },
+        sunday:    { open: '10:00', close: '16:00', active: false }
+    };
+}
+
+function getDaySchedule(businessHours, requestedDateStr) {
+    const d = new Date(`${requestedDateStr}T12:00:00Z`);
+    const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const dayName = days[d.getUTCDay()];
+
+    let hours = businessHours;
+    try {
+        hours = typeof businessHours === 'string' ? JSON.parse(businessHours) : businessHours;
+    } catch (e) {
+        hours = null;
+    }
+
+    const resolvedHours = hours || getDefaultBusinessHours();
+    const dayHours = resolvedHours[dayName] || { active: false, open: '09:00', close: '17:00' };
+    const is24Hours = Boolean(dayHours.is24Hours);
+    const [openHour, openMinute] = (dayHours.open || '09:00').split(':').map(Number);
+    const [closeHour, closeMinute] = (dayHours.close || '17:00').split(':').map(Number);
+
+    return {
+        dayName,
+        active: Boolean(dayHours.active),
+        startMins: is24Hours ? 0 : ((openHour * 60) + openMinute),
+        endMins: is24Hours ? (24 * 60) : ((closeHour * 60) + closeMinute)
+    };
+}
+
+async function validateTenantAvailability(client, tenant, date, time, totalServiceMins) {
+    const schedule = getDaySchedule(tenant.business_hours, date);
+
+    if (!schedule.active) {
+        const err = new Error('This date is unavailable because the business is closed.');
+        err.status = 400;
+        throw err;
+    }
+
+    const [hour, minute] = time.split(':').map(Number);
+    const slotStartMins = (hour * 60) + minute;
+    const slotEndMins = slotStartMins + totalServiceMins;
+
+    if (slotStartMins < schedule.startMins || slotEndMins > schedule.endMins) {
+        const err = new Error('This time falls outside the business schedule for the selected date.');
+        err.status = 400;
+        throw err;
+    }
+
+    const blocksResult = await client.query(
+        `SELECT block_type, block_time::TEXT AS block_time, reason
+         FROM unavailable_slots
+         WHERE tenant_id = $1 AND block_date = $2`,
+        [tenant.id, date]
+    );
+
+    const dayBlock = blocksResult.rows.find((block) => block.block_type === 'day');
+    if (dayBlock) {
+        const err = new Error(dayBlock.reason || 'This date is unavailable.');
+        err.status = 400;
+        throw err;
+    }
+
+    const slotBlock = blocksResult.rows.find((block) =>
+        block.block_type === 'slot' && String(block.block_time || '').slice(0, 5) === time
+    );
+    if (slotBlock) {
+        const err = new Error(slotBlock.reason || 'This time slot is unavailable.');
+        err.status = 400;
+        throw err;
+    }
 }
 
 // POST /api/v1/bookings — Create a new booking
@@ -102,16 +183,10 @@ router.post('/', enforceBookingLimit, async (req, res) => {
                 paymentMode = 'none';
             }
 
-            // 3. Calculate Start & End Times for Overlap Protection
+            // 3. Validate selected date and time against the tenant's published schedule
             const startTimeStr = `${date}T${time}:00`;
             const duration = (service.duration_minutes || 30) + (service.buffer_time_minutes || 0);
-            
-            // Validate time within business hours (12:00 – 18:30)
-            const [h, m] = time.split(':').map(Number);
-            const timeMins = h * 60 + m;
-            if (timeMins < 12 * 60 || (timeMins + duration) > 19 * 60) {
-                const err = new Error('Booking exceeds business hours.'); err.status = 400; throw err;
-            }
+            await validateTenantAvailability(client, tenant, date, time, duration);
 
             // PostgreSQL parses this assuming the DB timezone, but we enforce overlap relatively.
             // Using precise timestamps:
@@ -177,7 +252,11 @@ router.post('/', enforceBookingLimit, async (req, res) => {
         if (result.booking.status === 'confirmed') {
             // Attach service_name so the email template can display it
             const enrichedBooking = { ...result.booking, service_name: result.service_name };
+            calendarSync.syncBookingWithExternal(req.tenant.id, enrichedBooking).catch(console.error);
             sendBookingConfirmation(enrichedBooking, req.tenant).catch(console.error);
+        } else if (result.booking.status === 'pending_manual_confirmation') {
+            const enrichedBooking = { ...result.booking, service_name: result.service_name };
+            sendBookingPendingReviewEmail(enrichedBooking, req.tenant).catch(console.error);
         }
 
         res.status(201).json({ success: true, ...result });
@@ -243,6 +322,7 @@ router.post('/:id/verify-payment', async (req, res) => {
         // Async follow-up
         if (result.status === 'confirmed') {
             const tRes = await query(`SELECT * FROM tenants WHERE id = $1`, [result.tenant_id]);
+            calendarSync.syncBookingWithExternal(result.tenant_id, result).catch(console.error);
             sendBookingConfirmation(result, tRes.rows[0]).catch(console.error);
         }
 

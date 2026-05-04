@@ -266,6 +266,33 @@
             <button type="button" class="btn btn-primary" style="width: 100%;" onclick="saveSchedule()">Save Schedule</button>
         </div>
     </section>
+
+    <section class="card settings-card" style="max-width: 800px; margin: 2rem auto 0;">
+        <div class="settings-section-head" style="align-items:flex-start;">
+            <div>
+                <p class="settings-section-kicker">Calendar</p>
+                <h2 class="settings-section-title">Calendar Sync</h2>
+                <p class="page-subtitle settings-section-copy">Connect the calendar you use so confirmed bookings are sent there automatically.</p>
+            </div>
+        </div>
+
+        <div id="calendarConnections" class="schedule-notice" style="margin-bottom: 1rem;">
+            No calendar connected yet.
+        </div>
+
+        <div class="payment-method-grid" style="margin-bottom: 1rem;">
+            <button type="button" class="btn btn-secondary" onclick="connectCalendar('google')">Link Google Calendar</button>
+            <button type="button" class="btn btn-secondary" onclick="connectCalendar('microsoft')">Link Outlook Calendar</button>
+        </div>
+
+        <div class="settings-inline-row" style="align-items: center; gap: 10px; flex-wrap: wrap;">
+            <button type="button" class="btn btn-primary" onclick="copyCalendarFeed()">Copy Apple Calendar Feed</button>
+            <a id="calendarFeedLink" href="#" target="_blank" rel="noreferrer" class="btn btn-secondary" style="pointer-events: none; opacity: 0.6;">Open Feed</a>
+        </div>
+        <p style="margin-top: 10px; color: var(--text-dim); font-size: 0.9rem;">
+            Use the Apple feed for Apple Calendar subscriptions. Google and Outlook connections create events automatically after confirmed bookings.
+        </p>
+    </section>
 </main>
 
 <script src="js/admin.js"></script>
@@ -287,6 +314,7 @@
         requireAuth();
         buildScheduleGrid(DEFAULT_HOURS);
         await loadSettings();
+        handleCalendarStatusMessage();
         document.getElementById('settingsForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             await saveSettings();
@@ -562,14 +590,98 @@
         updateScheduleRowState(day);
     }
 
+    function handleCalendarStatusMessage() {
+        const params = new URLSearchParams(window.location.search);
+        const provider = params.get('provider');
+        if (params.get('calendar') === 'connected' && provider) {
+            if (typeof showToast === 'function') showToast(`${provider === 'google' ? 'Google Calendar' : 'Outlook Calendar'} connected successfully.`, 'success');
+            params.delete('calendar');
+            params.delete('provider');
+            const nextUrl = `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ''}`;
+            window.history.replaceState({}, document.title, nextUrl);
+        }
+    }
+
+    function renderCalendarConnections(data) {
+        const wrap = document.getElementById('calendarConnections');
+        const feedLink = document.getElementById('calendarFeedLink');
+        const connections = data.connections || [];
+
+        if (connections.length === 0) {
+            wrap.textContent = 'No calendar connected yet.';
+        } else {
+            wrap.innerHTML = connections.map((connection) => {
+                const providerName = connection.provider === 'google' ? 'Google Calendar' : 'Outlook Calendar';
+                return `<div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;"><strong>${providerName}</strong><span style="color:var(--text-dim);">${connection.provider_account_id || 'Connected'}</span></div>`;
+            }).join('');
+        }
+
+        if (data.feed_url) {
+            feedLink.href = data.feed_url;
+            feedLink.style.pointerEvents = 'auto';
+            feedLink.style.opacity = '1';
+            feedLink.dataset.feedUrl = data.feed_url;
+        } else {
+            feedLink.href = '#';
+            feedLink.style.pointerEvents = 'none';
+            feedLink.style.opacity = '0.6';
+            delete feedLink.dataset.feedUrl;
+        }
+    }
+
+    async function loadCalendarSettings() {
+        try {
+            const data = await apiFetch('/api/v1/calendar/status');
+            renderCalendarConnections(data);
+        } catch (err) {
+            const wrap = document.getElementById('calendarConnections');
+            if (wrap) wrap.textContent = 'Could not load calendar settings right now.';
+        }
+    }
+
+    function buildCalendarReturnTo(provider) {
+        const url = new URL(window.location.href);
+        url.searchParams.set('calendar', 'connected');
+        url.searchParams.set('provider', provider);
+        return `${url.pathname}${url.search}`;
+    }
+
+    async function connectCalendar(provider) {
+        try {
+            const data = await apiFetch(`/api/v1/calendar/connect/${provider}?format=json&return_to=${encodeURIComponent(buildCalendarReturnTo(provider))}`);
+            if (!data.authUrl) throw new Error('Calendar authorization URL was not returned.');
+            window.location.href = data.authUrl;
+        } catch (err) {
+            if (typeof showToast === 'function') showToast(`Failed to start calendar connection: ${err.message}`, 'error');
+            else alert(`Failed to start calendar connection: ${err.message}`);
+        }
+    }
+
+    async function copyCalendarFeed() {
+        const feedUrl = document.getElementById('calendarFeedLink')?.dataset.feedUrl;
+        if (!feedUrl) {
+            if (typeof showToast === 'function') showToast('Calendar feed is not available yet.', 'error');
+            else alert('Calendar feed is not available yet.');
+            return;
+        }
+
+        try {
+            await navigator.clipboard.writeText(feedUrl);
+            if (typeof showToast === 'function') showToast('Calendar feed copied.', 'success');
+        } catch (err) {
+            if (typeof showToast === 'function') showToast('Failed to copy the calendar feed link.', 'error');
+        }
+    }
+
     async function loadSettings() {
         try {
             const me = await apiFetch('/api/v1/auth/me');
-            if (!me || !me.tenant) return;
+            const tenant = me?.tenant || me?.user;
+            if (!tenant) return;
             const slug = getTenantSlug();
             if (!slug) return;
-            document.getElementById('tenantName').textContent = me.tenant.name || 'Booking System';
-            if (me.tenant.plan_id) document.getElementById('tenantPlan').textContent = me.tenant.plan_id.toUpperCase();
+            document.getElementById('tenantName').textContent = tenant.name || tenant.tenant_name || 'Booking System';
+            if (tenant.plan_id) document.getElementById('tenantPlan').textContent = tenant.plan_id.toUpperCase();
             
             const data = await apiFetch(`/api/v1/tenants/${slug}/payment-settings`);
             const s = data.settings || {};
@@ -602,8 +714,10 @@
                 syncImagePreview({ inputId: 'branding_logo_url', previewWrapId: 'logoPreviewWrap', previewImageId: 'logoPreview', removeButtonId: 'removeLogoBtn' });
                 syncImagePreview({ inputId: 'branding_service_section_image_url', previewWrapId: 'serviceSectionImagePreviewWrap', previewImageId: 'serviceSectionImagePreview', removeButtonId: 'removeServiceSectionImageBtn' });
                 // Set tenant name in preview
-                document.getElementById('preview_name').textContent = me.tenant.name || '';
+                document.getElementById('preview_name').textContent = tenant.name || tenant.tenant_name || '';
             } catch (e) { /* branding load is non-critical */ }
+
+            await loadCalendarSettings();
         } catch (err) {
             console.error('Failed to load settings:', err);
         }

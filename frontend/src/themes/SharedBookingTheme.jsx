@@ -1,20 +1,33 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import styles from './SharedBookingTheme.module.css';
 import { api } from '../api';
 
-function generateICS(serviceName, date, time, tenantName, location) {
+function buildCalendarWindow(date, time, durationMinutes = 60) {
   const [h, m] = time.split(':').map(Number);
   const [yr, mo, da] = date.split('-').map(Number);
+  const start = new Date(yr, mo - 1, da, h, m, 0, 0);
+  const end = new Date(start.getTime() + (Math.max(30, Number(durationMinutes) || 60) * 60 * 1000));
+  return { start, end };
+}
+
+function formatCalendarStamp(date) {
   const pad = (n) => String(n).padStart(2, '0');
-  const dtStart = `${yr}${pad(mo)}${pad(da)}T${pad(h)}${pad(m)}00`;
-  const dtEnd = `${yr}${pad(mo)}${pad(da)}T${pad(h + 1)}${pad(m)}00`;
+  return [
+    date.getFullYear(),
+    pad(date.getMonth() + 1),
+    pad(date.getDate())
+  ].join('') + `T${pad(date.getHours())}${pad(date.getMinutes())}00`;
+}
+
+function generateICS(serviceName, date, time, durationMinutes, tenantName, location) {
+  const { start, end } = buildCalendarWindow(date, time, durationMinutes);
   const uid = `${Date.now()}@icssbookings.com`;
   const ics = [
     'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//ICSS Bookings//EN',
     'BEGIN:VEVENT',
     `UID:${uid}`,
-    `DTSTART:${dtStart}`,
-    `DTEND:${dtEnd}`,
+    `DTSTART:${formatCalendarStamp(start)}`,
+    `DTEND:${formatCalendarStamp(end)}`,
     `SUMMARY:${serviceName} @ ${tenantName}`,
     `LOCATION:${location || tenantName}`,
     'STATUS:CONFIRMED',
@@ -30,16 +43,12 @@ function generateICS(serviceName, date, time, tenantName, location) {
   URL.revokeObjectURL(url);
 }
 
-function googleCalUrl(serviceName, date, time, tenantName, location) {
-  const [h, m] = time.split(':').map(Number);
-  const [yr, mo, da] = date.split('-').map(Number);
-  const pad = (n) => String(n).padStart(2, '0');
-  const dtStart = `${yr}${pad(mo)}${pad(da)}T${pad(h)}${pad(m)}00`;
-  const dtEnd = `${yr}${pad(mo)}${pad(da)}T${pad(h + 1)}${pad(m)}00`;
+function googleCalUrl(serviceName, date, time, durationMinutes, tenantName, location) {
+  const { start, end } = buildCalendarWindow(date, time, durationMinutes);
   const params = new URLSearchParams({
     action: 'TEMPLATE',
     text: `${serviceName} @ ${tenantName}`,
-    dates: `${dtStart}/${dtEnd}`,
+    dates: `${formatCalendarStamp(start)}/${formatCalendarStamp(end)}`,
     location: location || tenantName,
   });
   return `https://calendar.google.com/calendar/render?${params}`;
@@ -354,22 +363,27 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
     options: field.type === 'select' ? normalizeOptions(field.options, tenant) : field.options
   }));
   const addonItems = typeof theme.addons?.items === 'function' ? theme.addons.items(tenant) : (theme.addons?.items || []);
+  const themeVars = buildThemeVars(palette);
 
   const [selectedService, setSelectedService] = useState(services[0] || null);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedTime, setSelectedTime] = useState(null);
   const [availability, setAvailability] = useState([]);
+  const [availabilityMessage, setAvailabilityMessage] = useState('');
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [confirmModal, setConfirmModal] = useState(null);
+  const [noticeModal, setNoticeModal] = useState(null);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [receiptImage, setReceiptImage] = useState(null);
+  const [hasDateInteraction, setHasDateInteraction] = useState(false);
   const [selectedOption, setSelectedOption] = useState(optionConfig?.options?.[0] || null);
   const [selectedAddons, setSelectedAddons] = useState(new Set());
   const [extraState, setExtraState] = useState(() => Object.fromEntries(
     resolvedFields.map((field) => [field.name, field.defaultValue ?? (field.type === 'select' ? field.options?.[0]?.value || '' : '')])
   ));
+  const dateInputRef = useRef(null);
 
   useEffect(() => {
     setSelectedService(services[0] || null);
@@ -388,14 +402,32 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
   useEffect(() => {
     if (!selectedDate || !selectedService) return;
     setLoadingSlots(true);
+    setAvailabilityMessage('');
     api.publicAvailability(tenant.slug, selectedDate, selectedService.id)
-      .then((data) => setAvailability(((data.slots || []).filter((slot) => slot.available))))
+      .then((data) => {
+        const availableSlots = (data.slots || []).filter((slot) => slot.available);
+        const nextMessage = data.dayBlocked
+          ? (data.message || theme.unavailableDateAlert || 'This date is unavailable.')
+          : (availableSlots.length === 0 ? (data.message || theme.noSlotsText || 'No slots available for this date.') : '');
+
+        setAvailability(availableSlots);
+        setAvailabilityMessage(nextMessage);
+        setSelectedTime((current) => availableSlots.some((slot) => slot.time === current) ? current : null);
+
+        if (hasDateInteraction && nextMessage && (data.dayBlocked || availableSlots.length === 0)) {
+          setNoticeModal({
+            title: theme.unavailableDateTitle || 'Date Unavailable',
+            message: nextMessage
+          });
+        }
+      })
       .catch((err) => {
         console.error('[Availability]', err.message);
         setAvailability([]);
+        setAvailabilityMessage(theme.availabilityErrorText || 'We could not load availability for this date.');
       })
       .finally(() => setLoadingSlots(false));
-  }, [tenant.slug, selectedDate, selectedService]);
+  }, [tenant.slug, selectedDate, selectedService, hasDateInteraction, theme.availabilityErrorText, theme.noSlotsText, theme.unavailableDateAlert, theme.unavailableDateTitle]);
 
   const selectedAddonItems = addonItems.filter((item) => selectedAddons.has(item.id));
   const priceFormatter = theme.priceFormatter || defaultPriceFormatter;
@@ -411,6 +443,17 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
     setExtraState((prev) => ({ ...prev, [nameToSet]: value }));
   };
 
+  const showNotice = (message, title = theme.noticeTitle || 'Booking Notice') => {
+    setNoticeModal({ title, message });
+  };
+
+  const openDatePicker = () => {
+    const input = dateInputRef.current;
+    if (!input) return;
+    if (typeof input.showPicker === 'function') input.showPicker();
+    input.focus();
+  };
+
   const toggleAddon = (addonId) => {
     setSelectedAddons((prev) => {
       const next = new Set(prev);
@@ -423,15 +466,15 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
   const handleBooking = async (e) => {
     e.preventDefault();
     if (!selectedService) {
-      alert(theme.emptyServicesText || 'No services are currently available.');
+      showNotice(theme.emptyServicesText || 'No services are currently available.');
       return;
     }
     if (!selectedTime) {
-      alert(theme.selectTimeAlert || 'Please select a time.');
+      showNotice(theme.selectTimeAlert || 'Please select a time.');
       return;
     }
     if (needsReceipt && !receiptImage) {
-      alert(theme.receiptRequiredAlert || 'Please attach your bank transfer receipt.');
+      showNotice(theme.receiptRequiredAlert || 'Please attach your bank transfer receipt.');
       return;
     }
 
@@ -476,6 +519,7 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
           service: selectedService.name,
           date: selectedDate,
           time: selectedTime,
+          duration: selectedService.duration_minutes,
           status: res.booking?.status || 'confirmed',
           title: res.booking?.status === 'pending_manual_confirmation'
             ? (paymentDetails.requirement === 'deposit' ? 'Deposit Submitted' : 'Payment Submitted')
@@ -486,7 +530,7 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
         });
       }
     } catch (err) {
-      alert(err.message || 'Failed to complete booking.');
+      showNotice(err.message || 'Failed to complete booking.', theme.errorTitle || 'Unable to Complete Booking');
     }
   };
 
@@ -505,7 +549,7 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
 
   return (
     <>
-      <div className={styles.wrapper} style={buildThemeVars(palette)}>
+      <div className={styles.wrapper} style={themeVars}>
         <div className={styles.shell}>
           <div className={styles.header}>
             <div className={styles.brand}>
@@ -594,12 +638,28 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
 
               <div className={styles.block}>
                 <div className={styles.blockLabel}>{theme.dateLabel || 'Choose your date'}</div>
-                <div className={styles.inputShell}>
+                <div
+                  className={`${styles.inputShell} ${styles.inputShellDate}`}
+                  onClick={openDatePicker}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      openDatePicker();
+                    }
+                  }}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={theme.dateLabel || 'Choose your date'}
+                >
                   <input
+                    ref={dateInputRef}
                     type="date"
                     min={new Date().toISOString().split('T')[0]}
                     value={selectedDate}
-                    onChange={(e) => setSelectedDate(e.target.value)}
+                    onChange={(e) => {
+                      setHasDateInteraction(true);
+                      setSelectedDate(e.target.value);
+                    }}
                   />
                   <IconGlyph kind="calendar" className={styles.inputIcon} />
                 </div>
@@ -619,7 +679,7 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
                         {slot.label || slot.time}
                       </button>
                     ))}
-                    {availability.length === 0 && <p className={styles.helperText}>{theme.noSlotsText || 'No slots available for this date.'}</p>}
+                    {availability.length === 0 && <p className={styles.helperText}>{availabilityMessage || theme.noSlotsText || 'No slots available for this date.'}</p>}
                   </div>
                 )}
               </div>
@@ -746,8 +806,21 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
         </div>
       </div>
 
+      {noticeModal && (
+        <div className={styles.modalOverlay} style={themeVars}>
+          <div className={`${styles.modalCard} ${styles.noticeCard}`}>
+            <div className={styles.modalIcon}><IconGlyph kind="calendar" className={styles.iconGlyph} /></div>
+            <h2>{noticeModal.title}</h2>
+            <p className={styles.modalLead}>{noticeModal.message}</p>
+            <button type="button" onClick={() => setNoticeModal(null)} className={styles.primaryButton}>
+              OK
+            </button>
+          </div>
+        </div>
+      )}
+
       {confirmModal && (
-        <div className={styles.modalOverlay}>
+        <div className={styles.modalOverlay} style={themeVars}>
           <div className={styles.modalCard}>
             <div className={styles.modalIcon}><IconGlyph kind="check" className={styles.iconGlyph} /></div>
             <h2>{confirmModal.title}</h2>
@@ -769,13 +842,13 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
                 <div className={styles.modalActions}>
                   <button
                     type="button"
-                    onClick={() => generateICS(confirmModal.service, confirmModal.date, confirmModal.time, tenant.name, tenant.branding?.location)}
+                    onClick={() => generateICS(confirmModal.service, confirmModal.date, confirmModal.time, confirmModal.duration, tenant.name, tenant.branding?.location)}
                     className={styles.secondaryButton}
                   >
                     Apple / Outlook
                   </button>
                   <a
-                    href={googleCalUrl(confirmModal.service, confirmModal.date, confirmModal.time, tenant.name, tenant.branding?.location)}
+                    href={googleCalUrl(confirmModal.service, confirmModal.date, confirmModal.time, confirmModal.duration, tenant.name, tenant.branding?.location)}
                     target="_blank"
                     rel="noreferrer"
                     className={styles.secondaryButton}
