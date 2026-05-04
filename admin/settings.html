@@ -271,8 +271,8 @@
         <div class="settings-section-head" style="align-items:flex-start;">
             <div>
                 <p class="settings-section-kicker">Calendar</p>
-                <h2 class="settings-section-title">Calendar Sync</h2>
-                <p class="page-subtitle settings-section-copy">Connect the calendar you use so confirmed bookings are sent there automatically.</p>
+                <h2 class="settings-section-title">Calendar Subscription</h2>
+                <p class="page-subtitle settings-section-copy">Use the private feed below if you want the “accept once and keep receiving events” setup. Subscribe once in your calendar app and future confirmed bookings will continue to appear automatically.</p>
             </div>
         </div>
 
@@ -280,17 +280,33 @@
             No calendar connected yet.
         </div>
 
+        <div class="schedule-notice" style="margin-bottom: 1rem;">
+            <strong>Recommended:</strong> this private subscription feed does not require you to set up your own Google or Apple API credentials.
+        </div>
+
+        <div class="payment-method-grid" style="margin-bottom: 1rem;">
+            <a id="appleCalendarLink" href="#" class="btn btn-primary" style="pointer-events: none; opacity: 0.6;">Subscribe in Apple Calendar</a>
+            <button type="button" class="btn btn-secondary" onclick="copyCalendarFeed()">Copy Subscription Feed</button>
+        </div>
+
+        <div class="settings-inline-row" style="align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 1rem;">
+            <a id="calendarFeedLink" href="#" target="_blank" rel="noreferrer" class="btn btn-secondary" style="pointer-events: none; opacity: 0.6;">Open Subscription Feed</a>
+        </div>
+
+        <p style="margin-top: 0; margin-bottom: 1.25rem; color: var(--text-dim); font-size: 0.9rem;">
+            Apple Calendar can subscribe directly. Google Calendar and Outlook can also subscribe using the same feed URL.
+        </p>
+
+        <div class="schedule-notice" style="margin-bottom: 1rem;">
+            <strong>Advanced only:</strong> direct provider sync creates events inside a specific Google or Outlook account and requires provider authorization.
+        </div>
+
         <div class="payment-method-grid" style="margin-bottom: 1rem;">
             <button type="button" class="btn btn-secondary" onclick="connectCalendar('google')">Link Google Calendar</button>
             <button type="button" class="btn btn-secondary" onclick="connectCalendar('microsoft')">Link Outlook Calendar</button>
         </div>
-
-        <div class="settings-inline-row" style="align-items: center; gap: 10px; flex-wrap: wrap;">
-            <button type="button" class="btn btn-primary" onclick="copyCalendarFeed()">Copy Apple Calendar Feed</button>
-            <a id="calendarFeedLink" href="#" target="_blank" rel="noreferrer" class="btn btn-secondary" style="pointer-events: none; opacity: 0.6;">Open Feed</a>
-        </div>
         <p style="margin-top: 10px; color: var(--text-dim); font-size: 0.9rem;">
-            Use the Apple feed for Apple Calendar subscriptions. Google and Outlook connections create events automatically after confirmed bookings.
+            Google and Outlook direct sync need provider authorization. The subscription feed does not.
         </p>
     </section>
 </main>
@@ -605,6 +621,7 @@
     function renderCalendarConnections(data) {
         const wrap = document.getElementById('calendarConnections');
         const feedLink = document.getElementById('calendarFeedLink');
+        const appleLink = document.getElementById('appleCalendarLink');
         const connections = data.connections || [];
 
         if (connections.length === 0) {
@@ -621,11 +638,21 @@
             feedLink.style.pointerEvents = 'auto';
             feedLink.style.opacity = '1';
             feedLink.dataset.feedUrl = data.feed_url;
+            if (appleLink) {
+                appleLink.href = data.feed_webcal_url || data.feed_url;
+                appleLink.style.pointerEvents = 'auto';
+                appleLink.style.opacity = '1';
+            }
         } else {
             feedLink.href = '#';
             feedLink.style.pointerEvents = 'none';
             feedLink.style.opacity = '0.6';
             delete feedLink.dataset.feedUrl;
+            if (appleLink) {
+                appleLink.href = '#';
+                appleLink.style.pointerEvents = 'none';
+                appleLink.style.opacity = '0.6';
+            }
         }
     }
 

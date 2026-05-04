@@ -19,6 +19,17 @@ function getResend() {
     return new Resend(key);
 }
 
+function getEmailSafeAssetUrl(value) {
+    const url = String(value || '').trim();
+    if (!url) return null;
+
+    // Gmail clips or breaks on large inline data URIs. Only use public URLs in emails.
+    if (url.startsWith('data:')) return null;
+    if (!/^https?:\/\//i.test(url)) return null;
+
+    return url;
+}
+
 /**
  * Tenant branding helpers
  */
@@ -27,7 +38,7 @@ function getBrand(tenant) {
     return {
         name:        b.businessName  || tenant?.name || 'ICSS Booking',
         primaryColor: b.primaryColor || '#D4AF37',
-        logoUrl:     b.logoUrl       || null,
+        logoUrl:     getEmailSafeAssetUrl(b.logoUrl),
         replyEmail:  b.replyEmail    || process.env.ADMIN_EMAIL || 'noreply@icssbookings.com',
         sendingDomain: b.sendingDomain || 'icssbookings.com',
         bookingUrl:  b.bookingUrl    || 'https://icssbookings.com'

@@ -284,9 +284,13 @@ async function generateIcsFeed(feedToken) {
         tenantId = tenantResult.rows[0].id;
         // Business-wide: all bookings for this tenant
         queryStr = `
-            SELECT id, name, notes, booking_date, booking_time, created_at
+            SELECT b.id, b.name, b.notes, b.booking_date, b.booking_time, b.created_at,
+                   b.region, s.name AS service_name,
+                   COALESCE(s.duration_minutes, 60) AS duration_minutes,
+                   COALESCE(s.buffer_time_minutes, 0) AS buffer_time_minutes
             FROM bookings 
-            WHERE tenant_id = $1 AND status = 'confirmed'
+            LEFT JOIN services s ON s.id = b.service_id
+            WHERE b.tenant_id = $1 AND b.status = 'confirmed'
         `;
         queryArgs = [tenantId];
     } else {
@@ -298,9 +302,13 @@ async function generateIcsFeed(feedToken) {
         tenantId = userResult.rows[0].tenant_id;
         // Staff-level: bookings for this tenant AND user
         queryStr = `
-            SELECT id, name, notes, booking_date, booking_time, created_at
+            SELECT b.id, b.name, b.notes, b.booking_date, b.booking_time, b.created_at,
+                   b.region, s.name AS service_name,
+                   COALESCE(s.duration_minutes, 60) AS duration_minutes,
+                   COALESCE(s.buffer_time_minutes, 0) AS buffer_time_minutes
             FROM bookings 
-            WHERE tenant_id = $1 AND user_id = $2 AND status = 'confirmed'
+            LEFT JOIN services s ON s.id = b.service_id
+            WHERE b.tenant_id = $1 AND b.user_id = $2 AND b.status = 'confirmed'
         `;
         queryArgs = [tenantId, userId];
     }
@@ -312,22 +320,34 @@ async function generateIcsFeed(feedToken) {
     icsBuffer.push("BEGIN:VCALENDAR");
     icsBuffer.push("VERSION:2.0");
     icsBuffer.push("PRODID:-//ICSS Booking System//EN");
+    icsBuffer.push("CALSCALE:GREGORIAN");
+    icsBuffer.push("METHOD:PUBLISH");
+    icsBuffer.push("X-WR-CALNAME:ICSS Bookings");
+    icsBuffer.push("X-PUBLISHED-TTL:PT15M");
+    icsBuffer.push("REFRESH-INTERVAL;VALUE=DURATION:PT15M");
 
     for (const b of bookings) {
         // Convert to YYYYMMDDTHHMMSSZ format for simplistic representation
         try {
             const startStr = new Date(`${b.booking_date}T${b.booking_time}Z`).toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-            // Assuming 1hr duration defaults for now
-            const endTime = new Date(new Date(`${b.booking_date}T${b.booking_time}Z`).getTime() + 60*60*1000);
+            const durationMs = (Number(b.duration_minutes || 60) + Number(b.buffer_time_minutes || 0)) * 60 * 1000;
+            const endTime = new Date(new Date(`${b.booking_date}T${b.booking_time}Z`).getTime() + durationMs);
             const endStr = endTime.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
             const timestamp = b.created_at.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+            const summary = b.service_name
+                ? `${b.service_name} - ${b.name}`
+                : `Booking: ${b.name}`;
+            const description = (b.notes || '').replace(/\r?\n/g, '\\n');
 
             icsBuffer.push("BEGIN:VEVENT");
             icsBuffer.push(`UID:${b.id}@icss.app`);
             icsBuffer.push(`DTSTAMP:${timestamp}`);
             icsBuffer.push(`DTSTART:${startStr}`);
             icsBuffer.push(`DTEND:${endStr}`);
-            icsBuffer.push(`SUMMARY:Booking: ${b.name}`);
+            icsBuffer.push(`SUMMARY:${summary}`);
+            if (b.region) icsBuffer.push(`LOCATION:${String(b.region).replace(/\r?\n/g, ' ')}`);
+            if (description) icsBuffer.push(`DESCRIPTION:${description}`);
+            icsBuffer.push("STATUS:CONFIRMED");
             icsBuffer.push("END:VEVENT");
         } catch(e) {
             // Ignore parse errors on mock data

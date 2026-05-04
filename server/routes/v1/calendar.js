@@ -72,10 +72,13 @@ router.get('/status', authenticate, async (req, res) => {
 
         const feedToken = tenantResult.rows[0]?.feed_token || null;
         const baseUrl = process.env.PUBLIC_APP_URL || process.env.BASE_URL || `${req.headers['x-forwarded-proto'] || req.protocol}://${req.get('host')}`;
+        const feedUrl = feedToken ? `${baseUrl}/api/v1/calendar/feed/${feedToken}.ics` : null;
+        const feedWebcalUrl = feedUrl ? feedUrl.replace(/^https?:\/\//i, 'webcal://') : null;
 
         res.json({
             connections: connectionsResult.rows,
-            feed_url: feedToken ? `${baseUrl}/api/v1/calendar/feed/${feedToken}.ics` : null
+            feed_url: feedUrl,
+            feed_webcal_url: feedWebcalUrl
         });
     } catch (e) {
         res.status(500).json({ error: e.message });
@@ -93,8 +96,12 @@ router.get('/feed/:feed_token.ics', async (req, res) => {
 
         if (!icsData) return res.status(404).send('Feed not found');
 
-        res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
-        res.setHeader('Content-Disposition', 'attachment; filename="icss-bookings.ics"');
+        res.set({
+            'Content-Type': 'text/calendar; charset=utf-8',
+            'Content-Disposition': 'inline; filename="icss-bookings.ics"',
+            'Cache-Control': 'private, max-age=300, must-revalidate',
+            'X-Robots-Tag': 'noindex, nofollow, noarchive'
+        });
         res.send(icsData);
     } catch (e) {
         res.status(500).send('Error generating calendar feed');

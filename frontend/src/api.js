@@ -38,6 +38,7 @@ export const api = {
   // Public Booking Flow
   publicAvailability: (slug, date, serviceId) =>
     apiFetch(`/availability?date=${date}${serviceId ? `&service_id=${serviceId}` : ''}`, {
+      cache: 'no-store',
       headers: { 'X-Tenant-Slug': slug },
     }),
   publicCreateBooking: (slug, body) =>

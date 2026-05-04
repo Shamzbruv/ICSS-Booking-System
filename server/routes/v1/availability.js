@@ -21,6 +21,13 @@ const MIN_BUFFER_MINS      = 15;   // Reject slots within 15 min of now
 const MAX_DAYS_AHEAD       = 30;
 const BUSINESS_CLOSE_MINS  = 20 * 60; // 8:00 PM — no service can run past this
 
+function timeTextToMinutes(value) {
+    if (!value) return null;
+    const [hours, minutes] = String(value).slice(0, 5).split(':').map(Number);
+    if (Number.isNaN(hours) || Number.isNaN(minutes)) return null;
+    return (hours * 60) + minutes;
+}
+
 function getTzTimeStr(tz = 'America/Jamaica', addMinutes = 0, addDays = 0) {
     const now = new Date();
     if (addMinutes) now.setMinutes(now.getMinutes() + addMinutes);
@@ -92,6 +99,12 @@ function generateSlots(businessHoursStr, requestedDateStr) {
 
 // GET /api/v1/availability?date=YYYY-MM-DD[&service_id=UUID]
 router.get('/', async (req, res) => {
+    res.set({
+        'Cache-Control': 'no-store, no-cache, must-revalidate, private',
+        Pragma: 'no-cache',
+        Expires: '0'
+    });
+
     const { date, service_id } = req.query;
     const tenantId = req.tenant.id;
     const timezone = req.tenant.branding?.timezone || 'America/Jamaica';
@@ -194,10 +207,16 @@ router.get('/', async (req, res) => {
         //    A slot is blocked if ANY confirmed/pending booking overlaps the window
         //    [slot_start, slot_start + service_duration + buffer).
         const bookedResult = await query(
-            `SELECT start_time, end_time FROM bookings
-             WHERE tenant_id = $1
-               AND booking_date = $2
-               AND status IN ('confirmed', 'pending_payment', 'pending_manual_confirmation')`,
+            `SELECT b.booking_time::TEXT AS booking_time,
+                    b.start_time,
+                    b.end_time,
+                    COALESCE(s.duration_minutes, 30) AS duration_minutes,
+                    COALESCE(s.buffer_time_minutes, 0) AS buffer_time_minutes
+             FROM bookings b
+             LEFT JOIN services s ON s.id = b.service_id
+             WHERE b.tenant_id = $1
+               AND b.booking_date = $2
+               AND b.status IN ('confirmed', 'pending_payment', 'pending_manual_confirmation')`,
             [tenantId, date]
         );
 
@@ -219,12 +238,19 @@ router.get('/', async (req, res) => {
             const slotEndMins   = slotStartMins + totalServiceMins;
 
             for (const booking of bookedResult.rows) {
-                if (!booking.start_time || !booking.end_time) continue;
+                let bStartMins = timeTextToMinutes(booking.booking_time);
+                let bEndMins = bStartMins !== null
+                    ? bStartMins + Number(booking.duration_minutes || 30) + Number(booking.buffer_time_minutes || 0)
+                    : null;
 
-                const bStart = new Date(booking.start_time);
-                const bEnd   = new Date(booking.end_time);
-                const bStartMins = bStart.getHours() * 60 + bStart.getMinutes();
-                const bEndMins   = bEnd.getHours()   * 60 + bEnd.getMinutes();
+                // Fallback for any legacy rows missing reliable booking_time/service duration data.
+                if (bStartMins === null || bEndMins === null) {
+                    if (!booking.start_time || !booking.end_time) continue;
+                    const bStart = new Date(booking.start_time);
+                    const bEnd   = new Date(booking.end_time);
+                    bStartMins = bStart.getUTCHours() * 60 + bStart.getUTCMinutes();
+                    bEndMins   = bEnd.getUTCHours()   * 60 + bEnd.getUTCMinutes();
+                }
 
                 // Overlap: slot window intersects booking window
                 if (slotStartMins < bEndMins && slotEndMins > bStartMins) {
