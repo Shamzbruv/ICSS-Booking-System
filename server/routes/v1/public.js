@@ -129,7 +129,12 @@ router.get('/provisioning-status/:signupToken', async (req, res) => {
     }
 
     try {
-        const result = await query(`SELECT status, tenant_slug FROM pending_signups WHERE signup_token = $1`, [signupToken]);
+        const result = await query(
+            `SELECT status, tenant_slug
+             FROM pending_signups
+             WHERE signup_token = $1`,
+            [signupToken]
+        );
         if (result.rows.length === 0) {
             return res.status(404).json({ error: 'Provisioning session not found.' });
         }

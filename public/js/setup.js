@@ -1,7 +1,9 @@
 let state = {
     themes: [],
     selectedThemeId: null,
-    signupToken: null
+    signupToken: null,
+    paypalPlanId: null,
+    paypalClientId: null
 };
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -24,13 +26,6 @@ async function loadThemes() {
         const res = await fetch('/api/v1/themes');
         const data = await res.json();
         state.themes = data.themes || [];
-        // Inject Custom Theme option
-        state.themes.push({
-            id: 'custom',
-            name: 'Custom Design',
-            category: 'Bespoke Experience',
-            isCustom: true
-        });
         renderThemes();
     } catch (e) {
         console.error('Failed to load themes', e);
@@ -47,13 +42,7 @@ function renderThemes() {
         if (state.selectedThemeId === theme.id) card.classList.add('selected');
 
         let previewHtml = '';
-        if (theme.isCustom) {
-            previewHtml = `
-                <div class="theme-preview-box" style="background: linear-gradient(135deg, #1e1e2f, #2d2d44); color: #8b5cf6;">
-                    <i class="fas fa-paint-roller" style="font-size: 3rem;"></i>
-                </div>
-            `;
-        } else if (theme.template_path) {
+        if (theme.template_path) {
             previewHtml = `
                 <div class="theme-preview-box" style="position: relative; overflow: hidden; background: #fff;">
                     <iframe src="${theme.template_path}" 
@@ -167,32 +156,12 @@ async function finalizeDraft() {
         }
 
         state.signupToken = data.signup_token;
-        
-        // Render the PayPal button for the 2-month free trial plan
-        const PAYPAL_PLAN_ID = 'P-5GC99146GA5512100NHYSFEY';
-        const containerId    = `paypal-button-container-${PAYPAL_PLAN_ID}`;
+        state.paypalPlanId = data.paypal_plan_id;
+        state.paypalClientId = data.paypal_client_id;
+        localStorage.setItem('icss_signup_email', email);
 
-        document.getElementById(containerId).innerHTML = ''; // clear previous
-        
-        paypal.Buttons({
-            style: {
-                shape: 'rect',
-                color: 'blue',
-                layout: 'vertical',
-                label: 'subscribe'
-            },
-            createSubscription: function(data, actions) {
-                return actions.subscription.create({
-                    plan_id:   PAYPAL_PLAN_ID,
-                    custom_id: state.signupToken // Ties PayPal subscription to our pending_signups row
-                });
-            },
-            onApprove: function(data, actions) {
-                // Store token in localStorage for the React frontend to read during polling
-                localStorage.setItem('icss_signup_token', state.signupToken);
-                window.location.href = '/provisioning';
-            }
-        }).render(`#${containerId}`);
+        await loadPayPalSDK(state.paypalClientId);
+        await renderPayPalButtons();
 
         goToStep(3);
 
@@ -203,4 +172,77 @@ async function finalizeDraft() {
         err.textContent = e.message;
         err.style.display = 'block';
     }
+}
+
+function loadPayPalSDK(clientId) {
+    return new Promise((resolve, reject) => {
+        const existing = document.getElementById('paypal-sdk-script');
+
+        if (window.paypal && existing?.dataset.clientId === clientId) {
+            resolve();
+            return;
+        }
+
+        if (existing) existing.remove();
+
+        const script = document.createElement('script');
+        script.id = 'paypal-sdk-script';
+        script.dataset.clientId = clientId;
+        script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&vault=true&intent=subscription`;
+        script.dataset.sdkIntegrationSource = 'button-factory';
+        script.async = true;
+        script.onload = () => resolve();
+        script.onerror = () => reject(new Error('Failed to load PayPal. Please refresh and try again.'));
+        document.body.appendChild(script);
+    });
+}
+
+async function renderPayPalButtons() {
+    const containerId = 'paypal-button-container';
+    const container = document.getElementById(containerId);
+    if (!container) throw new Error('PayPal checkout container not found.');
+    if (!state.paypalPlanId) throw new Error('PayPal trial plan is not configured.');
+
+    container.innerHTML = '';
+
+    return paypal.Buttons({
+            style: {
+                shape: 'rect',
+                color: 'blue',
+                layout: 'vertical',
+                label: 'subscribe'
+            },
+            createSubscription: function(data, actions) {
+                return actions.subscription.create({
+                    plan_id:   state.paypalPlanId,
+                    custom_id: state.signupToken // Ties PayPal subscription to our pending_signups row
+                });
+            },
+            onApprove: async function(data) {
+                try {
+                    const res = await fetch('/api/v1/payments/paypal/approve', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            signup_token: state.signupToken,
+                            subscription_id: data.subscriptionID
+                        })
+                    });
+                    if (!res.ok) {
+                        throw new Error('Manual provisioning trigger failed.');
+                    }
+                } catch (err) {
+                    console.warn('Manual provisioning trigger failed, relying on webhook.', err);
+                }
+
+                // Store token in localStorage for the React frontend to read during polling
+                localStorage.setItem('icss_signup_token', state.signupToken);
+                window.location.href = '/provisioning';
+            },
+            onError: function() {
+                const err = document.getElementById('error3');
+                err.textContent = 'PayPal checkout encountered an error. Please try again.';
+                err.style.display = 'block';
+            }
+        }).render(`#${containerId}`);
 }

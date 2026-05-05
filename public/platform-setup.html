@@ -120,7 +120,7 @@
             max-width: 440px;
             margin: 0 auto 2rem;
         }
-        #paypal-button-container-P-4EC410252Y479773KNHUVB4A {
+        #paypal-button-container {
             width: 100%;
         }
 
@@ -242,7 +242,7 @@
 
         
         <div style="text-align: center; margin: 1.5rem 0; color: #a5b4fc; font-weight: 500; background: rgba(99, 102, 241, 0.1); padding: 10px; border-radius: 8px; border: 1px solid rgba(99, 102, 241, 0.2);">
-            <i class="fas fa-gift"></i> 2-Month Free Trial included. No charge until trial ends.
+            <i class="fas fa-gift"></i> 7-Day Free Trial included. No charge until trial ends.
         </div>
 
         <div class="flex-between">
@@ -258,9 +258,9 @@
         <div style="max-width: 540px; margin: 0 auto; text-align: center;">
             <div style="font-size: 3rem; margin-bottom: 1rem;">🔒</div>
             <h2 style="margin-bottom: 0.75rem;">Secure Checkout</h2>
-            <p style="color: var(--text-muted); margin-bottom: 2rem; font-size: 1rem; line-height: 1.6;">Your first 2 months are completely free! Complete your subscription below to activate your account. You won't be billed today.</p>
+            <p style="color: var(--text-muted); margin-bottom: 2rem; font-size: 1rem; line-height: 1.6;">Your first 7 days are completely free. Complete your subscription below to activate your account. You won't be billed today.</p>
 
-            <div id="paypal-button-container-P-5GC99146GA5512100NHYSFEY" style="margin-bottom: 1.5rem; min-height: 150px;"></div>
+            <div id="paypal-button-container" style="margin-bottom: 1.5rem; min-height: 150px;"></div>
 
             <button class="btn btn-secondary" onclick="goToStep(2)" style="margin: 0 auto;">&larr; Back</button>
         </div>
@@ -279,8 +279,6 @@
     <iframe id="previewIframe" class="preview-iframe" src=""></iframe>
 </div>
 
-<!-- PayPal SDK -->
-<script src="https://www.paypal.com/sdk/js?client-id=AZM7kD2EdxPGkSVk3I64iMNN_snyRB8uO2LP37WmApdHqnBHpC8HC3BEMlpLbMGK3R3CVOOOuBc1cWhr&vault=true&intent=subscription" data-sdk-integration-source="button-factory"></script>
 <script src="/js/setup.js"></script>
 <script>
     function togglePw(inputId, btn) {

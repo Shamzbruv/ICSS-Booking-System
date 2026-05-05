@@ -7,6 +7,7 @@
 
 const { query } = require('../db/connection');
 const { logAudit } = require('./audit');
+const { isConfiguredTrialPlan } = require('./paypalConfig');
 
 /**
  * Check if a feature is enabled for the given tenant.
@@ -136,8 +137,11 @@ async function handleStripeWebhookEvent(event) {
 async function handlePayPalWebhookEvent(event) {
     try {
         const resource = event.resource;
-        const subId = resource.id;
+        const subId = event.event_type === 'PAYMENT.SALE.COMPLETED'
+            ? (resource.billing_agreement_id || resource.id)
+            : resource.id;
         const status = resource.status; // 'APPROVAL_PENDING', 'APPROVED', 'ACTIVE', 'SUSPENDED', 'CANCELLED', 'EXPIRED'
+        const planId = resource.plan_id || null;
 
         let internalStatus = 'trial';
         
@@ -145,7 +149,9 @@ async function handlePayPalWebhookEvent(event) {
             case 'BILLING.SUBSCRIPTION.CREATED':
             case 'BILLING.SUBSCRIPTION.ACTIVATED':
                 // PayPal sends BILLING.SUBSCRIPTION.ACTIVATED when active.
-                if (status === 'ACTIVE') internalStatus = 'paid';
+                if (status === 'ACTIVE') {
+                    internalStatus = isConfiguredTrialPlan(planId) ? 'trial' : 'paid';
+                }
                 break;
             case 'BILLING.SUBSCRIPTION.CANCELLED':
             case 'BILLING.SUBSCRIPTION.PAYMENT.FAILED':
@@ -155,10 +161,16 @@ async function handlePayPalWebhookEvent(event) {
             case 'BILLING.SUBSCRIPTION.SUSPENDED':
                 internalStatus = 'expired';
                 break;
+            case 'PAYMENT.SALE.COMPLETED':
+                // First successful charge after the free trial promotes the tenant to paid.
+                internalStatus = 'paid';
+                break;
             default:
-                // If it's another event or sale completed, we probably don't need to change status unless it's a specific trigger
-                if (status === 'ACTIVE') internalStatus = 'paid';
-                else return; 
+                return;
+        }
+
+        if (!subId) {
+            return;
         }
 
         const result = await query(

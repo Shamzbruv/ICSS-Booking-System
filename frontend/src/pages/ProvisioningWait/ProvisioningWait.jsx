@@ -1,12 +1,10 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import s from './ProvisioningWait.module.css';
 
 const POLL_INTERVAL_MS = 2000;
 const MAX_POLL_ATTEMPTS = 60; // 2 minutes before giving up
 
 export default function ProvisioningWait() {
-  const navigate = useNavigate();
   const [dots, setDots]   = useState('');
   const [error, setError] = useState('');
 
@@ -38,15 +36,28 @@ export default function ProvisioningWait() {
           clearInterval(pollInterval);
           clearInterval(dotInterval);
 
-          // Store slug so the editor can use it immediately without waiting for api.me()
-          localStorage.setItem('icss_tenant_slug', data.tenant_slug);
+          let loginEmail = localStorage.getItem('icss_signup_email') || '';
+          if (!loginEmail) {
+            try {
+              const saved = localStorage.getItem('icss_onboarding');
+              const parsed = saved ? JSON.parse(saved) : null;
+              loginEmail = parsed?.data?.email || '';
+            } catch {
+              loginEmail = '';
+            }
+          }
+
+          localStorage.setItem('icss_login_hint', JSON.stringify({
+            email: loginEmail,
+            tenantSlug: data.tenant_slug
+          }));
+
           // Clean up provisioning tokens — they are single-use
           localStorage.removeItem('icss_signup_token');
+          localStorage.removeItem('icss_signup_email');
           localStorage.removeItem('icss_onboarding');
 
-          // Navigate into the editor — EditorCanvas.jsx already reads icss_tenant_slug
-          // via api.me() which returns the tenant context from the JWT
-          navigate('/editor');
+          window.location.href = '/admin/login.html?fresh=1';
 
         } else if (data.status === 'failed') {
           clearInterval(pollInterval);
@@ -67,7 +78,7 @@ export default function ProvisioningWait() {
       clearInterval(dotInterval);
       clearInterval(pollInterval);
     };
-  }, [navigate]);
+  }, []);
 
   return (
     <div className={s.page}>

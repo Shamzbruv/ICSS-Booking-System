@@ -11,6 +11,8 @@ const https   = require('https');
 const { query }  = require('../../db/connection');
 const { paymentLimiter } = require('../../middleware/rateLimiter');
 const { enqueueProvisioningJob } = require('../../services/provisioning');
+const { sendSignupWelcomeEmail } = require('../../services/email');
+const { getPayPalSignupConfig, normalizeInternalSignupPlanId } = require('../../services/paypalConfig');
 
 // Helper to enforce webhook idempotency
 async function checkIdempotency(provider, eventId, payload) {
@@ -26,6 +28,65 @@ async function checkIdempotency(provider, eventId, payload) {
             return false; // Already processed
         }
         throw e;
+    }
+}
+
+async function sendSignupWelcomeEmailOnce(signupToken, signupConfig = getPayPalSignupConfig()) {
+    if (!signupToken) return false;
+
+    const lockRes = await query(
+        `INSERT INTO idempotency_keys (provider, event_id, payload)
+         VALUES ('signup_welcome_email', $1, $2)
+         ON CONFLICT (provider, event_id) DO NOTHING
+         RETURNING id`,
+        [signupToken, JSON.stringify({ type: 'signup_welcome_email' })]
+    );
+
+    if (lockRes.rows.length === 0) {
+        return false;
+    }
+
+    try {
+        const pendingRes = await query(
+            `SELECT admin_email, admin_owner_name, tenant_name
+             FROM pending_signups
+             WHERE signup_token = $1`,
+            [signupToken]
+        );
+
+        if (pendingRes.rows.length === 0) {
+            await query(
+                `DELETE FROM idempotency_keys
+                 WHERE provider = 'signup_welcome_email' AND event_id = $1`,
+                [signupToken]
+            );
+            return false;
+        }
+
+        const signup = pendingRes.rows[0];
+
+        await sendSignupWelcomeEmail(
+            signup.admin_email,
+            (signup.admin_owner_name || signup.admin_email).split(' ')[0],
+            signup.tenant_name,
+            {
+                trialDays: signupConfig.trialDays,
+                monthlyPriceUsd: signupConfig.monthlyPriceUsd
+            }
+        );
+
+        return true;
+    } catch (err) {
+        try {
+            await query(
+                `DELETE FROM idempotency_keys
+                 WHERE provider = 'signup_welcome_email' AND event_id = $1`,
+                [signupToken]
+            );
+        } catch (cleanupErr) {
+            console.error('[Signup Welcome Email] Failed to release idempotency lock:', cleanupErr.message);
+        }
+        throw err;
     }
 }
 
@@ -160,6 +221,9 @@ router.post('/paypal/webhook', async (req, res) => {
                      if (pendingRes.rows.length > 0) {
                          const slug = pendingRes.rows[0].tenant_slug || null;
                          await enqueueProvisioningJob(slug, custom_id, paypalEvent.id, paypalEvent.resource);
+                         await sendSignupWelcomeEmailOnce(custom_id).catch((err) => {
+                             console.error('[PayPal Webhook] Failed to send signup welcome email:', err.message);
+                         });
                      } else {
                          console.error(`[PayPal Webhook] signup_token ${custom_id} not found in pending_signups.`);
                      }
@@ -185,10 +249,23 @@ router.post('/paypal/approve', async (req, res) => {
         const { signup_token, subscription_id } = req.body;
         if (!signup_token) return res.status(400).json({ error: 'Missing signup_token' });
 
-        const pendingRes = await query(`SELECT tenant_slug FROM pending_signups WHERE signup_token = $1`, [signup_token]);
+        const pendingRes = await query(
+            `SELECT tenant_slug, admin_email, admin_owner_name, tenant_name
+             FROM pending_signups
+             WHERE signup_token = $1`,
+            [signup_token]
+        );
         if (pendingRes.rows.length > 0) {
             const slug = pendingRes.rows[0].tenant_slug || null;
-            await enqueueProvisioningJob(slug, signup_token, subscription_id, { manual_trigger: true });
+            const signupConfig = getPayPalSignupConfig();
+            await enqueueProvisioningJob(slug, signup_token, subscription_id, {
+                manual_trigger: true,
+                paypal_subscription_id: subscription_id || null,
+                paypal_plan_id: signupConfig.planId
+            });
+            await sendSignupWelcomeEmailOnce(signup_token, signupConfig).catch((err) => {
+                console.error('[PayPal Approve] Failed to send signup welcome email:', err.message);
+            });
         }
         res.json({ success: true });
     } catch (e) {
@@ -218,19 +295,23 @@ router.post('/paypal/create-subscription', async (req, res) => {
 
         const bcrypt = require('bcryptjs');
         const hash = await bcrypt.hash(admin_password, 12);
-        
+        const signupConfig = getPayPalSignupConfig();
+        const normalizedPlanId = normalizeInternalSignupPlanId(plan_id);
         const signup_token = crypto.randomUUID();
 
         await query(
             `INSERT INTO pending_signups (signup_token, tenant_slug, tenant_name, admin_email, admin_password_hash, admin_owner_name, theme_id, plan_id)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-            [signup_token, null, tenant_name, admin_email.toLowerCase(), hash, admin_owner_name || admin_email, theme_id || null, plan_id || 'monthly']
+            [signup_token, null, tenant_name, admin_email.toLowerCase(), hash, admin_owner_name || admin_email, theme_id || null, normalizedPlanId]
         );
 
         res.json({
             message: 'Pending signup created successfully. Pass this token as custom_id to PayPal checkout.',
             signup_token,
-            paypal_client_id: process.env.PAYPAL_CLIENT_ID || 'sb'
+            paypal_client_id: signupConfig.clientId,
+            paypal_plan_id: signupConfig.planId,
+            trial_days: signupConfig.trialDays,
+            monthly_price_usd: signupConfig.monthlyPriceUsd
         });
     } catch (e) {
         console.error('[Create Subscription Error]', e);

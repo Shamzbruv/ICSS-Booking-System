@@ -39,6 +39,7 @@
         </div>
 
         <form class="login-form" id="loginForm" onsubmit="handleLogin(event)">
+            <div class="login-notice hidden" id="loginNotice"></div>
             <div class="form-group">
                 <label for="loginSlug">Business Handle <span style="font-size: 11px; color: var(--text-dim); font-weight: normal;">(Optional)</span></label>
                 <input type="text" id="loginSlug" placeholder="e.g. icreate-solutions" autocomplete="organization">
@@ -68,6 +69,36 @@
     <script>
         // If already logged in, redirect to dashboard
         if (getToken()) window.location.href = 'index.html';
+
+        (function hydrateProvisioningHint() {
+            const params = new URLSearchParams(window.location.search);
+            const fresh  = params.get('fresh');
+            let hint = null;
+
+            try {
+                const raw = localStorage.getItem('icss_login_hint');
+                hint = raw ? JSON.parse(raw) : null;
+            } catch (_) {
+                hint = null;
+            }
+
+            if (!hint) return;
+
+            if (hint.email) {
+                document.getElementById('loginEmail').value = hint.email;
+            }
+            if (hint.tenantSlug) {
+                document.getElementById('loginSlug').value = hint.tenantSlug;
+            }
+
+            if (fresh === '1') {
+                const notice = document.getElementById('loginNotice');
+                notice.textContent = 'Your platform is ready. Sign in to continue to your dashboard.';
+                notice.classList.remove('hidden');
+            }
+
+            localStorage.removeItem('icss_login_hint');
+        })();
 
         async function handleLogin(e) {
             e.preventDefault();

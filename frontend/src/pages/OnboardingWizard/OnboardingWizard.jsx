@@ -146,11 +146,15 @@ function StepPayPal({ data, onNext }) {
         admin_password:   data.password,
         admin_owner_name: data.ownerName,
         theme_id:         data.themeId || null,
-        plan_id:          'monthly',
+        plan_id:          'starter',
       });
       setSignupToken(res.signup_token);
       localStorage.setItem('icss_signup_token', res.signup_token);
-      loadPayPalSDK(res.signup_token);
+      localStorage.setItem('icss_signup_email', data.email);
+      loadPayPalSDK(res.signup_token, {
+        planId: res.paypal_plan_id || PAYPAL_PLAN_ID,
+        clientId: res.paypal_client_id || PAYPAL_CLIENT_ID,
+      });
     } catch (e) {
       setErr(e.message);
       setLoading(false);
@@ -158,21 +162,25 @@ function StepPayPal({ data, onNext }) {
     }
   };
 
-  const loadPayPalSDK = (token) => {
+  const loadPayPalSDK = (token, config) => {
+    const clientId = config?.clientId || PAYPAL_CLIENT_ID;
+    const planId = config?.planId || PAYPAL_PLAN_ID;
+
     // Reuse an already-loaded SDK instead of appending a second script tag
-    if (window.paypal) {
-      renderButtons(token);
+    const existing = document.getElementById('paypal-sdk-script');
+    if (window.paypal && existing?.dataset.clientId === clientId) {
+      renderButtons(token, planId);
       return;
     }
-    const existing = document.getElementById('paypal-sdk-script');
-    if (existing) { existing.onload = () => renderButtons(token); return; }
+    if (existing) existing.remove();
 
     const script = document.createElement('script');
     script.id  = 'paypal-sdk-script';
-    script.src = `https://www.paypal.com/sdk/js?client-id=${PAYPAL_CLIENT_ID}&vault=true&intent=subscription`;
+    script.dataset.clientId = clientId;
+    script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&vault=true&intent=subscription`;
     script.dataset.sdkIntegrationSource = 'button-factory';
     script.async = true;
-    script.onload = () => renderButtons(token);
+    script.onload = () => renderButtons(token, planId);
     script.onerror = () => {
       setErr('Failed to load PayPal. Please refresh and try again.');
       setLoading(false);
@@ -180,16 +188,16 @@ function StepPayPal({ data, onNext }) {
     document.body.appendChild(script);
   };
 
-  const renderButtons = (token) => {
+  const renderButtons = (token, planId) => {
     setLoading(false);
-    const containerId = `paypal-button-container-${PAYPAL_PLAN_ID}`;
+    const containerId = 'paypal-button-container';
     const container = document.getElementById(containerId);
     if (container) container.innerHTML = '';
 
     window.paypal.Buttons({
       style: { shape: 'rect', color: 'blue', layout: 'vertical', label: 'subscribe' },
       createSubscription: (_data, actions) =>
-        actions.subscription.create({ plan_id: PAYPAL_PLAN_ID, custom_id: token }),
+        actions.subscription.create({ plan_id: planId, custom_id: token }),
       onApprove: async (authData) => {
         try {
           await api.approvePayPalSubscription({
@@ -205,7 +213,7 @@ function StepPayPal({ data, onNext }) {
     }).render(`#${containerId}`);
   };
 
-  const containerId = `paypal-button-container-${PAYPAL_PLAN_ID}`;
+  const containerId = 'paypal-button-container';
 
   return (
     <>

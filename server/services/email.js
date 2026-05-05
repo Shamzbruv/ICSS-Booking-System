@@ -668,6 +668,42 @@ async function sendPasswordResetEmail(email, resetUrl) {
     console.log(`[Email] Password reset sent to ${email}`);
 }
 
+async function sendSignupWelcomeEmail(email, firstName, tenantName, options = {}) {
+    const resend = getResend();
+    if (!resend) {
+        console.warn('[Email] No RESEND_API_KEY — skipping signup welcome email to:', email);
+        return;
+    }
+
+    const trialDays = Number(options.trialDays || 7);
+    const monthlyPriceUsd = Number(options.monthlyPriceUsd || 35.50).toFixed(2);
+
+    await resend.emails.send({
+        from:    'ICSS Booking <welcome@icssbookings.com>',
+        to:      [email],
+        subject: `Welcome to ICSS Booking System`,
+        html: `
+        <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;border:1px solid #e8e8e8;border-radius:8px;overflow:hidden;">
+            <div style="background:#050505;padding:24px;text-align:center;">
+                <h2 style="color:#fff;margin:0;font-family:Georgia,serif;letter-spacing:2px;">WELCOME TO ICSS</h2>
+            </div>
+            <div style="padding:32px 36px;background:#fff;color:#333;">
+                <p>Hello ${firstName || 'there'},</p>
+                <p>Thanks for signing up for <strong>${tenantName}</strong> on ICSS Booking System.</p>
+                <p>Your <strong>${trialDays}-day free trial</strong> is being activated now. After the trial, your subscription continues at <strong>$${monthlyPriceUsd} USD/month</strong> unless you cancel.</p>
+                <p>We are now preparing your booking platform and will send you into your dashboard as soon as setup is complete.</p>
+                <p>If you have any questions, just reply to this email and our team will help.</p>
+                <p>Warm regards,<br><strong>The ICSS Team</strong></p>
+            </div>
+            <div style="background:#f9f9f9;padding:20px;text-align:center;font-size:12px;color:#999;border-top:1px solid #eee;">
+                <p style="margin:0;">&copy; ${new Date().getFullYear()} ICSS Booking System. All rights reserved.</p>
+            </div>
+        </div>`
+    });
+
+    console.log(`[Email] Signup welcome email sent to ${email}`);
+}
+
 async function sendWelcomeEmail(email, firstName, tenantName) {
     const resend = getResend();
     if (!resend) {
@@ -678,15 +714,15 @@ async function sendWelcomeEmail(email, firstName, tenantName) {
     await resend.emails.send({
         from:    'ICSS Booking <welcome@icssbookings.com>',
         to:      [email],
-        subject: `Welcome to ICSS Booking System!`,
+        subject: `Your ICSS Booking Platform Is Ready`,
         html: `
         <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;border:1px solid #e8e8e8;border-radius:8px;overflow:hidden;">
             <div style="background:#050505;padding:24px;text-align:center;">
-                <h2 style="color:#fff;margin:0;font-family:Georgia,serif;letter-spacing:2px;">WELCOME ABOARD</h2>
+                <h2 style="color:#fff;margin:0;font-family:Georgia,serif;letter-spacing:2px;">PLATFORM READY</h2>
             </div>
             <div style="padding:32px 36px;background:#fff;color:#333;">
                 <p>Hello ${firstName || 'there'},</p>
-                <p>Welcome to the ICSS Booking System! We are thrilled to have <strong>${tenantName}</strong> on our platform.</p>
+                <p>Your ICSS Booking setup for <strong>${tenantName}</strong> is complete.</p>
                 <p>Your account has been successfully provisioned. You can now access your dashboard to configure your services, set up your calendar, and start accepting bookings.</p>
                 <div style="text-align:center;margin:30px 0;">
                     <a href="https://icssbookings.com/admin" style="background:#7C6EF7;color:#fff;text-decoration:none;padding:14px 28px;border-radius:4px;font-weight:bold;display:inline-block;letter-spacing:1px;">GO TO DASHBOARD</a>
@@ -832,6 +868,7 @@ module.exports = {
     sendOrderConfirmation,
     sendDesignInquiryEmail,
     sendPasswordResetEmail,
+    sendSignupWelcomeEmail,
     sendWelcomeEmail,
     sendSubscriptionInvoiceEmail,
 };

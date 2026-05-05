@@ -6,6 +6,7 @@
 
 const { query } = require('../db/connection');
 const { sendWelcomeEmail } = require('./email');
+const { normalizeInternalSignupPlanId, isConfiguredTrialPlan } = require('./paypalConfig');
 const RESERVED_SLUGS = new Set([
     'admin', 'api', 'login', 'signup', 'dashboard', 'settings', 'www', 'app',
     'auth', 'billing', 'support', 'help', 'docs', 'blog', 'static', 'assets'
@@ -86,11 +87,10 @@ async function processProvisioningJob(job) {
         }
 
         const payload = job.payload || {};
-        const paypalSubId = payload.paypal_subscription_id || null;
+        const paypalSubId = payload.paypal_subscription_id || job.webhook_id || null;
         const paypalPlanId = payload.paypal_plan_id || null;
-        // If the setup flow passed 'trial' as the plan, map it to 'starter'
-        // since 'trial' does not exist in the plans table and will violate the FK constraint.
-        const planId = (signup.plan_id === 'trial') ? 'starter' : (signup.plan_id || 'starter');
+        const planId = normalizeInternalSignupPlanId(signup.plan_id);
+        const initialSubscriptionStatus = isConfiguredTrialPlan(paypalPlanId) ? 'trial' : 'paid';
 
         // 1. Generate unique slug and create tenant using transaction-safe looping
         let baseSlug = slugifyBusinessName(signup.tenant_name);
@@ -103,8 +103,8 @@ async function processProvisioningJob(job) {
             try {
                 const tenantResult = await query(
                     `INSERT INTO tenants (slug, name, plan_id, theme_id, paypal_subscription_id, paypal_plan_id, subscription_status)
-                     VALUES ($1, $2, $3, $4, $5, $6, 'paid') RETURNING *`,
-                    [finalSlug, signup.tenant_name, planId, signup.theme_id, paypalSubId, paypalPlanId]
+                     VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+                    [finalSlug, signup.tenant_name, planId, signup.theme_id, paypalSubId, paypalPlanId, initialSubscriptionStatus]
                 );
                 tenant = tenantResult.rows[0];
             } catch (err) {

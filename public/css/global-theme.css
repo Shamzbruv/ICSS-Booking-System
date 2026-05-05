@@ -531,6 +531,263 @@ body {
   line-height: 1.5;
 }
 
+/* Subscription section */
+.subscription-section {
+  padding: 1rem 0 5rem;
+}
+
+.subscription-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.subscription-hero-card {
+  display: grid;
+  grid-template-columns: 1.3fr 0.9fr;
+  gap: 24px;
+  background:
+    radial-gradient(circle at top left, rgba(99, 102, 241, 0.2), transparent 42%),
+    radial-gradient(circle at bottom right, rgba(236, 72, 153, 0.14), transparent 38%),
+    rgba(20, 20, 30, 0.72);
+  backdrop-filter: blur(18px);
+  border-radius: 32px;
+  padding: 2rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 30px 60px -30px rgba(0, 0, 0, 0.65);
+}
+
+.subscription-plan-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.subscription-pill,
+.subscription-trial {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.subscription-pill {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #f4f4f5;
+}
+
+.subscription-trial {
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.22);
+  color: #a7f3d0;
+}
+
+.subscription-copy h3 {
+  font-family: 'Clash Display', sans-serif;
+  font-size: 2.6rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+  margin-bottom: 1rem;
+}
+
+.subscription-copy p {
+  color: #c4c4cc;
+  font-size: 1rem;
+  line-height: 1.7;
+  max-width: 640px;
+}
+
+.subscription-price-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  margin: 1.5rem 0 0.5rem;
+  flex-wrap: wrap;
+}
+
+.subscription-price {
+  font-family: 'Clash Display', sans-serif;
+  font-size: 4.25rem;
+  font-weight: 700;
+  line-height: 0.92;
+  letter-spacing: -0.04em;
+  background: linear-gradient(135deg, #ffffff, #c7d2fe, #fbcfe8);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.subscription-price-note {
+  color: #a1a1aa;
+  font-size: 1rem;
+  padding-bottom: 0.55rem;
+}
+
+.subscription-actions {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin: 1.5rem 0 0;
+}
+
+.subscription-meta {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 1.5rem;
+}
+
+.subscription-meta-card {
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 18px;
+  padding: 1rem 1.1rem;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.subscription-meta-card strong {
+  display: block;
+  color: #ffffff;
+  font-size: 1rem;
+  margin-bottom: 0.35rem;
+}
+
+.subscription-meta-card span {
+  color: #a1a1aa;
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.subscription-side-card {
+  background: rgba(9, 11, 18, 0.72);
+  border-radius: 26px;
+  padding: 1.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.subscription-side-card h4 {
+  font-family: 'Clash Display', sans-serif;
+  font-size: 1.4rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+}
+
+.subscription-side-card p {
+  color: #a1a1aa;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  margin-bottom: 1.2rem;
+}
+
+.industry-chip-cloud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.industry-chip {
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  color: #e4e4e7;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.subscription-side-note {
+  margin-top: 1.2rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  color: #a5b4fc;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.subscription-features-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
+}
+
+.subscription-feature-card {
+  background: rgba(20, 20, 30, 0.5);
+  backdrop-filter: blur(10px);
+  border-radius: 24px;
+  padding: 1.6rem;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.subscription-feature-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 1rem;
+}
+
+.subscription-feature-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  color: #ffffff;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.7), rgba(236, 72, 153, 0.55));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.subscription-feature-card h3 {
+  font-family: 'Clash Display', sans-serif;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.subscription-feature-card p {
+  color: #a1a1aa;
+  font-size: 0.92rem;
+  line-height: 1.55;
+  margin-bottom: 1rem;
+}
+
+.subscription-feature-list {
+  list-style: none;
+  display: grid;
+  gap: 0.8rem;
+}
+
+.subscription-feature-list li {
+  position: relative;
+  padding-left: 1.5rem;
+  color: #e4e4e7;
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.subscription-feature-list li::before {
+  content: '';
+  position: absolute;
+  top: 0.5rem;
+  left: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #10b981, #8b5cf6);
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.12);
+}
+
 /* Stats section */
 .stats-section {
   padding: 4rem 0;
@@ -570,6 +827,16 @@ body {
   .features-grid {
     grid-template-columns: repeat(2, 1fr);
   }
+  .subscription-hero-card,
+  .subscription-features-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .subscription-hero-card {
+    grid-template-columns: 1fr;
+  }
+  .subscription-copy h3 {
+    font-size: 2.2rem;
+  }
   .hero h1 {
     font-size: 3.5rem;
   }
@@ -592,6 +859,10 @@ body {
     grid-template-columns: 1fr;
   }
   .features-grid {
+    grid-template-columns: 1fr;
+  }
+  .subscription-features-grid,
+  .subscription-meta {
     grid-template-columns: 1fr;
   }
   .stats-section {
@@ -631,6 +902,28 @@ body {
   }
   .section-header h2 {
     font-size: 1.6rem;
+  }
+  .subscription-section {
+    padding: 0.5rem 0 4rem;
+  }
+  .subscription-hero-card,
+  .subscription-feature-card {
+    padding: 1.25rem;
+    border-radius: 20px;
+  }
+  .subscription-copy h3 {
+    font-size: 1.85rem;
+  }
+  .subscription-price {
+    font-size: 3.2rem;
+  }
+  .subscription-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .subscription-actions .btn-primary,
+  .subscription-actions .btn-secondary {
+    justify-content: center;
   }
   .preview-container {
     min-height: 480px;
