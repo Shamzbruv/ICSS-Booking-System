@@ -13,6 +13,7 @@ const { paymentLimiter } = require('../../middleware/rateLimiter');
 const { enqueueProvisioningJob } = require('../../services/provisioning');
 const { sendSignupWelcomeEmail } = require('../../services/email');
 const { getPayPalSignupConfig, normalizeInternalSignupPlanId } = require('../../services/paypalConfig');
+const CURRENT_TERMS_VERSION = '2026-05-05';
 
 // Helper to enforce webhook idempotency
 async function checkIdempotency(provider, eventId, payload) {
@@ -281,7 +282,8 @@ router.post('/paypal/create-subscription', async (req, res) => {
     try {
         const {
             tenant_name, admin_email, admin_password,
-            admin_owner_name, theme_id, plan_id
+            admin_owner_name, theme_id, plan_id,
+            terms_accepted, terms_version
         } = req.body;
 
         if (!tenant_name || !admin_email || !admin_password) {
@@ -293,16 +295,42 @@ router.post('/paypal/create-subscription', async (req, res) => {
             return res.status(400).json({ error: 'Please enter a valid email address.' });
         }
 
+        if (terms_accepted !== true) {
+            return res.status(400).json({ error: 'You must accept the Terms & Conditions before creating an account.' });
+        }
+
+        if (terms_version !== CURRENT_TERMS_VERSION) {
+            return res.status(400).json({ error: 'The Terms & Conditions version is invalid or outdated. Please refresh and try again.' });
+        }
+
         const bcrypt = require('bcryptjs');
         const hash = await bcrypt.hash(admin_password, 12);
         const signupConfig = getPayPalSignupConfig();
         const normalizedPlanId = normalizeInternalSignupPlanId(plan_id);
         const signup_token = crypto.randomUUID();
+        const acceptanceIp = req.ip || null;
+        const acceptanceUserAgent = (req.get('user-agent') || '').slice(0, 512) || null;
 
         await query(
-            `INSERT INTO pending_signups (signup_token, tenant_slug, tenant_name, admin_email, admin_password_hash, admin_owner_name, theme_id, plan_id)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-            [signup_token, null, tenant_name, admin_email.toLowerCase(), hash, admin_owner_name || admin_email, theme_id || null, normalizedPlanId]
+            `INSERT INTO pending_signups (
+                signup_token, tenant_slug, tenant_name, admin_email, admin_password_hash,
+                admin_owner_name, theme_id, plan_id, terms_version, terms_accepted_at,
+                terms_acceptance_ip, terms_acceptance_user_agent
+             )
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), $10, $11)`,
+            [
+                signup_token,
+                null,
+                tenant_name,
+                admin_email.toLowerCase(),
+                hash,
+                admin_owner_name || admin_email,
+                theme_id || null,
+                normalizedPlanId,
+                terms_version,
+                acceptanceIp,
+                acceptanceUserAgent
+            ]
         );
 
         res.json({

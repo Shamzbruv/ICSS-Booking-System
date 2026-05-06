@@ -220,6 +220,10 @@ async function runMigrations(client) {
             admin_password_hash TEXT NOT NULL,
             theme_id UUID REFERENCES themes(id),
             plan_id TEXT,
+            terms_version TEXT,
+            terms_accepted_at TIMESTAMPTZ,
+            terms_acceptance_ip TEXT,
+            terms_acceptance_user_agent TEXT,
             status TEXT DEFAULT 'pending',
             created_at TIMESTAMPTZ DEFAULT NOW(),
             expires_at TIMESTAMPTZ DEFAULT NOW() + INTERVAL '24 hours'
@@ -321,6 +325,10 @@ async function runMigrations(client) {
     // Ensure columns exist if table was already created
     try { await client.query(`ALTER TABLE pending_signups ALTER COLUMN tenant_slug DROP NOT NULL`); } catch(e){}
     try { await client.query(`ALTER TABLE pending_signups ADD COLUMN admin_owner_name TEXT`); } catch(e){}
+    try { await client.query(`ALTER TABLE pending_signups ADD COLUMN terms_version TEXT`); } catch(e){}
+    try { await client.query(`ALTER TABLE pending_signups ADD COLUMN terms_accepted_at TIMESTAMPTZ`); } catch(e){}
+    try { await client.query(`ALTER TABLE pending_signups ADD COLUMN terms_acceptance_ip TEXT`); } catch(e){}
+    try { await client.query(`ALTER TABLE pending_signups ADD COLUMN terms_acceptance_user_agent TEXT`); } catch(e){}
     try { await client.query(`ALTER TABLE provisioning_jobs ALTER COLUMN tenant_slug DROP NOT NULL`); } catch(e){}
     try { await client.query(`ALTER TABLE tenants ADD COLUMN subscription_status TEXT DEFAULT 'trial'`); } catch(e){}
     try { await client.query(`ALTER TABLE tenants ADD COLUMN stripe_customer_id TEXT`); } catch(e){}

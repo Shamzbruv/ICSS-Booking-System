@@ -1,226 +1,848 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
-<title>ICSS Booking System FAQ | Booking Platform Questions Answered</title>
-<meta name="description" content="Get answers about ICSS Booking System, including setup, payments, booking pages, industries, mobile use, pricing, and support for businesses in Jamaica and the Caribbean.">
-<meta name="robots" content="index, follow">
-<link rel="canonical" href="https://icssbookings.com/faq">
-<meta property="og:title" content="ICSS Booking System FAQ">
-<meta property="og:description" content="Answers about setup, payments, booking pages, and support for Caribbean businesses.">
-<meta property="og:url" content="https://icssbookings.com/faq">
-<meta property="og:type" content="website">
-<meta property="og:image" content="https://icssbookings.com/og-image.png">
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="ICSS Booking System FAQ">
-<meta name="twitter:description" content="Everything you need to know about the Jamaica-built booking platform for service businesses.">
-<meta name="geo.region" content="JM">
-<meta name="geo.placename" content="Jamaica">
-<script type="application/ld+json">
-{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[
-{"@type":"Question","name":"What is ICSS Booking System?","acceptedAnswer":{"@type":"Answer","text":"ICSS Booking System is a booking platform built for service-based businesses that want a cleaner, more professional way to manage appointments. It helps business owners present their services, accept bookings online, manage schedules, and create a smoother experience for both staff and customers."}},
-{"@type":"Question","name":"Who is ICSS Booking System for?","acceptedAnswer":{"@type":"Answer","text":"ICSS Booking System is designed for businesses that rely on appointments or scheduled services — including barbers, salons, nail techs, photographers, clinics, mechanics, event rental companies, wellness professionals, fitness businesses, legal professionals, and many other service brands."}},
-{"@type":"Question","name":"Can I use ICSS Booking System in Jamaica?","acceptedAnswer":{"@type":"Answer","text":"Yes. ICSS Booking System is built with businesses in Jamaica in mind, while still being flexible enough for other Caribbean and international businesses."}},
-{"@type":"Question","name":"Do I need coding knowledge to use it?","acceptedAnswer":{"@type":"Answer","text":"No. Business owners can manage their booking setup without coding. The platform lets you manage services, availability, booking flows, and branding from an admin dashboard."}},
-{"@type":"Question","name":"Can I customize the look of my booking page?","acceptedAnswer":{"@type":"Answer","text":"Yes. ICSS Booking System supports branded booking experiences so businesses can present themselves professionally. Theme selection and layout customization help make the booking page feel aligned with your business."}},
-{"@type":"Question","name":"Can I require a deposit before confirming a booking?","acceptedAnswer":{"@type":"Answer","text":"Yes. Some businesses need a deposit before locking in an appointment, while others prefer to confirm first and collect later. The platform supports flexible payment rules so businesses can choose what works best for each service."}},
-{"@type":"Question","name":"Will my booking page work on mobile phones?","acceptedAnswer":{"@type":"Answer","text":"Yes. The platform is optimized to feel smooth on both mobile and desktop, including Android and iPhone devices. Mobile experience is a core priority since many customers discover and complete bookings from their phones."}},
-{"@type":"Question","name":"What makes ICSS Booking System different?","acceptedAnswer":{"@type":"Answer","text":"ICSS Booking System is designed to feel more polished and business-ready than basic booking setups. The focus is not just on taking appointments, but on helping businesses present themselves better, manage bookings clearly, and give customers a cleaner overall experience — built specifically for the Caribbean market."}},
-{"@type":"Question","name":"How do I get started?","acceptedAnswer":{"@type":"Answer","text":"The easiest way is to visit the platform setup page, choose a theme that fits your industry, and move through the onboarding flow. From there, you set up your services, availability, payment preferences, and your public booking page goes live."}}
-]}
-</script>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://icssbookings.com/"},{"@type":"ListItem","position":2,"name":"FAQ","item":"https://icssbookings.com/faq"}]}</script>
-<link rel="icon" type="image/png" href="/favicon.png">
-<link rel="apple-touch-icon" href="/favicon.png">
-<link rel="stylesheet" href="/css/industry.css">
-<style>
-.faq-intro{max-width:640px;margin:0 auto 48px;text-align:center}
-.faq-intro p{font-size:17px;color:var(--muted);line-height:1.7}
-.faq-list{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
-.faq-item{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;transition:border-color .2s}
-.faq-item.open{border-color:var(--primary)}
-.faq-q{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:20px 22px;cursor:pointer;font-size:16px;font-weight:600;color:var(--text);-webkit-tap-highlight-color:transparent;min-height:44px;user-select:none}
-.faq-q:focus-visible{outline:2px solid var(--primary);outline-offset:-2px;border-radius:14px}
-.faq-chevron{flex-shrink:0;width:20px;height:20px;border-radius:50%;background:rgba(124,110,247,.1);display:flex;align-items:center;justify-content:center;transition:transform .25s,background .2s}
-.faq-item.open .faq-chevron{transform:rotate(180deg);background:rgba(124,110,247,.2)}
-.faq-chevron svg{stroke:var(--primary)}
-.faq-a{max-height:0;overflow:hidden;transition:max-height .3s ease,padding .3s ease}
-.faq-item.open .faq-a{max-height:400px}
-.faq-a-inner{padding:0 22px 20px;font-size:15px;color:var(--muted);line-height:1.7}
-.faq-a-inner a{color:var(--primary);text-decoration:underline;text-underline-offset:3px}
-.categories{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:32px}
-.cat-btn{padding:8px 18px;border-radius:100px;border:1px solid var(--border);background:var(--surface);color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;min-height:36px}
-.cat-btn.active,.cat-btn:hover{background:var(--primary);border-color:var(--primary);color:#fff}
-@media(max-width:600px){.faq-q{font-size:15px;padding:16px 18px}.faq-a-inner{padding:0 18px 16px}}
-@media(prefers-reduced-motion:reduce){.faq-a,.faq-chevron{transition:none}}
-</style>
-<!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-N5L794KSNM"></script>
-<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-N5L794KSNM');</script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>ICSS Booking System FAQ</title>
+  <meta name="description" content="Read the full FAQ for ICSS Booking System, including billing, bookings, support, privacy, platform responsibilities, and customer questions.">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://icssbookings.com/faq">
+  <meta property="og:title" content="ICSS Booking System FAQ">
+  <meta property="og:description" content="Common questions about ICSS Booking System, billing, bookings, support, and platform responsibilities.">
+  <meta property="og:url" content="https://icssbookings.com/faq">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://icssbookings.com/og-image.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="ICSS Booking System FAQ">
+  <meta name="twitter:description" content="Answers about setup, payments, privacy, support, and platform responsibilities.">
+  <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700,900&f[]=clash-display@400,500,600,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <link rel="stylesheet" href="/css/global-theme.css">
+  <link rel="stylesheet" href="/css/legal-pages.css">
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <link rel="apple-touch-icon" href="/favicon.png">
 </head>
 <body>
-<nav class="nav">
-  <a href="/" class="nav-logo"><img src="/favicon.png" alt="ICSS Booking" width="32" height="32">ICSS Booking</a>
-  <a href="/platform-setup.html" class="nav-cta">Start Free Trial</a>
-</nav>
-<div class="breadcrumb"><a href="/">Home</a><span>›</span>FAQ</div>
+  <div class="gradient-bg"></div>
+  <div class="grid-pattern"></div>
 
-<div class="section" style="padding-top:56px">
-  <div style="text-align:center;margin-bottom:40px">
-    <div class="section-label">Support</div>
-    <h1 style="font-size:clamp(28px,5vw,44px);font-weight:800;margin-bottom:16px">Frequently Asked Questions</h1>
-    <div class="faq-intro"><p>Everything you need to know about ICSS Booking System — the scheduling platform built in Jamaica for service businesses across the Caribbean and beyond.</p></div>
+  <div class="landing-page legal-page">
+    <nav class="navbar">
+      <div class="logo">
+        <div class="logo-icon" style="background: transparent; box-shadow: none;">
+          <img src="/favicon.png" alt="ICSS Icon" style="width: 42px; height: 42px; border-radius: 12px; object-fit: contain;">
+        </div>
+        <div style="display: flex; flex-direction: column; justify-content: center;">
+          <span class="logo-text" style="line-height: 1;">ICSS</span>
+          <span style="font-size: 0.55rem; letter-spacing: 2px; color: #a1a1aa; font-weight: 600; line-height: 1; margin-top: 2px;">BOOKING MANAGEMENT</span>
+        </div>
+      </div>
+      <div class="nav-links">
+        <a href="/">Home</a>
+        <a href="/terms">Terms</a>
+        <a href="/platform-setup.html">Pricing</a>
+        <a href="/admin/login.html">Login</a>
+        <a href="/platform-setup.html" class="nav-cta">Start 7-day free trial</a>
+      </div>
+    </nav>
+
+    <div class="breadcrumb-bar"><a href="/">Home</a><span>/</span><span>FAQ</span></div>
+
+    <header class="legal-hero">
+      <span class="legal-label"><i class="fas fa-circle-question"></i> FAQ</span>
+      <h1>Frequently Asked Questions</h1>
+      <p>This FAQ explains how ICSS Booking System works, what businesses are responsible for, what customers should expect, and where I Create Solutions &amp; Services draws the line as the software provider.</p>
+      <div class="legal-chip-row">
+        <span class="legal-chip"><i class="fas fa-building"></i> By I Create Solutions &amp; Services</span>
+        <span class="legal-chip"><i class="fas fa-envelope"></i> Support: icreatesolutions.ja@gmail.com</span>
+        <span class="legal-chip"><i class="fas fa-book-open"></i> Read alongside the Terms &amp; Conditions</span>
+      </div>
+    </header>
+
+    <section class="legal-summary-grid" aria-label="FAQ summary">
+      <article class="legal-summary-card">
+        <h2>Platform Role</h2>
+        <p>ICSS provides the booking software. The business using the platform remains responsible for its actual services, staff, prices, policies, and customer outcomes.</p>
+      </article>
+      <article class="legal-summary-card">
+        <h2>Billing and Refunds</h2>
+        <p>Subscriptions may renew automatically and are generally non-refundable once charged unless the law or a written approval says otherwise.</p>
+      </article>
+      <article class="legal-summary-card">
+        <h2>Privacy and Records</h2>
+        <p>The system may process booking, payment, account, and audit information as needed to run, secure, support, and improve the platform.</p>
+      </article>
+      <article class="legal-summary-card">
+        <h2>Support and Disputes</h2>
+        <p>Support is available by email, but disputes with businesses using the platform should usually be taken up with that business first.</p>
+      </article>
+    </section>
+
+    <section class="legal-content" aria-labelledby="faq-content-title">
+      <div class="legal-header">
+        <h2 id="faq-content-title">Full FAQ</h2>
+        <p>This FAQ is provided for general information only. It does not replace the full Terms &amp; Conditions, Privacy Policy, Refund Policy, Cookie Policy, or any separate written agreement between you and I Create Solutions &amp; Services.</p>
+        <div class="legal-meta-grid">
+          <div class="legal-meta-card">
+            <span class="legal-meta-label">Important</span>
+            <span class="legal-meta-value">Using the platform means you must still follow all applicable policies and laws.</span>
+          </div>
+          <div class="legal-meta-card">
+            <span class="legal-meta-label">Support</span>
+            <span class="legal-meta-value">Email icreatesolutions.ja@gmail.com for platform help.</span>
+          </div>
+          <div class="legal-meta-card">
+            <span class="legal-meta-label">Legal Reading</span>
+            <span class="legal-meta-value">For full legal terms, also read the Terms &amp; Conditions page.</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="legal-section">
+        <div class="faq-utility">
+          <p id="faqStatus">Showing the most relevant answers first.</p>
+          <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+            <a href="/terms" class="btn-secondary">Read Terms</a>
+            <a href="/platform-setup.html" class="btn-primary">Start Free Trial</a>
+          </div>
+        </div>
+
+        <div class="faq-filter-row" id="faqFilters" aria-label="FAQ categories"></div>
+        <div class="faq-list" id="faqList"></div>
+        <div class="faq-more-wrap">
+          <button class="faq-more-button" id="faqMoreButton" type="button">View more answers</button>
+        </div>
+      </div>
+
+      <div class="legal-section">
+        <h3>Final FAQ Notice</h3>
+        <p>This FAQ is intended to help users understand how the ICSS Booking System works. It is not a complete legal agreement.</p>
+        <p>For full details, users should also read the Terms &amp; Conditions, Privacy Policy, Cookie Policy, Refund and Cancellation Policy, and any plan, invoice, subscription, order form, or written agreement issued by I Create Solutions &amp; Services.</p>
+      </div>
+    </section>
+
+    <section class="cta-section legal-cta">
+      <h2>Still need more clarity?</h2>
+      <p>Read the full FAQ, review the Terms &amp; Conditions, or reach out directly if you need help understanding how the platform works before you sign up.</p>
+      <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+        <a href="/terms" class="btn-secondary">Read Terms</a>
+        <a href="mailto:icreatesolutions.ja@gmail.com" class="btn-primary">Email Support</a>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <div class="footer-links">
+        <a href="/">Home</a>
+        <a href="/platform-setup.html">Start Free Trial</a>
+        <a href="/faq">FAQ</a>
+        <a href="/terms">Terms &amp; Conditions</a>
+        <a href="mailto:icreatesolutions.ja@gmail.com">Support</a>
+      </div>
+      <p>© 2026 ICSS Booking System. All rights reserved. · Elevating service businesses globally.</p>
+    </footer>
   </div>
 
-  <div class="categories" id="cats">
-    <button class="cat-btn active" data-cat="all">All Questions</button>
-    <button class="cat-btn" data-cat="general">General</button>
-    <button class="cat-btn" data-cat="setup">Setup &amp; Customization</button>
-    <button class="cat-btn" data-cat="payments">Payments</button>
-    <button class="cat-btn" data-cat="mobile">Mobile &amp; Booking</button>
-    <button class="cat-btn" data-cat="support">Support &amp; Pricing</button>
-  </div>
+  <script>
+    const faqCategories = [
+      { id: 'all', label: 'All Answers' },
+      { id: 'general', label: 'General' },
+      { id: 'accounts', label: 'Accounts' },
+      { id: 'billing', label: 'Billing' },
+      { id: 'bookings', label: 'Bookings' },
+      { id: 'payments', label: 'Payments' },
+      { id: 'privacy', label: 'Privacy & Security' },
+      { id: 'support', label: 'Support & Integrations' },
+      { id: 'legal', label: 'Legal & Disputes' }
+    ];
 
-  <div class="faq-list" id="faqList">
+    const faqItems = [
+      {
+        category: 'general',
+        categoryLabel: 'General',
+        question: 'What is the ICSS Booking System?',
+        answer: `
+          <p>The ICSS Booking System is a digital software platform created by <strong>I Create Solutions &amp; Services</strong> to help businesses manage online bookings, appointments, services, customer information, payments, confirmations, reminders, and business operations from one system.</p>
+          <p>It is designed for businesses that want a cleaner, more professional way to receive bookings and manage customer interactions online.</p>
+        `
+      },
+      {
+        category: 'general',
+        categoryLabel: 'General',
+        question: 'Who owns and operates this system?',
+        answer: `
+          <p>The software and platform are created, owned, operated, and maintained by <strong>I Create Solutions &amp; Services</strong>.</p>
+          <p>All software design, platform structure, code, workflows, system logic, layouts, branding, documentation, and related intellectual property remain the property of I Create Solutions &amp; Services unless otherwise stated in writing.</p>
+        `
+      },
+      {
+        category: 'general',
+        categoryLabel: 'General',
+        question: 'Is I Create Solutions & Services the business providing the actual service being booked?',
+        answer: `
+          <p>No. I Create Solutions &amp; Services provides the booking software only.</p>
+          <p>If a customer books an appointment, event, service, consultation, product-related service, or any other offering through a business using the platform, that actual service is provided by the business using the platform, not by I Create Solutions &amp; Services.</p>
+        `
+      },
+      {
+        category: 'general',
+        categoryLabel: 'General',
+        question: 'Does I Create Solutions & Services guarantee the quality of services offered by businesses using the platform?',
+        answer: `
+          <p>No. I Create Solutions &amp; Services does not guarantee, inspect, supervise, certify, or take responsibility for the quality, safety, legality, pricing, availability, or outcome of any service offered by businesses using the platform.</p>
+          <p>Each business remains responsible for its own staff, standards, pricing, policies, service delivery, cancellations, refunds, and customer treatment.</p>
+        `
+      },
+      {
+        category: 'general',
+        categoryLabel: 'General',
+        question: 'Can any type of business use this system?',
+        answer: `
+          <p>The system may be used by many types of businesses, including service-based businesses, appointment-based businesses, event-based businesses, churches, consultants, salons, spas, rental businesses, and similar organizations.</p>
+          <p>Businesses operating in regulated industries are responsible for ensuring their use of the system follows all laws, licensing rules, privacy obligations, and professional standards that apply to them.</p>
+        `
+      },
+      {
+        category: 'accounts',
+        categoryLabel: 'Accounts',
+        question: 'Do I need an account to use the system?',
+        answer: `
+          <p>Business owners, administrators, and authorized staff may need an account to manage bookings, services, business settings, customer information, payment records, calendar connections, and platform features.</p>
+          <p>Customers may not always need a full account to submit a booking, depending on how the business has configured its booking page.</p>
+        `
+      },
+      {
+        category: 'accounts',
+        categoryLabel: 'Accounts',
+        question: 'Who is responsible for account security?',
+        answer: `
+          <p>You are responsible for keeping your login details, passwords, devices, staff accounts, administrator access, and system credentials secure.</p>
+          <p>You should never share passwords, admin access, payment access, calendar tokens, or private booking links with unauthorized persons.</p>
+        `
+      },
+      {
+        category: 'accounts',
+        categoryLabel: 'Accounts',
+        question: 'What happens if my account is accessed without permission?',
+        answer: `
+          <p>You should contact I Create Solutions &amp; Services as soon as possible if you believe your account, dashboard, payment settings, calendar connection, or customer records were accessed without permission.</p>
+          <p>We may temporarily restrict, suspend, investigate, reset, or disable access to protect the system, your business, your customers, and the platform. However, we are not responsible for unauthorized access caused by weak passwords, shared credentials, compromised devices, phishing, or security failures outside our control.</p>
+        `
+      },
+      {
+        category: 'accounts',
+        categoryLabel: 'Accounts',
+        question: 'Can I give staff access to the system?',
+        answer: `
+          <p>Yes, where the feature is available. Business owners or administrators may give staff members access to manage appointments, bookings, schedules, services, or other business information.</p>
+          <p>The business owner remains responsible for what staff members do inside the system, including errors, misuse of customer data, deleted information, incorrect booking updates, payment status changes, or improper communication with customers.</p>
+        `
+      },
+      {
+        category: 'accounts',
+        categoryLabel: 'Accounts',
+        question: 'Can I Create Solutions & Services access my account for support?',
+        answer: `
+          <p>In some cases, authorized platform support may need to review account settings, logs, booking records, system behavior, or technical details to assist with support, security, fraud prevention, troubleshooting, or legal compliance.</p>
+          <p>Any such access is intended to help operate, protect, maintain, or improve the platform. Support access may be logged for accountability.</p>
+        `
+      },
+      {
+        category: 'billing',
+        categoryLabel: 'Billing',
+        question: 'Is the ICSS Booking System free?',
+        answer: `
+          <p>The system may offer a free trial, promotional access, setup period, or limited free access depending on the current offer. However, the full system is generally a paid software service.</p>
+          <p>Subscription details, pricing, billing periods, and included features may vary based on the plan or written agreement provided by I Create Solutions &amp; Services.</p>
+        `
+      },
+      {
+        category: 'billing',
+        categoryLabel: 'Billing',
+        question: 'What happens after a free trial ends?',
+        answer: `
+          <p>After the free trial ends, the subscription may automatically convert into a paid plan unless canceled before the trial period ends.</p>
+          <p>It is the subscriber’s responsibility to understand the trial terms, renewal date, billing amount, and cancellation process before starting the trial.</p>
+        `
+      },
+      {
+        category: 'billing',
+        categoryLabel: 'Billing',
+        question: 'Can I cancel my subscription?',
+        answer: `
+          <p>Yes. You may cancel your subscription according to the cancellation process provided by I Create Solutions &amp; Services or the payment provider being used.</p>
+          <p>Cancellation usually stops future billing. It does not automatically refund fees already charged unless a refund is required by law or expressly approved in writing.</p>
+        `
+      },
+      {
+        category: 'billing',
+        categoryLabel: 'Billing',
+        question: 'Are subscription payments refundable?',
+        answer: `
+          <p>Unless clearly stated otherwise in writing, subscription fees are generally non-refundable once charged.</p>
+          <p>This is because the system provides access to software, hosting, platform tools, administrative features, booking infrastructure, and support resources for the subscription period. Refund requests may be reviewed case by case, but a refund is not guaranteed simply because the user changed their mind, failed to cancel on time, or did not use the system.</p>
+        `
+      },
+      {
+        category: 'billing',
+        categoryLabel: 'Billing',
+        question: 'What happens if my payment fails?',
+        answer: `
+          <p>If a subscription payment fails, access to the system may be limited, suspended, downgraded, or terminated.</p>
+          <p>I Create Solutions &amp; Services may also retry billing, preserve records, or restrict certain features until payment is resolved.</p>
+        `
+      },
+      {
+        category: 'billing',
+        categoryLabel: 'Billing',
+        question: 'Can prices change?',
+        answer: `
+          <p>Yes. I Create Solutions &amp; Services may change subscription prices, setup fees, add-on fees, transaction-related fees, or feature pricing.</p>
+          <p>Where practical, pricing changes apply to future billing periods and not to charges already completed. Continued use of the system after a price change may be treated as acceptance of the updated pricing.</p>
+        `
+      },
+      {
+        category: 'bookings',
+        categoryLabel: 'Bookings',
+        question: 'Who is responsible for bookings made through the platform?',
+        answer: `
+          <p>The business using the platform is responsible for managing its own bookings. That includes confirming appointments, updating availability, managing staff schedules, communicating with customers, honoring confirmed bookings, handling late arrivals, no-shows, cancellations, refunds, rescheduling, and delivering the actual service.</p>
+          <p>I Create Solutions &amp; Services provides the software that helps facilitate the booking process, but it does not become responsible for the business’s services.</p>
+        `
+      },
+      {
+        category: 'bookings',
+        categoryLabel: 'Bookings',
+        question: 'Does a booking guarantee that the service will be provided?',
+        answer: `
+          <p>A booking confirms that the customer submitted a request or appointment through the system based on the business’s available settings.</p>
+          <p>However, the actual fulfillment of the service depends on the business providing that service. I Create Solutions &amp; Services does not guarantee that any business will accept, honor, complete, reschedule, refund, or properly deliver a booking.</p>
+        `
+      },
+      {
+        category: 'bookings',
+        categoryLabel: 'Bookings',
+        question: 'Can a business cancel or reschedule a booking?',
+        answer: `
+          <p>Yes. A business may cancel, reschedule, approve, reject, or modify bookings according to its own policies, availability, staffing, emergencies, payment status, or operational needs.</p>
+          <p>Customers should always review the specific business’s cancellation and rescheduling policy before booking.</p>
+        `
+      },
+      {
+        category: 'bookings',
+        categoryLabel: 'Bookings',
+        question: 'Can customers cancel their own bookings?',
+        answer: `
+          <p>This depends on the settings chosen by the business using the platform. Some businesses may allow customers to cancel or reschedule online. Others may require customers to contact the business directly.</p>
+          <p>Any cancellation fees, deposit rules, refund eligibility, or rescheduling deadlines are determined by the business, not I Create Solutions &amp; Services.</p>
+        `
+      },
+      {
+        category: 'bookings',
+        categoryLabel: 'Bookings',
+        question: 'What if a customer enters incorrect booking information?',
+        answer: `
+          <p>Customers are responsible for entering accurate information when booking, including names, phone numbers, email addresses, dates, times, service selections, notes, payment details, and special requests.</p>
+          <p>I Create Solutions &amp; Services is not responsible for missed appointments, failed notifications, incorrect bookings, payment issues, or service problems caused by inaccurate information submitted by the customer or business.</p>
+        `
+      },
+      {
+        category: 'payments',
+        categoryLabel: 'Payments',
+        question: 'Does the platform process payments directly?',
+        answer: `
+          <p>The platform may connect with third-party payment providers such as PayPal, WiPay, or other payment gateways depending on the setup.</p>
+          <p>I Create Solutions &amp; Services may help facilitate payment workflows, but third-party payment providers may handle the actual payment processing and may apply their own terms, fees, chargeback rules, processing times, and restrictions.</p>
+        `
+      },
+      {
+        category: 'payments',
+        categoryLabel: 'Payments',
+        question: 'Is I Create Solutions & Services responsible for payment gateway issues?',
+        answer: `
+          <p>No. I Create Solutions &amp; Services is not responsible for outages, delays, declined payments, frozen accounts, chargebacks, processing errors, currency conversion issues, account limitations, or policy decisions made by third-party payment providers.</p>
+          <p>If a payment provider fails, delays a transfer, holds funds, reverses a payment, or changes its rules, that issue must be handled according to that provider’s own process.</p>
+        `
+      },
+      {
+        category: 'payments',
+        categoryLabel: 'Payments',
+        question: 'Who handles refunds to customers?',
+        answer: `
+          <p>Refunds for services booked through a business are handled by that business unless I Create Solutions &amp; Services expressly agrees otherwise in writing.</p>
+          <p>The business is responsible for its own refund policy, cancellation policy, deposit policy, chargeback response, customer communication, and financial obligations.</p>
+        `
+      },
+      {
+        category: 'payments',
+        categoryLabel: 'Payments',
+        question: 'Can deposits be non-refundable?',
+        answer: `
+          <p>Yes, a business may choose to make deposits non-refundable depending on its own policies and applicable law.</p>
+          <p>However, the business is responsible for clearly informing customers before payment. I Create Solutions &amp; Services may provide tools to display deposit terms, but the business remains responsible for the accuracy and fairness of those terms.</p>
+        `
+      },
+      {
+        category: 'payments',
+        categoryLabel: 'Payments',
+        question: 'What happens if a customer disputes a payment?',
+        answer: `
+          <p>If a customer opens a chargeback, payment dispute, or reversal, the business may be required to provide proof of booking, payment records, customer communication, accepted terms, cancellation policy, or service delivery evidence.</p>
+          <p>I Create Solutions &amp; Services may preserve system records and logs where necessary, but it does not guarantee the outcome of any payment dispute.</p>
+        `
+      },
+      {
+        category: 'privacy',
+        categoryLabel: 'Privacy',
+        question: 'What personal information may be collected through the system?',
+        answer: `
+          <p>Depending on how the system is used, the platform may collect or process names, email addresses, phone numbers, booking details, service selections, appointment dates and times, business information, payment references, uploaded receipts or proof of payment, calendar connection details, customer notes, IP addresses, device or browser information, account activity logs, and support communication.</p>
+          <p>The exact information collected depends on the features being used and the information submitted by the business or customer.</p>
+        `
+      },
+      {
+        category: 'privacy',
+        categoryLabel: 'Privacy',
+        question: 'Why does the system collect personal information?',
+        answer: `
+          <p>Personal information may be collected to create and manage accounts, process bookings, send confirmations and reminders, support customer service, manage subscriptions, verify payments, prevent fraud, protect the platform, maintain logs and records, improve the system, comply with legal obligations, and resolve disputes.</p>
+        `
+      },
+      {
+        category: 'privacy',
+        categoryLabel: 'Privacy',
+        question: 'Is customer information shared with businesses?',
+        answer: `
+          <p>Yes. When a customer books with a business, the information submitted by that customer may be made available to that business so the business can manage the booking and provide the service.</p>
+          <p>Customers should understand that they are sharing information with the business they are booking with, not only with the platform itself.</p>
+        `
+      },
+      {
+        category: 'privacy',
+        categoryLabel: 'Privacy',
+        question: 'Can data be stored outside Jamaica?',
+        answer: `
+          <p>Yes. Because the platform may use third-party hosting, payment, email, calendar, analytics, or cloud service providers, information may be stored, processed, backed up, or routed through servers outside Jamaica.</p>
+          <p>By using the system, users acknowledge that data may be processed across borders where necessary to provide the service.</p>
+        `
+      },
+      {
+        category: 'privacy',
+        categoryLabel: 'Privacy',
+        question: 'Can a customer request access to or deletion of their personal information?',
+        answer: `
+          <p>Customers may have privacy rights depending on the laws that apply to them. Requests may include access, correction, deletion, restriction, objection, or withdrawal of consent where applicable.</p>
+          <p>However, some information may need to be retained for legal, fraud prevention, payment, tax, dispute, security, backup, or recordkeeping reasons.</p>
+        `
+      },
+      {
+        category: 'privacy',
+        categoryLabel: 'Privacy',
+        question: 'How long is data kept?',
+        answer: `
+          <p>Data may be kept for as long as necessary to provide the service, support business operations, maintain records, comply with legal obligations, prevent fraud, resolve disputes, enforce agreements, and protect the platform.</p>
+          <p>Different types of data may have different retention periods. Payment records, audit logs, booking records, security logs, and support records may need to be kept longer than general account preferences.</p>
+        `
+      },
+      {
+        category: 'privacy',
+        categoryLabel: 'Security',
+        question: 'Is the platform secure?',
+        answer: `
+          <p>I Create Solutions &amp; Services aims to use reasonable security measures to protect the system and user information.</p>
+          <p>However, no online system can be guaranteed to be completely secure. Internet services, browsers, devices, payment providers, email systems, hosting platforms, and third-party integrations all carry some level of risk. Users remain responsible for protecting their own devices, passwords, accounts, staff access, and business practices.</p>
+        `
+      },
+      {
+        category: 'privacy',
+        categoryLabel: 'Security',
+        question: 'What can I do to keep my account safe?',
+        answer: `
+          <ul>
+            <li>Use strong passwords.</li>
+            <li>Avoid sharing login details.</li>
+            <li>Remove staff access when no longer needed.</li>
+            <li>Keep devices updated.</li>
+            <li>Avoid logging in on public devices.</li>
+            <li>Watch for phishing messages.</li>
+            <li>Use secure internet connections.</li>
+            <li>Report suspicious activity quickly.</li>
+            <li>Review account activity regularly.</li>
+          </ul>
+        `
+      },
+      {
+        category: 'privacy',
+        categoryLabel: 'Security',
+        question: 'Can I Create Solutions & Services suspend an account for security reasons?',
+        answer: `
+          <p>Yes. If I Create Solutions &amp; Services believes an account, booking page, payment flow, calendar connection, or integration creates a security risk, the company may suspend, restrict, disable, or investigate access immediately.</p>
+          <p>This may happen without advance notice if quick action is needed to protect the system, customers, businesses, or platform integrity.</p>
+        `
+      },
+      {
+        category: 'support',
+        categoryLabel: 'Integrations',
+        question: 'Can the system connect to calendars?',
+        answer: `
+          <p>The system may support calendar-related features, such as syncing bookings, generating calendar events, or connecting with services like Google Calendar or Microsoft Calendar, depending on the available features.</p>
+          <p>By enabling a calendar connection, the business authorizes the system to access and process calendar-related data needed to provide the integration.</p>
+        `
+      },
+      {
+        category: 'support',
+        categoryLabel: 'Integrations',
+        question: 'Is I Create Solutions & Services responsible if a calendar sync fails?',
+        answer: `
+          <p>No. Calendar syncing may depend on third-party providers, internet access, API availability, permissions, account settings, expired tokens, changed provider rules, or user error.</p>
+          <p>I Create Solutions &amp; Services does not guarantee that calendar sync will always be uninterrupted, instant, accurate, or error-free. Businesses should still check their dashboard and calendar for important bookings.</p>
+        `
+      },
+      {
+        category: 'support',
+        categoryLabel: 'Integrations',
+        question: 'Can third-party integrations stop working?',
+        answer: `
+          <p>Yes. Third-party providers may change their systems, pricing, APIs, access rules, privacy requirements, or technical settings at any time.</p>
+          <p>If an integration stops working because of a third-party change, outage, account restriction, or provider decision, I Create Solutions &amp; Services is not responsible for losses caused by that outside issue.</p>
+        `
+      },
+      {
+        category: 'support',
+        categoryLabel: 'Notifications',
+        question: 'Will customers receive booking confirmations?',
+        answer: `
+          <p>The system may send confirmations, reminders, payment notices, or booking updates by email or other supported communication methods.</p>
+          <p>However, delivery is not guaranteed. Messages may be delayed, blocked, filtered into spam, rejected by a provider, or affected by incorrect contact details. Businesses and customers should not rely only on automated notifications for important bookings.</p>
+        `
+      },
+      {
+        category: 'support',
+        categoryLabel: 'Notifications',
+        question: 'Who is responsible for contacting customers?',
+        answer: `
+          <p>The business is ultimately responsible for communicating with its own customers.</p>
+          <p>The platform may help send automated messages, but it does not replace the business’s responsibility to confirm important details, respond to questions, handle disputes, and provide customer service.</p>
+        `
+      },
+      {
+        category: 'support',
+        categoryLabel: 'Notifications',
+        question: 'Can I Create Solutions & Services send system notices?',
+        answer: `
+          <p>Yes. I Create Solutions &amp; Services may send service notices, billing reminders, legal updates, account alerts, security notices, support messages, policy updates, and system-related communication electronically.</p>
+          <p>This may be done by email, dashboard notice, website notice, or other reasonable methods.</p>
+        `
+      },
+      {
+        category: 'support',
+        categoryLabel: 'Support',
+        question: 'Does the subscription include support?',
+        answer: `
+          <p>Support availability may depend on the subscription plan, current offer, or written agreement.</p>
+          <p>Support may include help with setup, platform use, troubleshooting, account access, booking configuration, or general system guidance. It does not automatically include unlimited custom development, business consulting, legal advice, financial advice, or tax advice unless separately agreed.</p>
+        `
+      },
+      {
+        category: 'support',
+        categoryLabel: 'Support',
+        question: 'How fast will support respond?',
+        answer: `
+          <p>Response times may vary depending on workload, issue complexity, subscription level, business hours, internet availability, third-party delays, and the nature of the request.</p>
+          <p>I Create Solutions &amp; Services may prioritize urgent system issues, security matters, billing problems, and platform-wide disruptions.</p>
+        `
+      },
+      {
+        category: 'support',
+        categoryLabel: 'Support',
+        question: 'Does support guarantee that every issue will be fixed?',
+        answer: `
+          <p>No. I Create Solutions &amp; Services will make reasonable efforts to assist with supported issues, but it does not guarantee that every issue will be resolved.</p>
+          <p>Some issues may come from third-party services, user error, unsupported customization, device problems, internet issues, payment provider decisions, browser limitations, or misuse of the system.</p>
+        `
+      },
+      {
+        category: 'support',
+        categoryLabel: 'Availability',
+        question: 'Will the system always be online?',
+        answer: `
+          <p>I Create Solutions &amp; Services aims to keep the platform available and functional, but no system can be guaranteed to operate without interruption.</p>
+          <p>Downtime may occur because of maintenance, updates, hosting issues, internet outages, cyberattacks, payment gateway problems, third-party API failures, natural disasters, or other events outside our control.</p>
+        `
+      },
+      {
+        category: 'support',
+        categoryLabel: 'Availability',
+        question: 'Can features change over time?',
+        answer: `
+          <p>Yes. I Create Solutions &amp; Services may update, improve, remove, rename, redesign, limit, suspend, or replace features at any time.</p>
+          <p>This may be done to improve security, performance, user experience, compliance, cost management, system stability, or business operations.</p>
+        `
+      },
+      {
+        category: 'support',
+        categoryLabel: 'Availability',
+        question: 'Are beta or test features guaranteed?',
+        answer: `
+          <p>No. Beta, trial, experimental, or early-access features may change, break, lose data, be removed, or stop working at any time.</p>
+          <p>Users should not rely on beta features for critical business, legal, financial, emergency, or safety-related operations.</p>
+        `
+      },
+      {
+        category: 'legal',
+        categoryLabel: 'Business Responsibility',
+        question: 'What responsibilities does a business have when using this system?',
+        answer: `
+          <p>Each business is responsible for providing accurate business information, listing correct prices, setting correct availability, managing staff access, delivering booked services, creating and honoring customer policies, complying with local laws, handling customer complaints, managing refunds and disputes, protecting customer information, and using the system lawfully and responsibly.</p>
+          <p>The platform does not remove the business’s legal or professional responsibilities.</p>
+        `
+      },
+      {
+        category: 'legal',
+        categoryLabel: 'Business Responsibility',
+        question: 'Does I Create Solutions & Services create the business’s policies?',
+        answer: `
+          <p>I Create Solutions &amp; Services may provide templates, examples, suggestions, or tools to help businesses display policies.</p>
+          <p>However, each business is responsible for reviewing, customizing, approving, and following its own policies. Generic templates are not a substitute for policies that match the business’s actual services, legal duties, and customer expectations.</p>
+        `
+      },
+      {
+        category: 'legal',
+        categoryLabel: 'Business Responsibility',
+        question: 'Can a business use the platform for illegal or misleading services?',
+        answer: `
+          <p>No. The platform may not be used for illegal, deceptive, harmful, abusive, fraudulent, discriminatory, unsafe, or unauthorized services.</p>
+          <p>I Create Solutions &amp; Services may suspend or remove any account, booking page, business profile, content, integration, or access if it believes the platform is being misused or exposed to legal, security, reputational, or operational risk.</p>
+        `
+      },
+      {
+        category: 'legal',
+        categoryLabel: 'Content and IP',
+        question: 'Who owns the content uploaded by businesses?',
+        answer: `
+          <p>Businesses generally keep ownership of the content they upload, such as logos, images, service descriptions, prices, staff names, business details, and customer-facing text.</p>
+          <p>However, by uploading content to the platform, the business gives I Create Solutions &amp; Services permission to host, display, store, process, format, back up, and transmit that content as needed to operate the system.</p>
+        `
+      },
+      {
+        category: 'legal',
+        categoryLabel: 'Content and IP',
+        question: 'Can I upload any image, logo, or content I find online?',
+        answer: `
+          <p>No. You should only upload content you own, created, licensed, or have permission to use.</p>
+          <p>You are responsible for ensuring your logos, images, text, videos, graphics, branding, service descriptions, and uploaded files do not violate copyright, trademark, privacy, publicity, confidentiality, or other rights.</p>
+        `
+      },
+      {
+        category: 'legal',
+        categoryLabel: 'Content and IP',
+        question: 'Can I copy or resell the ICSS Booking System?',
+        answer: `
+          <p>No. You may not copy, reproduce, reverse engineer, resell, duplicate, modify, scrape, clone, or exploit the ICSS Booking System, its code, design, workflows, dashboard, templates, or platform logic unless I Create Solutions &amp; Services gives written permission.</p>
+          <p>The software remains the intellectual property of I Create Solutions &amp; Services.</p>
+        `
+      },
+      {
+        category: 'legal',
+        categoryLabel: 'Legal',
+        question: 'Which country’s laws govern the platform?',
+        answer: `
+          <p>The platform is created and operated by I Create Solutions &amp; Services, a Jamaica-based business. The Terms &amp; Conditions may state that Jamaican law governs the relationship unless another written agreement says otherwise or a mandatory law applies.</p>
+          <p>Because the platform may be accessed internationally, some users may also have rights or obligations under laws in their own country.</p>
+        `
+      },
+      {
+        category: 'legal',
+        categoryLabel: 'Legal',
+        question: 'Does using the platform make I Create Solutions & Services responsible for my legal compliance?',
+        answer: `
+          <p>No. Each business is responsible for complying with the laws, rules, licenses, taxes, professional requirements, consumer protection obligations, privacy obligations, and industry standards that apply to its own business.</p>
+          <p>I Create Solutions &amp; Services provides software tools, but it does not become responsible for the business’s legal obligations.</p>
+        `
+      },
+      {
+        category: 'legal',
+        categoryLabel: 'Legal',
+        question: 'Does I Create Solutions & Services provide legal, financial, medical, or tax advice?',
+        answer: `
+          <p>No. The platform, support communication, templates, forms, FAQs, policies, or examples are not legal, financial, tax, medical, or professional advice.</p>
+          <p>Users should not treat platform materials as a substitute for advice from qualified professionals where needed.</p>
+        `
+      },
+      {
+        category: 'legal',
+        categoryLabel: 'Legal',
+        question: 'Can I use the platform for medical, legal, financial, or regulated services?',
+        answer: `
+          <p>You may only use the platform for regulated services if you are properly authorized, licensed, and compliant with all applicable laws.</p>
+          <p>You are responsible for ensuring that your use of the platform does not create additional legal duties for I Create Solutions &amp; Services unless those duties are clearly accepted in a signed written agreement.</p>
+        `
+      },
+      {
+        category: 'legal',
+        categoryLabel: 'Legal',
+        question: 'Can I Create Solutions & Services terminate my access?',
+        answer: `
+          <p>Yes. I Create Solutions &amp; Services may suspend, restrict, or terminate access if there is non-payment, misuse, fraud, illegal activity, security risk, reputational risk, excessive abuse, violation of policies, harmful conduct, or any action that may expose the platform to legal or operational risk.</p>
+          <p>Access may also be terminated if the service is discontinued or if continued service becomes commercially, technically, or legally impractical.</p>
+        `
+      },
+      {
+        category: 'legal',
+        categoryLabel: 'Customer Questions',
+        question: 'I booked through a business using this platform. Who should I contact about my appointment?',
+        answer: `
+          <p>You should contact the business you booked with.</p>
+          <p>I Create Solutions &amp; Services provides the booking technology, but the business is responsible for confirming, changing, canceling, refunding, or fulfilling the appointment.</p>
+        `
+      },
+      {
+        category: 'legal',
+        categoryLabel: 'Customer Questions',
+        question: 'I paid a deposit. Who handles my refund?',
+        answer: `
+          <p>The business you paid or booked with is responsible for refund decisions unless I Create Solutions &amp; Services expressly states otherwise.</p>
+          <p>Refund eligibility depends on that business’s policy, the payment provider’s rules, and applicable law.</p>
+        `
+      },
+      {
+        category: 'legal',
+        categoryLabel: 'Customer Questions',
+        question: 'I did not receive a confirmation email. Is my booking still valid?',
+        answer: `
+          <p>Possibly. Emails can be delayed, blocked, or sent to spam. You should contact the business directly to confirm your booking if you did not receive a confirmation.</p>
+          <p>I Create Solutions &amp; Services does not guarantee email delivery.</p>
+        `
+      },
+      {
+        category: 'legal',
+        categoryLabel: 'Customer Questions',
+        question: 'The business did not provide the service. Is I Create Solutions & Services responsible?',
+        answer: `
+          <p>No. I Create Solutions &amp; Services is not responsible for the actual services offered by businesses using the platform.</p>
+          <p>Any complaint about service quality, no-shows, cancellations, refunds, staff behavior, pricing, or business conduct should be directed to the business that accepted the booking.</p>
+        `
+      },
+      {
+        category: 'legal',
+        categoryLabel: 'Disputes',
+        question: 'What should I do if I have a dispute with a business using the platform?',
+        answer: `
+          <p>You should first contact the business directly and provide your booking details, payment confirmation, date, time, and explanation of the issue.</p>
+          <p>I Create Solutions &amp; Services may preserve platform records where appropriate, but it does not automatically become involved in disputes between businesses and their customers.</p>
+        `
+      },
+      {
+        category: 'legal',
+        categoryLabel: 'Disputes',
+        question: 'What should I do if I have a dispute with I Create Solutions & Services?',
+        answer: `
+          <p>You should contact I Create Solutions &amp; Services using the official support or legal contact provided on the website.</p>
+          <p>The Terms &amp; Conditions may require informal resolution first, followed by a formal dispute process if the issue cannot be resolved.</p>
+        `
+      },
+      {
+        category: 'legal',
+        categoryLabel: 'Disputes',
+        question: 'Can I sue I Create Solutions & Services because of something a business did?',
+        answer: `
+          <p>I Create Solutions &amp; Services is not responsible for the independent actions, services, failures, promises, refunds, pricing, staff, policies, or customer treatment of businesses using the platform.</p>
+          <p>The platform provides software. The business provides the actual service.</p>
+        `
+      }
+    ];
 
-    <div class="faq-item" data-cat="general">
-      <div class="faq-q" tabindex="0" aria-expanded="false" role="button">What is ICSS Booking System?<span class="faq-chevron"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,4 6,8 10,4"/></svg></span></div>
-      <div class="faq-a"><div class="faq-a-inner">ICSS Booking System is a booking platform built for service-based businesses that want a cleaner, more professional way to manage appointments. It helps business owners present their services, accept bookings online, manage schedules, and create a smoother experience for both staff and customers.</div></div>
-    </div>
+    const INITIAL_LIMIT = 10;
+    let activeCategory = 'all';
+    let showAll = false;
 
-    <div class="faq-item" data-cat="general">
-      <div class="faq-q" tabindex="0" aria-expanded="false" role="button">Who is ICSS Booking System for?<span class="faq-chevron"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,4 6,8 10,4"/></svg></span></div>
-      <div class="faq-a"><div class="faq-a-inner">It is designed for businesses that rely on appointments or scheduled services — including <a href="/industries/barbers">barbers</a>, <a href="/industries/salons">salons</a>, <a href="/industries/nail-techs">nail techs</a>, <a href="/industries/photographers">photographers</a>, <a href="/industries/clinics">clinics</a>, <a href="/industries/mechanics">mechanics</a>, <a href="/industries/events">event companies</a>, <a href="/industries/wellness-spa">wellness professionals</a>, <a href="/industries/fitness">fitness businesses</a>, <a href="/industries/legal">legal professionals</a>, and many other service brands.</div></div>
-    </div>
+    const filtersEl = document.getElementById('faqFilters');
+    const listEl = document.getElementById('faqList');
+    const statusEl = document.getElementById('faqStatus');
+    const moreButtonEl = document.getElementById('faqMoreButton');
 
-    <div class="faq-item" data-cat="general">
-      <div class="faq-q" tabindex="0" aria-expanded="false" role="button">Can I use ICSS Booking System in Jamaica?<span class="faq-chevron"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,4 6,8 10,4"/></svg></span></div>
-      <div class="faq-a"><div class="faq-a-inner">Yes. ICSS Booking System is built with businesses in Jamaica in mind, while still being flexible enough for other Caribbean and international businesses. The goal is to provide a modern booking experience that works for real local businesses — not just generic overseas templates.</div></div>
-    </div>
+    function getFilteredItems() {
+      if (activeCategory === 'all') return faqItems;
+      return faqItems.filter((item) => item.category === activeCategory);
+    }
 
-    <div class="faq-item" data-cat="general">
-      <div class="faq-q" tabindex="0" aria-expanded="false" role="button">Is ICSS Booking System only for beauty businesses?<span class="faq-chevron"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,4 6,8 10,4"/></svg></span></div>
-      <div class="faq-a"><div class="faq-a-inner">No. While barbers, salons, and beauty professionals are a natural fit, the platform is not limited to that category. It is built for a wide range of service-based businesses that need online booking and scheduling — from mechanics and clinics to photographers and law firms.</div></div>
-    </div>
+    function renderFilters() {
+      filtersEl.innerHTML = faqCategories.map((category) => `
+        <button
+          class="faq-filter ${category.id === activeCategory ? 'is-active' : ''}"
+          type="button"
+          data-category="${category.id}"
+        >
+          ${category.label}
+        </button>
+      `).join('');
+    }
 
-    <div class="faq-item" data-cat="setup">
-      <div class="faq-q" tabindex="0" aria-expanded="false" role="button">Do I need coding knowledge to use it?<span class="faq-chevron"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,4 6,8 10,4"/></svg></span></div>
-      <div class="faq-a"><div class="faq-a-inner">No. Business owners can manage their booking setup without needing to code. The platform lets you manage services, availability, booking flows, and branding from an admin dashboard instead of relying on technical setup every time.</div></div>
-    </div>
+    function renderFaq() {
+      const filtered = getFilteredItems();
+      const visibleItems = showAll ? filtered : filtered.slice(0, INITIAL_LIMIT);
 
-    <div class="faq-item" data-cat="setup">
-      <div class="faq-q" tabindex="0" aria-expanded="false" role="button">Can I customize the look of my booking page?<span class="faq-chevron"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,4 6,8 10,4"/></svg></span></div>
-      <div class="faq-a"><div class="faq-a-inner">Yes. ICSS Booking System supports branded booking experiences so businesses can present themselves professionally. Theme selection and layout customization help make the booking page feel aligned with your business instead of looking plain or generic.</div></div>
-    </div>
+      listEl.innerHTML = visibleItems.map((item, index) => `
+        <article class="faq-item" data-index="${index}">
+          <button class="faq-button" type="button" aria-expanded="false">
+            <div class="faq-button-copy">
+              <span class="faq-eyebrow">${item.categoryLabel}</span>
+              <h3>${item.question}</h3>
+            </div>
+            <span class="faq-chevron"><i class="fas fa-plus"></i></span>
+          </button>
+          <div class="faq-answer">
+            <div class="faq-answer-inner">${item.answer}</div>
+          </div>
+        </article>
+      `).join('');
 
-    <div class="faq-item" data-cat="setup">
-      <div class="faq-q" tabindex="0" aria-expanded="false" role="button">Can different services have different booking rules?<span class="faq-chevron"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,4 6,8 10,4"/></svg></span></div>
-      <div class="faq-a"><div class="faq-a-inner">Yes. Not every service works the same way. A quick consultation may not need payment upfront, while a premium service may require a deposit or longer blocked time. Service settings can reflect those differences so your booking flow matches how you actually work.</div></div>
-    </div>
+      if (filtered.length === 0) {
+        listEl.innerHTML = '<article class="faq-item"><div class="faq-answer-inner" style="padding: 1.2rem;"><p>No answers are available in this category yet.</p></div></article>';
+      }
 
-    <div class="faq-item" data-cat="setup">
-      <div class="faq-q" tabindex="0" aria-expanded="false" role="button">Do I need a separate website to use it?<span class="faq-chevron"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,4 6,8 10,4"/></svg></span></div>
-      <div class="faq-a"><div class="faq-a-inner">Not necessarily. A business may use ICSS Booking System as its main booking presence online, or connect the booking experience to an existing website or brand. It depends on how you want to position yourself.</div></div>
-    </div>
+      const currentLabel = faqCategories.find((category) => category.id === activeCategory)?.label || 'Answers';
+      const shownCount = visibleItems.length;
+      statusEl.textContent = activeCategory === 'all'
+        ? `Showing ${shownCount} of ${filtered.length} answers.`
+        : `${currentLabel}: showing ${shownCount} answer${shownCount === 1 ? '' : 's'}.`;
 
-    <div class="faq-item" data-cat="payments">
-      <div class="faq-q" tabindex="0" aria-expanded="false" role="button">Can I require a deposit before confirming a booking?<span class="faq-chevron"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,4 6,8 10,4"/></svg></span></div>
-      <div class="faq-a"><div class="faq-a-inner">Yes. Some businesses need a deposit before locking in an appointment, while others prefer to confirm first and collect later. The platform supports flexible payment rules so businesses can choose what works best for each service.</div></div>
-    </div>
+      const shouldShowMore = filtered.length > INITIAL_LIMIT;
+      moreButtonEl.style.display = shouldShowMore ? 'inline-flex' : 'none';
+      moreButtonEl.textContent = showAll ? 'Show fewer answers' : 'View more answers';
+    }
 
-    <div class="faq-item" data-cat="payments">
-      <div class="faq-q" tabindex="0" aria-expanded="false" role="button">What happens if a booking does not require payment?<span class="faq-chevron"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,4 6,8 10,4"/></svg></span></div>
-      <div class="faq-a"><div class="faq-a-inner">If no payment is required, the booking flow moves straight into confirmation once the customer selects a valid slot and submits their details. This is useful for businesses that prefer a simpler booking experience without requiring upfront payment.</div></div>
-    </div>
+    function toggleFaqItem(button) {
+      const item = button.closest('.faq-item');
+      const answer = item.querySelector('.faq-answer');
+      const isOpen = item.classList.contains('is-open');
 
-    <div class="faq-item" data-cat="payments">
-      <div class="faq-q" tabindex="0" aria-expanded="false" role="button">Can I choose how customers pay for bookings?<span class="faq-chevron"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,4 6,8 10,4"/></svg></span></div>
-      <div class="faq-a"><div class="faq-a-inner">Yes. Depending on how your business operates, bookings can be handled in different ways — no payment required, a deposit or full payment before confirmation, or manual confirmation methods. The booking flow is designed to match the way your business actually works.</div></div>
-    </div>
+      item.classList.toggle('is-open', !isOpen);
+      button.setAttribute('aria-expanded', String(!isOpen));
+      answer.style.maxHeight = !isOpen ? `${answer.scrollHeight}px` : null;
+    }
 
-    <div class="faq-item" data-cat="mobile">
-      <div class="faq-q" tabindex="0" aria-expanded="false" role="button">Will my booking page work on mobile phones?<span class="faq-chevron"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,4 6,8 10,4"/></svg></span></div>
-      <div class="faq-a"><div class="faq-a-inner">Yes. The platform is optimized to feel smooth on both mobile and desktop — including iPhone Safari and Android Chrome. Mobile experience is a core priority since many customers discover and complete bookings from their phones.</div></div>
-    </div>
-
-    <div class="faq-item" data-cat="mobile">
-      <div class="faq-q" tabindex="0" aria-expanded="false" role="button">Can customers book online at any time?<span class="faq-chevron"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,4 6,8 10,4"/></svg></span></div>
-      <div class="faq-a"><div class="faq-a-inner">Yes. One of the main benefits of an online booking system is that customers can request or confirm appointments outside of normal business hours. This helps businesses capture more opportunities even when they are not actively answering messages or calls.</div></div>
-    </div>
-
-    <div class="faq-item" data-cat="mobile">
-      <div class="faq-q" tabindex="0" aria-expanded="false" role="button">Does the system handle longer appointment times properly?<span class="faq-chevron"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,4 6,8 10,4"/></svg></span></div>
-      <div class="faq-a"><div class="faq-a-inner">Yes. The booking engine respects the actual duration of each service so that a long booking blocks the correct amount of time. This helps avoid scheduling overlaps and makes your calendar more reliable.</div></div>
-    </div>
-
-    <div class="faq-item" data-cat="support">
-      <div class="faq-q" tabindex="0" aria-expanded="false" role="button">What makes ICSS Booking System different?<span class="faq-chevron"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,4 6,8 10,4"/></svg></span></div>
-      <div class="faq-a"><div class="faq-a-inner">ICSS Booking System is designed to feel more polished and business-ready than many basic booking setups. The focus is not just on taking appointments, but on helping businesses present themselves better, manage bookings more clearly, and give customers a cleaner overall experience — built specifically for the Caribbean market.</div></div>
-    </div>
-
-    <div class="faq-item" data-cat="support">
-      <div class="faq-q" tabindex="0" aria-expanded="false" role="button">Is support available if I need help?<span class="faq-chevron"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,4 6,8 10,4"/></svg></span></div>
-      <div class="faq-a"><div class="faq-a-inner">Yes. Businesses can get help with setup, adjustments, and platform questions when needed. The goal is to make the system practical and usable — not leave business owners stuck figuring everything out on their own. Reach out at <a href="mailto:support@icssbookings.com">support@icssbookings.com</a>.</div></div>
-    </div>
-
-    <div class="faq-item" data-cat="support">
-      <div class="faq-q" tabindex="0" aria-expanded="false" role="button">Can this work for businesses outside Jamaica?<span class="faq-chevron"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,4 6,8 10,4"/></svg></span></div>
-      <div class="faq-a"><div class="faq-a-inner">Yes. While the platform is shaped with Jamaican and Caribbean businesses in mind, the booking model supports businesses in other regions that want a clean service-booking experience.</div></div>
-    </div>
-
-    <div class="faq-item" data-cat="support">
-      <div class="faq-q" tabindex="0" aria-expanded="false" role="button">How do I get started?<span class="faq-chevron"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,4 6,8 10,4"/></svg></span></div>
-      <div class="faq-a"><div class="faq-a-inner">The easiest way is to <a href="/platform-setup.html">visit the platform setup page</a>, choose a theme that fits your industry, and move through the onboarding flow. From there, set up your services, availability, payment preferences, and your public booking page goes live. <a href="/onboarding">Start your free trial →</a></div></div>
-    </div>
-
-  </div>
-</div>
-
-<div class="cta-section" style="max-width:1080px;margin:48px auto">
-  <h2>Ready to create a better booking experience?</h2>
-  <p>Set up a smoother, more professional booking flow for your business — designed for modern service brands across Jamaica and the Caribbean.</p>
-  <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
-    <a href="/platform-setup.html" class="btn-primary">Start Your Free Trial</a>
-    <a href="/" class="btn-outline" style="min-height:52px;display:inline-flex;align-items:center;padding:14px 28px;border-radius:12px;font-weight:600;font-size:15px">View Industry Solutions</a>
-  </div>
-</div>
-
-<footer class="footer">
-  <div class="footer-links">
-    <a href="/">Home</a><a href="/platform-setup.html">Pricing</a>
-    <a href="/industries/barbers">Barbers</a><a href="/industries/salons">Salons</a>
-    <a href="/industries/nail-techs">Nail Techs</a><a href="/industries/photographers">Photographers</a>
-    <a href="mailto:support@icssbookings.com">Contact</a>
-  </div>
-  <p class="footer-copy">© 2026 ICSS Booking System — Built in Jamaica 🇯🇲</p>
-</footer>
-
-<script>
-(function(){
-  // Accordion
-  document.querySelectorAll('.faq-q').forEach(function(btn){
-    btn.addEventListener('click',toggle);
-    btn.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();toggle.call(this)}});
-  });
-  function toggle(){
-    var item=this.closest('.faq-item');
-    var open=item.classList.contains('open');
-    document.querySelectorAll('.faq-item.open').forEach(function(el){el.classList.remove('open');el.querySelector('.faq-q').setAttribute('aria-expanded','false')});
-    if(!open){item.classList.add('open');this.setAttribute('aria-expanded','true')}
-  }
-  // Category filter
-  document.querySelectorAll('.cat-btn').forEach(function(btn){
-    btn.addEventListener('click',function(){
-      document.querySelectorAll('.cat-btn').forEach(function(b){b.classList.remove('active')});
-      this.classList.add('active');
-      var cat=this.dataset.cat;
-      document.querySelectorAll('.faq-item').forEach(function(item){
-        item.style.display=(cat==='all'||item.dataset.cat===cat)?'':'none';
-      });
+    filtersEl.addEventListener('click', (event) => {
+      const button = event.target.closest('[data-category]');
+      if (!button) return;
+      activeCategory = button.dataset.category;
+      showAll = false;
+      renderFilters();
+      renderFaq();
     });
-  });
-})();
-</script>
+
+    moreButtonEl.addEventListener('click', () => {
+      showAll = !showAll;
+      renderFaq();
+    });
+
+    listEl.addEventListener('click', (event) => {
+      const button = event.target.closest('.faq-button');
+      if (!button) return;
+      toggleFaqItem(button);
+    });
+
+    renderFilters();
+    renderFaq();
+  </script>
 </body>
 </html>

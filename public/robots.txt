@@ -4,6 +4,7 @@ User-agent: *
 Allow: /$
 Allow: /industries/
 Allow: /faq
+Allow: /terms
 Allow: /platform-setup.html
 
 # Block internal app routes

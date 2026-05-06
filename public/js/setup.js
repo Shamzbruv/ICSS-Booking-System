@@ -5,9 +5,11 @@ let state = {
     paypalPlanId: null,
     paypalClientId: null
 };
+const TERMS_VERSION = '2026-05-05';
 
 document.addEventListener('DOMContentLoaded', () => {
     loadThemes();
+    syncTermsAcceptanceState();
 });
 
 function goToStep(step) {
@@ -98,6 +100,14 @@ function closePreview() {
     document.getElementById('previewIframe').src = '';
 }
 
+function syncTermsAcceptanceState() {
+    const checkbox = document.getElementById('acceptTerms');
+    const button = document.getElementById('finalizeDraftBtn');
+    if (!checkbox || !button) return;
+    if (button.dataset.loading === 'true') return;
+    button.disabled = !checkbox.checked;
+}
+
 async function finalizeDraft() {
     const name        = document.getElementById('tenantName').value.trim();
     const ownerName   = document.getElementById('ownerName').value.trim();
@@ -106,6 +116,7 @@ async function finalizeDraft() {
     const confirmPwd  = document.getElementById('confirmPassword').value;
     const phone       = document.getElementById('tenantPhone').value.trim();
     const companySize = document.getElementById('companySize').value;
+    const termsAccepted = Boolean(document.getElementById('acceptTerms')?.checked);
     
     if (!name || !ownerName || !email || !pwd || !phone || !companySize) {
         goToStep(1);
@@ -130,7 +141,15 @@ async function finalizeDraft() {
         return;
     }
 
+    if (!termsAccepted) {
+        const err = document.getElementById('error2');
+        err.textContent = 'You must accept the Terms & Conditions before continuing.';
+        err.style.display = 'block';
+        return;
+    }
+
     document.getElementById('finalizeDraftBtn').disabled = true;
+    document.getElementById('finalizeDraftBtn').dataset.loading = 'true';
     document.getElementById('finalizeDraftBtn').textContent = 'Setting up...';
 
     try {
@@ -145,7 +164,9 @@ async function finalizeDraft() {
                 theme_id:         state.selectedThemeId,
                 plan_id:          'starter',
                 phone:            phone,
-                company_size:     companySize
+                company_size:     companySize,
+                terms_accepted:   termsAccepted,
+                terms_version:    TERMS_VERSION
             })
         });
 
@@ -166,8 +187,9 @@ async function finalizeDraft() {
         goToStep(3);
 
     } catch (e) {
-        document.getElementById('finalizeDraftBtn').disabled = false;
+        document.getElementById('finalizeDraftBtn').dataset.loading = 'false';
         document.getElementById('finalizeDraftBtn').textContent = 'Next: Finalize & Subscribe';
+        syncTermsAcceptanceState();
         const err = document.getElementById('error2');
         err.textContent = e.message;
         err.style.display = 'block';

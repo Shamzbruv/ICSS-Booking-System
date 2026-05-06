@@ -68,8 +68,10 @@ app.use('/api/v1', (req, res, next) => {
 app.use('/admin', express.static(path.join(__dirname, '../admin')));
 app.use('/Template', express.static(path.join(__dirname, '../Template')));
 
-// Serve legacy public folder (landing page, images, etc.) FIRST
-app.use('/', express.static(path.join(__dirname, '../public')));
+// Serve legacy public folder (landing page, legal pages, industry pages, images, etc.) FIRST
+app.use('/', express.static(path.join(__dirname, '../public'), {
+    extensions: ['html']
+}));
 
 // Serve the compiled React application (SPA)
 const frontendDist = path.join(__dirname, '../frontend/dist');
@@ -101,9 +103,9 @@ app.get('/health', (req, res) => {
 });
 
 // ─── React SPA Fallback ───────────────────────────────────────────────────────
-// Serve React SPA for app routes. Static public pages (/, /industries/*, /faq)
+// Serve React SPA for app routes. Static public pages (/, /industries/*, /faq, /terms)
 // are already handled above by express.static(public) — so exclude them here.
-app.get(/^\/(?!api\/|admin\/|admin$|Template\/|health$|industries\/|industries$|faq|sitemap\.xml|robots\.txt|favicon|logo)/, (req, res) => {
+app.get(/^\/(?!api\/|admin\/|admin$|Template\/|health$|industries\/|industries$|faq|terms|sitemap\.xml|robots\.txt|favicon|logo)/, (req, res) => {
     // Only send the SPA if the static middleware didn't match
     // (i.e. file doesn't exist in public/ — checked by trying the file first)
     const staticPublic = path.join(__dirname, '../public', req.path);

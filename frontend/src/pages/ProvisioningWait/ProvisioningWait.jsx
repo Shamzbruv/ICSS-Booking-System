@@ -62,7 +62,7 @@ export default function ProvisioningWait() {
         } else if (data.status === 'failed') {
           clearInterval(pollInterval);
           clearInterval(dotInterval);
-          setError('Provisioning failed. Please contact support@icssbookings.com.');
+          setError('Provisioning failed. Please email icreatesolutions.ja@gmail.com.');
 
         } else if (attempts >= MAX_POLL_ATTEMPTS) {
           clearInterval(pollInterval);

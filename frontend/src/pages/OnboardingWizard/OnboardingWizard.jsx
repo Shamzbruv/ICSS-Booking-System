@@ -22,6 +22,8 @@ import { api } from '../../api';
 // PayPal plan config — read from Vite env so changes don't require code edits
 const PAYPAL_PLAN_ID   = import.meta.env.VITE_PAYPAL_PLAN_ID   || 'P-4EC410252Y479773KNHUVB4A';
 const PAYPAL_CLIENT_ID = import.meta.env.VITE_PAYPAL_CLIENT_ID || '';
+const TERMS_VERSION = '2026-05-05';
+const TERMS_URL = '/terms';
 
 const TOTAL_STEPS = 3;
 
@@ -51,6 +53,7 @@ function StepBasics({ data, onChange, onNext }) {
       return setErr('All fields are required.');
     }
     if (pw.length < 8) return setErr('Password must be at least 8 characters.');
+    if (!data.termsAccepted) return setErr('You must accept the Terms & Conditions before continuing.');
     setErr('');
     // Store password into data only in memory, never in localStorage
     onChange('password', pw);
@@ -82,9 +85,20 @@ function StepBasics({ data, onChange, onNext }) {
           onChange={e => { passwordRef.current = e.target.value; }}
         />
       </div>
+      <label className={s.wizard__consent}>
+        <input
+          type="checkbox"
+          checked={Boolean(data.termsAccepted)}
+          onChange={e => onChange('termsAccepted', e.target.checked)}
+        />
+        <span>
+          I have read and accept the <a href={TERMS_URL} target="_blank" rel="noopener noreferrer">Terms &amp; Conditions</a> before creating my account.
+        </span>
+      </label>
+      <p className={s.wizard__hint}>The full terms open in a new tab so you can review them before continuing.</p>
       {err && <p className={s.wizard__error}>{err}</p>}
       <div className={s.wizard__actions}>
-        <button className={`${s.btn} ${s['btn--primary']}`} onClick={submit}>Continue →</button>
+        <button className={`${s.btn} ${s['btn--primary']}`} onClick={submit} disabled={!data.termsAccepted}>Continue →</button>
       </div>
     </>
   );
@@ -139,6 +153,13 @@ function StepPayPal({ data, onNext }) {
       return;
     }
 
+    if (!data.termsAccepted) {
+      setErr('You must accept the Terms & Conditions before continuing.');
+      setLoading(false);
+      initiated.current = false;
+      return;
+    }
+
     try {
       const res = await api.createPendingSignup({
         tenant_name:      data.businessName,
@@ -147,6 +168,8 @@ function StepPayPal({ data, onNext }) {
         admin_owner_name: data.ownerName,
         theme_id:         data.themeId || null,
         plan_id:          'starter',
+        terms_accepted:   Boolean(data.termsAccepted),
+        terms_version:    TERMS_VERSION,
       });
       setSignupToken(res.signup_token);
       localStorage.setItem('icss_signup_token', res.signup_token);
@@ -235,6 +258,9 @@ function StepPayPal({ data, onNext }) {
             {loading ? 'Connecting to PayPal…' : '🅿️ Proceed to Payment'}
           </button>
         )}
+        <p className={s.wizard__hint} style={{ marginTop: 12 }}>
+          By continuing with checkout, you confirm your acceptance of the <a href={TERMS_URL} target="_blank" rel="noopener noreferrer">Terms &amp; Conditions</a>.
+        </p>
       </div>
       {err && <p className={s.wizard__error}>{err}</p>}
     </>
@@ -260,7 +286,7 @@ function StepSuccess({ navigate }) {
 const PERSIST_KEY = 'icss_onboarding';
 
 // Fields safe to persist across refreshes (password is explicitly excluded)
-const SAFE_FIELDS = ['businessName', 'ownerName', 'email', 'themeId', 'themeName'];
+const SAFE_FIELDS = ['businessName', 'ownerName', 'email', 'themeId', 'themeName', 'termsAccepted'];
 
 export default function OnboardingWizard() {
   const navigate = useNavigate();
@@ -283,9 +309,10 @@ export default function OnboardingWizard() {
         password:     '', // Never restored from storage
         themeId:      parsed.themeId      || '',
         themeName:    parsed.themeName    || '',
+        termsAccepted: Boolean(parsed.termsAccepted),
       };
     } catch {
-      return { businessName: '', ownerName: '', email: '', password: '', themeId: '', themeName: '' };
+      return { businessName: '', ownerName: '', email: '', password: '', themeId: '', themeName: '', termsAccepted: false };
     }
   });
 

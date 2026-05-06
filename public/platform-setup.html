@@ -125,6 +125,11 @@
         }
 
         .error-msg { background: #fee2e2; color: #b91c1c; padding: 0.75rem; border-radius: var(--radius-md); margin-bottom: 1.5rem; display: none; }
+        .terms-consent { margin: 1rem 0 1.5rem; padding: 1rem 1.1rem; border-radius: 16px; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); }
+        .terms-checkbox { display: flex; align-items: flex-start; gap: 0.8rem; color: #e4e4e7; font-size: 0.95rem; line-height: 1.6; cursor: pointer; }
+        .terms-checkbox input { width: 18px; height: 18px; margin-top: 0.2rem; accent-color: var(--brand-primary); flex: 0 0 auto; }
+        .terms-checkbox a, .terms-note a { color: #c4b5fd; text-decoration: underline; text-underline-offset: 3px; }
+        .terms-note { color: var(--text-muted); font-size: 0.82rem; margin-top: 0.7rem; line-height: 1.6; }
 
         /* ── Mobile Responsive ───────────────────────────────────────── */
         @media (max-width: 640px) {
@@ -244,10 +249,17 @@
         <div style="text-align: center; margin: 1.5rem 0; color: #a5b4fc; font-weight: 500; background: rgba(99, 102, 241, 0.1); padding: 10px; border-radius: 8px; border: 1px solid rgba(99, 102, 241, 0.2);">
             <i class="fas fa-gift"></i> 7-Day Free Trial included. No charge until trial ends.
         </div>
+        <div class="terms-consent">
+            <label class="terms-checkbox" for="acceptTerms">
+                <input type="checkbox" id="acceptTerms" onchange="syncTermsAcceptanceState()">
+                <span>I have read and accept the <a href="/terms" target="_blank" rel="noopener noreferrer">Terms &amp; Conditions</a> before creating my account and starting checkout.</span>
+            </label>
+            <p class="terms-note">The full terms open in a new tab so you can review them before continuing.</p>
+        </div>
 
         <div class="flex-between">
             <button class="btn btn-secondary" onclick="goToStep(1)">Back</button>
-            <button class="btn btn-primary" id="finalizeDraftBtn" onclick="finalizeDraft()">Next: Finalize & Subscribe</button>
+            <button class="btn btn-primary" id="finalizeDraftBtn" onclick="finalizeDraft()" disabled>Next: Finalize &amp; Subscribe</button>
         </div>
     </div>
 
@@ -259,6 +271,7 @@
             <div style="font-size: 3rem; margin-bottom: 1rem;">🔒</div>
             <h2 style="margin-bottom: 0.75rem;">Secure Checkout</h2>
             <p style="color: var(--text-muted); margin-bottom: 2rem; font-size: 1rem; line-height: 1.6;">Your first 7 days are completely free. Complete your subscription below to activate your account. You won't be billed today.</p>
+            <p class="terms-note" style="max-width: 460px; margin: 0 auto 1.5rem;">By continuing with checkout, you confirm your acceptance of the <a href="/terms" target="_blank" rel="noopener noreferrer">Terms &amp; Conditions</a>.</p>
 
             <div id="paypal-button-container" style="margin-bottom: 1.5rem; min-height: 150px;"></div>
 
