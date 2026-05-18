@@ -30,6 +30,33 @@ function getEmailSafeAssetUrl(value) {
     return url;
 }
 
+function getPlatformAdminEmail() {
+    return String(process.env.ADMIN_EMAIL || '').trim().toLowerCase();
+}
+
+function getDefaultNotificationEmail() {
+    return String(
+        process.env.BUSINESS_NOTIFICATION_EMAIL ||
+        process.env.DEFAULT_NOTIFICATION_EMAIL ||
+        'icssbookingsystem@gmail.com'
+    ).trim().toLowerCase();
+}
+
+function isPlatformAdminMailbox(email) {
+    const candidate = String(email || '').trim().toLowerCase();
+    const platformAdminEmail = getPlatformAdminEmail();
+    return !!candidate && !!platformAdminEmail && candidate === platformAdminEmail;
+}
+
+function getReplyEmail(tenant) {
+    const configuredReplyEmail = String(tenant?.branding?.replyEmail || '').trim().toLowerCase();
+    if (configuredReplyEmail && !isPlatformAdminMailbox(configuredReplyEmail)) {
+        return configuredReplyEmail;
+    }
+
+    return getDefaultNotificationEmail() || 'noreply@icssbookings.com';
+}
+
 /**
  * Tenant branding helpers
  */
@@ -39,7 +66,7 @@ function getBrand(tenant) {
         name:        b.businessName  || tenant?.name || 'ICSS Booking',
         primaryColor: b.primaryColor || '#D4AF37',
         logoUrl:     getEmailSafeAssetUrl(b.logoUrl),
-        replyEmail:  b.replyEmail    || process.env.ADMIN_EMAIL || 'noreply@icssbookings.com',
+        replyEmail:  getReplyEmail(tenant),
         sendingDomain: b.sendingDomain || 'icssbookings.com',
         bookingUrl:  b.bookingUrl    || 'https://icssbookings.com'
     };
@@ -57,7 +84,18 @@ function splitEmails(value) {
 }
 
 async function getTenantNotificationRecipients(tenant) {
-    const recipients = new Set(splitEmails(tenant?.branding?.replyEmail || process.env.ADMIN_EMAIL));
+    const recipients = new Set();
+    const defaultNotificationEmail = getDefaultNotificationEmail();
+
+    splitEmails(tenant?.branding?.replyEmail).forEach((email) => {
+        if (!isPlatformAdminMailbox(email)) {
+            recipients.add(email);
+        }
+    });
+
+    if (defaultNotificationEmail && !isPlatformAdminMailbox(defaultNotificationEmail)) {
+        recipients.add(defaultNotificationEmail);
+    }
 
     if (!tenant?.id) {
         return Array.from(recipients);
@@ -74,7 +112,9 @@ async function getTenantNotificationRecipients(tenant) {
         );
 
         result.rows.forEach((row) => {
-            if (row.email) recipients.add(row.email);
+            if (row.email && !isPlatformAdminMailbox(row.email)) {
+                recipients.add(row.email);
+            }
         });
     } catch (err) {
         console.error('[Email] Failed to load tenant notification recipients:', err.message);
@@ -552,6 +592,9 @@ async function sendOrderConfirmation(order, items, tenant) {
 
     const brand = getBrand(tenant);
     const currencySymbol = order.currency === 'GBP' ? '£' : (order.currency === 'JMD' ? 'J$' : '$');
+    const customerEmail = (order.customer_email || '').toLowerCase().trim();
+    const tenantRecipients = (await getTenantNotificationRecipients(tenant))
+        .filter((recipient) => recipient !== customerEmail);
 
     // Generate PDF invoice
     let pdfAttachment = null;
@@ -569,7 +612,7 @@ async function sendOrderConfirmation(order, items, tenant) {
     await resend.emails.send({
         from:    getSenderAddress('orders', brand),
         to:      [order.customer_email],
-        cc:      [brand.replyEmail],
+        cc:      tenantRecipients.length > 0 ? tenantRecipients : undefined,
         replyTo: brand.replyEmail,
         subject: `Order Confirmation — ${brand.name}`,
         html: `

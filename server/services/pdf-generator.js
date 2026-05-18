@@ -46,7 +46,7 @@ function getBrand(tenant) {
         accentColor:  b.accentColor    || '#D4AF37',
         address:      b.address        || 'Jamaica',
         phone:        b.phone          || '',
-        email:        b.replyEmail     || '',
+        email:        b.replyEmail     || process.env.BUSINESS_NOTIFICATION_EMAIL || 'icssbookingsystem@gmail.com',
         website:      b.bookingUrl     || 'https://icss.app',
         logoPath:     b.localLogoPath  || null
     };
@@ -627,4 +627,3 @@ function generateSubscriptionInvoicePDF(opts) {
 }
 
 module.exports = { generateBookingPDF, generateOrderInvoicePDF, savePDFToTemp, getPlatformBillingBrand, generateSubscriptionInvoicePDF };
-

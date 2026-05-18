@@ -151,6 +151,7 @@ See [`.env.example`](.env.example) for the full list. Key variables:
 | `DATABASE_URL` | PostgreSQL connection string |
 | `JWT_SECRET` | Secret for signing JWT tokens |
 | `RESEND_API_KEY` | Resend API key for transactional email |
+| `BUSINESS_NOTIFICATION_EMAIL` | Default business inbox used for email CC and reply-to |
 | `WIPAY_ACCOUNT_NUMBER` | WiPay merchant account number |
 | `WIPAY_API_KEY` | WiPay API key |
 | `PLATFORM_ADMIN_KEY` | Key to protect tenant provisioning routes |
