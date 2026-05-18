@@ -59,6 +59,118 @@ function decryptToken(encryptedString) {
     return decrypted;
 }
 
+function getBookingDateString(dateValue) {
+    if (!dateValue) return null;
+
+    if (dateValue instanceof Date && !Number.isNaN(dateValue.getTime())) {
+        return dateValue.toISOString().split('T')[0];
+    }
+
+    const match = String(dateValue).trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
+    return match ? `${match[1]}-${match[2]}-${match[3]}` : null;
+}
+
+function getBookingTimeString(timeValue) {
+    if (!timeValue) return null;
+
+    const match = String(timeValue).trim().match(/^(\d{2}):(\d{2})(?::(\d{2}))?/);
+    if (!match) return null;
+
+    return `${match[1]}:${match[2]}:${match[3] || '00'}`;
+}
+
+function zonedDateTimeToUtc(dateValue, timeValue, timeZone = 'America/Jamaica') {
+    const dateStr = getBookingDateString(dateValue);
+    const timeStr = getBookingTimeString(timeValue);
+    if (!dateStr || !timeStr) return null;
+
+    const [year, month, day] = dateStr.split('-').map(Number);
+    const [hours, minutes, seconds] = timeStr.split(':').map(Number);
+    const utcGuess = new Date(Date.UTC(year, month - 1, day, hours, minutes, seconds || 0));
+
+    const formatter = new Intl.DateTimeFormat('en-CA', {
+        timeZone,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+    });
+    const parts = Object.fromEntries(
+        formatter
+            .formatToParts(utcGuess)
+            .filter((part) => part.type !== 'literal')
+            .map((part) => [part.type, part.value])
+    );
+
+    const renderedUtc = Date.UTC(
+        Number(parts.year),
+        Number(parts.month) - 1,
+        Number(parts.day),
+        Number(parts.hour),
+        Number(parts.minute),
+        Number(parts.second)
+    );
+
+    return new Date(utcGuess.getTime() - (renderedUtc - utcGuess.getTime()));
+}
+
+function formatUtcCalendarStamp(date) {
+    const pad = (value) => String(value).padStart(2, '0');
+    return [
+        date.getUTCFullYear(),
+        pad(date.getUTCMonth() + 1),
+        pad(date.getUTCDate())
+    ].join('') + `T${pad(date.getUTCHours())}${pad(date.getUTCMinutes())}${pad(date.getUTCSeconds())}Z`;
+}
+
+function escapeCalendarText(value) {
+    return String(value || '')
+        .replace(/\\/g, '\\\\')
+        .replace(/\r?\n/g, '\\n')
+        .replace(/,/g, '\\,')
+        .replace(/;/g, '\\;');
+}
+
+function foldCalendarLine(value, maxLength = 74) {
+    const text = String(value || '');
+    if (text.length <= maxLength) return text;
+
+    const chunks = [];
+    for (let index = 0; index < text.length; index += maxLength) {
+        chunks.push(index === 0 ? text.slice(index, index + maxLength) : ` ${text.slice(index, index + maxLength)}`);
+    }
+    return chunks.join('\r\n');
+}
+
+function parseDateValue(value) {
+    if (!value) return null;
+    const date = value instanceof Date ? value : new Date(value);
+    return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function resolveBookingWindow(booking, timeZone = 'America/Jamaica', fallbackDurationMinutes = 60) {
+    const startFromRow = parseDateValue(booking?.start_time);
+    const endFromRow = parseDateValue(booking?.end_time);
+
+    if (startFromRow && endFromRow && endFromRow > startFromRow) {
+        return { startUtc: startFromRow, endUtc: endFromRow };
+    }
+
+    const startUtc = zonedDateTimeToUtc(booking?.booking_date, booking?.booking_time, timeZone);
+    if (!startUtc) return null;
+
+    const durationMinutes = Number(booking?.duration_minutes || 0) + Number(booking?.buffer_time_minutes || 0);
+    const safeDurationMinutes = durationMinutes > 0 ? durationMinutes : fallbackDurationMinutes;
+
+    return {
+        startUtc,
+        endUtc: new Date(startUtc.getTime() + safeDurationMinutes * 60 * 1000)
+    };
+}
+
 /**
  * Generate OAuth Authorization URL
  */
@@ -275,16 +387,20 @@ async function flagBookingConflict(tenant_id, externalEventId) {
  */
 async function generateIcsFeed(feedToken) {
     // 1. Try to find a tenant with this feed token (Business-wide feed)
-    const tenantResult = await query(`SELECT id FROM tenants WHERE feed_token = $1`, [feedToken]);
+    const tenantResult = await query(`SELECT id, name, branding FROM tenants WHERE feed_token = $1`, [feedToken]);
     
     let tenantId, userId;
     let queryStr, queryArgs;
+    let tenantName = 'ICSS Bookings';
+    let tenantBranding = {};
 
     if (tenantResult.rows.length > 0) {
         tenantId = tenantResult.rows[0].id;
+        tenantName = tenantResult.rows[0].name || tenantName;
+        tenantBranding = tenantResult.rows[0].branding || {};
         // Business-wide: all bookings for this tenant
         queryStr = `
-            SELECT b.id, b.name, b.notes, b.booking_date, b.booking_time, b.created_at,
+            SELECT b.id, b.name, b.notes, b.booking_date, b.booking_time, b.start_time, b.end_time, b.created_at,
                    b.region, s.name AS service_name,
                    COALESCE(s.duration_minutes, 60) AS duration_minutes,
                    COALESCE(s.buffer_time_minutes, 0) AS buffer_time_minutes
@@ -295,14 +411,22 @@ async function generateIcsFeed(feedToken) {
         queryArgs = [tenantId];
     } else {
         // 2. Try to find a user with this feed token (Staff-level feed)
-        const userResult = await query(`SELECT id, tenant_id FROM users WHERE feed_token = $1`, [feedToken]);
+        const userResult = await query(
+            `SELECT u.id, u.tenant_id, t.name AS tenant_name, t.branding
+             FROM users u
+             JOIN tenants t ON t.id = u.tenant_id
+             WHERE u.feed_token = $1`,
+            [feedToken]
+        );
         if (userResult.rows.length === 0) return null;
         
         userId = userResult.rows[0].id;
         tenantId = userResult.rows[0].tenant_id;
+        tenantName = userResult.rows[0].tenant_name || tenantName;
+        tenantBranding = userResult.rows[0].branding || {};
         // Staff-level: bookings for this tenant AND user
         queryStr = `
-            SELECT b.id, b.name, b.notes, b.booking_date, b.booking_time, b.created_at,
+            SELECT b.id, b.name, b.notes, b.booking_date, b.booking_time, b.start_time, b.end_time, b.created_at,
                    b.region, s.name AS service_name,
                    COALESCE(s.duration_minutes, 60) AS duration_minutes,
                    COALESCE(s.buffer_time_minutes, 0) AS buffer_time_minutes
@@ -316,46 +440,49 @@ async function generateIcsFeed(feedToken) {
     const result = await query(queryStr, queryArgs);
 
     const bookings = result.rows;
-    let icsBuffer = [];
-    icsBuffer.push("BEGIN:VCALENDAR");
-    icsBuffer.push("VERSION:2.0");
-    icsBuffer.push("PRODID:-//ICSS Booking System//EN");
-    icsBuffer.push("CALSCALE:GREGORIAN");
-    icsBuffer.push("METHOD:PUBLISH");
-    icsBuffer.push("X-WR-CALNAME:ICSS Bookings");
-    icsBuffer.push("X-PUBLISHED-TTL:PT15M");
-    icsBuffer.push("REFRESH-INTERVAL;VALUE=DURATION:PT15M");
+    const timeZone = tenantBranding?.timezone || 'America/Jamaica';
+    const icsBuffer = [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'PRODID:-//ICSS Booking System//EN',
+        'CALSCALE:GREGORIAN',
+        'METHOD:PUBLISH',
+        `X-WR-CALNAME:${escapeCalendarText(`${tenantName} Bookings`)}`,
+        'X-PUBLISHED-TTL:PT15M',
+        'REFRESH-INTERVAL;VALUE=DURATION:PT15M'
+    ];
 
     for (const b of bookings) {
-        // Convert to YYYYMMDDTHHMMSSZ format for simplistic representation
         try {
-            const startStr = new Date(`${b.booking_date}T${b.booking_time}Z`).toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-            const durationMs = (Number(b.duration_minutes || 60) + Number(b.buffer_time_minutes || 0)) * 60 * 1000;
-            const endTime = new Date(new Date(`${b.booking_date}T${b.booking_time}Z`).getTime() + durationMs);
-            const endStr = endTime.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-            const timestamp = b.created_at.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+            const window = resolveBookingWindow(b, timeZone);
+            if (!window) continue;
+
+            const startStr = formatUtcCalendarStamp(window.startUtc);
+            const endStr = formatUtcCalendarStamp(window.endUtc);
+            const timestamp = formatUtcCalendarStamp(parseDateValue(b.created_at) || new Date());
             const summary = b.service_name
                 ? `${b.service_name} - ${b.name}`
                 : `Booking: ${b.name}`;
-            const description = (b.notes || '').replace(/\r?\n/g, '\\n');
+            const description = escapeCalendarText(b.notes || '');
+            const location = b.region ? escapeCalendarText(String(b.region).replace(/\r?\n/g, ' ')) : '';
 
-            icsBuffer.push("BEGIN:VEVENT");
-            icsBuffer.push(`UID:${b.id}@icss.app`);
+            icsBuffer.push('BEGIN:VEVENT');
+            icsBuffer.push(`UID:${b.id}@icssbookings.com`);
             icsBuffer.push(`DTSTAMP:${timestamp}`);
             icsBuffer.push(`DTSTART:${startStr}`);
             icsBuffer.push(`DTEND:${endStr}`);
-            icsBuffer.push(`SUMMARY:${summary}`);
-            if (b.region) icsBuffer.push(`LOCATION:${String(b.region).replace(/\r?\n/g, ' ')}`);
+            icsBuffer.push(`SUMMARY:${escapeCalendarText(summary)}`);
+            if (location) icsBuffer.push(`LOCATION:${location}`);
             if (description) icsBuffer.push(`DESCRIPTION:${description}`);
-            icsBuffer.push("STATUS:CONFIRMED");
-            icsBuffer.push("END:VEVENT");
-        } catch(e) {
+            icsBuffer.push('STATUS:CONFIRMED');
+            icsBuffer.push('END:VEVENT');
+        } catch (e) {
             // Ignore parse errors on mock data
         }
     }
 
-    icsBuffer.push("END:VCALENDAR");
-    return icsBuffer.join('\r\n');
+    icsBuffer.push('END:VCALENDAR');
+    return icsBuffer.map((line) => foldCalendarLine(line)).join('\r\n');
 }
 
 /**
@@ -441,17 +568,33 @@ async function syncBookingWithExternal(tenant_id, booking) {
             if (!accessToken) return;
 
             let externalEventId = booking.calendar_event_id;
+            const tenantResult = await query(`SELECT name, branding FROM tenants WHERE id = $1`, [tenant_id]);
+            const tenant = tenantResult.rows[0] || {};
+            const timeZone = tenant.branding?.timezone || 'America/Jamaica';
+            const bookingWindow = resolveBookingWindow(booking, timeZone);
 
-            // Formulate standard UTC date strings
-            const startStr = new Date(`${booking.booking_date}T${booking.booking_time}Z`).toISOString();
-            const endStr = new Date(new Date(`${booking.booking_date}T${booking.booking_time}Z`).getTime() + 60*60*1000).toISOString();
+            if (!bookingWindow) {
+                await query(`UPDATE bookings SET sync_status = 'failed' WHERE id = $1`, [booking.id]);
+                return;
+            }
+
+            if (booking.status === 'cancelled' && !externalEventId) {
+                await query(`UPDATE bookings SET sync_status = 'synced', calendar_event_id = NULL WHERE id = $1`, [booking.id]);
+                return;
+            }
+
+            const startStr = bookingWindow.startUtc.toISOString();
+            const endStr = bookingWindow.endUtc.toISOString();
 
             if (connection.provider === 'google') {
                 const eventPayload = {
-                    summary: `Booking: ${booking.name}`,
+                    summary: booking.service_name
+                        ? `${booking.service_name} - ${booking.name}`
+                        : `Booking: ${booking.name}`,
                     description: booking.notes || '',
-                    start: { dateTime: startStr },
-                    end: { dateTime: endStr }
+                    location: booking.region || tenant.branding?.location || '',
+                    start: { dateTime: startStr, timeZone: 'UTC' },
+                    end: { dateTime: endStr, timeZone: 'UTC' }
                 };
 
                 let response;
@@ -487,8 +630,11 @@ async function syncBookingWithExternal(tenant_id, booking) {
                 }
             } else if (connection.provider === 'microsoft') {
                 const eventPayload = {
-                    subject: `Booking: ${booking.name}`,
+                    subject: booking.service_name
+                        ? `${booking.service_name} - ${booking.name}`
+                        : `Booking: ${booking.name}`,
                     body: { contentType: 'HTML', content: booking.notes || '' },
+                    location: { displayName: booking.region || tenant.branding?.location || '' },
                     start: { dateTime: startStr, timeZone: 'UTC' },
                     end: { dateTime: endStr, timeZone: 'UTC' }
                 };

@@ -284,8 +284,20 @@
             <button type="button" id="subscribeCalendarBtn" class="btn btn-primary" style="width: 100%; pointer-events: none; opacity: 0.6;" onclick="subscribeToCalendar()">Subscribe to Calendar</button>
         </div>
 
+        <div id="calendarFeedTools" class="settings-inline-row" style="display: none; margin-bottom: 1rem;">
+            <input
+                type="text"
+                id="calendarFeedUrl"
+                readonly
+                value=""
+                aria-label="Calendar feed URL"
+                style="flex: 1 1 auto; width: 100%;"
+            />
+            <button type="button" id="copyCalendarFeedBtn" class="btn btn-secondary" onclick="copyCalendarFeedUrl()">Copy Link</button>
+        </div>
+
         <p style="margin-top: 0; margin-bottom: 0; color: var(--text-dim); font-size: 0.9rem;">
-            This opens your default calendar app and subscribes it to future confirmed bookings automatically.
+            This opens your default calendar app. If nothing opens, copy the feed URL and paste it into Google Calendar, Outlook, or Apple Calendar.
         </p>
     </section>
 </main>
@@ -587,6 +599,8 @@
     function renderCalendarConnections(data) {
         const wrap = document.getElementById('calendarConnections');
         const subscribeBtn = document.getElementById('subscribeCalendarBtn');
+        const feedTools = document.getElementById('calendarFeedTools');
+        const feedInput = document.getElementById('calendarFeedUrl');
 
         if (wrap) {
             wrap.textContent = data.feed_url
@@ -601,11 +615,15 @@
             subscribeBtn.dataset.webcalUrl = data.feed_webcal_url || data.feed_url;
             subscribeBtn.style.pointerEvents = 'auto';
             subscribeBtn.style.opacity = '1';
+            if (feedTools) feedTools.style.display = 'flex';
+            if (feedInput) feedInput.value = data.feed_url;
         } else {
             delete subscribeBtn.dataset.feedUrl;
             delete subscribeBtn.dataset.webcalUrl;
             subscribeBtn.style.pointerEvents = 'none';
             subscribeBtn.style.opacity = '0.6';
+            if (feedTools) feedTools.style.display = 'none';
+            if (feedInput) feedInput.value = '';
         }
     }
 
@@ -630,6 +648,34 @@
         }
 
         window.location.href = targetUrl;
+    }
+
+    async function copyCalendarFeedUrl() {
+        const feedInput = document.getElementById('calendarFeedUrl');
+        const feedUrl = feedInput?.value?.trim();
+
+        if (!feedUrl) {
+            if (typeof showToast === 'function') showToast('Calendar feed URL is not available yet.', 'error');
+            else alert('Calendar feed URL is not available yet.');
+            return;
+        }
+
+        try {
+            if (navigator.clipboard?.writeText) {
+                await navigator.clipboard.writeText(feedUrl);
+            } else {
+                feedInput.focus();
+                feedInput.select();
+                document.execCommand('copy');
+                feedInput.setSelectionRange(0, 0);
+                feedInput.blur();
+            }
+
+            if (typeof showToast === 'function') showToast('Calendar feed link copied.');
+        } catch (err) {
+            if (typeof showToast === 'function') showToast('Could not copy the calendar feed link.', 'error');
+            else alert('Could not copy the calendar feed link.');
+        }
     }
 
     async function loadSettings() {
