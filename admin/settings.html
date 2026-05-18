@@ -281,31 +281,110 @@
         </div>
 
         <div style="margin-bottom: 1rem;">
-            <button type="button" id="subscribeCalendarBtn" class="btn btn-primary" style="width: 100%; pointer-events: none; opacity: 0.6;" onclick="subscribeToCalendar()">Subscribe to Calendar</button>
-        </div>
-
-        <div id="calendarFeedTools" class="settings-inline-row" style="display: none; margin-bottom: 1rem;">
-            <input
-                type="text"
-                id="calendarFeedUrl"
-                readonly
-                value=""
-                aria-label="Calendar feed URL"
-                style="flex: 1 1 auto; width: 100%;"
-            />
-            <button type="button" id="copyCalendarFeedBtn" class="btn btn-secondary" onclick="copyCalendarFeedUrl()">Copy Link</button>
+            <button type="button" id="subscribeCalendarBtn" class="btn btn-primary" style="width: 100%; pointer-events: none; opacity: 0.6;" onclick="subscribeToCalendar()">Choose Calendar App</button>
         </div>
 
         <p style="margin-top: 0; margin-bottom: 0; color: var(--text-dim); font-size: 0.9rem;">
-            This opens your default calendar app. If nothing opens, copy the feed URL and paste it into Google Calendar, Outlook, or Apple Calendar.
+            Choose Apple Calendar, Google Calendar, or Outlook after clicking the button.
         </p>
     </section>
 </main>
+
+<div id="calendarSubscribeModal" class="modal-overlay" aria-hidden="true" onclick="handleCalendarSubscribeBackdrop(event)">
+    <div class="modal calendar-subscribe-modal" role="dialog" aria-modal="true" aria-labelledby="calendarSubscribeModalTitle" onclick="event.stopPropagation()">
+        <div class="modal-header">
+            <div>
+                <p class="settings-section-kicker" style="margin-bottom: 6px;">Calendar</p>
+                <h3 id="calendarSubscribeModalTitle" class="modal-title">Subscribe to your calendar</h3>
+            </div>
+            <button type="button" class="modal-close" aria-label="Close" onclick="closeCalendarSubscribeModal()">&times;</button>
+        </div>
+
+        <p class="page-subtitle" style="margin-top: 0;">
+            Choose the calendar app you want to keep in sync with future confirmed bookings.
+        </p>
+
+        <div class="calendar-subscribe-grid">
+            <button type="button" class="calendar-subscribe-card" onclick="subscribeWithAppleCalendar()">
+                <strong>Apple Calendar</strong>
+                <span>Best for Mac, iPhone, and iPad. Tries to open the live subscription directly.</span>
+            </button>
+
+            <button type="button" class="calendar-subscribe-card" onclick="subscribeWithGoogleCalendar()">
+                <strong>Google Calendar</strong>
+                <span>Copies your feed link and opens Google's Add by URL screen.</span>
+            </button>
+
+            <button type="button" class="calendar-subscribe-card" onclick="subscribeWithOutlookCalendar()">
+                <strong>Outlook</strong>
+                <span>Copies your feed link and opens Outlook on the web.</span>
+            </button>
+        </div>
+
+        <div class="calendar-subscribe-help">
+            <p id="calendarSubscribeHelpTitle" class="calendar-subscribe-help-title">Choose your calendar app</p>
+            <p id="calendarSubscribeHelpCopy" class="calendar-subscribe-help-copy">
+                Pick the calendar you use. If it asks for a calendar URL, use the exact feed link below.
+            </p>
+
+            <div class="calendar-subscribe-link-row">
+                <input
+                    type="text"
+                    id="calendarFeedUrl"
+                    readonly
+                    value=""
+                    aria-label="Calendar feed URL"
+                />
+                <button type="button" id="copyCalendarFeedBtn" class="btn btn-secondary" onclick="copyCalendarFeedUrl()">Copy Link</button>
+            </div>
+
+            <div id="calendarSubscribeSteps" class="calendar-subscribe-steps"></div>
+        </div>
+    </div>
+</div>
 
 <script src="js/admin.js"></script>
 <script>
     const DAYS = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
     const DAY_LABELS = { monday:'Monday', tuesday:'Tuesday', wednesday:'Wednesday', thursday:'Thursday', friday:'Friday', saturday:'Saturday', sunday:'Sunday' };
+    const CALENDAR_SUBSCRIBE_HELP = {
+        generic: {
+            title: 'Choose your calendar app',
+            copy: 'Pick the calendar you use. If it asks for a calendar URL, use the exact feed link below.',
+            steps: [
+                'Apple Calendar can usually open the subscription directly.',
+                'Google Calendar requires pasting the feed URL into its browser-based Add by URL screen.',
+                'Outlook requires pasting the feed URL into Subscribe from web so it stays synced.'
+            ]
+        },
+        apple: {
+            title: 'Apple Calendar',
+            copy: 'Your browser will try to hand this off to Apple Calendar using a live subscription link.',
+            steps: [
+                'If your browser asks to open Calendar, allow it.',
+                'If nothing opens, copy the feed link below and use Apple Calendar\'s subscribe-by-URL option.',
+                'Once subscribed, future confirmed bookings will update automatically.'
+            ]
+        },
+        google: {
+            title: 'Google Calendar',
+            copy: 'Google only allows subscriptions from the browser. We copied your feed link and opened the correct Google Calendar screen.',
+            steps: [
+                'Paste the copied link into the "URL of calendar" field.',
+                'Click "Add calendar".',
+                'The subscription will stay connected and update automatically.'
+            ]
+        },
+        outlook: {
+            title: 'Outlook',
+            copy: 'We copied your feed link and opened Outlook on the web. Use Outlook\'s subscription flow, not file import, so it keeps updating.',
+            steps: [
+                'Open Calendar in Outlook.',
+                'Choose "Add calendar" then "Subscribe from web".',
+                'Paste the copied link, name the calendar, then finish the import.'
+            ]
+        }
+    };
 
     const DEFAULT_HOURS = {
         monday:    { open:'09:00', close:'17:00', active: true, is24Hours: false },
@@ -324,6 +403,9 @@
         document.getElementById('settingsForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             await saveSettings();
+        });
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') closeCalendarSubscribeModal();
         });
         document.getElementById('brandingForm').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -599,12 +681,11 @@
     function renderCalendarConnections(data) {
         const wrap = document.getElementById('calendarConnections');
         const subscribeBtn = document.getElementById('subscribeCalendarBtn');
-        const feedTools = document.getElementById('calendarFeedTools');
         const feedInput = document.getElementById('calendarFeedUrl');
 
         if (wrap) {
             wrap.textContent = data.feed_url
-                ? 'Calendar subscription is ready. Click the button below once to subscribe.'
+                ? 'Your calendar subscription link is ready. Choose the calendar app you want to use.'
                 : 'Calendar subscription is not available right now.';
         }
 
@@ -615,14 +696,12 @@
             subscribeBtn.dataset.webcalUrl = data.feed_webcal_url || data.feed_url;
             subscribeBtn.style.pointerEvents = 'auto';
             subscribeBtn.style.opacity = '1';
-            if (feedTools) feedTools.style.display = 'flex';
             if (feedInput) feedInput.value = data.feed_url;
         } else {
             delete subscribeBtn.dataset.feedUrl;
             delete subscribeBtn.dataset.webcalUrl;
             subscribeBtn.style.pointerEvents = 'none';
             subscribeBtn.style.opacity = '0.6';
-            if (feedTools) feedTools.style.display = 'none';
             if (feedInput) feedInput.value = '';
         }
     }
@@ -638,19 +717,125 @@
     }
 
     function subscribeToCalendar() {
-        const subscribeBtn = document.getElementById('subscribeCalendarBtn');
-        const targetUrl = subscribeBtn?.dataset.webcalUrl || subscribeBtn?.dataset.feedUrl;
+        if (!getCalendarFeedUrl()) {
+            if (typeof showToast === 'function') showToast('Calendar subscription is not available yet.', 'error');
+            else alert('Calendar subscription is not available yet.');
+            return;
+        }
 
+        renderCalendarSubscribeHelp('generic');
+        const modal = document.getElementById('calendarSubscribeModal');
+        if (!modal) return;
+        modal.classList.add('open');
+        modal.setAttribute('aria-hidden', 'false');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeCalendarSubscribeModal() {
+        const modal = document.getElementById('calendarSubscribeModal');
+        if (!modal) return;
+        modal.classList.remove('open');
+        modal.setAttribute('aria-hidden', 'true');
+        document.body.style.overflow = '';
+    }
+
+    function handleCalendarSubscribeBackdrop(event) {
+        if (event.target?.id === 'calendarSubscribeModal') {
+            closeCalendarSubscribeModal();
+        }
+    }
+
+    function getCalendarFeedUrl() {
+        const subscribeBtn = document.getElementById('subscribeCalendarBtn');
+        return subscribeBtn?.dataset.feedUrl || document.getElementById('calendarFeedUrl')?.value?.trim() || '';
+    }
+
+    function getCalendarWebcalUrl() {
+        const subscribeBtn = document.getElementById('subscribeCalendarBtn');
+        return subscribeBtn?.dataset.webcalUrl || getCalendarFeedUrl().replace(/^https?:\/\//i, 'webcal://');
+    }
+
+    function renderCalendarSubscribeHelp(mode = 'generic') {
+        const help = CALENDAR_SUBSCRIBE_HELP[mode] || CALENDAR_SUBSCRIBE_HELP.generic;
+        const title = document.getElementById('calendarSubscribeHelpTitle');
+        const copy = document.getElementById('calendarSubscribeHelpCopy');
+        const steps = document.getElementById('calendarSubscribeSteps');
+
+        if (title) title.textContent = help.title;
+        if (copy) copy.textContent = help.copy;
+        if (!steps) return;
+
+        steps.innerHTML = '';
+        help.steps.forEach((step, index) => {
+            const item = document.createElement('div');
+            item.className = 'calendar-subscribe-step';
+            item.textContent = `${index + 1}. ${step}`;
+            steps.appendChild(item);
+        });
+    }
+
+    function openUrlInNewTab(url) {
+        const tab = window.open(url, '_blank', 'noopener');
+        if (!tab) {
+            if (typeof showToast === 'function') showToast('Your browser blocked the new tab. Allow pop-ups and try again.', 'error');
+            else alert('Your browser blocked the new tab. Allow pop-ups and try again.');
+            return false;
+        }
+        return true;
+    }
+
+    function launchCalendarProtocol(url) {
+        const link = document.createElement('a');
+        link.href = url;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+    }
+
+    function subscribeWithAppleCalendar() {
+        const targetUrl = getCalendarWebcalUrl();
         if (!targetUrl) {
             if (typeof showToast === 'function') showToast('Calendar subscription is not available yet.', 'error');
             else alert('Calendar subscription is not available yet.');
             return;
         }
 
-        window.location.href = targetUrl;
+        renderCalendarSubscribeHelp('apple');
+        launchCalendarProtocol(targetUrl);
+        if (typeof showToast === 'function') showToast('Trying to open Apple Calendar...', 'info');
     }
 
-    async function copyCalendarFeedUrl() {
+    async function subscribeWithGoogleCalendar() {
+        const feedUrl = getCalendarFeedUrl();
+        if (!feedUrl) {
+            if (typeof showToast === 'function') showToast('Calendar feed URL is not available yet.', 'error');
+            else alert('Calendar feed URL is not available yet.');
+            return;
+        }
+
+        renderCalendarSubscribeHelp('google');
+        await copyCalendarFeedUrl({ silent: true });
+        openUrlInNewTab('https://calendar.google.com/calendar/r/settings/addbyurl');
+        if (typeof showToast === 'function') showToast('Feed link copied. Paste it into Google Calendar.', 'info');
+    }
+
+    async function subscribeWithOutlookCalendar() {
+        const feedUrl = getCalendarFeedUrl();
+        if (!feedUrl) {
+            if (typeof showToast === 'function') showToast('Calendar feed URL is not available yet.', 'error');
+            else alert('Calendar feed URL is not available yet.');
+            return;
+        }
+
+        renderCalendarSubscribeHelp('outlook');
+        await copyCalendarFeedUrl({ silent: true });
+        openUrlInNewTab('https://outlook.live.com/calendar/0/');
+        if (typeof showToast === 'function') showToast('Feed link copied. Paste it into Outlook\'s "Subscribe from web" flow.', 'info');
+    }
+
+    async function copyCalendarFeedUrl(options = {}) {
+        const { silent = false } = options;
         const feedInput = document.getElementById('calendarFeedUrl');
         const feedUrl = feedInput?.value?.trim();
 
@@ -671,7 +856,7 @@
                 feedInput.blur();
             }
 
-            if (typeof showToast === 'function') showToast('Calendar feed link copied.');
+            if (!silent && typeof showToast === 'function') showToast('Calendar feed link copied.');
         } catch (err) {
             if (typeof showToast === 'function') showToast('Could not copy the calendar feed link.', 'error');
             else alert('Could not copy the calendar feed link.');

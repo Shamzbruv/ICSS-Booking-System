@@ -506,6 +506,92 @@ tbody tr:hover td { background: var(--surface-2); }
     font-size: 15px;
 }
 
+.calendar-subscribe-modal {
+    max-width: 760px;
+}
+
+.calendar-subscribe-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 18px;
+}
+
+.calendar-subscribe-card {
+    width: 100%;
+    padding: 18px;
+    text-align: left;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    color: var(--text);
+    transition: border-color var(--transition), transform var(--transition), background var(--transition);
+}
+
+.calendar-subscribe-card:hover {
+    border-color: rgba(99, 102, 241, 0.45);
+    background: rgba(99, 102, 241, 0.08);
+    transform: translateY(-1px);
+}
+
+.calendar-subscribe-card strong {
+    display: block;
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 6px;
+}
+
+.calendar-subscribe-card span {
+    display: block;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--text-dim);
+}
+
+.calendar-subscribe-help {
+    margin-top: 16px;
+    padding: 18px;
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.calendar-subscribe-help-title {
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 6px;
+}
+
+.calendar-subscribe-help-copy {
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--text-dim);
+}
+
+.calendar-subscribe-link-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-top: 14px;
+}
+
+.calendar-subscribe-link-row input {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.calendar-subscribe-steps {
+    display: grid;
+    gap: 8px;
+    margin-top: 14px;
+}
+
+.calendar-subscribe-step {
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--text-dim);
+}
+
 .payment-settings-form {
     grid-template-columns: repeat(2, minmax(0, 1fr));
 }
@@ -1134,6 +1220,20 @@ select option { background: var(--surface-2); }
 
     .settings-inline-row .btn,
     .stylist-input-row .btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .calendar-subscribe-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .calendar-subscribe-link-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .calendar-subscribe-link-row .btn {
         width: 100%;
         justify-content: center;
     }
