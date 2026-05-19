@@ -1052,7 +1052,7 @@
             const slug = getTenantSlug();
             if (!slug) { showToast('Error: Tenant not found', 'error'); return; }
             await apiFetch(`/api/v1/tenants/${slug}/branding`, { method: 'PATCH', body: payload });
-            showToast('Branding saved! Your booking page will update shortly.', 'success');
+            showToast('Branding saved. Your booking page is updated.', 'success');
         } catch (err) {
             showToast('Failed to save branding: ' + err.message, 'error');
         }

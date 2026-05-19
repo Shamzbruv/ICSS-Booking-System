@@ -9,6 +9,7 @@ const axios = require('axios');
 const { query } = require('../server/db/connection');
 
 const API_URL = 'http://localhost:3000/api/v1';
+const CURRENT_TERMS_VERSION = '2026-05-05';
 
 async function runPaymentTests() {
     console.log('--- Starting Payment Engine E2E Tests ---');
@@ -25,7 +26,9 @@ async function runPaymentTests() {
             tenant_name: testBusiness,
             admin_email: testEmail,
             admin_password: 'Password123!',
-            plan_id: 'pro'
+            plan_id: 'pro',
+            terms_accepted: true,
+            terms_version: CURRENT_TERMS_VERSION
         });
         signupToken = signupRes.data.signup_token;
         

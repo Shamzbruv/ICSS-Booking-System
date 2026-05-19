@@ -375,6 +375,7 @@ router.patch('/:slug/payment-settings', authenticate, async (req, res) => {
             ]
         );
         if (result.rows.length === 0) return res.status(404).json({ error: 'Tenant not found.' });
+        invalidateTenantCache(req.params.slug);
         res.json({ success: true, message: 'Payment settings saved successfully.' });
     } catch (err) {
         console.error('[Tenants/Payment Settings]', err.message);

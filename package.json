@@ -8,7 +8,11 @@
     "dev": "/usr/local/bin/node server/app.js",
     "migrate": "/usr/local/bin/node server/db/migrate.js",
     "seed": "/usr/local/bin/node server/db/seed.js",
-    "test": "echo \"Tests: run node server/app.js and verify endpoints\""
+    "test": "echo \"Tests: run node server/app.js and verify endpoints\"",
+    "test:provisioning": "/usr/local/bin/node tests/e2e_provisioning.js",
+    "test:payments": "/usr/local/bin/node tests/e2e_payments.js",
+    "test:future-signup-settings": "/usr/local/bin/node tests/e2e_future_signup_payment_settings.js",
+    "test:future-signup-payments": "/usr/local/bin/node tests/e2e_future_signup_payment_settings.js"
   },
   "keywords": [
     "booking",

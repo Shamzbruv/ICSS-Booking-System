@@ -104,6 +104,9 @@ router.get('/', async (req, res) => {
         Pragma: 'no-cache',
         Expires: '0'
     });
+    res.vary('X-Tenant-Slug');
+    res.vary('X-Tenant-ID');
+    res.vary('Host');
 
     const { date, service_id } = req.query;
     const tenantId = req.tenant.id;

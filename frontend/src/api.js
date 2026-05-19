@@ -32,8 +32,8 @@ export const api = {
   themes: () => apiFetch('/themes'),
 
   // Public endpoints
-  publicTenant:   (slug) => apiFetch('/public/tenant',   { headers: { 'X-Tenant-Slug': slug } }),
-  publicServices: (slug) => apiFetch('/public/services', { headers: { 'X-Tenant-Slug': slug } }),
+  publicTenant:   (slug) => apiFetch('/public/tenant',   { cache: 'no-store', headers: { 'X-Tenant-Slug': slug } }),
+  publicServices: (slug) => apiFetch('/public/services', { cache: 'no-store', headers: { 'X-Tenant-Slug': slug } }),
 
   // Public Booking Flow
   publicAvailability: (slug, date, serviceId) =>

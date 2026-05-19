@@ -169,6 +169,7 @@ async function enqueueProvisioningJob(tenantSlug, signupToken, webhookId, payloa
         // Trigger background processing durably through pg-boss
         const { enqueue } = require('./queue');
         await enqueue('provisioning-jobs', { jobId: result.rows[0].id });
+        return result.rows[0].id;
 
     } catch (e) {
         console.error('[Provisioning Enqueue Error]', e);

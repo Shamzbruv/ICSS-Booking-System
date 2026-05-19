@@ -98,7 +98,7 @@ export default function TenantDrawer({ tenant, onClose }) {
   if (!tenant) return null;
 
   const branding = tenant.branding || {};
-  const accent   = branding.accent_color || '#7c6ef7';
+  const accent   = branding.accentColor || branding.accent_color || branding.primaryColor || '#7c6ef7';
 
   return (
     <div className={s.drawer} onClick={onClose}>
@@ -160,9 +160,9 @@ export default function TenantDrawer({ tenant, onClose }) {
                     <InfoRow label="Manual Transfer" value={tenant.manual_payment_enabled ? '✅ Enabled' : '—'} />
                   </div>
 
-                  {branding.logo_url && (
+                  {(branding.logoUrl || branding.logo_url) && (
                     <div className={s.brandPreview}>
-                      <img src={branding.logo_url} alt="Logo" className={s.brandPreview__logo} />
+                      <img src={branding.logoUrl || branding.logo_url} alt="Logo" className={s.brandPreview__logo} />
                     </div>
                   )}
 

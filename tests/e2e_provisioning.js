@@ -9,6 +9,7 @@ const axios = require('axios');
 const { query } = require('../server/db/connection');
 
 const API_URL = 'http://localhost:3000/api/v1';
+const CURRENT_TERMS_VERSION = '2026-05-05';
 
 // We need to bypass the strict PayPal signature check for the test
 // The webhook route skips verification if PAYPAL_WEBHOOK_ID is empty in Dev.
@@ -34,7 +35,9 @@ async function runProvisioningTest() {
             admin_email: testEmail,
             admin_password: testPassword,
             plan_id: 'pro',
-            theme_id: null // Will use default Universal Theme
+            theme_id: null, // Will use default Universal Theme
+            terms_accepted: true,
+            terms_version: CURRENT_TERMS_VERSION
         });
         signupToken = res.data.signup_token;
         console.log(`✅ Pending signup created. Token: ${signupToken}`);

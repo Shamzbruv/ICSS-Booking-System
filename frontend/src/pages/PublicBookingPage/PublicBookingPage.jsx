@@ -44,7 +44,7 @@ function isoDate(d) {
 }
 
 function buildAccentVars(tenant) {
-  const accent = tenant?.branding?.accent_color || '#7c6ef7';
+  const accent = tenant?.branding?.accentColor || tenant?.branding?.accent_color || tenant?.branding?.primaryColor || '#7c6ef7';
   return { '--accent': accent, '--accent-dim': `${accent}22` };
 }
 
@@ -512,8 +512,8 @@ export default function PublicBookingPage() {
 
 function PageHeader({ tenant }) {
   const name  = tenant?.name || 'Book an Appointment';
-  const logo  = tenant?.branding?.logo_url;
-  const tagline = tenant?.branding?.tagline || '';
+  const logo  = tenant?.branding?.logoUrl || tenant?.branding?.logo_url;
+  const tagline = tenant?.branding?.bookingTagline || tenant?.branding?.tagline || '';
 
   return (
     <header className={s.pageHeader}>

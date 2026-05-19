@@ -9,8 +9,16 @@ const router  = express.Router();
 const { query } = require('../../db/connection');
 const { normalizeDepositConfig } = require('../../services/paymentRules');
 
+function markTenantScopedResponse(res) {
+    res.set('Cache-Control', 'no-store');
+    res.vary('X-Tenant-Slug');
+    res.vary('X-Tenant-ID');
+    res.vary('Host');
+}
+
 // GET /api/v1/public/tenant — Expose safe branding for the booking widget
 router.get('/tenant', async (req, res) => {
+    markTenantScopedResponse(res);
     const {
         id, name, slug, plan_id, branding, theme_id,
         default_payment_mode, wipay_enabled, manual_payment_enabled, bank_transfer_instructions
@@ -60,6 +68,7 @@ router.get('/tenant', async (req, res) => {
 
 // GET /api/v1/public/services — List tenant's active services
 router.get('/services', async (req, res) => {
+    markTenantScopedResponse(res);
     try {
         const result = await query(
             `SELECT id, name, description, image_url, duration_minutes, buffer_time_minutes, price, currency,

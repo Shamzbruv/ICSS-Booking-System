@@ -159,7 +159,7 @@ function TenantsView() {
               {tenants.map(t => (
                 <tr key={t.id} className={s.tableRow} onClick={() => setSelected(t)}>
                   <td className={s.table__name}>
-                    {t.branding?.logo_url && <img src={t.branding.logo_url} className={s.table__logo} alt="" />}
+                    {(t.branding?.logoUrl || t.branding?.logo_url) && <img src={t.branding?.logoUrl || t.branding?.logo_url} className={s.table__logo} alt="" />}
                     <strong>{t.name}</strong>
                   </td>
                   <td className={s.table__slug}>{t.slug}</td>

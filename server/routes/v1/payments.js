@@ -10,7 +10,7 @@ const crypto  = require('crypto');
 const https   = require('https');
 const { query }  = require('../../db/connection');
 const { paymentLimiter } = require('../../middleware/rateLimiter');
-const { enqueueProvisioningJob } = require('../../services/provisioning');
+const { enqueueProvisioningJob, processProvisioningJob } = require('../../services/provisioning');
 const { sendSignupWelcomeEmail } = require('../../services/email');
 const { getPayPalSignupConfig, normalizeInternalSignupPlanId } = require('../../services/paypalConfig');
 const CURRENT_TERMS_VERSION = '2026-05-05';
@@ -259,11 +259,14 @@ router.post('/paypal/approve', async (req, res) => {
         if (pendingRes.rows.length > 0) {
             const slug = pendingRes.rows[0].tenant_slug || null;
             const signupConfig = getPayPalSignupConfig();
-            await enqueueProvisioningJob(slug, signup_token, subscription_id, {
+            const provisioningJobId = await enqueueProvisioningJob(slug, signup_token, subscription_id, {
                 manual_trigger: true,
                 paypal_subscription_id: subscription_id || null,
                 paypal_plan_id: signupConfig.planId
             });
+            // Best-effort immediate fallback so fresh signups do not depend solely
+            // on the background worker picking up the queue before provisioning starts.
+            await processProvisioningJob({ data: { jobId: provisioningJobId } });
             await sendSignupWelcomeEmailOnce(signup_token, signupConfig).catch((err) => {
                 console.error('[PayPal Approve] Failed to send signup welcome email:', err.message);
             });
