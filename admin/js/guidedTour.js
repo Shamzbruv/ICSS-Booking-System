@@ -20,6 +20,7 @@
             this.root.hidden = true;
             this.root.innerHTML = `
                 <div class="tour-overlay" aria-hidden="true"></div>
+                <div class="tour-spotlight" aria-hidden="true"></div>
                 <section
                     class="tour-card"
                     role="dialog"
@@ -51,6 +52,7 @@
             document.body.appendChild(this.root);
 
             this.overlay = this.root.querySelector('.tour-overlay');
+            this.spotlight = this.root.querySelector('.tour-spotlight');
             this.card = this.root.querySelector('.tour-card');
             this.stepCount = this.root.querySelector('.tour-step-count');
             this.progressFill = this.root.querySelector('.tour-progress-fill');
@@ -174,6 +176,7 @@
             if (!this.isOpen) return;
             global.requestAnimationFrame(() => {
                 if (!this.isOpen) return;
+                this.syncSpotlight(this.currentTarget);
                 this.positionCard(this.steps[this.currentStep], this.currentTarget);
             });
         }
@@ -277,22 +280,17 @@
         }
 
         applyHighlight(target) {
+            this.syncSpotlight(target);
             if (!target) return;
             const radius = global.getComputedStyle(target).borderRadius;
-            const elevatedContext = target.closest('.sidebar');
-            target.classList.add('tour-highlight');
             if (radius && radius !== '0px') {
                 target.style.setProperty('--tour-highlight-radius', radius);
-            }
-            if (elevatedContext) {
-                elevatedContext.classList.add('tour-elevated-context');
-                this.currentContext = elevatedContext;
             }
         }
 
         clearHighlight() {
+            this.syncSpotlight(null);
             if (this.currentTarget) {
-                this.currentTarget.classList.remove('tour-highlight');
                 this.currentTarget.style.removeProperty('--tour-highlight-radius');
                 this.currentTarget = null;
             }
@@ -300,6 +298,42 @@
                 this.currentContext.classList.remove('tour-elevated-context');
                 this.currentContext = null;
             }
+        }
+
+        syncSpotlight(target) {
+            if (!this.spotlight) return;
+
+            if (!target || !this.isRenderableTarget(target)) {
+                this.root.classList.remove('has-spotlight');
+                this.spotlight.classList.remove('is-visible');
+                this.spotlight.style.left = '';
+                this.spotlight.style.top = '';
+                this.spotlight.style.width = '';
+                this.spotlight.style.height = '';
+                this.spotlight.style.borderRadius = '';
+                return;
+            }
+
+            const rect = target.getBoundingClientRect();
+            const padding = global.innerWidth <= 720 ? 8 : 12;
+            const inset = 8;
+            const left = this.clamp(rect.left - padding, inset, global.innerWidth - inset);
+            const top = this.clamp(rect.top - padding, inset, global.innerHeight - inset);
+            const maxWidth = Math.max(0, global.innerWidth - left - inset);
+            const maxHeight = Math.max(0, global.innerHeight - top - inset);
+            const width = Math.min(rect.width + (padding * 2), maxWidth);
+            const height = Math.min(rect.height + (padding * 2), maxHeight);
+            const radius = target.style.getPropertyValue('--tour-highlight-radius')
+                || global.getComputedStyle(target).borderRadius
+                || '18px';
+
+            this.spotlight.style.left = `${left}px`;
+            this.spotlight.style.top = `${top}px`;
+            this.spotlight.style.width = `${Math.max(0, width)}px`;
+            this.spotlight.style.height = `${Math.max(0, height)}px`;
+            this.spotlight.style.borderRadius = radius;
+            this.root.classList.add('has-spotlight');
+            this.spotlight.classList.add('is-visible');
         }
 
         getSafeTopOffset(margin = 16) {
