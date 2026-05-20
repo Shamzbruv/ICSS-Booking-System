@@ -266,7 +266,15 @@ button.nav-item {
 .plan-name   { font-size: 20px; font-weight: 600; color: var(--gold); }
 
 .plan-usage { flex: 1; max-width: 320px; }
-.usage-bar-wrap { display: flex; flex-direction: column; gap: 6px; }
+.usage-bar-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 12px 14px;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}
 .usage-label { font-size: 12px; color: var(--text-dim); }
 .usage-bar {
     height: 8px;

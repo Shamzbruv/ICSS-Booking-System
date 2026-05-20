@@ -406,6 +406,16 @@
             const safeTop = this.getSafeTopOffset(margin);
             this.card.style.width = '';
             const cardRect = this.card.getBoundingClientRect();
+            const isMobile = viewportWidth <= 720;
+
+            if (isMobile) {
+                this.card.style.width = `${Math.max(0, viewportWidth - (margin * 2))}px`;
+                this.card.style.left = `${margin}px`;
+                this.card.style.top = 'auto';
+                this.card.style.right = 'auto';
+                this.card.style.bottom = `${margin}px`;
+                return;
+            }
 
             if (step?.placement === 'center' || !target) {
                 const centeredLeft = Math.max(margin, (viewportWidth - cardRect.width) / 2);
@@ -417,50 +427,49 @@
                 return;
             }
 
-            if (viewportWidth <= 720) {
-                if (target.closest('.sidebar')) {
-                    this.positionMobileSidebarCard(target, margin, safeTop);
-                    return;
-                }
-
-                this.positionMobileTargetCard(target, margin, safeTop);
-                return;
-            }
-
             const rect = target.getBoundingClientRect();
             const gap = 18;
-            const positions = [];
             const centeredTop = this.clamp(rect.top + (rect.height / 2) - (cardRect.height / 2), margin, viewportHeight - cardRect.height - margin);
             const centeredLeft = this.clamp(rect.left + (rect.width / 2) - (cardRect.width / 2), margin, viewportWidth - cardRect.width - margin);
+            const placements = {
+                right: {
+                    left: rect.right + gap,
+                    top: centeredTop,
+                    fits: rect.right + gap + cardRect.width <= viewportWidth - margin
+                },
+                left: {
+                    left: rect.left - cardRect.width - gap,
+                    top: centeredTop,
+                    fits: rect.left - gap - cardRect.width >= margin
+                },
+                bottom: {
+                    left: centeredLeft,
+                    top: rect.bottom + gap,
+                    fits: rect.bottom + gap + cardRect.height <= viewportHeight - margin
+                },
+                top: {
+                    left: centeredLeft,
+                    top: rect.top - cardRect.height - gap,
+                    fits: rect.top - gap - cardRect.height >= safeTop
+                }
+            };
 
-            positions.push({
-                left: rect.right + gap,
-                top: centeredTop,
-                fits: rect.right + gap + cardRect.width <= viewportWidth - margin
-            });
-            positions.push({
-                left: rect.left - cardRect.width - gap,
-                top: centeredTop,
-                fits: rect.left - gap - cardRect.width >= margin
-            });
-            positions.push({
-                left: centeredLeft,
-                top: rect.bottom + gap,
-                fits: rect.bottom + gap + cardRect.height <= viewportHeight - margin
-            });
-            positions.push({
-                left: centeredLeft,
-                top: rect.top - cardRect.height - gap,
-                fits: rect.top - gap - cardRect.height >= margin
-            });
+            const preferredOrders = {
+                right: ['right', 'left', 'bottom', 'top'],
+                left: ['left', 'right', 'bottom', 'top'],
+                bottom: ['bottom', 'top', 'right', 'left'],
+                top: ['top', 'bottom', 'right', 'left']
+            };
+            const orderedKeys = preferredOrders[step?.placement] || ['right', 'left', 'bottom', 'top'];
+            const positions = orderedKeys.map((key) => placements[key]);
 
-            const bestFit = positions.find(position => position.fits) || {
+            const bestFit = positions.find(position => position.fits) || placements.bottom || {
                 left: centeredLeft,
-                top: this.clamp(rect.bottom + gap, margin, viewportHeight - cardRect.height - margin)
+                top: this.clamp(rect.bottom + gap, safeTop, viewportHeight - cardRect.height - margin)
             };
 
             this.card.style.left = `${this.clamp(bestFit.left, margin, viewportWidth - cardRect.width - margin)}px`;
-            this.card.style.top = `${this.clamp(bestFit.top, margin, viewportHeight - cardRect.height - margin)}px`;
+            this.card.style.top = `${this.clamp(bestFit.top, safeTop, viewportHeight - cardRect.height - margin)}px`;
             this.card.style.right = 'auto';
             this.card.style.bottom = 'auto';
         }
