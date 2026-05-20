@@ -355,7 +355,7 @@ router.post('/tenants/:tenantId/reset-dashboard-tour', async (req, res) => {
 
         await query(
             `UPDATE tenants
-             SET branding = $1, updated_at = NOW()
+             SET branding = $1
              WHERE id = $2`,
             [JSON.stringify(nextBranding), tenant.id]
         );
@@ -385,7 +385,7 @@ router.post('/tenants/:tenantId/reset-dashboard-tour', async (req, res) => {
 router.patch('/tenants/:tenantId/status', async (req, res) => {
     try {
         const { active } = req.body;
-        await query(`UPDATE tenants SET active = $1, updated_at = NOW() WHERE id = $2`, [active, req.params.tenantId]);
+        await query(`UPDATE tenants SET active = $1 WHERE id = $2`, [active, req.params.tenantId]);
         res.json({ success: true, active });
     } catch (err) {
         console.error('[Platform/Tenant/Status]', err.message);

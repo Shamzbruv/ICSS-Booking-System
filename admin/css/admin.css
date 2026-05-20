@@ -1454,6 +1454,7 @@ select option { background: var(--surface-2); }
 
     .tour-card {
         width: calc(100vw - 32px);
+        max-height: min(560px, calc(100vh - 104px));
         padding: 18px;
         border-radius: 22px;
         gap: 14px;

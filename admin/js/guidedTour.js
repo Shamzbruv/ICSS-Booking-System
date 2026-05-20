@@ -250,7 +250,7 @@
             try {
                 target.scrollIntoView({
                     behavior: prefersReducedMotion ? 'auto' : 'smooth',
-                    block: global.innerWidth <= 720 ? 'center' : 'center',
+                    block: global.innerWidth <= 720 ? 'start' : 'center',
                     inline: 'nearest'
                 });
             } catch {
@@ -258,6 +258,10 @@
             }
 
             await this.wait(prefersReducedMotion ? 80 : 360, token);
+
+            if (global.innerWidth <= 720) {
+                await this.ensureMobileTargetVisibility(target, token, prefersReducedMotion);
+            }
         }
 
         wait(duration, token) {
@@ -298,17 +302,114 @@
             }
         }
 
+        getSafeTopOffset(margin = 16) {
+            const hamburger = document.getElementById('hamburgerBtn');
+            if (!hamburger) return margin;
+
+            const hamburgerRect = hamburger.getBoundingClientRect();
+            const isHamburgerVisible = hamburgerRect.width > 0 && hamburgerRect.height > 0 &&
+                global.getComputedStyle(hamburger).display !== 'none';
+
+            if (!isHamburgerVisible) return margin;
+            return Math.max(margin, hamburgerRect.bottom + 12);
+        }
+
+        async ensureMobileTargetVisibility(target, token, prefersReducedMotion) {
+            if (!target || global.innerWidth > 720) return;
+
+            const margin = 16;
+            const safeTop = this.getSafeTopOffset(margin);
+            const cardRect = this.card.getBoundingClientRect();
+            const targetRect = target.getBoundingClientRect();
+            const reservedBottom = cardRect.height + margin + 12;
+            const maxTargetBottom = Math.max(safeTop + 56, global.innerHeight - reservedBottom);
+            const desiredTop = safeTop + 12;
+            let scrollDelta = 0;
+
+            if (targetRect.top < desiredTop) {
+                scrollDelta = targetRect.top - desiredTop;
+            } else if (targetRect.bottom > maxTargetBottom) {
+                scrollDelta = targetRect.bottom - maxTargetBottom;
+            }
+
+            if (Math.abs(scrollDelta) < 4) return;
+
+            global.scrollBy({
+                top: scrollDelta,
+                behavior: prefersReducedMotion ? 'auto' : 'smooth'
+            });
+
+            await this.wait(prefersReducedMotion ? 80 : 220, token);
+        }
+
+        positionMobileSidebarCard(target, margin, safeTop) {
+            const sidebar = target?.closest('.sidebar');
+            if (!sidebar) return false;
+
+            const sidebarRect = sidebar.getBoundingClientRect();
+            const sidebarPadding = 12;
+            const maxWidth = Math.max(220, sidebarRect.width - (sidebarPadding * 2));
+            const width = Math.min(maxWidth, global.innerWidth - (margin * 2));
+
+            this.card.style.width = `${width}px`;
+
+            const cardRect = this.card.getBoundingClientRect();
+            const left = this.clamp(sidebarRect.left + sidebarPadding, margin, global.innerWidth - cardRect.width - margin);
+            const top = this.clamp(global.innerHeight - cardRect.height - margin, safeTop, global.innerHeight - cardRect.height - margin);
+
+            this.card.style.left = `${left}px`;
+            this.card.style.top = `${top}px`;
+            this.card.style.right = 'auto';
+            this.card.style.bottom = 'auto';
+            return true;
+        }
+
+        positionMobileTargetCard(target, margin, safeTop) {
+            if (!target) return false;
+
+            this.card.style.width = '';
+
+            const cardRect = this.card.getBoundingClientRect();
+            const rect = target.getBoundingClientRect();
+            const gap = 14;
+            const centeredLeft = this.clamp(
+                rect.left + (rect.width / 2) - (cardRect.width / 2),
+                margin,
+                global.innerWidth - cardRect.width - margin
+            );
+
+            const availableBelow = global.innerHeight - rect.bottom - margin;
+            const availableAbove = rect.top - safeTop - margin;
+
+            let top;
+            if (availableBelow >= cardRect.height + gap) {
+                top = rect.bottom + gap;
+            } else if (availableAbove >= cardRect.height + gap) {
+                top = rect.top - cardRect.height - gap;
+            } else {
+                top = this.clamp(global.innerHeight - cardRect.height - margin, safeTop, global.innerHeight - cardRect.height - margin);
+            }
+
+            this.card.style.left = `${centeredLeft}px`;
+            this.card.style.top = `${this.clamp(top, safeTop, global.innerHeight - cardRect.height - margin)}px`;
+            this.card.style.right = 'auto';
+            this.card.style.bottom = 'auto';
+            return true;
+        }
+
         positionCard(step, target) {
             if (!this.card) return;
 
             const margin = global.innerWidth <= 720 ? 16 : 20;
             const viewportWidth = global.innerWidth;
             const viewportHeight = global.innerHeight;
+            const safeTop = this.getSafeTopOffset(margin);
+            this.card.style.width = '';
             const cardRect = this.card.getBoundingClientRect();
 
             if (step?.placement === 'center' || !target) {
                 const centeredLeft = Math.max(margin, (viewportWidth - cardRect.width) / 2);
-                const centeredTop = Math.max(margin, (viewportHeight - cardRect.height) / 2);
+                const centeredTop = Math.max(safeTop, (viewportHeight - cardRect.height) / 2);
                 this.card.style.left = `${Math.min(centeredLeft, viewportWidth - cardRect.width - margin)}px`;
                 this.card.style.top = `${Math.min(centeredTop, viewportHeight - cardRect.height - margin)}px`;
                 this.card.style.right = 'auto';
@@ -317,10 +418,12 @@
             }
 
             if (viewportWidth <= 720) {
-                this.card.style.left = `${margin}px`;
-                this.card.style.right = `${margin}px`;
-                this.card.style.top = 'auto';
-                this.card.style.bottom = `${margin}px`;
+                if (target.closest('.sidebar')) {
+                    this.positionMobileSidebarCard(target, margin, safeTop);
+                    return;
+                }
+
+                this.positionMobileTargetCard(target, margin, safeTop);
                 return;
             }
 
@@ -368,6 +471,7 @@
             this.card.style.top = '';
             this.card.style.right = '';
             this.card.style.bottom = '';
+            this.card.style.width = '';
         }
 
         clamp(value, min, max) {

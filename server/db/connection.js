@@ -186,7 +186,8 @@ async function runMigrations(client) {
             hold_timeout_minutes INTEGER DEFAULT 15,
             bank_transfer_instructions TEXT,
             payment_settings JSONB DEFAULT '{}',
-            created_at TIMESTAMPTZ DEFAULT NOW()
+            created_at TIMESTAMPTZ DEFAULT NOW(),
+            updated_at TIMESTAMPTZ DEFAULT NOW()
         )
     `);
 
@@ -198,6 +199,7 @@ async function runMigrations(client) {
     await client.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS hold_timeout_minutes INTEGER DEFAULT 15`);
     await client.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS bank_transfer_instructions TEXT`);
     await client.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS payment_settings JSONB DEFAULT '{}'`);
+    await client.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()`);
 
     // ── Tenant Slug History (for redirects) ──────────────────────────────────
     await client.query(`
