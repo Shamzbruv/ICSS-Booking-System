@@ -72,6 +72,16 @@ export default function TenantDrawer({ tenant, onClose }) {
     }
   };
 
+  const handleResetDashboardTour = async () => {
+    if (!confirm('Reset the dashboard tutorial for this tenant? The guided walkthrough will show again on their next dashboard visit.')) return;
+    try {
+      const res = await api.platform.resetTenantDashboardTour(tenant.id);
+      alert(res.message || 'Dashboard tutorial reset.');
+    } catch (e) {
+      alert('Failed to reset the dashboard tutorial.');
+    }
+  };
+
   const handleToggleStatus = async () => {
     const newStatus = !tenant.active;
     if (!confirm(`Are you sure you want to ${newStatus ? 'activate' : 'suspend'} this account?`)) return;
@@ -113,6 +123,7 @@ export default function TenantDrawer({ tenant, onClose }) {
             <button className={s.actionBtn} onClick={openPublicPage} title="Open Public Page">🌐 Public</button>
             <button className={s.actionBtn} onClick={openEditor}     title="Open Editor">🎨 Editor</button>
             <button className={s.actionBtn} onClick={openAdmin}      title="Open Admin">🛠 Admin</button>
+            <button className={s.actionBtn} onClick={handleResetDashboardTour} title="Reset Dashboard Tutorial">🧭 Reset Tour</button>
             <button className={`${s.actionBtn} ${s['actionBtn--primary']}`} onClick={() => impersonate('read_only')} title="Impersonate">
               👁 View As
             </button>
@@ -166,12 +177,13 @@ export default function TenantDrawer({ tenant, onClose }) {
                     </div>
                   )}
 
-                  <div style={{ marginTop: 32 }}>
-                    <div className={s.healthWarnings__title} style={{ color: '#ef4444', marginBottom: 12 }}>Danger Zone & Actions</div>
-                    <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-                      <button className={s.actionBtn} onClick={handleResetPassword}>📧 Send Password Reset</button>
-                      <button className={s.actionBtn} onClick={handleToggleStatus} style={{ borderColor: '#fb923c', color: '#fb923c' }}>
-                        {tenant.active ? '⏸ Put on Hold (Suspend)' : '▶️ Reactivate Account'}
+                    <div style={{ marginTop: 32 }}>
+                      <div className={s.healthWarnings__title} style={{ color: '#ef4444', marginBottom: 12 }}>Danger Zone & Actions</div>
+                      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                        <button className={s.actionBtn} onClick={handleResetDashboardTour}>🧭 Reset Dashboard Tutorial</button>
+                        <button className={s.actionBtn} onClick={handleResetPassword}>📧 Send Password Reset</button>
+                        <button className={s.actionBtn} onClick={handleToggleStatus} style={{ borderColor: '#fb923c', color: '#fb923c' }}>
+                          {tenant.active ? '⏸ Put on Hold (Suspend)' : '▶️ Reactivate Account'}
                       </button>
                       <button className={s.actionBtn} onClick={handleDelete} style={{ background: '#ef4444', color: '#fff', border: 'none' }}>🗑 Delete Account</button>
                     </div>

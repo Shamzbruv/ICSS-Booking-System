@@ -33,7 +33,7 @@
 
 <!-- ── Sidebar ──────────────────────────────────────────────────────────────── -->
 <aside class="sidebar" id="sidebar">
-    <div class="sidebar-brand">
+    <div class="sidebar-brand" data-tour="account-panel">
         <div style="display: flex; align-items: center; gap: 10px;">
               <img src="./favicon.png" alt="ICSS Icon" style="width: 36px; height: 36px; border-radius: 8px; object-fit: contain;">
               <div style="display: flex; flex-direction: column; justify-content: center;">
@@ -47,7 +47,7 @@
         </div>
     </div>
 
-    <nav class="sidebar-nav">
+    <nav class="sidebar-nav" data-tour="sidebar-navigation">
         <a href="index.html" class="nav-item active" id="nav-dashboard">
             <span class="nav-icon">⬛</span> Dashboard
         </a>
@@ -82,26 +82,27 @@
 
 <!-- ── Main Content ──────────────────────────────────────────────────────────── -->
 <main class="main-content">
-    <header class="page-header">
+    <header class="page-header" data-tour="dashboard-header">
         <div>
             <h1 class="page-title">Dashboard</h1>
             <p class="page-subtitle" id="currentDate">Loading...</p>
         </div>
         <div class="header-actions">
-            <button class="btn btn-secondary" onclick="refreshData()">↻ Refresh</button>
+            <button class="btn btn-secondary" type="button" id="startTourBtn">✦ Start Tutorial</button>
+            <button class="btn btn-secondary" type="button" data-tour="refresh-button" onclick="refreshData()">↻ Refresh</button>
         </div>
     </header>
 
     <!-- Stats Grid -->
     <section class="stats-grid" id="statsGrid">
-        <div class="stat-card" id="statConfirmed">
+        <div class="stat-card" id="statConfirmed" data-tour="confirmed-bookings-card">
             <div class="stat-icon confirmed-icon">📅</div>
             <div class="stat-body">
                 <div class="stat-value" id="statConfirmedVal">—</div>
                 <div class="stat-label">Confirmed Bookings</div>
             </div>
         </div>
-        <div class="stat-card" id="statMonthly">
+        <div class="stat-card" id="statMonthly" data-tour="this-month-card">
             <div class="stat-icon monthly-icon">📆</div>
             <div class="stat-body">
                 <div class="stat-value" id="statMonthlyVal">—</div>
@@ -109,7 +110,7 @@
             </div>
         </div>
 
-        <div class="stat-card" id="statCancelled">
+        <div class="stat-card" id="statCancelled" data-tour="cancelled-bookings-card">
             <div class="stat-icon cancelled-icon">✕</div>
             <div class="stat-body">
                 <div class="stat-value" id="statCancelledVal">—</div>
@@ -119,13 +120,13 @@
     </section>
 
     <!-- Plan Status Card -->
-    <section class="plan-card" id="planCard">
+    <section class="plan-card" id="planCard" data-tour="subscription-plan">
         <div class="plan-header">
             <div>
                 <h2 class="plan-title">Subscription Plan</h2>
                 <p class="plan-name" id="planName">Loading...</p>
             </div>
-            <div class="plan-usage" id="planUsage">
+            <div class="plan-usage" id="planUsage" data-tour="monthly-bookings">
                 <div class="usage-bar-wrap">
                     <div class="usage-label">Monthly Bookings</div>
                     <div class="usage-bar">
@@ -138,22 +139,22 @@
     </section>
 
     <!-- Quick Actions -->
-    <section class="quick-actions">
+    <section class="quick-actions" data-tour="quick-actions">
         <h2 class="section-title">Quick Actions</h2>
         <div class="action-grid">
-            <a href="bookings.html" class="action-card">
+            <a href="bookings.html" class="action-card" data-tour="view-all-bookings">
                 <div class="action-icon">📋</div>
                 <div class="action-label">View All Bookings</div>
             </a>
-            <a href="availability.html" class="action-card">
+            <a href="availability.html" class="action-card" data-tour="block-availability">
                 <div class="action-icon">🔒</div>
                 <div class="action-label">Block Availability</div>
             </a>
-            <a href="services.html" class="action-card">
+            <a href="services.html" class="action-card" data-tour="manage-services">
                 <div class="action-icon">📦</div>
                 <div class="action-label">Manage Services</div>
             </a>
-            <a href="#" target="_blank" class="action-card" id="bookingPageLink">
+            <a href="#" target="_blank" class="action-card" id="bookingPageLink" data-tour="view-booking-page">
                 <div class="action-icon">🌐</div>
                 <div class="action-label">View Booking Page</div>
             </a>
@@ -162,13 +163,22 @@
 </main>
 
 <script src="js/admin.js"></script>
+<script src="js/guidedTour.js"></script>
 <script>
+    const DASHBOARD_TOUR_STORAGE_PREFIX = 'icssBookingDashboardTourCompleted';
+    let dashboardTour = null;
+    let dashboardTourContext = {
+        tenantSlug: getTenantSlug() || 'default',
+        version: 1
+    };
+
     document.addEventListener('DOMContentLoaded', async () => {
         requireAuth();
         document.getElementById('currentDate').textContent =
             new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
         await loadSummary();
         populateUserUI();
+        initializeDashboardTour();
     });
 
     async function loadSummary() {
@@ -180,16 +190,171 @@
             document.getElementById('statMonthlyVal').textContent    = data.monthlyBookings ?? '—';
             document.getElementById('statCancelledVal').textContent  = data.cancelledBookings ?? '—';
             document.getElementById('planName').textContent = capitalize(data.plan || 'starter') + ' Plan';
+            updateMonthlyUsage(data.monthlyBookings, data.monthlyBookingLimit);
             
             if (data.tenantSlug) {
                 document.getElementById('bookingPageLink').href = '/' + data.tenantSlug;
             }
+
+            dashboardTourContext = {
+                tenantSlug: data.tenantSlug || getTenantSlug() || 'default',
+                version: Number.isFinite(Number(data.dashboardTourVersion)) && Number(data.dashboardTourVersion) > 0
+                    ? Number(data.dashboardTourVersion)
+                    : 1
+            };
         } catch (e) {
             console.error('Summary load error:', e);
         }
     }
 
     async function refreshData() { await loadSummary(); }
+
+    function updateMonthlyUsage(monthlyBookings = 0, monthlyLimit = null) {
+        const usageFill = document.getElementById('usageFill');
+        const usageText = document.getElementById('usageText');
+        if (!usageFill || !usageText) return;
+
+        const bookingsValue = Number(monthlyBookings);
+        const limitValue = monthlyLimit === null || monthlyLimit === undefined ? null : Number(monthlyLimit);
+        const bookings = Number.isFinite(bookingsValue) ? bookingsValue : 0;
+        const limit = Number.isFinite(limitValue) ? limitValue : null;
+
+        if (limit === null) {
+            usageFill.style.width = '0%';
+            usageText.textContent = `${bookings} booking${bookings === 1 ? '' : 's'} this month`;
+            return;
+        }
+
+        if (limit < 0) {
+            usageFill.style.width = bookings > 0 ? '100%' : '0%';
+            usageText.textContent = `${bookings} booking${bookings === 1 ? '' : 's'} this month`;
+            return;
+        }
+
+        const percent = limit > 0 ? Math.min(100, Math.max(0, (bookings / limit) * 100)) : 0;
+        usageFill.style.width = `${percent}%`;
+        usageText.textContent = `${bookings} of ${limit} used this month`;
+    }
+
+    function buildDashboardTourStorageKey() {
+        const tenantSlug = dashboardTourContext.tenantSlug || getTenantSlug() || 'default';
+        const version = Number.isFinite(Number(dashboardTourContext.version)) && Number(dashboardTourContext.version) > 0
+            ? Number(dashboardTourContext.version)
+            : 1;
+        return `${DASHBOARD_TOUR_STORAGE_PREFIX}:${tenantSlug}:v${version}`;
+    }
+
+    function initializeDashboardTour() {
+        if (typeof GuidedTour !== 'function') return;
+
+        const steps = [
+            {
+                title: 'Welcome to Your Booking Dashboard',
+                message: 'This dashboard gives you a quick overview of your bookings, cancellations, subscription plan, and important shortcuts. This short walkthrough will show you how to move around the system.',
+                placement: 'center'
+            },
+            {
+                title: 'Business Account',
+                message: 'This section shows the business account you are currently managing. It also shows the active plan attached to the account, so the user knows which business and subscription they are working with.',
+                target: '[data-tour="account-panel"]'
+            },
+            {
+                title: 'Sidebar Navigation',
+                message: 'This menu is used to move around the system. The user can go to Dashboard, Bookings, Availability, Settings, and Services from here.',
+                target: '[data-tour="sidebar-navigation"]'
+            },
+            {
+                title: 'Dashboard Header',
+                message: 'This area confirms the page the user is currently viewing and shows the current date. It helps the user know exactly where they are in the system.',
+                target: '[data-tour="dashboard-header"]'
+            },
+            {
+                title: 'Refresh Dashboard',
+                message: 'The Refresh button reloads the latest booking information. If a customer recently made a booking or if something was updated, the user can click this to refresh the dashboard numbers.',
+                target: '[data-tour="refresh-button"]'
+            },
+            {
+                title: 'Confirmed Bookings',
+                message: 'This card shows how many bookings have been successfully confirmed. It gives the user a quick view of their active confirmed appointments.',
+                target: '[data-tour="confirmed-bookings-card"]'
+            },
+            {
+                title: 'This Month',
+                message: 'This card shows the number of bookings made during the current month. It helps the user monitor monthly activity and performance.',
+                target: '[data-tour="this-month-card"]'
+            },
+            {
+                title: 'Cancelled Bookings',
+                message: 'This card shows cancelled bookings. It helps the user keep track of lost appointments and notice if cancellations are becoming a pattern.',
+                target: '[data-tour="cancelled-bookings-card"]'
+            },
+            {
+                title: 'Subscription Plan',
+                message: 'This section shows the current subscription plan connected to the account. The user can quickly confirm what plan they are currently using.',
+                target: '[data-tour="subscription-plan"]'
+            },
+            {
+                title: 'Monthly Bookings',
+                message: 'This area shows monthly booking usage or activity. It should help the user understand how many bookings they are receiving within the month.',
+                target: '[data-tour="monthly-bookings"]'
+            },
+            {
+                title: 'Quick Actions',
+                message: 'Quick Actions give the user fast access to the most important tools without needing to search through the sidebar.',
+                target: '[data-tour="quick-actions"]'
+            },
+            {
+                title: 'View All Bookings',
+                message: 'This shortcut opens the full booking list. The user can review customer appointments, booking details, dates, and service selections from there.',
+                target: '[data-tour="view-all-bookings"]'
+            },
+            {
+                title: 'Block Availability',
+                message: 'This shortcut allows the user to block certain dates or times when customers should not be allowed to book. This is useful for closed days, holidays, personal time, or fully booked periods.',
+                target: '[data-tour="block-availability"]'
+            },
+            {
+                title: 'Manage Services',
+                message: 'This shortcut allows the user to manage the services customers can book. They should be able to add services, edit prices, update descriptions, set durations, and remove services that are no longer offered.',
+                target: '[data-tour="manage-services"]'
+            },
+            {
+                title: 'View Booking Page',
+                message: 'This shortcut lets the user open or preview the public booking page that customers will use. This helps the business owner see the booking experience from the customer’s side.',
+                target: '[data-tour="view-booking-page"]'
+            },
+            {
+                title: 'Tutorial Complete',
+                message: 'You now understand the main areas of the ICSS Booking Management dashboard. You can continue managing bookings, availability, services, and your public booking page.',
+                placement: 'center'
+            }
+        ];
+
+        dashboardTour = new GuidedTour({
+            steps,
+            storageKey: buildDashboardTourStorageKey()
+        });
+
+        window.dashboardTour = dashboardTour;
+
+        const startTourBtn = document.getElementById('startTourBtn');
+        if (startTourBtn) {
+            startTourBtn.addEventListener('click', () => dashboardTour.start({ force: true, stepIndex: 0 }));
+        }
+
+        const params = new URLSearchParams(window.location.search);
+        const forceTour = params.get('tour') === '1';
+        if (forceTour) {
+            params.delete('tour');
+            const nextSearch = params.toString();
+            const nextUrl = `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ''}${window.location.hash}`;
+            window.history.replaceState({}, document.title, nextUrl);
+        }
+
+        window.setTimeout(() => {
+            dashboardTour.start({ force: forceTour, stepIndex: 0 });
+        }, 320);
+    }
 </script>
 </body>
 </html>

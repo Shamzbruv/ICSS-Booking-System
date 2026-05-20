@@ -42,6 +42,10 @@ function getDefaultNotificationEmail() {
     ).trim().toLowerCase();
 }
 
+function getSupportContactEmail() {
+    return getPlatformAdminEmail() || getDefaultNotificationEmail() || 'icssbookingsystem@gmail.com';
+}
+
 function isPlatformAdminMailbox(email) {
     const candidate = String(email || '').trim().toLowerCase();
     const platformAdminEmail = getPlatformAdminEmail();
@@ -55,6 +59,15 @@ function getReplyEmail(tenant) {
     }
 
     return getDefaultNotificationEmail() || 'noreply@icssbookings.com';
+}
+
+function escapeHtml(value) {
+    return String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
 }
 
 /**
@@ -677,6 +690,68 @@ async function sendDesignInquiryEmail(data, tenant) {
     console.log(`[Email] Design inquiry forwarded to ${adminEmail}`);
 }
 
+async function sendSupportRequestEmail({ tenant, user, category, subject, message, pageUrl }) {
+    const resend = getResend();
+    const supportEmail = getSupportContactEmail();
+    const tenantName = tenant?.name || tenant?.branding?.businessName || 'ICSS Tenant';
+    const tenantSlug = tenant?.slug || 'unknown';
+    const senderEmail = String(user?.email || '').trim().toLowerCase();
+    const senderName = user?.name || senderEmail || 'Unknown user';
+    const senderRole = user?.role || 'tenant_admin';
+    const safeCategory = escapeHtml(category || 'general');
+    const safeSubject = escapeHtml(subject || 'Support request');
+    const safeMessage = escapeHtml(message || '').replace(/\r?\n/g, '<br>');
+    const safePageUrl = escapeHtml(pageUrl || 'Unknown page');
+
+    if (!resend) {
+        console.warn('[Email] No RESEND_API_KEY — skipping support request delivery.');
+        console.log('[Email] Support request payload:', {
+            tenant: tenantName,
+            tenantSlug,
+            senderEmail,
+            senderName,
+            senderRole,
+            category,
+            subject,
+            message,
+            pageUrl
+        });
+        return;
+    }
+
+    await resend.emails.send({
+        from: 'ICSS Support <support@icssbookings.com>',
+        to: [supportEmail],
+        replyTo: senderEmail || undefined,
+        subject: `Support Request — ${tenantName} — ${subject || 'General help'}`,
+        html: `
+        <div style="font-family:Arial,sans-serif;max-width:680px;margin:0 auto;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;">
+            <div style="background:#0f172a;padding:24px 28px;">
+                <p style="margin:0 0 8px;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#94a3b8;">ICSS Support Request</p>
+                <h2 style="margin:0;color:#fff;font-size:22px;line-height:1.2;">${safeSubject}</h2>
+            </div>
+            <div style="padding:28px;background:#fff;color:#0f172a;">
+                <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:18px 20px;margin-bottom:22px;">
+                    <p style="margin:0 0 8px;font-size:13px;"><strong>Tenant:</strong> ${escapeHtml(tenantName)}</p>
+                    <p style="margin:0 0 8px;font-size:13px;"><strong>Handle:</strong> ${escapeHtml(tenantSlug)}</p>
+                    <p style="margin:0 0 8px;font-size:13px;"><strong>Submitted by:</strong> ${escapeHtml(senderName)}</p>
+                    <p style="margin:0 0 8px;font-size:13px;"><strong>Email:</strong> ${escapeHtml(senderEmail || 'Not available')}</p>
+                    <p style="margin:0 0 8px;font-size:13px;"><strong>Role:</strong> ${escapeHtml(senderRole)}</p>
+                    <p style="margin:0 0 8px;font-size:13px;"><strong>Category:</strong> ${safeCategory}</p>
+                    <p style="margin:0;font-size:13px;"><strong>Page:</strong> ${safePageUrl}</p>
+                </div>
+
+                <h3 style="margin:0 0 10px;font-size:15px;color:#334155;">Issue Details</h3>
+                <div style="font-size:14px;line-height:1.7;color:#1e293b;background:#fff;border-left:4px solid #7c6ef7;padding:4px 0 4px 16px;">
+                    ${safeMessage}
+                </div>
+            </div>
+        </div>`
+    });
+
+    console.log(`[Email] Support request sent for tenant ${tenantSlug} by ${senderEmail || senderName}`);
+}
+
 async function sendPasswordResetEmail(email, resetUrl) {
     const resend = getResend();
     if (!resend) {
@@ -905,11 +980,13 @@ async function sendSubscriptionInvoiceEmail({ to, ownerName, businessName, amoun
 }
 
 module.exports = {
+    getSupportContactEmail,
     sendBookingConfirmation,
     sendBookingPendingReviewEmail,
     sendBookingCancellationEmail,
     sendOrderConfirmation,
     sendDesignInquiryEmail,
+    sendSupportRequestEmail,
     sendPasswordResetEmail,
     sendSignupWelcomeEmail,
     sendWelcomeEmail,

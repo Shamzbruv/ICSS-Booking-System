@@ -8,10 +8,23 @@ const express = require('express');
 const router  = express.Router();
 const { query }  = require('../../db/connection');
 const { authenticate, requireRole } = require('../../middleware/auth');
+const { getSupportContactEmail, sendSupportRequestEmail } = require('../../services/email');
 
 // All admin routes require authentication
 router.use(authenticate);
 router.use(requireRole('staff', 'tenant_admin', 'super_admin'));
+
+function getDashboardTourVersion(tenant) {
+    const rawVersion = Number(tenant?.branding?.dashboard_tour_version);
+    return Number.isFinite(rawVersion) && rawVersion >= 0 ? rawVersion : 1;
+}
+
+function sanitizeSupportText(value, maxLength) {
+    return String(value || '')
+        .replace(/[<>]/g, '')
+        .trim()
+        .slice(0, maxLength);
+}
 
 // ── Dashboard Summary ──────────────────────────────────────────────────────────
 // GET /api/v1/admin/summary
@@ -30,6 +43,9 @@ router.get('/summary', async (req, res) => {
                 [tenantId]
             )
         ]);
+        const monthlyBookingLimit = typeof req.tenant?.resolvedLimits?.bookings_per_month === 'number'
+            ? req.tenant.resolvedLimits.bookings_per_month
+            : 50;
 
         res.json({
             confirmedBookings: parseInt(confirmed.rows[0].cnt),
@@ -38,13 +54,60 @@ router.get('/summary', async (req, res) => {
             totalDesigns:      parseInt(totalDesigns.rows[0].cnt),
             activeBlocks:      parseInt(activeBlocks.rows[0].cnt),
             monthlyBookings:   parseInt(monthlyBookings.rows[0].cnt),
+            monthlyBookingLimit,
             plan:              req.tenant.plan_id,
             tenantName:        req.tenant.name,
-            tenantSlug:        req.tenant.slug
+            tenantSlug:        req.tenant.slug,
+            dashboardTourVersion: getDashboardTourVersion(req.tenant),
+            supportEmail:      getSupportContactEmail()
         });
     } catch (err) {
         console.error('[Admin/Summary]', err.message);
         res.status(500).json({ error: 'Failed to fetch summary.' });
+    }
+});
+
+// GET /api/v1/admin/support-meta
+router.get('/support-meta', (req, res) => {
+    res.json({
+        supportEmail: getSupportContactEmail(),
+        supportLabel: 'ICSS Developer Support'
+    });
+});
+
+// POST /api/v1/admin/support-request
+router.post('/support-request', async (req, res) => {
+    const subject = sanitizeSupportText(req.body?.subject, 120);
+    const category = sanitizeSupportText(req.body?.category, 40) || 'general';
+    const message = sanitizeSupportText(req.body?.message, 4000);
+    const pageUrl = sanitizeSupportText(req.body?.pageUrl, 500);
+
+    if (!subject) {
+        return res.status(400).json({ error: 'A short subject is required.' });
+    }
+
+    if (!message || message.length < 12) {
+        return res.status(400).json({ error: 'Please include a few details about the issue you need help with.' });
+    }
+
+    try {
+        await sendSupportRequestEmail({
+            tenant: req.tenant,
+            user: req.user,
+            category,
+            subject,
+            message,
+            pageUrl
+        });
+
+        res.json({
+            success: true,
+            message: 'Your support request was sent to the developer team.',
+            supportEmail: getSupportContactEmail()
+        });
+    } catch (err) {
+        console.error('[Admin/SupportRequest]', err.message);
+        res.status(500).json({ error: 'We could not send your support request right now.' });
     }
 });
 

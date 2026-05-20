@@ -83,6 +83,7 @@ export const api = {
     getTenantPayments:    (id)   => apiFetch(`/platform/tenants/${id}/payment-settings`),
     getTenantProvisioning:(id)   => apiFetch(`/platform/tenants/${id}/provisioning`),
     resetTenantPassword:  (id)   => apiFetch(`/platform/tenants/${id}/reset-password`, { method: 'POST' }),
+    resetTenantDashboardTour: (id) => apiFetch(`/platform/tenants/${id}/reset-dashboard-tour`, { method: 'POST' }),
     updateTenantStatus:   (id, active) => apiFetch(`/platform/tenants/${id}/status`, { method: 'PATCH', body: { active } }),
     deleteTenant:         (id)   => apiFetch(`/platform/tenants/${id}`, { method: 'DELETE' }),
 

@@ -15,6 +15,7 @@ const express = require('express');
 const router  = express.Router();
 const { query } = require('../../db/connection');
 const { authenticate, requirePlatformOwner, signToken } = require('../../middleware/auth');
+const { invalidateTenantCache } = require('../../middleware/tenantResolver');
 
 function formatDateOnlyValue(value) {
     if (!value) return value;
@@ -324,6 +325,59 @@ router.post('/tenants/:tenantId/reset-password', async (req, res) => {
     } catch (err) {
         console.error('[Platform/Tenant/ResetPassword]', err.message);
         res.status(500).json({ error: 'Failed to send reset email.' });
+    }
+});
+
+// POST /api/v1/platform/tenants/:tenantId/reset-dashboard-tour
+router.post('/tenants/:tenantId/reset-dashboard-tour', async (req, res) => {
+    try {
+        const tenantRes = await query(
+            `SELECT id, slug, name, branding
+             FROM tenants
+             WHERE id = $1`,
+            [req.params.tenantId]
+        );
+
+        if (tenantRes.rows.length === 0) {
+            return res.status(404).json({ error: 'Tenant not found.' });
+        }
+
+        const tenant = tenantRes.rows[0];
+        const branding = tenant.branding || {};
+        const currentVersion = Number(branding.dashboard_tour_version);
+        const nextVersion = Number.isFinite(currentVersion) && currentVersion >= 0
+            ? currentVersion + 1
+            : 2;
+        const nextBranding = {
+            ...branding,
+            dashboard_tour_version: nextVersion
+        };
+
+        await query(
+            `UPDATE tenants
+             SET branding = $1, updated_at = NOW()
+             WHERE id = $2`,
+            [JSON.stringify(nextBranding), tenant.id]
+        );
+
+        invalidateTenantCache(tenant.slug);
+        await auditLog(req.user.id, tenant.id, 'dashboard_tour_reset', {
+            entity: 'tenant',
+            entityId: tenant.id,
+            dashboard_tour_version: nextVersion
+        }, req);
+
+        res.json({
+            success: true,
+            tenantId: tenant.id,
+            tenantName: tenant.name,
+            tenantSlug: tenant.slug,
+            dashboardTourVersion: nextVersion,
+            message: 'Dashboard tutorial reset. The next dashboard visit will show the walkthrough again.'
+        });
+    } catch (err) {
+        console.error('[Platform/Tenant/ResetDashboardTour]', err.message);
+        res.status(500).json({ error: 'Failed to reset the dashboard tutorial.' });
     }
 });
 

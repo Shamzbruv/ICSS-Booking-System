@@ -108,6 +108,16 @@ function TenantsView() {
     } catch (e) { alert(e.message); }
   };
 
+  const quickResetTour = async (tenant) => {
+    if (!window.confirm(`Reset the dashboard tutorial for ${tenant.name}? The walkthrough will show again the next time they open their dashboard.`)) return;
+    try {
+      const res = await api.platform.resetTenantDashboardTour(tenant.id);
+      alert(res.message || 'Dashboard tutorial reset.');
+    } catch (e) {
+      alert(e.message || 'Failed to reset the dashboard tutorial.');
+    }
+  };
+
   const quickToggleStatus = async (tenant) => {
     const action = tenant.active ? 'Suspend' : 'Activate';
     if (!window.confirm(`Are you sure you want to ${action} ${tenant.name}?`)) return;
@@ -182,6 +192,7 @@ function TenantsView() {
                     <div className={s.rowActions}>
                       <a href={`/${t.slug}`} target="_blank" rel="noreferrer" className={s.rowBtn} title="Open Public Page">🌐</a>
                       <a href={`/editor?_tenant=${t.slug}`} target="_blank" rel="noreferrer" className={s.rowBtn} title="Open Editor">🎨</a>
+                      <button className={s.rowBtn} title="Reset Dashboard Tutorial" onClick={() => quickResetTour(t)}>🧭</button>
                       <button className={s.rowBtn} title="Reset Password" onClick={() => quickResetPassword(t)}>🔑</button>
                       <button className={s.rowBtn} title={t.active ? "Suspend Account" : "Activate Account"} onClick={() => quickToggleStatus(t)}>{t.active ? '🛑' : '✅'}</button>
                       <button className={s.rowBtn} title="Delete Account" onClick={() => quickDelete(t)}>🗑️</button>
