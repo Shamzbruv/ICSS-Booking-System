@@ -606,38 +606,71 @@ button.nav-item {
 }
 
 @media (max-width: 720px) {
+    .tour-root {
+        z-index: 99990;
+    }
+
+    .tour-overlay {
+        z-index: 99991;
+        background:
+            radial-gradient(circle at top, rgba(99, 102, 241, 0.16), transparent 34%),
+            rgba(4, 7, 17, 0.86);
+    }
+
+    .tour-spotlight {
+        display: none !important;
+        opacity: 0 !important;
+        visibility: hidden !important;
+    }
+
+    .tour-root.has-spotlight .tour-overlay {
+        background:
+            radial-gradient(circle at top, rgba(99, 102, 241, 0.16), transparent 34%),
+            rgba(4, 7, 17, 0.86);
+    }
+
     .tour-card {
-        left: 16px;
-        right: 16px;
-        bottom: calc(14px + env(safe-area-inset-bottom, 0px));
-        width: auto;
-        max-height: min(52dvh, 520px);
-        padding: 18px;
-        border-radius: 22px;
-        gap: 14px;
+        position: fixed !important;
+        left: 16px !important;
+        right: 16px !important;
+        top: auto !important;
+        bottom: calc(16px + env(safe-area-inset-bottom, 0px)) !important;
+        width: auto !important;
+        max-width: none !important;
+        max-height: min(72dvh, 560px) !important;
+        overflow-y: auto !important;
+        padding: 18px !important;
+        border-radius: 22px !important;
+        z-index: 99999 !important;
     }
 
     .tour-step-row {
         flex-direction: column;
         align-items: flex-start;
+        gap: 8px;
     }
 
     .tour-title {
-        font-size: 1.2rem;
+        font-size: 1.25rem;
         line-height: 1.2;
     }
 
     .tour-message {
-        font-size: 0.92rem;
-        line-height: 1.55;
+        font-size: 0.95rem;
+        line-height: 1.6;
     }
 
     .tour-actions {
         position: sticky;
         bottom: 0;
-        flex-direction: column;
-        align-items: stretch;
-        background: linear-gradient(180deg, rgba(14, 18, 32, 0), rgba(14, 18, 32, 0.96) 20%);
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 10px;
+        background: linear-gradient(
+            180deg,
+            rgba(14, 18, 32, 0),
+            rgba(14, 18, 32, 0.96) 20%
+        );
         padding-top: 10px;
         padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 2px);
     }
@@ -645,9 +678,14 @@ button.nav-item {
     .tour-actions .btn,
     .tour-next-btn {
         width: 100%;
-        margin-left: 0;
-        justify-content: center;
         min-height: 48px;
+        justify-content: center;
+        margin-left: 0;
+    }
+
+    .sidebar.tour-sidebar-open,
+    .sidebar-backdrop.tour-sidebar-open {
+        z-index: auto !important;
     }
 }
 
@@ -1559,50 +1597,6 @@ select option { background: var(--surface-2); }
 
     /* Action cards */
     .action-card { padding: 16px; }
-
-    .tour-card {
-        left: 16px;
-        right: 16px;
-        bottom: calc(14px + env(safe-area-inset-bottom, 0px));
-        width: auto;
-        max-height: min(52dvh, 520px);
-        padding: 18px;
-        border-radius: 22px;
-        gap: 14px;
-    }
-
-    .tour-step-row {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-
-    .tour-title {
-        font-size: 1.2rem;
-        line-height: 1.2;
-    }
-
-    .tour-message {
-        font-size: 0.92rem;
-        line-height: 1.55;
-    }
-
-    .tour-actions {
-        position: sticky;
-        bottom: 0;
-        flex-direction: column;
-        align-items: stretch;
-        background: linear-gradient(180deg, rgba(14, 18, 32, 0), rgba(14, 18, 32, 0.96) 20%);
-        padding-top: 10px;
-        padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 2px);
-    }
-
-    .tour-actions .btn,
-    .tour-next-btn {
-        width: 100%;
-        margin-left: 0;
-        justify-content: center;
-        min-height: 48px;
-    }
 
     .support-form__grid {
         grid-template-columns: 1fr;

@@ -300,6 +300,33 @@
             const compactSidebar = initialViewport.width <= COMPACT_SIDEBAR_BREAKPOINT;
             const reduceMotion = this.prefersReducedMotion();
 
+            if (isMobile) {
+                this.releaseSidebarLayer();
+
+                if (typeof global.closeSidebar === 'function') {
+                    global.closeSidebar();
+                }
+
+                await this.wait(120, token);
+
+                const viewport = this.getViewportRect();
+                const safe = this.getSafeArea(viewport);
+
+                return {
+                    step,
+                    isMobile: true,
+                    compactSidebar,
+                    sidebarTarget: false,
+                    viewport,
+                    safe,
+                    target: null,
+                    placement: 'center',
+                    mode: 'center',
+                    reduceMotion,
+                    spotlightEnabled: false
+                };
+            }
+
             let target = this.resolveTarget(step, isMobile);
             let sidebarTarget = this.isSidebarTarget(target);
 
