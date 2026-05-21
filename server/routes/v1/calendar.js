@@ -5,16 +5,54 @@ const { query } = require('../../db/connection');
 
 const { authenticate } = require('../../middleware/auth');
 
-function resolvePublicBaseUrl(req) {
-    const configuredBaseUrl = String(process.env.PUBLIC_APP_URL || process.env.BASE_URL || '').trim();
-    if (configuredBaseUrl) {
-        const normalized = /^https?:\/\//i.test(configuredBaseUrl)
-            ? configuredBaseUrl
-            : `https://${configuredBaseUrl.replace(/^\/+/, '')}`;
-        return normalized.replace(/\/+$/, '');
-    }
+function shouldForceHttps(hostname = '') {
+    const normalizedHost = String(hostname || '').toLowerCase();
+    return normalizedHost === 'icssbookings.com' || normalizedHost.endsWith('.icssbookings.com');
+}
 
-    return `${req.headers['x-forwarded-proto'] || req.protocol}://${req.get('host')}`;
+function normalizePublicBaseUrl(rawValue) {
+    const trimmed = String(rawValue || '').trim();
+    if (!trimmed) return '';
+
+    const withProtocol = /^https?:\/\//i.test(trimmed)
+        ? trimmed
+        : `https://${trimmed.replace(/^\/+/, '')}`;
+
+    try {
+        const parsed = new URL(withProtocol);
+        if (shouldForceHttps(parsed.hostname)) {
+            parsed.protocol = 'https:';
+        }
+        return parsed.origin;
+    } catch {
+        return withProtocol.replace(/\/+$/, '');
+    }
+}
+
+function toCalendarSubscriptionUrl(feedUrl) {
+    const normalizedFeedUrl = String(feedUrl || '').trim();
+    if (!normalizedFeedUrl) return '';
+
+    try {
+        const parsed = new URL(normalizedFeedUrl);
+        const scheme = parsed.protocol === 'https:' ? 'webcals' : 'webcal';
+        return `${scheme}://${parsed.host}${parsed.pathname}${parsed.search}${parsed.hash}`;
+    } catch {
+        return normalizedFeedUrl
+            .replace(/^https:\/\//i, 'webcals://')
+            .replace(/^http:\/\//i, 'webcal://');
+    }
+}
+
+function resolvePublicBaseUrl(req) {
+    const configuredBaseUrl = normalizePublicBaseUrl(process.env.PUBLIC_APP_URL || process.env.BASE_URL);
+    if (configuredBaseUrl) return configuredBaseUrl;
+
+    const forwardedProto = String(req.headers['x-forwarded-proto'] || '').split(',')[0].trim();
+    const requestBaseUrl = normalizePublicBaseUrl(`${forwardedProto || req.protocol}://${req.get('host')}`);
+    if (requestBaseUrl) return requestBaseUrl;
+
+    return `https://${req.get('host')}`;
 }
 
 /**
@@ -85,7 +123,7 @@ router.get('/status', authenticate, async (req, res) => {
         const feedToken = tenantResult.rows[0]?.feed_token || null;
         const baseUrl = resolvePublicBaseUrl(req);
         const feedUrl = feedToken ? `${baseUrl}/api/v1/calendar/feed/${feedToken}.ics` : null;
-        const feedWebcalUrl = feedUrl ? feedUrl.replace(/^https?:\/\//i, 'webcal://') : null;
+        const feedWebcalUrl = feedUrl ? toCalendarSubscriptionUrl(feedUrl) : null;
 
         res.json({
             connections: connectionsResult.rows,
