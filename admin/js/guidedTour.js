@@ -381,7 +381,7 @@
             let target = nextState.target;
             let targetZone = this.getMobileTargetZone(viewport, safe, cardFrame);
 
-            if (canScrollTarget && nextState.spotlightEnabled) {
+            if (canScrollTarget) {
                 await this.scrollTargetIntoZone(target, targetZone, nextState.reduceMotion, token);
                 if (!this.isOpen || token !== this.renderToken) return nextState;
             }

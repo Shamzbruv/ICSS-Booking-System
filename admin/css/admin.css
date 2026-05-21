@@ -39,6 +39,7 @@ body {
 
 body.tour-open {
     touch-action: none;
+    overscroll-behavior: contain;
 }
 
 body.tour-lock-scroll {
