@@ -761,24 +761,9 @@
         return subscribeBtn?.dataset.feedUrl || document.getElementById('calendarFeedUrl')?.value?.trim() || '';
     }
 
-    function toCalendarSubscriptionUrl(url) {
-        const normalizedUrl = String(url || '').trim();
-        if (!normalizedUrl) return '';
-
-        try {
-            const parsed = new URL(normalizedUrl);
-            const scheme = parsed.protocol === 'https:' ? 'webcals' : 'webcal';
-            return `${scheme}://${parsed.host}${parsed.pathname}${parsed.search}${parsed.hash}`;
-        } catch (error) {
-            return normalizedUrl
-                .replace(/^https:\/\//i, 'webcals://')
-                .replace(/^http:\/\//i, 'webcal://');
-        }
-    }
-
     function getCalendarWebcalUrl() {
         const subscribeBtn = document.getElementById('subscribeCalendarBtn');
-        return subscribeBtn?.dataset.webcalUrl || toCalendarSubscriptionUrl(getCalendarFeedUrl());
+        return subscribeBtn?.dataset.webcalUrl || getCalendarFeedUrl().replace(/^https?:\/\//i, 'webcal://');
     }
 
     function renderCalendarSubscribeHelp(mode = 'generic') {

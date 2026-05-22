@@ -404,7 +404,7 @@ async function generateIcsFeed(feedToken) {
                    b.region, s.name AS service_name,
                    COALESCE(s.duration_minutes, 60) AS duration_minutes,
                    COALESCE(s.buffer_time_minutes, 0) AS buffer_time_minutes
-            FROM bookings 
+            FROM bookings b
             LEFT JOIN services s ON s.id = b.service_id
             WHERE b.tenant_id = $1 AND b.status = 'confirmed'
         `;
@@ -430,7 +430,7 @@ async function generateIcsFeed(feedToken) {
                    b.region, s.name AS service_name,
                    COALESCE(s.duration_minutes, 60) AS duration_minutes,
                    COALESCE(s.buffer_time_minutes, 0) AS buffer_time_minutes
-            FROM bookings 
+            FROM bookings b
             LEFT JOIN services s ON s.id = b.service_id
             WHERE b.tenant_id = $1 AND b.user_id = $2 AND b.status = 'confirmed'
         `;

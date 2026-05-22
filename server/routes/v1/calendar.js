@@ -32,16 +32,7 @@ function normalizePublicBaseUrl(rawValue) {
 function toCalendarSubscriptionUrl(feedUrl) {
     const normalizedFeedUrl = String(feedUrl || '').trim();
     if (!normalizedFeedUrl) return '';
-
-    try {
-        const parsed = new URL(normalizedFeedUrl);
-        const scheme = parsed.protocol === 'https:' ? 'webcals' : 'webcal';
-        return `${scheme}://${parsed.host}${parsed.pathname}${parsed.search}${parsed.hash}`;
-    } catch {
-        return normalizedFeedUrl
-            .replace(/^https:\/\//i, 'webcals://')
-            .replace(/^http:\/\//i, 'webcal://');
-    }
+    return normalizedFeedUrl.replace(/^https?:\/\//i, 'webcal://');
 }
 
 function resolvePublicBaseUrl(req) {
