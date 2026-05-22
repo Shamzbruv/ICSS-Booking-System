@@ -55,6 +55,7 @@
                     <div class="tour-actions">
                         <button type="button" class="btn btn-secondary tour-back-btn">Back</button>
                         <button type="button" class="btn btn-secondary tour-skip-btn">Skip Tutorial</button>
+                        <button type="button" class="btn btn-secondary tour-show-btn" hidden>Show me</button>
                         <button type="button" class="btn btn-primary tour-next-btn">Okay, Next</button>
                     </div>
                 </section>
@@ -72,10 +73,12 @@
             this.messageEl = this.root.querySelector('.tour-message');
             this.backButton = this.root.querySelector('.tour-back-btn');
             this.skipButton = this.root.querySelector('.tour-skip-btn');
+            this.showButton = this.root.querySelector('.tour-show-btn');
             this.nextButton = this.root.querySelector('.tour-next-btn');
 
             this.backButton.addEventListener('click', () => this.previous());
             this.skipButton.addEventListener('click', () => this.skip());
+            this.showButton.addEventListener('click', () => this.showCurrentTargetOnMobile());
             this.nextButton.addEventListener('click', () => this.next());
             this.overlay.addEventListener('click', () => {
                 if (this.card) this.card.focus({ preventScroll: true });
@@ -132,15 +135,11 @@
             this.renderToken += 1;
             this.detachEvents();
             this.clearHighlight();
-            this.root.classList.remove('is-open', 'is-preparing', 'has-spotlight');
+            this.root.classList.remove('is-open', 'is-preparing', 'has-spotlight', 'tour-peek-mode');
             this.root.hidden = true;
             document.body.classList.remove('tour-open', 'tour-lock-scroll');
             this.releaseSidebarLayer();
             this.resetCardPosition();
-
-            if (typeof global.closeSidebar === 'function' && this.isCompactSidebar()) {
-                global.closeSidebar();
-            }
 
             if (this.repositionFrame) {
                 global.cancelAnimationFrame(this.repositionFrame);
@@ -207,6 +206,9 @@
         handleViewportChange() {
             if (!this.isOpen) return;
 
+            // Don't reposition while we are in a mobile peek (Show me) sequence.
+            if (this.root.classList.contains('tour-peek-mode')) return;
+
             if (this.isPreparingStep) {
                 this.pendingViewportRefresh = true;
                 return;
@@ -248,8 +250,6 @@
                 this.applyLayout(state);
                 this.currentState = state;
                 this.currentTarget = state.target || null;
-                this.syncContextLabel(step, state);
-                this.syncMobileContextFocus(state);
                 this.card.focus({ preventScroll: true });
             } finally {
                 if (this.isOpen && token === this.renderToken) {
@@ -281,20 +281,40 @@
             this.backButton.classList.toggle('is-disabled', isFirstStep);
             this.skipButton.hidden = isLastStep;
             this.nextButton.textContent = isLastStep ? 'I understand' : 'Okay, Next';
+
+            // Show me button: only on mobile when the step has a target to preview.
+            const hasTarget = !!(step.mobileTarget || step.target);
+            this.showButton.hidden = !(isMobile && hasTarget);
+
+            // Context label: always shown on mobile when there is a label or target.
+            if (this.contextLabelEl) {
+                const label = step.mobileContextLabel || step.title || '';
+                const shouldShow = isMobile && !!(label && hasTarget);
+                this.contextLabelEl.textContent = shouldShow ? `Related area: ${label}` : '';
+                this.contextLabelEl.hidden = !shouldShow;
+            }
         }
 
         async prepareStep(step, token) {
             const state = await this.buildStepState(step, token);
             if (!this.isOpen || token !== this.renderToken) return state;
 
+            // Mobile always uses modal-only mode. No live target highlighting.
+            if (state.isMobile) {
+                return {
+                    ...state,
+                    target: null,
+                    mode: 'mobile-modal',
+                    spotlightEnabled: false,
+                    mobileContextFocus: false
+                };
+            }
+
+            // Desktop: center mode or anchored spotlight.
             if (state.mode === 'center') {
                 state.target = null;
                 state.spotlightEnabled = false;
                 return state;
-            }
-
-            if (state.isMobile) {
-                return this.prepareMobileStep(state, token);
             }
 
             return this.prepareDesktopStep(state, token);
@@ -306,6 +326,7 @@
             const compactSidebar = initialViewport.width <= COMPACT_SIDEBAR_BREAKPOINT;
             const reduceMotion = this.prefersReducedMotion();
 
+            // ── Mobile: clean modal state, no target resolution, no sidebar magic ──
             if (isMobile) {
                 this.releaseSidebarLayer();
 
@@ -313,27 +334,13 @@
                     global.closeSidebar();
                 }
 
-                await this.wait(120, token);
-                if (!this.isOpen || token !== this.renderToken) {
-                    return this.createFallbackState(step, true);
-                }
-
-                let target = this.resolveTarget(step, true);
-                target = this.isElementUsable(target) ? target : null;
-
-                if (target) {
-                    await this.prepareMobileContextTarget(target, token);
-                }
+                await this.wait(80, token);
                 if (!this.isOpen || token !== this.renderToken) {
                     return this.createFallbackState(step, true);
                 }
 
                 const viewport = this.getViewportRect();
                 const safe = this.getSafeArea(viewport);
-                const cardFrame = this.measureCardFrame('mobile-sheet', viewport, safe);
-                const targetZone = this.getMobileTargetZone(viewport, safe, cardFrame);
-                target = this.resolveTarget(step, true);
-                target = this.isElementUsable(target) ? target : null;
 
                 return {
                     step,
@@ -342,33 +349,32 @@
                     sidebarTarget: false,
                     viewport,
                     safe,
-                    target,
+                    target: null,
                     placement: 'mobile-bottom',
-                    mode: 'mobile-context',
+                    mode: 'mobile-modal',
                     reduceMotion,
                     spotlightEnabled: false,
-                    mobileContextFocus: !!(target && this.canUseMobileContextFocus(target, targetZone, cardFrame)),
-                    cardFrame,
-                    targetZone
+                    mobileContextFocus: false
                 };
             }
 
-            let target = this.resolveTarget(step, isMobile);
+            // ── Desktop: resolve target and compute layout mode ──
+            let target = this.resolveTarget(step, false);
             let sidebarTarget = this.isSidebarTarget(target);
 
             await this.syncSidebarState(sidebarTarget && compactSidebar, token);
             if (!this.isOpen || token !== this.renderToken) {
-                return this.createFallbackState(step, isMobile);
+                return this.createFallbackState(step, false);
             }
 
             const viewport = this.getViewportRect();
             const safe = this.getSafeArea(viewport);
-            target = this.resolveTarget(step, isMobile);
+            target = this.resolveTarget(step, false);
             sidebarTarget = this.isSidebarTarget(target);
 
-            const placement = this.getPlacement(step, isMobile);
+            const placement = this.getPlacement(step, false);
             const mode = this.getLayoutMode({
-                isMobile,
+                isMobile: false,
                 sidebarTarget,
                 placement,
                 target
@@ -376,7 +382,7 @@
 
             return {
                 step,
-                isMobile,
+                isMobile: false,
                 compactSidebar,
                 sidebarTarget,
                 viewport,
@@ -385,7 +391,7 @@
                 placement,
                 mode,
                 reduceMotion,
-                spotlightEnabled: this.shouldUseSpotlight(step, isMobile, target, mode)
+                spotlightEnabled: this.shouldUseSpotlight(step, false, target, mode)
             };
         }
 
@@ -415,29 +421,15 @@
             };
         }
 
-        async prepareMobileStep(state) {
-            const viewport = this.getViewportRect();
-            const safe = this.getSafeArea(viewport);
-            const cardFrame = this.measureCardFrame('mobile-sheet', viewport, safe);
-            const targetZone = this.getMobileTargetZone(viewport, safe, cardFrame);
-
-            let target = this.resolveTarget(state.step, true);
-            target = this.isElementUsable(target) ? target : null;
-
-            return {
-                ...state,
-                viewport,
-                safe,
-                target,
-                cardFrame,
-                targetZone,
-                mode: 'mobile-context',
-                spotlightEnabled: false,
-                mobileContextFocus: !!(target && this.canUseMobileContextFocus(target, targetZone, cardFrame))
-            };
-        }
-
         applyLayout(state) {
+            // Mobile modal: fixed bottom card, no spotlight, no focus target.
+            if (state.isMobile && state.mode === 'mobile-modal') {
+                const cardFrame = this.measureCardFrame('mobile-sheet', state.viewport, state.safe);
+                this.applyCardFrame('mobile-sheet', cardFrame);
+                this.hideSpotlight();
+                return;
+            }
+
             const layoutMode = state.mode === 'anchored'
                 ? 'anchored'
                 : state.mode === 'center'
@@ -457,18 +449,95 @@
 
             const cardRect = this.card.getBoundingClientRect();
             if (state.spotlightEnabled && state.target && this.rectsOverlap(cardRect, state.target.getBoundingClientRect(), SPOTLIGHT_COLLISION_PADDING)) {
-                if (state.isMobile) {
-                    const centerFrame = this.measureCardFrame('center', state.viewport, state.safe);
-                    this.applyCardFrame('center', centerFrame);
-                    state.mode = 'center';
-                    state.spotlightEnabled = false;
-                } else {
-                    state.spotlightEnabled = false;
-                }
+                state.spotlightEnabled = false;
             }
 
             this.syncSpotlight(state);
         }
+
+        // ── Mobile "Show me" peek system ────────────────────────────────────────
+
+        async showCurrentTargetOnMobile() {
+            if (!this.isOpen) return;
+
+            const step = this.steps[this.currentStep];
+            if (!step) return;
+
+            const target = this.resolveTarget(step, true);
+            if (!this.isElementUsable(target)) return;
+
+            const token = ++this.renderToken;
+            const reduceMotion = this.prefersReducedMotion();
+
+            // 1. Hide the tutorial card and overlay by entering peek mode.
+            document.body.classList.remove('tour-lock-scroll');
+            this.root.classList.add('tour-peek-mode');
+            this.clearMobilePeekHighlight();
+
+            // Small pause so the CSS transition runs and the card is truly hidden.
+            await this.wait(80, token);
+            if (!this.isOpen || token !== this.renderToken) return;
+
+            // 2. Determine whether this is a menu-related step.
+            const isMenuRelated =
+                step.mobileTarget === '[data-tour="mobile-menu-button"]' ||
+                step.target === '[data-tour="account-panel"]' ||
+                step.target === '[data-tour="sidebar-navigation"]';
+
+            if (isMenuRelated) {
+                // Show the hamburger button instead of trying to open the sidebar.
+                const menuButton = document.querySelector('[data-tour="mobile-menu-button"]');
+
+                if (menuButton && this.isElementUsable(menuButton)) {
+                    menuButton.scrollIntoView({
+                        behavior: reduceMotion ? 'auto' : 'smooth',
+                        block: 'center',
+                        inline: 'nearest'
+                    });
+
+                    await this.wait(reduceMotion ? 80 : 260, token);
+                    if (!this.isOpen || token !== this.renderToken) return;
+
+                    menuButton.classList.add('tour-peek-highlight');
+                    await this.wait(1700, token);
+                    menuButton.classList.remove('tour-peek-highlight');
+                }
+            } else {
+                // 3. Scroll the real section into view.
+                target.scrollIntoView({
+                    behavior: reduceMotion ? 'auto' : 'smooth',
+                    block: 'center',
+                    inline: 'nearest'
+                });
+
+                await this.wait(reduceMotion ? 80 : 300, token);
+                if (!this.isOpen || token !== this.renderToken) return;
+
+                // 4. Apply pulse highlight.
+                target.classList.add('tour-peek-highlight');
+
+                // 5. Wait ~1.7 s then remove.
+                await this.wait(1700, token);
+                target.classList.remove('tour-peek-highlight');
+            }
+
+            if (!this.isOpen || token !== this.renderToken) return;
+
+            // 6. Restore the tutorial card.
+            this.root.classList.remove('tour-peek-mode');
+            document.body.classList.add('tour-lock-scroll');
+
+            // Re-render the same step (keeps user on same step, restores card position).
+            this.renderCurrentStep();
+        }
+
+        clearMobilePeekHighlight() {
+            document.querySelectorAll('.tour-peek-highlight').forEach((el) => {
+                el.classList.remove('tour-peek-highlight');
+            });
+        }
+
+        // ── Target resolution ────────────────────────────────────────────────────
 
         resolveTarget(step, isMobile) {
             const candidate = isMobile && step?.mobileTarget ? step.mobileTarget : step?.target;
@@ -508,24 +577,6 @@
             return true;
         }
 
-        canUseMobileContextFocus(target, targetZone, cardFrame) {
-            if (!this.isElementUsable(target) || !targetZone || !cardFrame) return false;
-
-            const rect = target.getBoundingClientRect();
-            const position = global.getComputedStyle(target).position;
-            const topLimit = position === 'fixed'
-                ? this.getViewportRect().top + 4
-                : targetZone.top + 4;
-
-            if (targetZone.height < 72) return false;
-            if (rect.height > Math.max(0, targetZone.height - 8)) return false;
-            if (rect.top < topLimit) return false;
-            if (rect.bottom > targetZone.bottom - 4) return false;
-            if (this.rectsOverlap(rect, this.frameToRect(cardFrame), 10)) return false;
-
-            return true;
-        }
-
         isSidebarTarget(target) {
             return !!target?.closest('.sidebar');
         }
@@ -547,20 +598,12 @@
                 return 'anchored';
             }
 
-            if (placement === 'mobile-no-spotlight') {
-                return 'mobile-no-spotlight';
-            }
-
-            if (sidebarTarget) {
-                return 'mobile-sidebar';
-            }
-
-            return 'mobile-bottom-sheet';
+            return 'mobile-modal';
         }
 
         shouldUseSpotlight(step, isMobile, target, mode) {
-            if (!target || mode === 'center' || mode === 'mobile-no-spotlight') return false;
-            if (isMobile) return step.mobileSpotlight !== false;
+            if (!target || mode === 'center' || mode === 'mobile-modal') return false;
+            if (isMobile) return false; // Mobile never uses spotlight.
             return step.spotlight !== false;
         }
 
@@ -575,7 +618,7 @@
                 safe: this.getSafeArea(viewport),
                 target: null,
                 placement: 'center',
-                mode: 'center',
+                mode: isMobile ? 'mobile-modal' : 'center',
                 reduceMotion: this.prefersReducedMotion(),
                 spotlightEnabled: false,
                 mobileContextFocus: false
@@ -630,80 +673,7 @@
             }
         }
 
-        async prepareMobileContextTarget(target, token) {
-            if (!this.isElementUsable(target)) return;
-
-            const reduceMotion = this.prefersReducedMotion();
-            const viewport = this.getViewportRect();
-            const position = global.getComputedStyle(target).position;
-            const card = this.card;
-            const estimatedCardHeight = card
-                ? Math.min(card.offsetHeight || 420, viewport.height * 0.68, 560)
-                : Math.min(420, viewport.height * 0.68, 560);
-
-            if (position === 'fixed' || position === 'sticky') {
-                return;
-            }
-
-            this.scrollTargetIntoView(target, reduceMotion, 'center');
-            await this.wait(reduceMotion ? 80 : 260, token);
-            if (!this.isOpen || token !== this.renderToken) return;
-
-            const nextViewport = this.getViewportRect();
-            const safeTop = this.getSafeArea(nextViewport).top;
-            const targetBottomLimit = nextViewport.bottom - estimatedCardHeight - 32;
-            const rect = target.getBoundingClientRect();
-            let scrollAdjustment = 0;
-
-            if (rect.bottom > targetBottomLimit) {
-                scrollAdjustment = rect.bottom - targetBottomLimit + 24;
-            } else if (rect.top < safeTop) {
-                scrollAdjustment = rect.top - safeTop - 12;
-            }
-
-            if (Math.abs(scrollAdjustment) < 2) return;
-
-            global.scrollBy({
-                top: scrollAdjustment,
-                behavior: reduceMotion ? 'auto' : 'smooth'
-            });
-
-            await this.wait(reduceMotion ? 80 : 220, token);
-        }
-
-        async scrollTargetIntoZone(target, zone, reduceMotion, token) {
-            if (!target || !zone) return;
-
-            const rect = target.getBoundingClientRect();
-            if (rect.height >= zone.height - 12) return;
-
-            const desiredTop = this.clamp(
-                zone.top + 16,
-                zone.top,
-                Math.max(zone.top, zone.bottom - rect.height - 8)
-            );
-            const desiredBottom = desiredTop + rect.height;
-            let delta = 0;
-
-            if (rect.top < desiredTop || rect.bottom > zone.bottom) {
-                if (rect.bottom > zone.bottom && desiredBottom <= zone.bottom) {
-                    delta = rect.top - desiredTop;
-                } else if (rect.top < desiredTop) {
-                    delta = rect.top - desiredTop;
-                } else {
-                    delta = rect.bottom - zone.bottom;
-                }
-            }
-
-            if (Math.abs(delta) < 2) return;
-
-            global.scrollBy({
-                top: delta,
-                behavior: reduceMotion ? 'auto' : 'smooth'
-            });
-
-            await this.wait(reduceMotion ? 80 : 240, token);
-        }
+        // ── Layout / frame computation ───────────────────────────────────────────
 
         measureCardFrame(layoutMode, viewport, safe) {
             this.card.dataset.layout = layoutMode;
@@ -838,6 +808,8 @@
             this.card.style.maxHeight = `${frame.maxHeight}px`;
         }
 
+        // ── Viewport helpers ─────────────────────────────────────────────────────
+
         getViewportRect() {
             const vv = global.visualViewport;
             if (vv) {
@@ -887,26 +859,7 @@
             return Math.max(viewport.top + margin, rect.bottom + 12);
         }
 
-        getMobileTargetZone(viewport, safe, cardFrame) {
-            return {
-                top: safe.top,
-                left: safe.left,
-                right: safe.right,
-                bottom: Math.max(safe.top + 48, cardFrame.top - 18),
-                width: Math.max(0, safe.right - safe.left),
-                height: Math.max(0, cardFrame.top - 18 - safe.top)
-            };
-        }
-
-        canSpotlightInZone(targetRect, zone) {
-            if (!targetRect || !zone) return false;
-            if (zone.height < 88) return false;
-            if (targetRect.height > zone.height * 0.78) return false;
-            if (targetRect.width > zone.width + 4) return false;
-            if (targetRect.top < zone.top + 4) return false;
-            if (targetRect.bottom > zone.bottom - 4) return false;
-            return true;
-        }
+        // ── Spotlight ────────────────────────────────────────────────────────────
 
         syncSpotlight(state) {
             if (!this.spotlight) return;
@@ -921,10 +874,7 @@
             const viewport = state.viewport || this.getViewportRect();
             const radius = global.getComputedStyle(state.target).borderRadius || '18px';
 
-            let spotlightRect = this.expandRect(targetRect, state.isMobile ? 6 : 10, viewport);
-            if (this.rectsOverlap(spotlightRect, cardRect, 8)) {
-                spotlightRect = this.expandRect(targetRect, 2, viewport);
-            }
+            const spotlightRect = this.expandRect(targetRect, 10, viewport);
 
             if (this.rectsOverlap(spotlightRect, cardRect, 8)) {
                 this.hideSpotlight();
@@ -956,72 +906,15 @@
             this.contextLabelEl.textContent = '';
         }
 
-        syncContextLabel(step, state) {
-            if (!this.contextLabelEl) return;
-
-            const label = step?.mobileContextLabel || step?.title || '';
-            const shouldShow = !!(
-                state?.isMobile &&
-                state.mode !== 'center' &&
-                label &&
-                (step?.mobileTarget || step?.target)
-            );
-
-            if (!shouldShow) {
-                this.clearContextLabel();
-                return;
-            }
-
-            this.contextLabelEl.hidden = false;
-            this.contextLabelEl.textContent = `This relates to: ${label}`;
-        }
-
-        clearMobileFocusTarget() {
-            document.querySelectorAll('.tour-mobile-focus-target').forEach((element) => {
-                element.classList.remove('tour-mobile-focus-target');
-
-                if (element instanceof HTMLElement) {
-                    element.style.position = element.dataset.tourMobileFocusPosition || '';
-                    element.style.zIndex = element.dataset.tourMobileFocusZIndex || '';
-                    element.style.pointerEvents = element.dataset.tourMobileFocusPointerEvents || '';
-                    delete element.dataset.tourMobileFocusPosition;
-                    delete element.dataset.tourMobileFocusZIndex;
-                    delete element.dataset.tourMobileFocusPointerEvents;
-                }
-            });
-        }
-
-        applyMobileFocusTarget(target) {
-            this.clearMobileFocusTarget();
-            if (!this.isElementUsable(target) || !(target instanceof HTMLElement)) return;
-
-            target.dataset.tourMobileFocusPosition = target.style.position || '';
-            target.dataset.tourMobileFocusZIndex = target.style.zIndex || '';
-            target.dataset.tourMobileFocusPointerEvents = target.style.pointerEvents || '';
-
-            const computedPosition = global.getComputedStyle(target).position;
-            target.style.position = computedPosition === 'static' ? 'relative' : computedPosition;
-            target.style.zIndex = '99992';
-            target.style.pointerEvents = 'none';
-            target.classList.add('tour-mobile-focus-target');
-        }
-
-        syncMobileContextFocus(state) {
-            if (!state?.isMobile || !state.mobileContextFocus || !this.isElementUsable(state.target)) {
-                this.clearMobileFocusTarget();
-                return;
-            }
-
-            this.applyMobileFocusTarget(state.target);
-        }
-
         clearHighlight() {
             this.hideSpotlight();
             this.clearContextLabel();
-            this.clearMobileFocusTarget();
+            this.clearMobilePeekHighlight();
             this.currentTarget = null;
             this.currentState = null;
         }
+
+        // ── Geometry helpers ─────────────────────────────────────────────────────
 
         expandRect(rect, padding, viewport) {
             const left = this.clamp(rect.left - padding, viewport.left + 6, viewport.right - 6);

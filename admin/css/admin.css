@@ -625,20 +625,20 @@ button.nav-item {
         position: fixed;
         inset: 0;
         z-index: 99990;
-        pointer-events: none;
     }
 
     .tour-overlay {
         position: fixed;
         inset: 0;
         z-index: 99991;
-        pointer-events: auto;
         background:
-            radial-gradient(circle at top, rgba(99, 102, 241, 0.12), transparent 34%),
-            rgba(4, 7, 17, 0.68);
+            radial-gradient(circle at top, rgba(99, 102, 241, 0.14), transparent 34%),
+            rgba(4, 7, 17, 0.78);
     }
 
-    .tour-spotlight {
+    /* Spotlight and old focus-target are always hidden on mobile */
+    .tour-spotlight,
+    .tour-mobile-focus-target {
         display: none !important;
         opacity: 0 !important;
         visibility: hidden !important;
@@ -653,13 +653,14 @@ button.nav-item {
         bottom: calc(16px + env(safe-area-inset-bottom, 0px)) !important;
         width: auto !important;
         max-width: none !important;
-        max-height: min(68dvh, 560px) !important;
+        max-height: min(70dvh, 560px) !important;
         overflow-y: auto !important;
         padding: 18px !important;
         border-radius: 22px !important;
         gap: 14px !important;
         z-index: 99999 !important;
         pointer-events: auto !important;
+        transition: opacity 180ms ease, visibility 180ms ease;
     }
 
     .tour-step-row {
@@ -694,32 +695,53 @@ button.nav-item {
     }
 
     .tour-actions .btn,
-    .tour-next-btn {
+    .tour-next-btn,
+    .tour-show-btn {
         width: 100%;
         min-height: 48px;
         justify-content: center;
         margin-left: 0;
     }
 
-    .tour-mobile-focus-target {
-        position: relative;
-        z-index: 99992 !important;
-        outline: 2px solid rgba(140, 151, 255, 0.9);
-        outline-offset: 4px;
-        box-shadow:
-            0 0 0 6px rgba(99, 102, 241, 0.16),
-            0 0 28px rgba(99, 102, 241, 0.38);
-        border-radius: 18px;
-        pointer-events: none !important;
-        transition:
-            outline-color 180ms ease,
-            box-shadow 180ms ease,
-            transform 180ms ease;
+    /* ── Peek mode: hide card + overlay while user sees the highlighted section ── */
+    .tour-root.tour-peek-mode {
+        pointer-events: none;
     }
 
-    .sidebar.tour-sidebar-open,
-    .sidebar-backdrop.tour-sidebar-open {
-        z-index: auto !important;
+    .tour-root.tour-peek-mode .tour-overlay,
+    .tour-root.tour-peek-mode .tour-card {
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+    }
+
+    /* ── Peek highlight: pulse applied to the real dashboard element ── */
+    .tour-peek-highlight {
+        position: relative;
+        z-index: 99998 !important;
+        outline: 3px solid rgba(140, 151, 255, 0.95);
+        outline-offset: 5px;
+        border-radius: 18px;
+        animation: tourPeekPulse 1.4s ease-in-out infinite;
+        box-shadow:
+            0 0 0 8px rgba(99, 102, 241, 0.18),
+            0 0 36px rgba(99, 102, 241, 0.5);
+    }
+
+    @keyframes tourPeekPulse {
+        0%, 100% {
+            transform: scale(1);
+            box-shadow:
+                0 0 0 8px rgba(99, 102, 241, 0.18),
+                0 0 36px rgba(99, 102, 241, 0.5);
+        }
+
+        50% {
+            transform: scale(1.015);
+            box-shadow:
+                0 0 0 12px rgba(99, 102, 241, 0.28),
+                0 0 48px rgba(99, 102, 241, 0.72);
+        }
     }
 }
 

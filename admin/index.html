@@ -259,6 +259,7 @@
                 message: 'This section shows the business account you are currently managing. It also shows the active plan attached to the account, so the user knows which business and subscription they are working with.',
                 target: '[data-tour="account-panel"]',
                 mobileTarget: '[data-tour="mobile-menu-button"]',
+                mobileContextLabel: 'Menu',
                 mobileMessage: 'Your business account details are found inside the menu. Tap the menu icon after the tutorial to view your account name and active subscription plan.'
             },
             {
@@ -266,6 +267,7 @@
                 message: 'This menu is used to move around the system. The user can go to Dashboard, Bookings, Availability, Settings, and Services from here.',
                 target: '[data-tour="sidebar-navigation"]',
                 mobileTarget: '[data-tour="mobile-menu-button"]',
+                mobileContextLabel: 'Menu',
                 mobileMessage: 'The menu icon opens your navigation area, where you can access Dashboard, Bookings, Availability, Settings, Services, and Help.',
                 mobileSpotlight: false
             },
@@ -273,7 +275,8 @@
                 title: 'Dashboard Header',
                 message: 'This area confirms the page the user is currently viewing and shows the current date. It helps the user know exactly where they are in the system.',
                 target: '[data-tour="dashboard-header"]',
-                mobileTarget: '[data-tour="dashboard-title-area"]'
+                mobileTarget: '[data-tour="dashboard-title-area"]',
+                mobileContextLabel: 'Dashboard Header'
             },
             {
                 title: 'Refresh Dashboard',
@@ -283,60 +286,70 @@
             {
                 title: 'Confirmed Bookings',
                 message: 'This card shows how many bookings have been successfully confirmed. It gives the user a quick view of their active confirmed appointments.',
-                target: '[data-tour="confirmed-bookings-card"]'
+                target: '[data-tour="confirmed-bookings-card"]',
+                mobileContextLabel: 'Confirmed Bookings'
             },
             {
                 title: 'This Month',
                 message: 'This card shows the number of bookings made during the current month. It helps the user monitor monthly activity and performance.',
-                target: '[data-tour="this-month-card"]'
+                target: '[data-tour="this-month-card"]',
+                mobileContextLabel: 'This Month'
             },
             {
                 title: 'Cancelled Bookings',
                 message: 'This card shows cancelled bookings. It helps the user keep track of lost appointments and notice if cancellations are becoming a pattern.',
-                target: '[data-tour="cancelled-bookings-card"]'
+                target: '[data-tour="cancelled-bookings-card"]',
+                mobileContextLabel: 'Cancelled Bookings'
             },
             {
                 title: 'Subscription Plan',
                 message: 'This section shows the current subscription plan connected to the account. The user can quickly confirm what plan they are currently using.',
                 target: '[data-tour="subscription-plan"]',
-                mobileTarget: '[data-tour="subscription-plan-summary"]'
+                mobileTarget: '[data-tour="subscription-plan-summary"]',
+                mobileContextLabel: 'Subscription Plan'
             },
             {
                 title: 'Monthly Bookings',
                 message: 'This area shows monthly booking usage or activity. It should help the user understand how many bookings they are receiving within the month.',
                 target: '[data-tour="monthly-bookings"]',
                 mobileTarget: '[data-tour="monthly-bookings"]',
+                mobileContextLabel: 'Monthly Bookings',
                 placement: 'left'
             },
             {
                 title: 'Quick Actions',
                 message: 'Quick Actions give the user fast access to the most important tools without needing to search through the sidebar.',
                 target: '[data-tour="quick-actions"]',
-                mobileTarget: '[data-tour="quick-actions-title"]'
+                mobileTarget: '[data-tour="quick-actions-title"]',
+                mobileContextLabel: 'Quick Actions'
             },
             {
                 title: 'View All Bookings',
                 message: 'This shortcut opens the full booking list. The user can review customer appointments, booking details, dates, and service selections from there.',
                 target: '[data-tour="view-all-bookings"]',
-                mobileTarget: '[data-tour="view-all-bookings"]'
+                mobileTarget: '[data-tour="view-all-bookings"]',
+                mobileContextLabel: 'View All Bookings'
             },
             {
                 title: 'Block Availability',
                 message: 'This shortcut allows the user to block certain dates or times when customers should not be allowed to book. This is useful for closed days, holidays, personal time, or fully booked periods.',
                 target: '[data-tour="block-availability"]',
-                mobileTarget: '[data-tour="block-availability"]'
+                mobileTarget: '[data-tour="block-availability"]',
+                mobileContextLabel: 'Block Availability'
             },
             {
                 title: 'Manage Services',
                 message: 'This shortcut allows the user to manage the services customers can book. They should be able to add services, edit prices, update descriptions, set durations, and remove services that are no longer offered.',
                 target: '[data-tour="manage-services"]',
-                mobileTarget: '[data-tour="manage-services"]'
+                mobileTarget: '[data-tour="manage-services"]',
+                mobileContextLabel: 'Manage Services'
             },
             {
                 title: 'View Booking Page',
                 message: 'This shortcut lets the user open or preview the public booking page that customers will use. This helps the business owner see the booking experience from the customer’s side.',
                 target: '[data-tour="view-booking-page"]',
-                mobileTarget: '[data-tour="view-booking-page"]'
+                mobileTarget: '[data-tour="view-booking-page"]',
+                mobileContextLabel: 'View Booking Page'
             },
             {
                 title: 'Tutorial Complete',
