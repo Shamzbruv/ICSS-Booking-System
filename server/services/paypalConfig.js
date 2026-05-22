@@ -1,6 +1,6 @@
 const DEFAULT_PAYPAL_TRIAL_PLAN_ID = 'P-4EC410252Y479773KNHUVB4A';
 const DEFAULT_TRIAL_DAYS = 7;
-const DEFAULT_MONTHLY_PRICE_USD = 35.50;
+const DEFAULT_MONTHLY_PRICE_USD = 31.67;
 const VALID_INTERNAL_PLAN_IDS = new Set(['starter', 'pro', 'enterprise']);
 
 function getPayPalSignupConfig() {

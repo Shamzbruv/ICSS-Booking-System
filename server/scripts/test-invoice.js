@@ -16,7 +16,7 @@ const { generateSubscriptionInvoicePDF } = require('../services/pdf-generator');
     const buf = await generateSubscriptionInvoicePDF({
         tenant: { name: 'Luxe Hair Studio', slug: 'luxe-hair' },
         owner:  { name: 'Jordan Clarke', email: 'jordan@luxehair.com' },
-        amount:         35.50,
+        amount:         31.67,
         currency:       'USD',
         subscriptionId: 'I-TESTSUBID1234',
         eventId:        'WH-ABCD1234EFGH5678',

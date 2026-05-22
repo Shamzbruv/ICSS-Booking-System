@@ -794,7 +794,7 @@ async function sendSignupWelcomeEmail(email, firstName, tenantName, options = {}
     }
 
     const trialDays = Number(options.trialDays || 7);
-    const monthlyPriceUsd = Number(options.monthlyPriceUsd || 35.50).toFixed(2);
+    const monthlyPriceUsd = Number(options.monthlyPriceUsd || 31.67).toFixed(2);
 
     await resend.emails.send({
         from:    'ICSS Booking <welcome@icssbookings.com>',

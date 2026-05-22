@@ -9,7 +9,7 @@
 // Steps:
 //   0 → Business Basics (name, owner, email, password)
 //   1 → Choose Theme (redirects to ThemeSelector page)
-//   2 → PayPal Subscription Checkout ($35.50/mo — 7-day free trial)
+//   2 → PayPal Subscription Checkout ($31.67/mo — 7-day free trial)
 //   3 → Success / Provisioning Wait
 
 import { useState, useEffect, useRef } from 'react';
@@ -22,6 +22,7 @@ import { api } from '../../api';
 // PayPal plan config — read from Vite env so changes don't require code edits
 const PAYPAL_PLAN_ID   = import.meta.env.VITE_PAYPAL_PLAN_ID   || 'P-4EC410252Y479773KNHUVB4A';
 const PAYPAL_CLIENT_ID = import.meta.env.VITE_PAYPAL_CLIENT_ID || '';
+const MONTHLY_PRICE_USD = Number(import.meta.env.VITE_PAYPAL_MONTHLY_PRICE_USD || 31.67).toFixed(2);
 const TERMS_VERSION = '2026-05-05';
 const TERMS_URL = '/terms';
 
@@ -63,7 +64,7 @@ function StepBasics({ data, onChange, onNext }) {
   return (
     <>
       <h1 className={s.wizard__title}>Start your free trial</h1>
-      <p className={s.wizard__subtitle}>7 days free, then $35.50 USD/month. Cancel anytime.</p>
+      <p className={s.wizard__subtitle}>7 days free, then {'$'}{MONTHLY_PRICE_USD} USD/month. Cancel anytime.</p>
       <div className={s.wizard__field}>
         <label className={s.wizard__label}>Business Name</label>
         <input value={data.businessName} onChange={e => onChange('businessName', e.target.value)} placeholder="e.g. Luxe Hair Studio" />
@@ -241,7 +242,7 @@ function StepPayPal({ data, onNext }) {
   return (
     <>
       <h1 className={s.wizard__title}>Start your free trial</h1>
-      <p className={s.wizard__subtitle}>7 days free, then <strong>$35.50 USD/month</strong>. Cancel anytime.</p>
+      <p className={s.wizard__subtitle}>7 days free, then <strong>{'$'}{MONTHLY_PRICE_USD} USD/month</strong>. Cancel anytime.</p>
       <div style={{ padding: '24px', textAlign: 'center', background: 'var(--color-surface-2)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
         <p style={{ fontSize: 13, color: 'var(--color-text-muted)', marginBottom: 16 }}>
           ICSS Booking Management — Monthly Plan
