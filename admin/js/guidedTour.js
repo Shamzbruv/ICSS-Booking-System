@@ -450,7 +450,10 @@
             this.applyCardFrame(layoutMode, cardFrame);
 
             const cardRect = this.card.getBoundingClientRect();
-            if (state.spotlightEnabled && state.target && this.rectsOverlap(cardRect, state.target.getBoundingClientRect(), SPOTLIGHT_COLLISION_PADDING)) {
+            // Only suppress spotlight when the card ACTUALLY intersects the target element
+            // (padding=0). Using a large padding here caused the spotlight to be killed
+            // even when the card was correctly placed next to (not on top of) the target.
+            if (state.spotlightEnabled && state.target && this.rectsOverlap(cardRect, state.target.getBoundingClientRect(), 0)) {
                 state.spotlightEnabled = false;
             }
 
@@ -872,16 +875,13 @@
             }
 
             const targetRect = state.target.getBoundingClientRect();
-            const cardRect = this.card.getBoundingClientRect();
             const viewport = state.viewport || this.getViewportRect();
             const radius = global.getComputedStyle(state.target).borderRadius || '18px';
 
+            // Expand the spotlight slightly so the element's border/shadow is included.
+            // The card (z-index 99999) is always above the spotlight (z-index 99994),
+            // so we never need to suppress the spotlight based on card proximity.
             const spotlightRect = this.expandRect(targetRect, 10, viewport);
-
-            if (this.rectsOverlap(spotlightRect, cardRect, 8)) {
-                this.hideSpotlight();
-                return;
-            }
 
             this.spotlight.style.left = `${spotlightRect.left}px`;
             this.spotlight.style.top = `${spotlightRect.top}px`;
