@@ -393,6 +393,12 @@ button.nav-item {
 }
 
 /* ── Guided Tour ────────────────────────────────────────────────────────────── */
+/* Safety net: Show me button must NEVER appear on non-mobile screens.          */
+@media (min-width: 721px) {
+    .tour-show-btn {
+        display: none !important;
+    }
+}
 .tour-root {
     position: fixed;
     inset: 0;

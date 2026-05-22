@@ -270,7 +270,9 @@
             const totalSteps = this.steps.length;
             const isFirstStep = this.currentStep === 0;
             const isLastStep = this.currentStep === totalSteps - 1;
-            const isMobile = this.getViewportRect().width <= MOBILE_BREAKPOINT;
+            // Use window.innerWidth (layout viewport) — not visualViewport.width — so that
+            // zoom level and on-screen keyboard changes on desktop don't cause a false mobile read.
+            const isMobile = global.innerWidth <= MOBILE_BREAKPOINT;
             const message = isMobile && step.mobileMessage ? step.mobileMessage : (step.message || '');
 
             this.stepCount.textContent = `Step ${stepNumber} of ${totalSteps}`;
