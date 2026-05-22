@@ -27,7 +27,7 @@
 <div class="gradient-bg"></div>
 
 <!-- Mobile hamburger -->
-<button class="hamburger" id="hamburgerBtn" aria-label="Open menu"><span></span><span></span><span></span></button>
+<button class="hamburger" id="hamburgerBtn" aria-label="Open menu" data-tour="mobile-menu-button"><span></span><span></span><span></span></button>
 <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
 <div class="grid-pattern"></div>
 
@@ -258,13 +258,15 @@
                 title: 'Business Account',
                 message: 'This section shows the business account you are currently managing. It also shows the active plan attached to the account, so the user knows which business and subscription they are working with.',
                 target: '[data-tour="account-panel"]',
-                mobileTarget: '[data-tour="account-panel"]'
+                mobileTarget: '[data-tour="mobile-menu-button"]',
+                mobileMessage: 'Your business account details are found inside the menu. Tap the menu icon after the tutorial to view your account name and active subscription plan.'
             },
             {
                 title: 'Sidebar Navigation',
                 message: 'This menu is used to move around the system. The user can go to Dashboard, Bookings, Availability, Settings, and Services from here.',
                 target: '[data-tour="sidebar-navigation"]',
-                mobileTarget: '[data-tour="sidebar-navigation"]',
+                mobileTarget: '[data-tour="mobile-menu-button"]',
+                mobileMessage: 'The menu icon opens your navigation area, where you can access Dashboard, Bookings, Availability, Settings, Services, and Help.',
                 mobileSpotlight: false
             },
             {
@@ -315,22 +317,26 @@
             {
                 title: 'View All Bookings',
                 message: 'This shortcut opens the full booking list. The user can review customer appointments, booking details, dates, and service selections from there.',
-                target: '[data-tour="view-all-bookings"]'
+                target: '[data-tour="view-all-bookings"]',
+                mobileTarget: '[data-tour="view-all-bookings"]'
             },
             {
                 title: 'Block Availability',
                 message: 'This shortcut allows the user to block certain dates or times when customers should not be allowed to book. This is useful for closed days, holidays, personal time, or fully booked periods.',
-                target: '[data-tour="block-availability"]'
+                target: '[data-tour="block-availability"]',
+                mobileTarget: '[data-tour="block-availability"]'
             },
             {
                 title: 'Manage Services',
                 message: 'This shortcut allows the user to manage the services customers can book. They should be able to add services, edit prices, update descriptions, set durations, and remove services that are no longer offered.',
-                target: '[data-tour="manage-services"]'
+                target: '[data-tour="manage-services"]',
+                mobileTarget: '[data-tour="manage-services"]'
             },
             {
                 title: 'View Booking Page',
                 message: 'This shortcut lets the user open or preview the public booking page that customers will use. This helps the business owner see the booking experience from the customer’s side.',
-                target: '[data-tour="view-booking-page"]'
+                target: '[data-tour="view-booking-page"]',
+                mobileTarget: '[data-tour="view-booking-page"]'
             },
             {
                 title: 'Tutorial Complete',

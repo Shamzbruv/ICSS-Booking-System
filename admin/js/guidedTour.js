@@ -47,6 +47,7 @@
                     <div class="tour-progress" aria-hidden="true">
                         <span class="tour-progress-fill"></span>
                     </div>
+                    <p class="tour-context-label" id="guidedTourContextLabel" hidden></p>
                     <div class="tour-copy">
                         <h2 class="tour-title" id="guidedTourTitle"></h2>
                         <p class="tour-message" id="guidedTourMessage"></p>
@@ -66,6 +67,7 @@
             this.card = this.root.querySelector('.tour-card');
             this.stepCount = this.root.querySelector('.tour-step-count');
             this.progressFill = this.root.querySelector('.tour-progress-fill');
+            this.contextLabelEl = this.root.querySelector('.tour-context-label');
             this.titleEl = this.root.querySelector('.tour-title');
             this.messageEl = this.root.querySelector('.tour-message');
             this.backButton = this.root.querySelector('.tour-back-btn');
@@ -246,6 +248,8 @@
                 this.applyLayout(state);
                 this.currentState = state;
                 this.currentTarget = state.target || null;
+                this.syncContextLabel(step, state);
+                this.syncMobileContextFocus(state);
                 this.card.focus({ preventScroll: true });
             } finally {
                 if (this.isOpen && token === this.renderToken) {
@@ -266,10 +270,12 @@
             const totalSteps = this.steps.length;
             const isFirstStep = this.currentStep === 0;
             const isLastStep = this.currentStep === totalSteps - 1;
+            const isMobile = this.getViewportRect().width <= MOBILE_BREAKPOINT;
+            const message = isMobile && step.mobileMessage ? step.mobileMessage : (step.message || '');
 
             this.stepCount.textContent = `Step ${stepNumber} of ${totalSteps}`;
             this.titleEl.textContent = step.title || 'Guided Tour';
-            this.messageEl.textContent = step.message || '';
+            this.messageEl.textContent = message;
             this.progressFill.style.width = `${(stepNumber / totalSteps) * 100}%`;
             this.backButton.disabled = isFirstStep;
             this.backButton.classList.toggle('is-disabled', isFirstStep);
@@ -308,9 +314,26 @@
                 }
 
                 await this.wait(120, token);
+                if (!this.isOpen || token !== this.renderToken) {
+                    return this.createFallbackState(step, true);
+                }
+
+                let target = this.resolveTarget(step, true);
+                target = this.isElementUsable(target) ? target : null;
+
+                if (target) {
+                    await this.prepareMobileContextTarget(target, token);
+                }
+                if (!this.isOpen || token !== this.renderToken) {
+                    return this.createFallbackState(step, true);
+                }
 
                 const viewport = this.getViewportRect();
                 const safe = this.getSafeArea(viewport);
+                const cardFrame = this.measureCardFrame('mobile-sheet', viewport, safe);
+                const targetZone = this.getMobileTargetZone(viewport, safe, cardFrame);
+                target = this.resolveTarget(step, true);
+                target = this.isElementUsable(target) ? target : null;
 
                 return {
                     step,
@@ -319,11 +342,14 @@
                     sidebarTarget: false,
                     viewport,
                     safe,
-                    target: null,
-                    placement: 'center',
-                    mode: 'center',
+                    target,
+                    placement: 'mobile-bottom',
+                    mode: 'mobile-context',
                     reduceMotion,
-                    spotlightEnabled: false
+                    spotlightEnabled: false,
+                    mobileContextFocus: !!(target && this.canUseMobileContextFocus(target, targetZone, cardFrame)),
+                    cardFrame,
+                    targetZone
                 };
             }
 
@@ -389,70 +415,25 @@
             };
         }
 
-        async prepareMobileStep(state, token) {
-            let nextState = { ...state };
-            const expectedSpotlight = nextState.step.mobileSpotlight !== false;
-            const canScrollTarget = nextState.target && !nextState.sidebarTarget;
+        async prepareMobileStep(state) {
+            const viewport = this.getViewportRect();
+            const safe = this.getSafeArea(viewport);
+            const cardFrame = this.measureCardFrame('mobile-sheet', viewport, safe);
+            const targetZone = this.getMobileTargetZone(viewport, safe, cardFrame);
 
-            if (nextState.mode === 'mobile-no-spotlight' || !nextState.target) {
-                return {
-                    ...nextState,
-                    spotlightEnabled: false,
-                    target: nextState.target || null
-                };
-            }
-
-            let viewport = this.getViewportRect();
-            let safe = this.getSafeArea(viewport);
-            let cardFrame = this.measureCardFrame('mobile-sheet', viewport, safe);
-            let target = nextState.target;
-            let targetZone = this.getMobileTargetZone(viewport, safe, cardFrame);
-
-            if (canScrollTarget) {
-                await this.scrollTargetIntoZone(target, targetZone, nextState.reduceMotion, token);
-                if (!this.isOpen || token !== this.renderToken) return nextState;
-            }
-
-            viewport = this.getViewportRect();
-            safe = this.getSafeArea(viewport);
-            cardFrame = this.measureCardFrame('mobile-sheet', viewport, safe);
-            targetZone = this.getMobileTargetZone(viewport, safe, cardFrame);
-            target = this.resolveTarget(nextState.step, true);
-
-            const targetRect = target?.getBoundingClientRect() || null;
-            let spotlightEnabled = nextState.spotlightEnabled;
-
-            if (!targetRect || !this.canSpotlightInZone(targetRect, targetZone)) {
-                spotlightEnabled = false;
-            }
-
-            if (spotlightEnabled && this.rectsOverlap(this.frameToRect(cardFrame), targetRect, SPOTLIGHT_COLLISION_PADDING)) {
-                spotlightEnabled = false;
-            }
-
-            const fallbackToCenter = expectedSpotlight && !spotlightEnabled &&
-                targetRect &&
-                this.rectsOverlap(this.frameToRect(cardFrame), targetRect, SPOTLIGHT_COLLISION_PADDING);
-
-            if (fallbackToCenter) {
-                return {
-                    ...nextState,
-                    viewport,
-                    safe,
-                    target,
-                    spotlightEnabled: false,
-                    mode: 'center'
-                };
-            }
+            let target = this.resolveTarget(state.step, true);
+            target = this.isElementUsable(target) ? target : null;
 
             return {
-                ...nextState,
+                ...state,
                 viewport,
                 safe,
                 target,
                 cardFrame,
                 targetZone,
-                spotlightEnabled
+                mode: 'mobile-context',
+                spotlightEnabled: false,
+                mobileContextFocus: !!(target && this.canUseMobileContextFocus(target, targetZone, cardFrame))
             };
         }
 
@@ -514,6 +495,37 @@
             return target instanceof Element && target.getClientRects().length > 0;
         }
 
+        isElementUsable(target) {
+            if (!this.isRenderableTarget(target)) return false;
+
+            const rect = target.getBoundingClientRect();
+            if (rect.width < 1 || rect.height < 1) return false;
+
+            const style = global.getComputedStyle(target);
+            if (style.display === 'none' || style.visibility === 'hidden') return false;
+            if (Number.parseFloat(style.opacity || '1') <= 0.05) return false;
+
+            return true;
+        }
+
+        canUseMobileContextFocus(target, targetZone, cardFrame) {
+            if (!this.isElementUsable(target) || !targetZone || !cardFrame) return false;
+
+            const rect = target.getBoundingClientRect();
+            const position = global.getComputedStyle(target).position;
+            const topLimit = position === 'fixed'
+                ? this.getViewportRect().top + 4
+                : targetZone.top + 4;
+
+            if (targetZone.height < 72) return false;
+            if (rect.height > Math.max(0, targetZone.height - 8)) return false;
+            if (rect.top < topLimit) return false;
+            if (rect.bottom > targetZone.bottom - 4) return false;
+            if (this.rectsOverlap(rect, this.frameToRect(cardFrame), 10)) return false;
+
+            return true;
+        }
+
         isSidebarTarget(target) {
             return !!target?.closest('.sidebar');
         }
@@ -565,7 +577,8 @@
                 placement: 'center',
                 mode: 'center',
                 reduceMotion: this.prefersReducedMotion(),
-                spotlightEnabled: false
+                spotlightEnabled: false,
+                mobileContextFocus: false
             };
         }
 
@@ -617,6 +630,47 @@
             }
         }
 
+        async prepareMobileContextTarget(target, token) {
+            if (!this.isElementUsable(target)) return;
+
+            const reduceMotion = this.prefersReducedMotion();
+            const viewport = this.getViewportRect();
+            const position = global.getComputedStyle(target).position;
+            const card = this.card;
+            const estimatedCardHeight = card
+                ? Math.min(card.offsetHeight || 420, viewport.height * 0.68, 560)
+                : Math.min(420, viewport.height * 0.68, 560);
+
+            if (position === 'fixed' || position === 'sticky') {
+                return;
+            }
+
+            this.scrollTargetIntoView(target, reduceMotion, 'center');
+            await this.wait(reduceMotion ? 80 : 260, token);
+            if (!this.isOpen || token !== this.renderToken) return;
+
+            const nextViewport = this.getViewportRect();
+            const safeTop = this.getSafeArea(nextViewport).top;
+            const targetBottomLimit = nextViewport.bottom - estimatedCardHeight - 32;
+            const rect = target.getBoundingClientRect();
+            let scrollAdjustment = 0;
+
+            if (rect.bottom > targetBottomLimit) {
+                scrollAdjustment = rect.bottom - targetBottomLimit + 24;
+            } else if (rect.top < safeTop) {
+                scrollAdjustment = rect.top - safeTop - 12;
+            }
+
+            if (Math.abs(scrollAdjustment) < 2) return;
+
+            global.scrollBy({
+                top: scrollAdjustment,
+                behavior: reduceMotion ? 'auto' : 'smooth'
+            });
+
+            await this.wait(reduceMotion ? 80 : 220, token);
+        }
+
         async scrollTargetIntoZone(target, zone, reduceMotion, token) {
             if (!target || !zone) return;
 
@@ -663,7 +717,7 @@
                     ? Math.min(viewport.width > MOBILE_BREAKPOINT ? 420 : availableWidth, availableWidth)
                     : availableWidth;
             const maxHeight = layoutMode === 'mobile-sheet'
-                ? Math.min(520, viewport.height * 0.52, availableHeight)
+                ? Math.min(560, viewport.height * 0.68, availableHeight)
                 : availableHeight;
 
             this.card.style.left = `${safe.left}px`;
@@ -896,8 +950,75 @@
             this.spotlight.style.borderRadius = '';
         }
 
+        clearContextLabel() {
+            if (!this.contextLabelEl) return;
+            this.contextLabelEl.hidden = true;
+            this.contextLabelEl.textContent = '';
+        }
+
+        syncContextLabel(step, state) {
+            if (!this.contextLabelEl) return;
+
+            const label = step?.mobileContextLabel || step?.title || '';
+            const shouldShow = !!(
+                state?.isMobile &&
+                state.mode !== 'center' &&
+                label &&
+                (step?.mobileTarget || step?.target)
+            );
+
+            if (!shouldShow) {
+                this.clearContextLabel();
+                return;
+            }
+
+            this.contextLabelEl.hidden = false;
+            this.contextLabelEl.textContent = `This relates to: ${label}`;
+        }
+
+        clearMobileFocusTarget() {
+            document.querySelectorAll('.tour-mobile-focus-target').forEach((element) => {
+                element.classList.remove('tour-mobile-focus-target');
+
+                if (element instanceof HTMLElement) {
+                    element.style.position = element.dataset.tourMobileFocusPosition || '';
+                    element.style.zIndex = element.dataset.tourMobileFocusZIndex || '';
+                    element.style.pointerEvents = element.dataset.tourMobileFocusPointerEvents || '';
+                    delete element.dataset.tourMobileFocusPosition;
+                    delete element.dataset.tourMobileFocusZIndex;
+                    delete element.dataset.tourMobileFocusPointerEvents;
+                }
+            });
+        }
+
+        applyMobileFocusTarget(target) {
+            this.clearMobileFocusTarget();
+            if (!this.isElementUsable(target) || !(target instanceof HTMLElement)) return;
+
+            target.dataset.tourMobileFocusPosition = target.style.position || '';
+            target.dataset.tourMobileFocusZIndex = target.style.zIndex || '';
+            target.dataset.tourMobileFocusPointerEvents = target.style.pointerEvents || '';
+
+            const computedPosition = global.getComputedStyle(target).position;
+            target.style.position = computedPosition === 'static' ? 'relative' : computedPosition;
+            target.style.zIndex = '99992';
+            target.style.pointerEvents = 'none';
+            target.classList.add('tour-mobile-focus-target');
+        }
+
+        syncMobileContextFocus(state) {
+            if (!state?.isMobile || !state.mobileContextFocus || !this.isElementUsable(state.target)) {
+                this.clearMobileFocusTarget();
+                return;
+            }
+
+            this.applyMobileFocusTarget(state.target);
+        }
+
         clearHighlight() {
             this.hideSpotlight();
+            this.clearContextLabel();
+            this.clearMobileFocusTarget();
             this.currentTarget = null;
             this.currentState = null;
         }
