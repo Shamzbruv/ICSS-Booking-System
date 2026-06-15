@@ -45,13 +45,13 @@ router.get('/summary', async (req, res) => {
 
     try {
         const [confirmed, cancelled, newDesigns, totalDesigns, activeBlocks, monthlyBookings, revenueData, topServicesData] = await Promise.all([
-            query(`SELECT COUNT(*) AS cnt FROM bookings WHERE tenant_id=$1 AND status='confirmed'` + dateFilter, params),
+            query(`SELECT COUNT(*) AS cnt FROM bookings WHERE tenant_id=$1 AND status IN ('confirmed', 'completed')` + dateFilter, params),
             query(`SELECT COUNT(*) AS cnt FROM bookings WHERE tenant_id=$1 AND status='cancelled'` + dateFilter, params),
             query(`SELECT COUNT(*) AS cnt FROM design_inquiries WHERE tenant_id=$1 AND status='new'`, [tenantId]),
             query(`SELECT COUNT(*) AS cnt FROM design_inquiries WHERE tenant_id=$1`, [tenantId]),
             query(`SELECT COUNT(*) AS cnt FROM unavailable_slots WHERE tenant_id=$1`, [tenantId]),
             query(
-                `SELECT COUNT(*) AS cnt FROM bookings WHERE tenant_id=$1 AND status='confirmed'
+                `SELECT COUNT(*) AS cnt FROM bookings WHERE tenant_id=$1 AND status IN ('confirmed', 'completed')
                  AND booking_date >= date_trunc('month', NOW())`,
                 [tenantId]
             ),
@@ -59,14 +59,14 @@ router.get('/summary', async (req, res) => {
                 `SELECT SUM(s.price) AS total_revenue 
                  FROM bookings b 
                  JOIN services s ON b.service_id = s.id 
-                 WHERE b.tenant_id=$1 AND b.status='confirmed'` + dateFilter,
+                 WHERE b.tenant_id=$1 AND b.status IN ('confirmed', 'completed')` + dateFilter,
                 params
             ),
             query(
                 `SELECT s.name, COUNT(b.id) as booking_count, SUM(s.price) as revenue 
                  FROM bookings b 
                  JOIN services s ON b.service_id = s.id 
-                 WHERE b.tenant_id=$1 AND b.status='confirmed'` + dateFilter + `
+                 WHERE b.tenant_id=$1 AND b.status IN ('confirmed', 'completed')` + dateFilter + `
                  GROUP BY s.id, s.name 
                  ORDER BY revenue DESC LIMIT 5`,
                 params
