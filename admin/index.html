@@ -88,6 +88,12 @@
             <p class="page-subtitle" id="currentDate">Loading...</p>
         </div>
         <div class="header-actions">
+            <div class="date-filter" style="display: flex; gap: 8px; align-items: center; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); padding: 6px 12px; border-radius: 8px;">
+                <input type="date" id="filterStartDate" class="date-input" aria-label="Start Date" style="background: transparent; color: white; border: none; font-family: inherit; font-size: 14px; outline: none; color-scheme: dark;">
+                <span style="color: #666;">-</span>
+                <input type="date" id="filterEndDate" class="date-input" aria-label="End Date" style="background: transparent; color: white; border: none; font-family: inherit; font-size: 14px; outline: none; color-scheme: dark;">
+                <button class="btn btn-primary" onclick="applyDateFilter()" style="padding: 6px 12px; font-size: 13px; min-height: unset; height: auto;">Apply</button>
+            </div>
             <button class="btn btn-secondary" type="button" id="startTourBtn">✦ Start Tutorial</button>
             <button class="btn btn-secondary" type="button" data-tour="refresh-button" onclick="refreshData()">↻ Refresh</button>
         </div>
@@ -119,21 +125,24 @@
         </div>
     </section>
 
-    <!-- Plan Status Card -->
-    <section class="plan-card" id="planCard" data-tour="subscription-plan">
-        <div class="plan-header">
-            <div data-tour="subscription-plan-summary">
-                <h2 class="plan-title">Subscription Plan</h2>
-                <p class="plan-name" id="planName">Loading...</p>
+    <!-- Financial Overview Card -->
+    <section class="plan-card financial-card" id="financialOverview" data-tour="financial-overview" style="display: flex; flex-direction: column; gap: 20px;">
+        <div class="plan-header" style="border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 20px; margin-bottom: 0;">
+            <div>
+                <h2 class="plan-title" style="font-size: 1.5rem; background: linear-gradient(135deg, #fff, #a5b4fc); -webkit-background-clip: text; color: transparent;">Financial Overview</h2>
+                <p class="plan-name" style="font-size: 0.9rem; color: #8888aa; margin-top: 4px;">Estimated revenue based on confirmed bookings for the selected period</p>
             </div>
-            <div class="plan-usage" id="planUsage">
-                <div class="usage-bar-wrap" data-tour="monthly-bookings">
-                    <div class="usage-label">Monthly Bookings</div>
-                    <div class="usage-bar">
-                        <div class="usage-fill" id="usageFill" style="width:0%"></div>
-                    </div>
-                    <div class="usage-text" id="usageText">—</div>
+            <div class="plan-usage">
+                <div class="usage-bar-wrap" style="align-items: flex-end; text-align: right;">
+                    <div class="usage-label" style="font-size: 0.85rem; color: #8888aa; text-transform: uppercase; letter-spacing: 1px;">Total Revenue</div>
+                    <div class="usage-text" id="totalRevenueVal" style="font-size: 2rem; font-weight: 700; color: #fff; line-height: 1; margin-top: 4px;">$0.00</div>
                 </div>
+            </div>
+        </div>
+        <div class="top-services-container">
+            <h3 style="font-family: 'Clash Display', sans-serif; font-size: 1.1rem; font-weight: 600; color: #fff; margin-bottom: 15px;">Top Services</h3>
+            <div class="top-services-list" id="topServicesList" style="display: flex; flex-direction: column; gap: 12px;">
+                <div class="empty-state" style="color: #666; font-size: 0.9rem;">No services booked in this period.</div>
             </div>
         </div>
     </section>
@@ -172,26 +181,79 @@
         version: 1
     };
 
+    let currentStartDate = '';
+    let currentEndDate = '';
+
     document.addEventListener('DOMContentLoaded', async () => {
         requireAuth();
         document.getElementById('currentDate').textContent =
             new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            
+        // Default to current month
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0); // Last day of month
+        
+        currentStartDate = startOfMonth.toISOString().split('T')[0];
+        currentEndDate = endOfMonth.toISOString().split('T')[0];
+        
+        document.getElementById('filterStartDate').value = currentStartDate;
+        document.getElementById('filterEndDate').value = currentEndDate;
+
         await loadSummary();
         populateUserUI();
         initializeDashboardTour();
     });
 
+    function applyDateFilter() {
+        const start = document.getElementById('filterStartDate').value;
+        const end = document.getElementById('filterEndDate').value;
+        if (!start || !end) {
+            alert('Please select both start and end dates.');
+            return;
+        }
+        if (new Date(start) > new Date(end)) {
+            alert('Start date must be before end date.');
+            return;
+        }
+        currentStartDate = start;
+        currentEndDate = end;
+        loadSummary();
+    }
+
     async function loadSummary() {
         try {
-            const data = await apiFetch('/api/v1/admin/summary');
+            const queryParams = new URLSearchParams();
+            if (currentStartDate) queryParams.set('startDate', currentStartDate);
+            if (currentEndDate) queryParams.set('endDate', currentEndDate);
+
+            const data = await apiFetch('/api/v1/admin/summary?' + queryParams.toString());
             document.getElementById('tenantName').textContent = data.tenantName || 'Admin';
             document.getElementById('tenantPlan').textContent = (data.plan || 'starter').toUpperCase();
             document.getElementById('statConfirmedVal').textContent  = data.confirmedBookings ?? '—';
             document.getElementById('statMonthlyVal').textContent    = data.monthlyBookings ?? '—';
             document.getElementById('statCancelledVal').textContent  = data.cancelledBookings ?? '—';
-            document.getElementById('planName').textContent = capitalize(data.plan || 'starter') + ' Plan';
-            updateMonthlyUsage(data.monthlyBookings, data.monthlyBookingLimit);
             
+            // Populate Financial Overview
+            const revenueVal = document.getElementById('totalRevenueVal');
+            if (revenueVal) {
+                revenueVal.textContent = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(data.totalRevenue || 0);
+            }
+
+            const topServicesList = document.getElementById('topServicesList');
+            if (topServicesList && data.topServices) {
+                if (data.topServices.length === 0) {
+                    topServicesList.innerHTML = '<div class="empty-state" style="color: #666; font-size: 0.9rem;">No services booked in this period.</div>';
+                } else {
+                    topServicesList.innerHTML = data.topServices.map(ts => `
+                        <div class="top-service-item" style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: rgba(255,255,255,0.02); border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
+                            <div class="top-service-name" style="font-weight: 500; color: #e2e8f0; font-size: 0.95rem;">${ts.name} <span class="service-count" style="color: #8888aa; font-size: 0.85rem; font-weight: 400; margin-left: 6px;">(${ts.count} bookings)</span></div>
+                            <div class="top-service-revenue" style="font-family: 'Clash Display', monospace; font-weight: 600; color: #4ade80;">${new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(ts.revenue)}</div>
+                        </div>
+                    `).join('');
+                }
+            }
+
             if (data.tenantSlug) {
                 document.getElementById('bookingPageLink').href = '/' + data.tenantSlug;
             }

@@ -30,10 +30,23 @@ function sanitizeSupportText(value, maxLength) {
 // GET /api/v1/admin/summary
 router.get('/summary', async (req, res) => {
     const tenantId = req.tenant.id;
+    const { startDate, endDate } = req.query;
+
+    let dateFilter = '';
+    let params = [tenantId];
+    
+    if (startDate && endDate) {
+        dateFilter = ` AND booking_date BETWEEN $2 AND $3`;
+        params.push(startDate, endDate);
+    } else {
+        // Fallback to current month if no explicit dates provided
+        dateFilter = ` AND booking_date >= date_trunc('month', NOW())`;
+    }
+
     try {
-        const [confirmed, cancelled, newDesigns, totalDesigns, activeBlocks, monthlyBookings] = await Promise.all([
-            query(`SELECT COUNT(*) AS cnt FROM bookings WHERE tenant_id=$1 AND status='confirmed'`, [tenantId]),
-            query(`SELECT COUNT(*) AS cnt FROM bookings WHERE tenant_id=$1 AND status='cancelled'`, [tenantId]),
+        const [confirmed, cancelled, newDesigns, totalDesigns, activeBlocks, monthlyBookings, revenueData, topServicesData] = await Promise.all([
+            query(`SELECT COUNT(*) AS cnt FROM bookings WHERE tenant_id=$1 AND status='confirmed'` + dateFilter, params),
+            query(`SELECT COUNT(*) AS cnt FROM bookings WHERE tenant_id=$1 AND status='cancelled'` + dateFilter, params),
             query(`SELECT COUNT(*) AS cnt FROM design_inquiries WHERE tenant_id=$1 AND status='new'`, [tenantId]),
             query(`SELECT COUNT(*) AS cnt FROM design_inquiries WHERE tenant_id=$1`, [tenantId]),
             query(`SELECT COUNT(*) AS cnt FROM unavailable_slots WHERE tenant_id=$1`, [tenantId]),
@@ -41,6 +54,22 @@ router.get('/summary', async (req, res) => {
                 `SELECT COUNT(*) AS cnt FROM bookings WHERE tenant_id=$1 AND status='confirmed'
                  AND booking_date >= date_trunc('month', NOW())`,
                 [tenantId]
+            ),
+            query(
+                `SELECT SUM(s.price) AS total_revenue 
+                 FROM bookings b 
+                 JOIN services s ON b.service_id = s.id 
+                 WHERE b.tenant_id=$1 AND b.status='confirmed'` + dateFilter,
+                params
+            ),
+            query(
+                `SELECT s.name, COUNT(b.id) as booking_count, SUM(s.price) as revenue 
+                 FROM bookings b 
+                 JOIN services s ON b.service_id = s.id 
+                 WHERE b.tenant_id=$1 AND b.status='confirmed'` + dateFilter + `
+                 GROUP BY s.id, s.name 
+                 ORDER BY revenue DESC LIMIT 5`,
+                params
             )
         ]);
         const monthlyBookingLimit = typeof req.tenant?.resolvedLimits?.bookings_per_month === 'number'
@@ -54,6 +83,12 @@ router.get('/summary', async (req, res) => {
             totalDesigns:      parseInt(totalDesigns.rows[0].cnt),
             activeBlocks:      parseInt(activeBlocks.rows[0].cnt),
             monthlyBookings:   parseInt(monthlyBookings.rows[0].cnt),
+            totalRevenue:      parseFloat(revenueData.rows[0].total_revenue || 0),
+            topServices:       topServicesData.rows.map(r => ({
+                name: r.name,
+                count: parseInt(r.booking_count),
+                revenue: parseFloat(r.revenue || 0)
+            })),
             monthlyBookingLimit,
             plan:              req.tenant.plan_id,
             tenantName:        req.tenant.name,

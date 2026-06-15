@@ -271,6 +271,14 @@
   line-height: 1.5;
 }
 
+.serviceDescription {
+  margin: 6px 0 0;
+  font-size: 0.88rem;
+  color: var(--theme-text-muted);
+  line-height: 1.45;
+  white-space: pre-line;
+}
+
 .servicePrice,
 .addonCard em {
   flex-shrink: 0;

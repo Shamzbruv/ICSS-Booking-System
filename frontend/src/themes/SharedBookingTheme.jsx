@@ -707,6 +707,9 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
                       <div className={styles.serviceText}>
                         <h3>{service.name}</h3>
                         <span>{formatDuration(service.duration_minutes)}</span>
+                        {service.description && (
+                          <p className={styles.serviceDescription}>{service.description}</p>
+                        )}
                       </div>
                     </div>
                     <div className={styles.servicePrice}>{priceFormatter(service)}</div>
