@@ -49,14 +49,23 @@
     function updatePreview(){el('previewName').textContent=nameEl.value||'[Your full legal name]';el('previewAddress').textContent=addressEl.value||'[Your full address]';el('previewPlatforms').textContent=platformsEl.value||'[Your approved platforms]';const complete=fields.filter(id=>el(id).value.trim()).length+(acceptedEl.checked?1:0),percent=Math.round(complete/(fields.length+1)*100);el('progressText').textContent=percent+'%';el('progressFill').style.width=percent+'%'}
     fields.forEach(id=>el(id).addEventListener('input',updatePreview));acceptedEl.addEventListener('change',updatePreview);
     function showDocument(url){el('documentLoading').hidden=true;el('documentFrame').src=url;el('documentFrame').hidden=false;el('documentLink').href=url}
+    async function loadOwnerPreviewDocument(){
+      const ownerToken=localStorage.getItem('icss_token');
+      if(!ownerToken)throw new Error('Your owner session is unavailable. Return to the Platform Console, sign in again, and reopen this preview.');
+      const response=await fetch('/api/v1/partners/template/download',{headers:{Authorization:'Bearer '+ownerToken}});
+      if(!response.ok){const data=await response.json().catch(()=>({}));throw new Error(data.error||'The contract preview could not be loaded.');}
+      const objectUrl=URL.createObjectURL(await response.blob());
+      showDocument(objectUrl);
+      window.addEventListener('pagehide',()=>URL.revokeObjectURL(objectUrl),{once:true});
+    }
     async function init(){
-      if(previewMode){el('previewBanner').style.display='block';document.querySelector('.secure').textContent='👁 Owner preview';nameEl.value='Alex Morgan';addressEl.value='12 Hope Road, Kingston, Jamaica';emailEl.value='alex@example.com';platformsEl.value='Instagram, Facebook and TikTok';signatureEl.value='Alex Morgan';titleEl.value='Independent Marketing Partner';witnessNameEl.value='Jordan Lee';witnessSignatureEl.value='Jordan Lee';submitEl.textContent='Preview Mode — Submission Disabled';submitEl.disabled=true;form.hidden=false;showDocument(params.get('document')||'about:blank');updatePreview();return}
+      if(previewMode){el('previewBanner').style.display='block';document.querySelector('.secure').textContent='👁 Owner preview';nameEl.value='Alex Morgan';addressEl.value='12 Hope Road, Kingston, Jamaica';emailEl.value='alex@example.com';platformsEl.value='Instagram, Facebook and TikTok';signatureEl.value='Alex Morgan';titleEl.value='Independent Marketing Partner';witnessNameEl.value='Jordan Lee';witnessSignatureEl.value='Jordan Lee';submitEl.textContent='Preview Mode — Submission Disabled';submitEl.disabled=true;form.hidden=false;updatePreview();await loadOwnerPreviewDocument();return}
       if(!token){el('documentLoading').textContent='No signing token was provided.';return}
       const r=await fetch('/api/v1/partners/sign/'+encodeURIComponent(token)),d=await r.json();if(!r.ok){el('documentLoading').textContent=d.error;return}
       nameEl.value=d.agreement.partner_name||'';emailEl.value=d.agreement.partner_email;form.hidden=false;showDocument('/api/v1/partners/sign/'+encodeURIComponent(token)+'/document');updatePreview()
     }
     form.addEventListener('submit',async e=>{e.preventDefault();if(previewMode)return;submitEl.disabled=true;try{const r=await fetch('/api/v1/partners/sign/'+encodeURIComponent(token),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({partnerName:nameEl.value,partnerAddress:addressEl.value,approvedSocialPlatforms:platformsEl.value,signature:signatureEl.value,title:titleEl.value,witnessName:witnessNameEl.value,witnessSignature:witnessSignatureEl.value,accepted:acceptedEl.checked})}),d=await r.json();if(!r.ok)throw Error(d.error);showStatus(d.message,true);form.querySelectorAll('input,textarea,button').forEach(node=>node.disabled=true)}catch(err){showStatus(err.message);submitEl.disabled=false}});
-    init().catch(e=>{el('documentLoading').textContent=e.message});
+    init().catch(e=>{el('documentLoading').hidden=false;el('documentLoading').innerHTML=`<div><strong>Preview unavailable</strong><br><span>${String(e.message).replace(/[<>&]/g,'')}</span><br><button type="button" onclick="location.reload()" style="margin-top:14px">Retry</button></div>`});
   </script>
 </body>
 </html>
