@@ -110,7 +110,7 @@ function generateAgreementPdf(a) {
             doc.y=y+42;
         });
         const range = doc.bufferedPageRange();
-        for (let i = 1; i < range.count; i++) { doc.switchToPage(i); doc.rect(0,0,612,7).fill(purple); doc.font('Helvetica-Bold').fontSize(8).fillColor(purple).text('ICSS BOOKING SYSTEM',58,28); doc.font('Helvetica').fillColor('#77778A').text(`Private & confidential · ${a.id || 'Preview'} · Page ${i + 1} of ${range.count}`,58,748,{align:'right',width:496}); }
+        for (let i = 1; i < range.count; i++) { doc.switchToPage(i); doc.rect(0,0,612,7).fill(purple); doc.font('Helvetica-Bold').fontSize(8).fillColor(purple).text('ICSS BOOKING SYSTEM',58,28,{lineBreak:false}); doc.font('Helvetica').fillColor('#77778A').text(`PRIVATE & CONFIDENTIAL · PAGE ${i + 1} OF ${range.count}`,350,28,{align:'right',width:204,lineBreak:false}); }
         doc.end();
     });
 }

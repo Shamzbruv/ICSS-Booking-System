@@ -100,7 +100,7 @@ router.post('/:id/owner-sign', authenticate, requirePlatformOwner, requireActual
 });
 
 router.get('/template/download', authenticate, requirePlatformOwner, requireActualOwner, async (req, res) => {
-    const pdf = await generateAgreementPdf({ id:'TEMPLATE-PREVIEW', partner_email:'[PARTNER EMAIL]' });
+    const pdf = await generateAgreementPdf({ id:'TEMPLATE-PREVIEW', partner_name:'Alex Morgan', partner_email:'alex@example.com', partner_address:'12 Hope Road, Kingston, Jamaica', approved_social_platforms:'Instagram, Facebook and TikTok' });
     res.set({ 'Content-Type':'application/pdf', 'Content-Disposition':'inline; filename="ICSS_Agreement_Template.pdf"', 'Cache-Control':'private, no-store' }).send(pdf);
 });
 
