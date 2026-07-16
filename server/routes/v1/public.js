@@ -13,7 +13,8 @@ const { normalizeDepositConfig } = require('../../services/paymentRules');
 router.get('/tenant', async (req, res) => {
     const {
         id, name, slug, plan_id, branding, theme_id,
-        default_payment_mode, wipay_enabled, manual_payment_enabled, bank_transfer_instructions
+        default_payment_mode, manual_payment_enabled, bank_transfer_instructions,
+        after_hours_requests_enabled, after_hours_fee, paypal_payments_enabled
     } = req.tenant;
 
     let themeSlug = 'universal_booking';
@@ -42,6 +43,7 @@ router.get('/tenant', async (req, res) => {
         bookingFooterNote: branding?.bookingFooterNote || null,
         stylists:       branding?.stylists       || [],
         serviceSectionImageUrl: branding?.serviceSectionImageUrl || null
+        ,customPalette: branding?.customPalette || {}
     };
 
     res.json({
@@ -52,9 +54,11 @@ router.get('/tenant', async (req, res) => {
         layout: req.tenant.layout,
         themeName: themeSlug,
         default_payment_mode: default_payment_mode || 'none',
-        wipay_enabled: Boolean(wipay_enabled),
         manual_payment_enabled: Boolean(manual_payment_enabled),
-        bank_transfer_instructions: bank_transfer_instructions || null
+        bank_transfer_instructions: bank_transfer_instructions || null,
+        after_hours_requests_enabled: Boolean(after_hours_requests_enabled),
+        after_hours_fee: Number(after_hours_fee || 0)
+        ,paypal_payments_enabled: Boolean(paypal_payments_enabled)
     });
 });
 

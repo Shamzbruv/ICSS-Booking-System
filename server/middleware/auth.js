@@ -25,6 +25,7 @@ const ROLE_LEVELS = {
     staff:          2,
     tenant_admin:   3,
     super_admin:    4,
+    developer_admin: 4,
     platform_owner: 5,
 };
 
@@ -46,6 +47,18 @@ async function authenticate(req, res, next) {
     try {
         const decoded = jwt.verify(token, JWT_SECRET);
         req.user = decoded;
+
+        if (decoded.impersonation_session_id && ['POST','PUT','PATCH','DELETE'].includes(req.method) && !req._impersonationAuditAttached) {
+            req._impersonationAuditAttached = true;
+            res.on('finish', () => {
+                if (res.statusCode >= 400) return;
+                query(`INSERT INTO audit_log (actor_user_id,tenant_id,action,entity,metadata,ip_address) VALUES ($1,$2,'impersonated_change','api_request',$3,$4)`, [
+                    decoded.actor_user_id, decoded.tenant_id,
+                    JSON.stringify({ method: req.method, path: req.originalUrl, impersonatedTenantName: decoded.tenant_name || null, impersonationSessionId: decoded.impersonation_session_id }),
+                    req.ip || null
+                ]).catch(err => console.error('[Auth/ImpersonationAudit]', err.message));
+            });
+        }
 
         // ── Impersonation session validation ──────────────────────────────────
         if (decoded.impersonation_session_id) {
@@ -119,8 +132,8 @@ function requirePlatformOwner(req, res, next) {
     if (!req.user) {
         return res.status(401).json({ error: 'Authentication required.' });
     }
-    if (req.user.role !== 'platform_owner') {
-        return res.status(403).json({ error: 'Platform Owner access required.' });
+    if (!['platform_owner', 'developer_admin'].includes(req.user.role)) {
+        return res.status(403).json({ error: 'Developer platform access required.' });
     }
     next();
 }

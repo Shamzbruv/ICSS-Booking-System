@@ -48,6 +48,7 @@
         <a href="bookings.html" class="nav-item active"><span class="nav-icon">📅</span> Bookings</a>
         <a href="availability.html" class="nav-item"><span class="nav-icon">🗓️</span> Availability</a>
         <a href="settings.html" class="nav-item"><span class="nav-icon">⚙️</span> Settings</a>
+        <a href="customize.html" class="nav-item"><span class="nav-icon">🎨</span> Customize</a>
         <a href="services.html" class="nav-item"><span class="nav-icon">📦</span> Services</a>
     </nav>
     <div class="sidebar-footer">
@@ -73,8 +74,9 @@
                 <input type="date" id="filterDate" style="max-width:170px;" onchange="loadBookings()">
                 <select id="filterStatus" onchange="loadBookings()">
                     <option value="">All Statuses</option>
-                    <option value="pending_payment">Pending WiPay</option>
+                    <option value="pending_payment">Pending PayPal</option>
                     <option value="pending_manual_confirmation">Pending Bank Transfer</option>
+                    <option value="pending_after_hours_confirmation">After-hours Requests</option>
                     <option value="confirmed">Confirmed</option>
                     <option value="cancelled">Cancelled</option>
                     <option value="rejected">Rejected</option>
@@ -181,6 +183,15 @@
                         <button class="btn btn-primary btn-sm" style="background:#10b981;" onclick="updateStatus('${b.id}', 'confirmed', 'Bank transfer approved.')">✓ Approve Transfer</button>
                         <button class="btn btn-danger btn-sm" onclick="updateStatus('${b.id}', 'rejected', 'Bank transfer not received.')">✕ Reject</button>
                     ` : ''}
+                    ${b.status === 'pending_payment' && b.payment_mode === 'paypal' ? `
+                        <button class="btn btn-primary btn-sm" style="background:#10b981;" onclick="updateStatus('${b.id}', 'confirmed', 'PayPal payment verified.')">✓ Verify PayPal Payment</button>
+                        <button class="btn btn-danger btn-sm" onclick="updateStatus('${b.id}', 'rejected', 'PayPal payment not received.')">✕ Reject</button>
+                    ` : ''}
+                    ${b.status === 'pending_after_hours_confirmation' ? `
+                        <div style="font-size:11px;color:var(--text-dim);margin-bottom:6px;">After-hours fee: ${escHtml(b.after_hours_fee || '0')}</div>
+                        <button class="btn btn-primary btn-sm" style="background:#10b981;" onclick="updateStatus('${b.id}', 'confirmed', 'After-hours request approved.')">✓ Approve Request</button>
+                        <button class="btn btn-danger btn-sm" onclick="updateStatus('${b.id}', 'rejected', 'After-hours request unavailable.')">✕ Decline</button>
+                    ` : ''}
                 </td>
             </tr>
         `).join('');
@@ -199,7 +210,7 @@
 
     async function updateStatus(id, newStatus, note = '') {
         if (newStatus === 'rejected' && !confirmDialog('Are you sure you want to reject this booking?')) return;
-        if (newStatus === 'confirmed' && !confirmDialog('Are you sure you want to approve this bank transfer and confirm the booking?')) return;
+        if (newStatus === 'confirmed' && !confirmDialog('Approve this request and confirm the booking?')) return;
         
         try {
             await apiFetch(`/api/v1/bookings/${id}/status`, {

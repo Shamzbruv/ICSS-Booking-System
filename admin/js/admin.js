@@ -38,7 +38,7 @@ function getUser() {
                 role: payload.role,
                 tenant_id: payload.tenant_id,
                 tenant_slug: payload.tenant_slug || getImpTenant(),
-                name: (payload.name || payload.email || 'Tenant Admin').split('@')[0]
+                name: payload.tenant_name ? `Impersonating: ${payload.tenant_name}` : (payload.name || payload.email || 'Tenant Admin').split('@')[0]
             };
         } catch (e) {
             console.error('Failed to parse impersonation token', e);
@@ -67,6 +67,11 @@ function requireAuth() {
         window.location.href = 'login.html';
         return false;
     }
+    const user = getUser();
+    if (user?.role === 'platform_partner' && !window.location.pathname.endsWith('/contracts.html') && !window.location.pathname.endsWith('contracts.html')) {
+        window.location.href = 'contracts.html';
+        return false;
+    }
     return true;
 }
 
@@ -86,7 +91,7 @@ function populateUserUI() {
     if (avatarEl) avatarEl.textContent = (user.name || user.email || 'U')[0].toUpperCase();
 
     // Show super-admin elements
-    if (user.role === 'super_admin') {
+    if (user.role === 'super_admin' || user.role === 'platform_owner') {
         document.querySelectorAll('.super-admin-only').forEach(el => el.classList.remove('hidden'));
     }
 }
@@ -210,6 +215,7 @@ function statusBadge(status) {
         pending:     { label: 'Pending',     cls: 'badge-pending'   },
         pending_payment: { label: 'Pending Payment', cls: 'badge-pending' },
         pending_manual_confirmation: { label: 'Awaiting Bank Transfer', cls: 'badge-new' },
+        pending_after_hours_confirmation: { label: 'After-hours Request', cls: 'badge-new' },
         rejected:    { label: 'Rejected',    cls: 'badge-cancelled' },
         expired:     { label: 'Expired',     cls: 'badge-cancelled' }
     };

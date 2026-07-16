@@ -768,3 +768,18 @@
     font-size: 16px;
   }
 }
+.afterHoursRequest {
+  margin-top: 14px;
+  padding: 16px;
+  border: 1px solid color-mix(in srgb, var(--theme-accent, #7c6ef7) 38%, transparent);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--theme-accent, #7c6ef7) 8%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+.afterHoursRequest strong { display: block; margin-bottom: 4px; }
+.afterHoursRequest p { margin: 0; font-size: 0.84rem; opacity: 0.76; line-height: 1.45; }
+.afterHoursRequest input { min-width: 128px; padding: 10px; border-radius: 9px; border: 1px solid rgba(127,127,127,.3); background: transparent; color: inherit; }
+@media (max-width: 620px) { .afterHoursRequest { align-items: stretch; flex-direction: column; } .afterHoursRequest input { width: 100%; box-sizing: border-box; } }

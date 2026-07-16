@@ -200,6 +200,10 @@ async function runMigrations(client) {
     await client.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS bank_transfer_instructions TEXT`);
     await client.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS payment_settings JSONB DEFAULT '{}'`);
     await client.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()`);
+    await client.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS after_hours_requests_enabled BOOLEAN DEFAULT false`);
+    await client.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS after_hours_fee NUMERIC(12,2) DEFAULT 0`);
+    await client.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS paypal_payments_enabled BOOLEAN DEFAULT false`);
+    await client.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS paypal_payment_link TEXT`);
 
     // ── Tenant Slug History (for redirects) ──────────────────────────────────
     await client.query(`
@@ -349,11 +353,48 @@ async function runMigrations(client) {
     try { await client.query(`ALTER TABLE bookings ADD COLUMN end_time TIMESTAMPTZ`); } catch(e){}
     try { await client.query(`ALTER TABLE bookings ADD COLUMN expires_at TIMESTAMPTZ`); } catch(e){}
     try { await client.query(`ALTER TABLE bookings ADD COLUMN payment_mode TEXT DEFAULT 'none'`); } catch(e){}
+    await client.query(`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS is_after_hours_request BOOLEAN DEFAULT false`);
+    await client.query(`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS after_hours_fee NUMERIC(12,2) DEFAULT 0`);
 
     // Indexes for fast overlap checks (Must run after columns are added)
     await client.query(`CREATE INDEX IF NOT EXISTS idx_bookings_tenant_time ON bookings (tenant_id, start_time, end_time)`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_bookings_status ON bookings (status)`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_bookings_active_states ON bookings (tenant_id, start_time, end_time) WHERE status IN ('confirmed', 'pending_payment', 'pending_manual_confirmation')`);
+
+    // ── Marketing partner agreements ────────────────────────────────────────
+    // The public token is stored only as a SHA-256 hash. It is consumed when
+    // the partner signs, so forwarding an old invitation cannot reopen it.
+    await client.query(`
+        CREATE TABLE IF NOT EXISTS partner_agreements (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            partner_email TEXT NOT NULL,
+            partner_name TEXT,
+            partner_address TEXT,
+            approved_social_platforms TEXT,
+            status TEXT NOT NULL DEFAULT 'invited',
+            signing_token_hash TEXT UNIQUE,
+            signing_token_expires_at TIMESTAMPTZ,
+            partner_signature TEXT,
+            partner_title TEXT,
+            partner_witness_name TEXT,
+            partner_witness_signature TEXT,
+            partner_signed_at TIMESTAMPTZ,
+            partner_signing_ip TEXT,
+            partner_signing_user_agent TEXT,
+            effective_date DATE,
+            owner_signature TEXT,
+            owner_printed_name TEXT,
+            owner_title TEXT,
+            owner_witness_name TEXT,
+            owner_witness_signature TEXT,
+            owner_signed_at TIMESTAMPTZ,
+            owner_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+            partner_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+            created_at TIMESTAMPTZ DEFAULT NOW(),
+            updated_at TIMESTAMPTZ DEFAULT NOW()
+        )
+    `);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_partner_agreements_email ON partner_agreements (LOWER(partner_email))`);
     
     try { await client.query(`ALTER TABLE services ADD COLUMN buffer_time_minutes INT DEFAULT 0`); } catch(e){}
     try { await client.query(`ALTER TABLE services ADD COLUMN payment_mode TEXT DEFAULT 'tenant_default'`); } catch(e){}
@@ -361,6 +402,8 @@ async function runMigrations(client) {
     try { await client.query(`ALTER TABLE services ADD COLUMN deposit_type TEXT DEFAULT 'percentage'`); } catch(e){}
     try { await client.query(`ALTER TABLE services ADD COLUMN deposit_amount NUMERIC DEFAULT 0`); } catch(e){}
     try { await client.query(`ALTER TABLE services ADD COLUMN image_url TEXT`); } catch(e){}
+    await client.query(`UPDATE services SET payment_mode='paypal' WHERE payment_mode='wipay'`);
+    await client.query(`UPDATE tenants SET default_payment_mode='paypal', wipay_enabled=false WHERE default_payment_mode='wipay'`);
     try { await client.query(`ALTER TABLE tenants ADD COLUMN business_hours JSONB DEFAULT NULL`); } catch(e){}
 
     // ── Booking Payments ──────────────────────────────────────────────────────
@@ -380,6 +423,7 @@ async function runMigrations(client) {
             updated_at TIMESTAMPTZ DEFAULT NOW()
         )
     `);
+    await client.query(`ALTER TABLE booking_payments ADD COLUMN IF NOT EXISTS currency TEXT DEFAULT 'JMD'`);
 
     // ── Ledger Schema (Phase 2) ────────────────────────────────────────────────
     await client.query(`
@@ -562,6 +606,28 @@ async function runMigrations(client) {
     try { await client.query(`ALTER TABLE audit_log ADD COLUMN note TEXT`); } catch(e){}
 
     await client.query(`CREATE INDEX IF NOT EXISTS idx_audit_tenant ON audit_log(tenant_id, created_at DESC)`);
+
+    // ── Tenant developer jobs / issue tickets ────────────────────────────────
+    await client.query(`
+        CREATE TABLE IF NOT EXISTS support_jobs (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+            submitted_by UUID REFERENCES users(id) ON DELETE SET NULL,
+            category TEXT NOT NULL DEFAULT 'general',
+            subject TEXT NOT NULL,
+            description TEXT NOT NULL,
+            page_url TEXT,
+            status TEXT NOT NULL DEFAULT 'submitted',
+            developer_note TEXT,
+            assigned_to UUID REFERENCES users(id) ON DELETE SET NULL,
+            reviewed_at TIMESTAMPTZ,
+            completed_at TIMESTAMPTZ,
+            created_at TIMESTAMPTZ DEFAULT NOW(),
+            updated_at TIMESTAMPTZ DEFAULT NOW()
+        )
+    `);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_support_jobs_status ON support_jobs(status, created_at DESC)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_support_jobs_tenant ON support_jobs(tenant_id, created_at DESC)`);
 
     // ── Deposit Sessions ──────────────────────────────────────────────────────
     await client.query(`

@@ -52,15 +52,16 @@ export default function TenantDrawer({ tenant, onClose }) {
     }).finally(() => setLoading(false));
   }, [tenant]);
 
-  const impersonate = async (mode) => {
+  const impersonate = async (mode, page = 'index.html') => {
     const reason = mode === 'edit' ? prompt('Reason for edit access:') : '';
     if (mode === 'edit' && !reason) return;
-    await startImpersonation(tenant.id, mode, reason || '');
+    const session = await startImpersonation(tenant.id, mode, reason || 'Tenant drawer access');
+    window.open(`/admin/${page}?tenant=${tenant.slug}&_impToken=${session.token}`, '_blank');
   };
 
   const openPublicPage = () => window.open(`/${tenant.slug}`, '_blank');
-  const openEditor     = () => window.open(`/editor?_tenant=${tenant.slug}`, '_blank');
-  const openAdmin      = () => window.open(`/admin?tenant=${tenant.slug}`, '_blank');
+  const openEditor     = () => impersonate('edit', 'customize.html');
+  const openAdmin      = () => impersonate('read_only');
 
   const handleResetPassword = async () => {
     if (!confirm('Are you sure you want to send a password reset email to this tenant owner?')) return;
@@ -121,11 +122,11 @@ export default function TenantDrawer({ tenant, onClose }) {
           </div>
           <div className={s.drawer__headerActions}>
             <button className={s.actionBtn} onClick={openPublicPage} title="Open Public Page">🌐 Public</button>
-            <button className={s.actionBtn} onClick={openEditor}     title="Open Editor">🎨 Editor</button>
-            <button className={s.actionBtn} onClick={openAdmin}      title="Open Admin">🛠 Admin</button>
+            <button className={s.actionBtn} onClick={openEditor} title="Open tenant customization with edit access">🎨 Customize</button>
+            <button className={s.actionBtn} onClick={openAdmin} title="Open tenant admin read-only">👁 View Admin</button>
             <button className={s.actionBtn} onClick={handleResetDashboardTour} title="Reset Dashboard Tutorial">🧭 Reset Tour</button>
-            <button className={`${s.actionBtn} ${s['actionBtn--primary']}`} onClick={() => impersonate('read_only')} title="Impersonate">
-              👁 View As
+            <button className={`${s.actionBtn} ${s['actionBtn--primary']}`} onClick={() => impersonate('edit')} title="Open tenant admin with edit access">
+              🛠 Edit Admin
             </button>
             <button className={s.drawer__close} onClick={onClose}>✕</button>
           </div>
@@ -167,7 +168,7 @@ export default function TenantDrawer({ tenant, onClose }) {
                     <InfoRow label="Total Bookings" value={tenant.total_bookings || 0} />
                     <InfoRow label="Active Services" value={tenant.active_services || 0} />
                     <InfoRow label="Payment Mode" value={tenant.default_payment_mode || '—'} />
-                    <InfoRow label="WiPay" value={tenant.wipay_enabled ? '✅ Enabled' : '—'} />
+                    <InfoRow label="PayPal" value={tenant.paypal_payments_enabled ? '✅ Enabled' : '—'} />
                     <InfoRow label="Manual Transfer" value={tenant.manual_payment_enabled ? '✅ Enabled' : '—'} />
                   </div>
 
@@ -243,7 +244,7 @@ export default function TenantDrawer({ tenant, onClose }) {
                   {!payments ? <div className={s.empty}>No payment settings configured.</div> : (
                     <div className={s.infoGrid}>
                       <InfoRow label="Default Mode" value={payments.payment_mode || '—'} />
-                      <InfoRow label="WiPay" value={payments.wipay_enabled ? '✅ Enabled' : 'Disabled'} />
+                      <InfoRow label="PayPal" value={payments.paypal_payments_enabled ? '✅ Enabled' : 'Disabled'} />
                       <InfoRow label="Manual Transfer" value={payments.manual_payment_enabled ? '✅ Enabled' : 'Disabled'} />
                       <InfoRow label="Hold Timeout" value={`${payments.hold_timeout_minutes || 30} min`} />
                       <InfoRow label="Transfer Instructions" value={payments.manual_transfer_instructions ? '✅ Set' : '⚠️ Missing'} />

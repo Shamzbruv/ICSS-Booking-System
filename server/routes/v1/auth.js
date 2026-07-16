@@ -75,10 +75,10 @@ router.post('/login', authLimiter, async (req, res) => {
     const tokenExpiry = rememberMe ? '30d' : '7d';
 
     try {
-        // ── Platform owner login — no tenant association required ─────────────
+        // ── Platform-level login — no tenant association required ─────────────
         const ownerRes = await query(
             `SELECT id, email, name, role, password_hash FROM users
-             WHERE email = $1 AND role = 'platform_owner' AND active = true`,
+             WHERE email = $1 AND role IN ('platform_owner', 'developer_admin', 'platform_partner') AND active = true`,
             [email.toLowerCase().trim()]
         );
 

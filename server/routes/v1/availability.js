@@ -118,7 +118,7 @@ router.get('/', async (req, res) => {
     const maxDateStr = getTzTimeStr(timezone, 0, MAX_DAYS_AHEAD).split('T')[0];
 
     if (date < todayStr || date > maxDateStr) {
-        return res.json({ date, slots: [], message: 'Date is out of bookable range.' });
+        return res.json({ date, slots: [], message: 'Date is out of bookable range.', afterHours: { enabled: false } });
     }
 
     // ── Fetch service duration if service_id provided ──────────────────────────
@@ -145,7 +145,7 @@ router.get('/', async (req, res) => {
     const { slots, isClosed, closeMins } = generateSlots(req.tenant.business_hours, date);
 
     if (isClosed) {
-        return res.json({ date, slots: [], dayBlocked: true, message: 'Business is closed on this day.' });
+        return res.json({ date, slots: [], dayBlocked: true, message: 'Business is closed on this day.', afterHours: { enabled: Boolean(req.tenant.after_hours_requests_enabled), fee: Number(req.tenant.after_hours_fee || 0) } });
     }
 
     // Mark past/too-close slots
@@ -187,7 +187,7 @@ router.get('/', async (req, res) => {
                 if (!slot.reason) slot.reason = 'UNAVAILABLE';
                 if (dayBlock?.reason) slot.adminReason = dayBlock.reason;
             });
-            return res.json({ date, slots, dayBlocked: true });
+            return res.json({ date, slots, dayBlocked: true, afterHours: { enabled: false } });
         }
 
         const slotBlockMap = {};
@@ -226,7 +226,7 @@ router.get('/', async (req, res) => {
                 slot.available = false;
                 if (!slot.reason) slot.reason = 'FULLY_BOOKED';
             });
-            return res.json({ date, slots });
+            return res.json({ date, slots, afterHours: { enabled: Boolean(req.tenant.after_hours_requests_enabled), fee: Number(req.tenant.after_hours_fee || 0) } });
         }
 
         // For each available slot, check whether the service window overlaps any booking
@@ -261,7 +261,7 @@ router.get('/', async (req, res) => {
             }
         }
 
-        res.json({ date, slots, serviceDurationMins, totalServiceMins });
+        res.json({ date, slots, serviceDurationMins, totalServiceMins, afterHours: { enabled: Boolean(req.tenant.after_hours_requests_enabled), fee: Number(req.tenant.after_hours_fee || 0) } });
 
     } catch (err) {
         console.error('[Availability]', err.message);

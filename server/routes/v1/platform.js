@@ -16,6 +16,8 @@ const router  = express.Router();
 const { query } = require('../../db/connection');
 const { authenticate, requirePlatformOwner, signToken } = require('../../middleware/auth');
 const { invalidateTenantCache } = require('../../middleware/tenantResolver');
+const bcrypt = require('bcryptjs');
+const { sendSupportJobStatusEmail } = require('../../services/email');
 
 function formatDateOnlyValue(value) {
     if (!value) return value;
@@ -47,6 +49,29 @@ function serializeBooking(booking) {
 
 // All platform routes: authenticated + platform_owner only
 router.use(authenticate, requirePlatformOwner);
+
+function ownerOnly(req, res, next) {
+    if (req.user.role !== 'platform_owner') return res.status(403).json({ error: 'Only the Platform Owner can manage developer accounts.' });
+    next();
+}
+
+router.get('/developer-admins', async (req, res) => {
+    const result = await query(`SELECT id,email,name,active,created_at FROM users WHERE tenant_id IS NULL AND role='developer_admin' ORDER BY created_at DESC`);
+    res.json({ admins: result.rows });
+});
+
+router.post('/developer-admins', ownerOnly, async (req, res) => {
+    const email = String(req.body.email || '').trim().toLowerCase(), name = String(req.body.name || '').trim(), password = String(req.body.password || '');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !name || password.length < 10) return res.status(400).json({ error: 'Name, valid email, and a password of at least 10 characters are required.' });
+    try {
+        const duplicate = await query(`SELECT id FROM users WHERE LOWER(email)=LOWER($1) LIMIT 1`, [email]);
+        if (duplicate.rows.length) return res.status(409).json({ error:'An account with this email already exists.' });
+        const hash = await bcrypt.hash(password, 12);
+        const result = await query(`INSERT INTO users (email,password_hash,name,role,active) VALUES ($1,$2,$3,'developer_admin',true) RETURNING id,email,name,role,active,created_at`, [email,hash,name]);
+        await auditLog(req.user.id, null, 'developer_admin_created', { entity:'user', entityId:result.rows[0].id, email }, req);
+        res.status(201).json({ admin: result.rows[0] });
+    } catch (err) { if (err.code === '23505') return res.status(409).json({ error:'An account with this email already exists.' }); res.status(500).json({ error:'Could not create developer admin.' }); }
+});
 
 // ─── Audit helper ──────────────────────────────────────────────────────────────
 async function auditLog(actorId, tenantId, action, meta = {}, req = null) {
@@ -86,7 +111,7 @@ router.get('/tenants', async (req, res) => {
                 t.branding,
                 th.name AS theme_name,
                 t.default_payment_mode,
-                t.wipay_enabled,
+                t.paypal_payments_enabled,
                 t.manual_payment_enabled,
                 (SELECT COUNT(*) FROM bookings b WHERE b.tenant_id = t.id) AS total_bookings,
                 (SELECT COUNT(*) FROM services s WHERE s.tenant_id = t.id AND s.active = true) AS active_services,
@@ -149,7 +174,7 @@ router.get('/tenants/:tenantId/health', async (req, res) => {
     try {
         const [svcRes, tenantRes, brandRes, provRes, failedJobsRes] = await Promise.all([
             query(`SELECT COUNT(*) AS cnt FROM services WHERE tenant_id = $1 AND active = true`, [tenantId]),
-            query(`SELECT default_payment_mode, wipay_enabled, manual_payment_enabled, bank_transfer_instructions, payment_settings FROM tenants WHERE id = $1`, [tenantId]),
+            query(`SELECT default_payment_mode, paypal_payments_enabled, paypal_payment_link, manual_payment_enabled, bank_transfer_instructions, payment_settings FROM tenants WHERE id = $1`, [tenantId]),
             query(`SELECT branding FROM tenants WHERE id = $1`, [tenantId]),
             query(`SELECT status FROM pending_signups WHERE tenant_slug = (SELECT slug FROM tenants WHERE id = $1) ORDER BY created_at DESC LIMIT 1`, [tenantId]),
             query(`SELECT COUNT(*) AS cnt FROM bookings WHERE tenant_id = $1 AND status = 'pending_payment' AND expires_at < NOW()`, [tenantId]),
@@ -161,8 +186,7 @@ router.get('/tenants/:tenantId/health', async (req, res) => {
         if (!ps) {
             warnings.push({ code: 'NO_TENANT', message: 'Tenant not found.' });
         } else {
-            const settingsJson = ps.payment_settings || {};
-            if (ps.wipay_enabled && !settingsJson.wipay_account_number_enc) warnings.push({ code: 'WIPAY_NO_CREDS', message: 'WiPay enabled but account number missing.' });
+            if (ps.paypal_payments_enabled && !ps.paypal_payment_link) warnings.push({ code: 'PAYPAL_NO_LINK', message: 'PayPal enabled but PayPal.Me link is missing.' });
             if (ps.manual_payment_enabled && !ps.bank_transfer_instructions) warnings.push({ code: 'MANUAL_NO_INSTRUCTIONS', message: 'Manual transfer enabled but instructions are empty.' });
             if (!ps.default_payment_mode || ps.default_payment_mode === 'none') warnings.push({ code: 'NO_PAYMENT_MODE', message: 'No default payment mode set.' });
         }
@@ -221,10 +245,9 @@ router.get('/tenants/:tenantId/bookings', async (req, res) => {
 router.get('/tenants/:tenantId/payment-settings', async (req, res) => {
     try {
         const result = await query(
-            `SELECT default_payment_mode AS payment_mode, wipay_enabled, manual_payment_enabled,
+            `SELECT default_payment_mode AS payment_mode, paypal_payments_enabled, paypal_payment_link, manual_payment_enabled,
                     hold_timeout_minutes, bank_transfer_instructions AS manual_transfer_instructions,
-                    payment_settings->>'wipay_country_code' AS wipay_country_code,
-                    payment_settings->>'wipay_currency' AS wipay_currency
+                    payment_settings
              FROM tenants WHERE id = $1`,
             [req.params.tenantId]
         );
@@ -320,6 +343,7 @@ router.post('/tenants/:tenantId/reset-password', async (req, res) => {
         const baseUrl = process.env.PUBLIC_APP_URL || process.env.BASE_URL || 'https://icssbookings.com';
         const resetUrl = `${baseUrl}/reset-password?token=${rawToken}&email=${encodeURIComponent(email)}`;
         await sendPasswordResetEmail(email, resetUrl);
+        await auditLog(req.user.id,req.params.tenantId,'tenant_password_reset_sent',{entity:'tenant',entityId:req.params.tenantId,email},req);
         
         res.json({ success: true, email: email, message: 'Password reset link sent.' });
     } catch (err) {
@@ -385,7 +409,9 @@ router.post('/tenants/:tenantId/reset-dashboard-tour', async (req, res) => {
 router.patch('/tenants/:tenantId/status', async (req, res) => {
     try {
         const { active } = req.body;
-        await query(`UPDATE tenants SET active = $1 WHERE id = $2`, [active, req.params.tenantId]);
+        const result=await query(`UPDATE tenants SET active = $1 WHERE id = $2 RETURNING name`, [active, req.params.tenantId]);
+        if(!result.rows.length)return res.status(404).json({error:'Tenant not found.'});
+        await auditLog(req.user.id,req.params.tenantId,active?'tenant_activated':'tenant_suspended',{entity:'tenant',entityId:req.params.tenantId,name:result.rows[0].name},req);
         res.json({ success: true, active });
     } catch (err) {
         console.error('[Platform/Tenant/Status]', err.message);
@@ -396,6 +422,9 @@ router.patch('/tenants/:tenantId/status', async (req, res) => {
 // DELETE /api/v1/platform/tenants/:tenantId
 router.delete('/tenants/:tenantId', async (req, res) => {
     try {
+        const existing=await query(`SELECT name,slug FROM tenants WHERE id=$1`,[req.params.tenantId]);
+        if(!existing.rows.length)return res.status(404).json({error:'Tenant not found.'});
+        await auditLog(req.user.id,req.params.tenantId,'tenant_deleted',{entity:'tenant',entityId:req.params.tenantId,...existing.rows[0]},req);
         await query(`DELETE FROM tenants WHERE id = $1`, [req.params.tenantId]);
         res.json({ success: true });
     } catch (err) {
@@ -413,19 +442,50 @@ router.delete('/tenants/:tenantId', async (req, res) => {
 router.get('/jobs', async (req, res) => {
     try {
         // Query pg-boss job tables directly
-        const [pendingRes, failedRes, completedRes] = await Promise.all([
+        const [pendingRes, failedRes, completedRes, themeRequestsRes, supportJobsRes] = await Promise.all([
             query(`SELECT id, name, data, created_on, state FROM pgboss.job WHERE state IN ('created','retry') ORDER BY created_on DESC LIMIT 50`).catch(() => ({ rows: [] })),
             query(`SELECT id, name, data, created_on, state, output FROM pgboss.job WHERE state = 'failed' ORDER BY created_on DESC LIMIT 50`).catch(() => ({ rows: [] })),
             query(`SELECT id, name, created_on, state FROM pgboss.job WHERE state = 'completed' ORDER BY created_on DESC LIMIT 20`).catch(() => ({ rows: [] })),
+            query(`SELECT ctr.*,t.name AS tenant_name,t.slug AS tenant_slug FROM custom_theme_requests ctr JOIN tenants t ON t.id=ctr.tenant_id ORDER BY ctr.created_at DESC LIMIT 100`).catch(() => ({ rows: [] })),
+            query(`SELECT sj.*,t.name AS tenant_name,t.slug AS tenant_slug,u.email AS submitter_email,assignee.email AS assignee_email FROM support_jobs sj JOIN tenants t ON t.id=sj.tenant_id LEFT JOIN users u ON u.id=sj.submitted_by LEFT JOIN users assignee ON assignee.id=sj.assigned_to ORDER BY CASE sj.status WHEN 'submitted' THEN 1 WHEN 'in_review' THEN 2 ELSE 3 END,sj.created_at DESC LIMIT 200`).catch(() => ({ rows: [] })),
         ]);
         res.json({
             pending:   pendingRes.rows,
             failed:    failedRes.rows,
             completed: completedRes.rows,
+            themeRequests: themeRequestsRes.rows,
+            supportJobs: supportJobsRes.rows,
         });
     } catch (err) {
         res.status(500).json({ error: 'Failed to fetch jobs.' });
     }
+});
+
+router.patch('/jobs/:jobId/status', async (req, res) => {
+    const status = String(req.body.status || '');
+    const note = String(req.body.note || '').trim().slice(0, 2000);
+    if (!['in_review','completed'].includes(status)) return res.status(400).json({ error: 'Status must be in_review or completed.' });
+    try {
+        const result = await query(`UPDATE support_jobs SET status=$1,developer_note=$2,assigned_to=$3,reviewed_at=CASE WHEN $1='in_review' THEN NOW() ELSE reviewed_at END,completed_at=CASE WHEN $1='completed' THEN NOW() ELSE NULL END,updated_at=NOW() WHERE id=$4 RETURNING *`, [status,note||null,req.user.id,req.params.jobId]);
+        if (!result.rows.length) return res.status(404).json({ error: 'Job not found.' });
+        const details = await query(`SELECT sj.*,t.name AS tenant_name,(SELECT email FROM users WHERE tenant_id=sj.tenant_id AND role='tenant_admin' AND active=true ORDER BY created_at LIMIT 1) AS tenant_email FROM support_jobs sj JOIN tenants t ON t.id=sj.tenant_id WHERE sj.id=$1`, [req.params.jobId]);
+        const job=details.rows[0];
+        await sendSupportJobStatusEmail({ to:job.tenant_email,tenantName:job.tenant_name,subject:job.subject,status,note }).catch(err => console.error('[Platform/JobNotification]',err.message));
+        await auditLog(req.user.id,job.tenant_id,'support_job_status_changed',{entity:'support_job',entityId:job.id,status,note},req);
+        res.json({ success:true,job });
+    } catch(err) { console.error('[Platform/JobStatus]',err.message); res.status(500).json({ error:'Could not update job.' }); }
+});
+
+router.get('/dashboard-analytics', async (req, res) => {
+    try {
+        const [summary, monthly, tenants, statuses] = await Promise.all([
+            query(`SELECT (SELECT COUNT(*) FROM tenants WHERE active=true)::int AS active_tenants,(SELECT COUNT(*) FROM bookings)::int AS total_bookings,(SELECT COUNT(*) FROM bookings WHERE created_at>=NOW()-INTERVAL '30 days')::int AS bookings_30d,COALESCE((SELECT SUM(amount_due) FROM booking_payments WHERE status='paid' AND currency='JMD'),0)::numeric AS total_paid,COALESCE((SELECT SUM(amount_due) FROM booking_payments WHERE status='paid' AND currency='JMD' AND created_at>=NOW()-INTERVAL '30 days'),0)::numeric AS paid_30d`),
+            query(`SELECT TO_CHAR(month,'YYYY-MM') AS month,COALESCE(SUM(bp.amount_due) FILTER(WHERE bp.status='paid' AND bp.currency='JMD'),0)::numeric AS payments,COUNT(DISTINCT b.id)::int AS bookings FROM generate_series(date_trunc('month',NOW())-INTERVAL '11 months',date_trunc('month',NOW()),INTERVAL '1 month') month LEFT JOIN bookings b ON date_trunc('month',b.created_at)=month LEFT JOIN booking_payments bp ON bp.booking_id=b.id GROUP BY month ORDER BY month`),
+            query(`SELECT t.name,t.slug,COUNT(DISTINCT b.id)::int AS bookings,COALESCE(SUM(bp.amount_due) FILTER(WHERE bp.status='paid' AND bp.currency='JMD'),0)::numeric AS payments FROM tenants t LEFT JOIN bookings b ON b.tenant_id=t.id LEFT JOIN booking_payments bp ON bp.booking_id=b.id GROUP BY t.id ORDER BY payments DESC LIMIT 10`),
+            query(`SELECT status,COUNT(*)::int AS count FROM bookings GROUP BY status ORDER BY count DESC`)
+        ]);
+        res.json({ summary:summary.rows[0],monthly:monthly.rows,tenants:tenants.rows,statuses:statuses.rows });
+    } catch(err) { console.error('[Platform/Analytics]',err.message); res.status(500).json({ error:'Could not load dashboard analytics.' }); }
 });
 
 // GET /api/v1/platform/audit-log?tenantId=&limit=100
@@ -491,7 +551,7 @@ router.get('/build-info', async (req, res) => {
 // GET /api/v1/platform/env-check  — presence only, never values
 router.get('/env-check', (req, res) => {
     const REQUIRED = ['DATABASE_URL','JWT_SECRET','RESEND_API_KEY','PUBLIC_APP_URL'];
-    const OPTIONAL = ['PAYPAL_CLIENT_ID','PAYPAL_SECRET','PAYPAL_WEBHOOK_ID','WIPAY_ACCOUNT_NUMBER','ENCRYPTION_KEY'];
+    const OPTIONAL = ['PAYPAL_CLIENT_ID','PAYPAL_SECRET','PAYPAL_WEBHOOK_ID','ENCRYPTION_KEY'];
     const check = (keys) => keys.map(k => ({ key: k, present: !!process.env[k] }));
     res.json({ required: check(REQUIRED), optional: check(OPTIONAL) });
 });
@@ -548,6 +608,8 @@ router.post('/impersonate/tenant/:tenantId', async (req, res) => {
             impersonation_session_id: session.id,
             actor_user_id:            req.user.id,
             impersonation_mode:       mode,
+            tenant_name:              tenant.name,
+            tenant_slug:              tenant.slug,
         }, '30m');
 
         await auditLog(req.user.id, tenantId, 'impersonation_start', {
@@ -631,6 +693,8 @@ router.post('/impersonation/:sessionId/elevate', async (req, res) => {
             `SELECT id, email FROM users WHERE tenant_id = $1 AND role = 'tenant_admin' LIMIT 1`,
             [target_tenant_id]
         );
+        const elevatedTenantRes = await query(`SELECT name,slug FROM tenants WHERE id=$1`, [target_tenant_id]);
+        const tenant = elevatedTenantRes.rows[0] || { name: 'Tenant', slug: '' };
         const elevatedToken = signToken({
             id:        userRes.rows[0]?.id || req.user.id,
             role:      'tenant_admin',
@@ -638,6 +702,8 @@ router.post('/impersonation/:sessionId/elevate', async (req, res) => {
             impersonation_session_id: req.params.sessionId,
             actor_user_id:            req.user.id,
             impersonation_mode:       'edit',
+            tenant_name:              tenant.name,
+            tenant_slug:              tenant.slug,
         }, '15m');
 
         await auditLog(req.user.id, target_tenant_id, 'impersonation_elevated_to_edit', {

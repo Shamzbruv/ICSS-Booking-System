@@ -25,8 +25,8 @@ export function ConsoleProvider({ children }) {
 
     api.me()
       .then(({ user }) => {
-        if (user.role !== 'platform_owner') {
-          setAuthError('This console requires a Platform Owner account.');
+        if (!['platform_owner', 'developer_admin'].includes(user.role)) {
+          setAuthError('This console requires a developer platform account.');
           localStorage.removeItem('icss_token');
         } else {
           setPlatformUser(user);
@@ -38,7 +38,7 @@ export function ConsoleProvider({ children }) {
 
   const login = useCallback(async (email, password) => {
     const { token, user } = await api.login({ email, password });
-    if (user.role !== 'platform_owner') throw new Error('This console is restricted to Platform Owners.');
+    if (!['platform_owner', 'developer_admin'].includes(user.role)) throw new Error('This console is restricted to developer platform accounts.');
     localStorage.setItem('icss_token', token);
     setPlatformUser(user);
     setAuthError(null);

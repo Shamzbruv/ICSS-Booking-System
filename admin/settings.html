@@ -39,6 +39,7 @@
         <a href="bookings.html" class="nav-item"><span class="nav-icon">📅</span> Bookings</a>
         <a href="availability.html" class="nav-item"><span class="nav-icon">🗓️</span> Availability</a>
         <a href="settings.html" class="nav-item active"><span class="nav-icon">⚙️</span> Settings</a>
+        <a href="customize.html" class="nav-item"><span class="nav-icon">🎨</span> Customize</a>
         <a href="services.html" class="nav-item"><span class="nav-icon">📦</span> Services</a>
     </nav>
 </aside>
@@ -69,15 +70,13 @@
                 <label>Default Payment Mode</label>
                 <select id="default_payment_mode" class="form-control">
                     <option value="none">No Payment Required</option>
-                    <option value="wipay">WiPay</option>
+                    <option value="paypal">PayPal</option>
                     <option value="manual">Manual Bank Transfer</option>
                 </select>
             </div>
 
             <div class="payment-method-grid" style="grid-column: 1 / -1;">
-                <label class="payment-method-card">
-                    <input type="checkbox" id="wipay_enabled" style="width: 18px; height: 18px;"> Enable WiPay
-                </label>
+                <label class="payment-method-card"><input type="checkbox" id="paypal_payments_enabled" style="width:18px;height:18px;"> Enable PayPal</label>
                 <label class="payment-method-card">
                     <input type="checkbox" id="manual_payment_enabled" style="width: 18px; height: 18px;"> Enable Bank Transfer
                 </label>
@@ -91,15 +90,8 @@
 
             <div style="grid-column: 1 / -1;"><hr style="border: 0; border-top: 1px solid var(--border); margin: 0.5rem 0;"></div>
 
-            <h3 style="grid-column: 1 / -1; font-size: 15px; font-weight: 600; color: var(--text-dim);">WiPay Credentials</h3>
-            <div class="form-group">
-                <label>Merchant Code / Key</label>
-                <input type="text" id="wipay_merchant_code" class="form-control" placeholder="Enter WiPay Merchant Key">
-            </div>
-            <div class="form-group">
-                <label>Account ID</label>
-                <input type="text" id="wipay_account_id" class="form-control" placeholder="Enter WiPay Account ID">
-            </div>
+            <h3 style="grid-column:1/-1;font-size:15px;font-weight:600;color:var(--text-dim);">PayPal Payment Link</h3>
+            <div class="form-group" style="grid-column:1/-1"><label>PayPal.Me link</label><input type="url" id="paypal_payment_link" class="form-control" placeholder="https://paypal.me/YourPayPalName"><small style="color:var(--text-dim)">The selected service or deposit amount is added automatically when clients continue to PayPal.</small></div>
 
             <div style="grid-column: 1 / -1;"><hr style="border: 0; border-top: 1px solid var(--border); margin: 0.5rem 0;"></div>
 
@@ -272,6 +264,18 @@
         </div>
 
         <div id="scheduleGrid" class="schedule-grid"></div>
+
+        <div class="schedule-notice" style="margin-top:1.5rem;padding:18px;">
+            <label style="display:flex;align-items:flex-start;gap:12px;cursor:pointer;">
+                <input type="checkbox" id="after_hours_requests_enabled" style="width:18px;height:18px;margin-top:2px;accent-color:var(--gold);">
+                <span><strong>Allow after-hours time requests</strong><br><small style="color:var(--text-dim);">Clients may request a custom time outside this schedule. Requests stay pending until you approve or decline them.</small></span>
+            </label>
+            <div class="form-group" style="margin-top:16px;max-width:280px;">
+                <label for="after_hours_fee">Additional after-hours cost (JMD)</label>
+                <input type="number" id="after_hours_fee" class="form-control" value="0" min="0" step="0.01">
+                <small style="color:var(--text-dim);">Shown clearly to the client before they submit.</small>
+            </div>
+        </div>
 
         <div style="margin-top: 1.5rem;">
             <button type="button" class="btn btn-primary" style="width: 100%;" onclick="saveSchedule()">Save Schedule</button>
@@ -888,10 +892,13 @@
             const s = data.settings || {};
 
             document.getElementById('default_payment_mode').value = s.default_payment_mode || 'none';
-            document.getElementById('wipay_enabled').checked = !!s.wipay_enabled;
+            document.getElementById('paypal_payments_enabled').checked = !!s.paypal_payments_enabled;
+            document.getElementById('paypal_payment_link').value = s.paypal_payment_link || '';
             document.getElementById('manual_payment_enabled').checked = !!s.manual_payment_enabled;
             document.getElementById('hold_timeout_minutes').value = s.hold_timeout_minutes || 15;
             document.getElementById('bank_transfer_instructions').value = s.bank_transfer_instructions || '';
+            document.getElementById('after_hours_requests_enabled').checked = !!s.after_hours_requests_enabled;
+            document.getElementById('after_hours_fee').value = Number(s.after_hours_fee || 0);
 
             if (s.business_hours) {
                 buildScheduleGrid(s.business_hours);
@@ -927,13 +934,13 @@
     async function saveSettings() {
         const payload = {
             default_payment_mode: document.getElementById('default_payment_mode').value,
-            wipay_enabled: document.getElementById('wipay_enabled').checked,
+            paypal_payments_enabled: document.getElementById('paypal_payments_enabled').checked,
+            paypal_payment_link: document.getElementById('paypal_payment_link').value.trim(),
             manual_payment_enabled: document.getElementById('manual_payment_enabled').checked,
             hold_timeout_minutes: parseInt(document.getElementById('hold_timeout_minutes').value),
             bank_transfer_instructions: document.getElementById('bank_transfer_instructions').value,
             payment_settings: {
-                wipay_merchant_code: document.getElementById('wipay_merchant_code').value,
-                wipay_account_id: document.getElementById('wipay_account_id').value
+                provider: 'paypal_link'
             }
         };
         try {
@@ -979,7 +986,11 @@
         try {
             const slug = getTenantSlug();
             if (!slug) { alert('Error: Tenant not found'); return; }
-            await apiFetch(`/api/v1/tenants/${slug}/payment-settings`, { method: 'PATCH', body: JSON.stringify({ business_hours }) });
+            await apiFetch(`/api/v1/tenants/${slug}/payment-settings`, { method: 'PATCH', body: JSON.stringify({
+                business_hours,
+                after_hours_requests_enabled: document.getElementById('after_hours_requests_enabled').checked,
+                after_hours_fee: Math.max(0, Number(document.getElementById('after_hours_fee').value || 0))
+            }) });
             if (typeof showToast === 'function') showToast('Schedule saved. Booking slots now reflect your hours.', 'success');
             else alert('Schedule saved! Booking slots will now reflect your hours.');
         } catch (err) {
