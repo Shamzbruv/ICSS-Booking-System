@@ -493,9 +493,20 @@ router.get('/audit-log', async (req, res) => {
     const { tenantId, limit = 100, offset = 0 } = req.query;
     try {
         const result = await query(
-            `SELECT al.*, u.email AS actor_email
+            `SELECT al.*, u.email AS actor_email,
+                    t.name AS tenant_name, t.slug AS tenant_slug,
+                    target.email AS target_account_email
              FROM audit_log al
              LEFT JOIN users u ON u.id = al.actor_user_id
+             LEFT JOIN tenants t ON t.id = al.tenant_id
+             LEFT JOIN LATERAL (
+                 SELECT tu.email
+                 FROM users tu
+                 WHERE tu.tenant_id = al.tenant_id
+                   AND tu.role = 'tenant_admin'
+                 ORDER BY tu.active DESC, tu.created_at ASC
+                 LIMIT 1
+             ) target ON true
              WHERE ($1::uuid IS NULL OR al.tenant_id = $1::uuid)
              ORDER BY al.created_at DESC
              LIMIT $2 OFFSET $3`,
@@ -613,7 +624,10 @@ router.post('/impersonate/tenant/:tenantId', async (req, res) => {
         }, '30m');
 
         await auditLog(req.user.id, tenantId, 'impersonation_start', {
-            entity: 'impersonation_session', entityId: session.id, mode, reason
+            entity: 'impersonation_session', entityId: session.id, mode, reason,
+            impersonatedTenantName: tenant.name,
+            impersonatedTenantSlug: tenant.slug,
+            impersonatedAccountEmail: userRes.rows[0]?.email || null,
         }, req);
 
         res.json({
@@ -660,8 +674,19 @@ router.post('/impersonation/:sessionId/end', async (req, res) => {
         );
         if (result.rows.length === 0) return res.status(404).json({ error: 'Session not found.' });
 
+        const targetRes = await query(
+            `SELECT t.name,t.slug,
+                    (SELECT email FROM users WHERE tenant_id=t.id AND role='tenant_admin' ORDER BY active DESC,created_at ASC LIMIT 1) AS account_email
+             FROM tenants t WHERE t.id=$1`,
+            [result.rows[0].target_tenant_id]
+        );
+        const target = targetRes.rows[0] || {};
+
         await auditLog(req.user.id, result.rows[0].target_tenant_id, 'impersonation_end', {
-            entity: 'impersonation_session', entityId: req.params.sessionId
+            entity: 'impersonation_session', entityId: req.params.sessionId,
+            impersonatedTenantName: target.name,
+            impersonatedTenantSlug: target.slug,
+            impersonatedAccountEmail: target.account_email,
         }, req);
 
         res.json({ ended: true });
@@ -707,7 +732,10 @@ router.post('/impersonation/:sessionId/elevate', async (req, res) => {
         }, '15m');
 
         await auditLog(req.user.id, target_tenant_id, 'impersonation_elevated_to_edit', {
-            entity: 'impersonation_session', entityId: req.params.sessionId, reason
+            entity: 'impersonation_session', entityId: req.params.sessionId, reason,
+            impersonatedTenantName: tenant.name,
+            impersonatedTenantSlug: tenant.slug,
+            impersonatedAccountEmail: userRes.rows[0]?.email || null,
         }, req);
 
         res.json({ elevated: true, token: elevatedToken, expires_at: result.rows[0].expires_at });
