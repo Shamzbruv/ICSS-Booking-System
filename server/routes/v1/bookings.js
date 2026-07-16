@@ -10,7 +10,6 @@ const { authenticate, requireRole } = require('../../middleware/auth');
 const { enforceBookingLimit }   = require('../../services/subscription');
 const { sendBookingConfirmation, sendBookingCancellationEmail, sendBookingPendingReviewEmail } = require('../../services/email');
 const calendarSync              = require('../../services/calendarSync');
-const wipay                     = require('../../services/wipay');
 const { normalizeDepositConfig, calculateAmountDue } = require('../../services/paymentRules');
 
 const MAX_BOOKINGS_PER_DAY = 14;
@@ -97,20 +96,14 @@ function getDaySchedule(businessHours, requestedDateStr) {
     };
 }
 
-async function validateTenantAvailability(client, tenant, date, time, totalServiceMins) {
+async function validateTenantAvailability(client, tenant, date, time, totalServiceMins, allowAfterHoursRequest = false) {
     const schedule = getDaySchedule(tenant.business_hours, date);
-
-    if (!schedule.active) {
-        const err = new Error('This date is unavailable because the business is closed.');
-        err.status = 400;
-        throw err;
-    }
-
     const [hour, minute] = time.split(':').map(Number);
     const slotStartMins = (hour * 60) + minute;
     const slotEndMins = slotStartMins + totalServiceMins;
+    const outsideHours = !schedule.active || slotStartMins < schedule.startMins || slotEndMins > schedule.endMins;
 
-    if (slotStartMins < schedule.startMins || slotEndMins > schedule.endMins) {
+    if (outsideHours && !allowAfterHoursRequest) {
         const err = new Error('This time falls outside the business schedule for the selected date.');
         err.status = 400;
         throw err;
@@ -138,11 +131,12 @@ async function validateTenantAvailability(client, tenant, date, time, totalServi
         err.status = 400;
         throw err;
     }
+    return { outsideHours };
 }
 
 // POST /api/v1/bookings — Create a new booking
 router.post('/', enforceBookingLimit, async (req, res) => {
-    const { name, email, phone, date, time, notes, region, service_id, receipt_image } = req.body;
+    const { name, email, phone, date, time, notes, region, service_id, receipt_image, after_hours_request } = req.body;
     const tenant = req.tenant;
     const tenantId = tenant.id;
     const timezone = tenant.branding?.timezone || 'America/Jamaica';
@@ -191,14 +185,21 @@ router.post('/', enforceBookingLimit, async (req, res) => {
             
             let status = 'confirmed';
             let expiresAt = null;
-            const holdTimeout = tenant.hold_timeout_minutes || 15;
 
             const amountDue = calculateAmountDue(service);
             const paymentRequested = amountDue > 0;
+            const afterHoursRequested = after_hours_request === true;
 
-            if (paymentRequested && paymentMode === 'wipay' && tenant.wipay_enabled) {
+            if (afterHoursRequested && !tenant.after_hours_requests_enabled) {
+                const err = new Error('After-hours requests are not enabled for this business.'); err.status = 400; throw err;
+            }
+
+            if (afterHoursRequested) {
+                status = 'pending_after_hours_confirmation';
+                paymentMode = 'none';
+            } else if (paymentRequested && paymentMode === 'paypal' && tenant.paypal_payments_enabled && tenant.paypal_payment_link) {
                 status = 'pending_payment';
-                expiresAt = new Date(Date.now() + holdTimeout * 60000);
+                expiresAt = null;
             } else if (paymentRequested && paymentMode === 'manual' && tenant.manual_payment_enabled) {
                 if (!receipt_image) {
                     const err = new Error('A payment receipt screenshot is required for bank transfers.'); err.status = 400; throw err;
@@ -214,7 +215,10 @@ router.post('/', enforceBookingLimit, async (req, res) => {
             // 3. Validate selected date and time against the tenant's published schedule
             const startTimeStr = `${date}T${time}:00`;
             const duration = (service.duration_minutes || 30) + (service.buffer_time_minutes || 0);
-            await validateTenantAvailability(client, tenant, date, time, duration);
+            const availabilityResult = await validateTenantAvailability(client, tenant, date, time, duration, afterHoursRequested);
+            if (afterHoursRequested && !availabilityResult.outsideHours) {
+                const err = new Error('This time is within normal business hours. Please select it from the available schedule.'); err.status = 400; throw err;
+            }
 
             // PostgreSQL parses this assuming the DB timezone, but we enforce overlap relatively.
             // Using precise timestamps:
@@ -237,10 +241,10 @@ router.post('/', enforceBookingLimit, async (req, res) => {
 
             // 5. Insert Booking
             const bookingRes = await client.query(
-                `INSERT INTO bookings (tenant_id, service_id, name, email, phone, booking_date, booking_time, start_time, end_time, notes, region, status, payment_mode, expires_at)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+                `INSERT INTO bookings (tenant_id, service_id, name, email, phone, booking_date, booking_time, start_time, end_time, notes, region, status, payment_mode, expires_at, is_after_hours_request, after_hours_fee)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
                  RETURNING *`,
-                [tenantId, service_id, name, email.toLowerCase().trim(), phone, date, time, startTime, endTime, sanitizedNotes, region || 'Jamaica', status, paymentMode, expiresAt]
+                [tenantId, service_id, name, email.toLowerCase().trim(), phone, date, time, startTime, endTime, sanitizedNotes, region || 'Jamaica', status, paymentMode, expiresAt, afterHoursRequested, afterHoursRequested ? Number(tenant.after_hours_fee || 0) : 0]
             );
             const booking = bookingRes.rows[0];
 
@@ -250,16 +254,15 @@ router.post('/', enforceBookingLimit, async (req, res) => {
             // 6. Handle Payment Records
             if (paymentMode !== 'none' && amountDue > 0) {
                 const paymentRes = await client.query(
-                    `INSERT INTO booking_payments (booking_id, tenant_id, provider, payment_type, amount_due, status, gateway_response)
-                     VALUES ($1, $2, $3, $4, $5, 'pending', $6) RETURNING *`,
-                    [booking.id, tenantId, paymentMode, paymentRequirement, amountDue, paymentMode === 'manual' ? JSON.stringify({ receipt_image }) : null]
+                    `INSERT INTO booking_payments (booking_id, tenant_id, provider, payment_type, amount_due, currency, status, gateway_response)
+                     VALUES ($1, $2, $3, $4, $5, $6, 'pending', $7) RETURNING *`,
+                    [booking.id, tenantId, paymentMode, paymentRequirement, amountDue, service.currency || 'JMD', paymentMode === 'manual' ? JSON.stringify({ receipt_image }) : null]
                 );
                 const payment = paymentRes.rows[0];
 
-                if (paymentMode === 'wipay') {
-                    const baseUrl = process.env.PUBLIC_APP_URL || process.env.BASE_URL || `${req.headers['x-forwarded-proto'] || req.protocol}://${req.get('host')}`;
-                    const returnUrl = `${baseUrl}/payment-processing?booking=${booking.id}`;
-                    checkoutUrl = wipay.generateCheckoutUrl(tenant, booking, payment, returnUrl);
+                if (paymentMode === 'paypal') {
+                    const currency = String(service.currency || 'JMD').toUpperCase();
+                    checkoutUrl = `${String(tenant.paypal_payment_link).replace(/\/$/, '')}/${Number(amountDue).toFixed(2)}${currency}`;
                 } else if (paymentMode === 'manual') {
                     bankInstructions = tenant.bank_transfer_instructions;
                 }
@@ -282,7 +285,7 @@ router.post('/', enforceBookingLimit, async (req, res) => {
             const enrichedBooking = { ...result.booking, service_name: result.service_name };
             calendarSync.syncBookingWithExternal(req.tenant.id, enrichedBooking).catch(console.error);
             sendBookingConfirmation(enrichedBooking, req.tenant).catch(console.error);
-        } else if (result.booking.status === 'pending_manual_confirmation') {
+        } else if (result.booking.status === 'pending_manual_confirmation' || result.booking.status === 'pending_after_hours_confirmation') {
             const enrichedBooking = { ...result.booking, service_name: result.service_name };
             sendBookingPendingReviewEmail(enrichedBooking, req.tenant).catch(console.error);
         }
@@ -298,6 +301,8 @@ router.post('/', enforceBookingLimit, async (req, res) => {
 
 // POST /api/v1/bookings/:id/verify-payment — WiPay Callback / Polling
 router.post('/:id/verify-payment', async (req, res) => {
+    return res.status(410).json({ error: 'WiPay verification has been retired. PayPal payments are verified by the tenant.' });
+    /* istanbul ignore next -- retained temporarily only to recognize old return URLs */
     const bookingId = req.params.id;
     const { transaction_id } = req.body; // Provided by frontend from WiPay URL params
 
@@ -439,6 +444,23 @@ router.patch('/:id/status', authenticate, requireRole('staff', 'tenant_admin'), 
             }
             const booking = bRes.rows[0];
 
+            if (booking.status === 'pending_after_hours_confirmation' && status === 'confirmed') {
+                const conflicts = await client.query(
+                    `SELECT id FROM bookings WHERE tenant_id=$1 AND id<>$2
+                     AND status IN ('confirmed','pending_payment','pending_manual_confirmation')
+                     AND start_time < $4 AND end_time > $3`,
+                    [req.tenant.id, booking.id, booking.start_time, booking.end_time]
+                );
+                if (conflicts.rows.length) {
+                    const err = new Error('That requested time now conflicts with another booking. Reject the request or arrange another time with the client.'); err.status = 409; throw err;
+                }
+                await client.query(
+                    `INSERT INTO audit_log (tenant_id,user_id,actor_user_id,action,entity,entity_id,old_status,new_status,note)
+                     VALUES ($1,$2,$2,'after_hours_confirmed','booking',$3,$4,$5,$6)`,
+                    [req.tenant.id, req.user.id, booking.id, booking.status, status, note || `After-hours fee: ${booking.after_hours_fee}`]
+                );
+            }
+
             // Audit Logging for manual bank transfer approvals/rejections
             if (booking.payment_mode === 'manual' && booking.status === 'pending_manual_confirmation') {
                 if (status === 'confirmed' || status === 'rejected') {
@@ -452,6 +474,10 @@ router.patch('/:id/status', authenticate, requireRole('staff', 'tenant_admin'), 
                         await client.query(`UPDATE booking_payments SET status = 'paid' WHERE booking_id = $1`, [booking.id]);
                     }
                 }
+            }
+            if (booking.payment_mode === 'paypal' && booking.status === 'pending_payment' && (status === 'confirmed' || status === 'rejected')) {
+                await client.query(`UPDATE booking_payments SET status=$1 WHERE booking_id=$2`, [status === 'confirmed' ? 'paid' : 'failed', booking.id]);
+                await client.query(`INSERT INTO audit_log (tenant_id,user_id,actor_user_id,action,entity,entity_id,old_status,new_status,note) VALUES ($1,$2,$2,$3,'booking',$4,$5,$6,$7)`, [req.tenant.id,req.user.id,`paypal_${status}`,booking.id,booking.status,status,note]);
             }
 
             const updRes = await client.query(

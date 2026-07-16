@@ -195,8 +195,8 @@ function resolvePaymentDetails(service, tenant) {
     : (tenant.default_payment_mode || 'none');
   const dueToday = calculateRequiredAmount(normalizedService);
   const collectNow = dueToday > 0;
-  const modeAvailable = rawMode === 'wipay'
-    ? Boolean(tenant.wipay_enabled)
+  const modeAvailable = rawMode === 'paypal'
+    ? Boolean(tenant.paypal_payments_enabled)
     : rawMode === 'manual'
       ? Boolean(tenant.manual_payment_enabled)
       : rawMode === 'none';
@@ -215,10 +215,10 @@ function resolvePaymentDetails(service, tenant) {
       calloutTitle = requirement === 'deposit' ? 'Deposit required before confirmation' : 'Payment proof required before confirmation';
       calloutCopy = tenant.bank_transfer_instructions || 'Upload your transfer receipt to submit this booking for review.';
       buttonLabel = requirement === 'deposit' ? 'Submit Deposit' : 'Submit Payment Proof';
-    } else if (rawMode === 'wipay' && modeAvailable) {
-      calloutTitle = requirement === 'deposit' ? 'Deposit required to reserve this time' : 'Payment required to complete this booking';
-      calloutCopy = 'You will be redirected to secure checkout after submitting your details.';
-      buttonLabel = requirement === 'deposit' ? 'Pay Deposit' : 'Pay Now';
+    } else if (rawMode === 'paypal' && modeAvailable) {
+      calloutTitle = requirement === 'deposit' ? 'PayPal deposit required' : 'Pay securely with PayPal';
+      calloutCopy = `${formatCurrency(dueToday, normalizedService.currency || 'JMD')} will be filled in automatically when PayPal opens.`;
+      buttonLabel = requirement === 'deposit' ? 'Continue to PayPal Deposit' : 'Continue to PayPal';
     } else {
       calloutTitle = 'Payment setup needed';
       calloutCopy = 'This service requires payment before booking, but the payment method is not available right now.';
@@ -390,7 +390,8 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
     accentStrong: '#724356',
     accentSoft: 'rgba(139, 82, 104, 0.12)',
     accentBorder: 'rgba(139, 82, 104, 0.18)',
-    ...theme.palette
+    ...theme.palette,
+    ...(tenant.branding?.customPalette || {})
   };
 
   const optionConfig = theme.preferenceField
@@ -408,6 +409,8 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
   const [selectedService, setSelectedService] = useState(services[0] || null);
   const [selectedDate, setSelectedDate] = useState(() => getDateInputValue(tenant.branding?.timezone || 'America/Jamaica'));
   const [selectedTime, setSelectedTime] = useState(null);
+  const [isAfterHoursRequest, setIsAfterHoursRequest] = useState(false);
+  const [afterHours, setAfterHours] = useState({ enabled: Boolean(tenant.after_hours_requests_enabled), fee: Number(tenant.after_hours_fee || 0) });
   const [availability, setAvailability] = useState([]);
   const [availabilityMessage, setAvailabilityMessage] = useState('');
   const [loadingSlots, setLoadingSlots] = useState(false);
@@ -458,17 +461,18 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
 
     api.publicAvailability(tenant.slug, selectedDate, selectedService.id)
       .then((data) => {
+        setAfterHours(data.afterHours || { enabled: false, fee: 0 });
         const availableSlots = (data.slots || []).filter((slot) => slot.available);
         const nextMessage = data.dayBlocked
           ? (data.message || theme.unavailableDateAlert || 'This date is unavailable.')
           : (availableSlots.length === 0 ? (data.message || theme.noSlotsText || 'No slots available for this date.') : '');
-        const selectedTimeStillAvailable = selectedTimeRef.current
+        const selectedTimeStillAvailable = isAfterHoursRequest || (selectedTimeRef.current
           ? availableSlots.some((slot) => slot.time === selectedTimeRef.current)
-          : true;
+          : true);
 
         setAvailability(availableSlots);
         setAvailabilityMessage(nextMessage);
-        setSelectedTime((current) => availableSlots.some((slot) => slot.time === current) ? current : null);
+        setSelectedTime((current) => isAfterHoursRequest || availableSlots.some((slot) => slot.time === current) ? current : null);
 
         if (!selectedTimeStillAvailable && selectedTimeRef.current) {
           setNoticeModal({
@@ -492,6 +496,7 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
       });
   }, [
     hasDateInteraction,
+    isAfterHoursRequest,
     selectedDate,
     selectedService,
     tenant.slug,
@@ -534,11 +539,12 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
   const priceFormatter = theme.priceFormatter || defaultPriceFormatter;
   const baseTotal = selectedService ? Number(selectedService.price || 0) : 0;
   const addonsTotal = selectedAddonItems.reduce((sum, item) => sum + Number(item.price || 0), 0);
-  const totalAmount = theme.calculateTotal
+  const normalTotal = theme.calculateTotal
     ? theme.calculateTotal({ selectedService, selectedAddonItems, addonItems, extraState })
     : baseTotal + addonsTotal;
+  const totalAmount = normalTotal + (isAfterHoursRequest ? Number(afterHours.fee || 0) : 0);
   const paymentDetails = resolvePaymentDetails(selectedService, tenant);
-  const needsReceipt = paymentDetails.collectNow && paymentDetails.mode === 'manual' && !paymentDetails.hasConfigurationIssue;
+  const needsReceipt = !isAfterHoursRequest && paymentDetails.collectNow && paymentDetails.mode === 'manual' && !paymentDetails.hasConfigurationIssue;
 
   const handleExtraFieldChange = (nameToSet, value) => {
     setExtraState((prev) => ({ ...prev, [nameToSet]: value }));
@@ -610,7 +616,8 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
         email,
         phone,
         notes,
-        receipt_image: receiptBase64
+        receipt_image: receiptBase64,
+        after_hours_request: isAfterHoursRequest
       });
 
       if (res.checkoutUrl) {
@@ -622,10 +629,14 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
           time: selectedTime,
           duration: selectedService.duration_minutes,
           status: res.booking?.status || 'confirmed',
-          title: res.booking?.status === 'pending_manual_confirmation'
+          title: res.booking?.status === 'pending_after_hours_confirmation'
+            ? 'After-hours Request Sent'
+            : res.booking?.status === 'pending_manual_confirmation'
             ? (paymentDetails.requirement === 'deposit' ? 'Deposit Submitted' : 'Payment Submitted')
             : (theme.confirmationTitle || 'Booking Confirmed'),
-          text: res.booking?.status === 'pending_manual_confirmation'
+          text: res.booking?.status === 'pending_after_hours_confirmation'
+            ? 'Your requested time is pending approval. The business will confirm whether it is available.'
+            : res.booking?.status === 'pending_manual_confirmation'
             ? 'Your booking is pending review. We will confirm it once your payment receipt is approved.'
             : (theme.confirmationText || 'A confirmation email is on its way with all of your appointment details.')
         });
@@ -778,12 +789,26 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
                         key={slot.time}
                         type="button"
                         className={`${styles.timeChip} ${selectedTime === slot.time ? styles.selected : ''}`}
-                        onClick={() => setSelectedTime(slot.time)}
+                        onClick={() => { setIsAfterHoursRequest(false); setSelectedTime(slot.time); }}
                       >
                         {slot.label || slot.time}
                       </button>
                     ))}
                     {availability.length === 0 && <p className={styles.helperText}>{availabilityMessage || theme.noSlotsText || 'No slots available for this date.'}</p>}
+                  </div>
+                )}
+                {afterHours.enabled && (
+                  <div className={styles.afterHoursRequest}>
+                    <div>
+                      <strong>Need a time outside business hours?</strong>
+                      <p>Request a custom time. The business will review it before confirming.{Number(afterHours.fee || 0) > 0 ? ` An additional ${formatCurrency(afterHours.fee, selectedService?.currency || 'JMD')} applies if approved.` : ''}</p>
+                    </div>
+                    <input
+                      type="time"
+                      aria-label="Requested after-hours time"
+                      value={isAfterHoursRequest ? (selectedTime || '') : ''}
+                      onChange={(e) => { setIsAfterHoursRequest(Boolean(e.target.value)); setSelectedTime(e.target.value || null); }}
+                    />
                   </div>
                 )}
               </div>
@@ -880,6 +905,12 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
                       <strong>{row.value}</strong>
                     </div>
                   ))}
+                  {isAfterHoursRequest && (
+                    <div className={styles.summaryRow}>
+                      <span>After-hours request fee</span>
+                      <strong>{formatCurrency(afterHours.fee || 0, selectedService?.currency || 'JMD')}</strong>
+                    </div>
+                  )}
                   {paymentDetails.collectNow && (
                     <div className={styles.summaryRow}>
                       <span>{paymentDetails.summaryLabel}</span>
@@ -898,8 +929,8 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
                   </div>
                 </div>
 
-                <button type="submit" className={styles.primaryButton} disabled={!selectedService || paymentDetails.hasConfigurationIssue}>
-                  {theme.bookButtonLabel || paymentDetails.buttonLabel}
+                <button type="submit" className={styles.primaryButton} disabled={!selectedService || (!isAfterHoursRequest && paymentDetails.hasConfigurationIssue)}>
+                  {isAfterHoursRequest ? 'Submit time request' : (theme.bookButtonLabel || paymentDetails.buttonLabel)}
                 </button>
                 <div className={styles.footerNote}>
                   {theme.footerNote || 'Secure booking. Cancellation policy applies.'}

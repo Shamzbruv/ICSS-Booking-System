@@ -437,6 +437,7 @@ async function sendBookingConfirmation(booking, tenant) {
                     ${serviceName ? `<p style="margin:6px 0;font-size:15px;"><strong>Service:</strong> ${serviceName}</p>` : ''}
                     <p style="margin:6px 0;font-size:15px;"><strong>Date:</strong> ${displayDate}</p>
                     <p style="margin:6px 0;font-size:15px;"><strong>Time:</strong> ${displayTime}</p>
+                    ${booking.is_after_hours_request ? `<p style="margin:6px 0;font-size:15px;"><strong>After-hours cost:</strong> JMD ${Number(booking.after_hours_fee || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>` : ''}
                     ${booking.region ? `<p style="margin:6px 0;font-size:15px;"><strong>Location:</strong> ${booking.region}</p>` : ''}
                 </div>
                 ${(googleCalendarUrl || icsAttachment) ? `
@@ -485,26 +486,29 @@ async function sendBookingPendingReviewEmail(booking, tenant) {
     const tenantRecipients = (await getTenantNotificationRecipients(tenant))
         .filter((recipient) => recipient !== customerEmail);
     const receiptAttachment = await getBookingReceiptAttachment(booking);
+    const isAfterHours = booking.status === 'pending_after_hours_confirmation' || booking.is_after_hours_request;
+    const feeText = `${booking.currency || 'JMD'} ${Number(booking.after_hours_fee || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
 
     await resend.emails.send({
         from:    getSenderAddress('appointments', brand),
         to:      [booking.email],
         cc:      tenantRecipients.length > 0 ? tenantRecipients : undefined,
         replyTo: brand.replyEmail,
-        subject: `Booking Received — Pending Review · ${brand.name}`,
+        subject: `${isAfterHours ? 'After-hours Request' : 'Booking Received'} — Pending Review · ${brand.name}`,
         html: `
         <div style="font-family:Arial,sans-serif;color:#1a1a1a;max-width:600px;margin:0 auto;border:1px solid #e8e8e8;">
             ${headerHtml(brand)}
             <div style="padding:40px 36px;background:#fff;">
                 <p style="font-size:15px;">Dear ${firstName},</p>
-                <p style="font-size:15px;line-height:1.7;">We received your booking request and your payment proof has been submitted for review.</p>
+                <p style="font-size:15px;line-height:1.7;">${isAfterHours ? 'We received your requested time. It is outside regular business hours and must be approved by the business before it becomes a confirmed booking.' : 'We received your booking request and your payment proof has been submitted for review.'}</p>
                 <div style="background:#f9f9f9;border-left:4px solid ${brand.primaryColor};padding:18px 22px;margin:24px 0;border-radius:2px;">
                     <p style="margin:0 0 4px;font-size:13px;text-transform:uppercase;letter-spacing:1.5px;color:#86868B;">Booking Details</p>
                     ${serviceName ? `<p style="margin:6px 0;font-size:15px;"><strong>Service:</strong> ${serviceName}</p>` : ''}
                     <p style="margin:6px 0;font-size:15px;"><strong>Date:</strong> ${displayDate}</p>
                     <p style="margin:6px 0;font-size:15px;"><strong>Time:</strong> ${displayTime}</p>
+                    ${isAfterHours ? `<p style="margin:6px 0;font-size:15px;"><strong>Additional after-hours cost:</strong> ${feeText}</p>` : ''}
                 </div>
-                <p style="font-size:14px;color:#555;line-height:1.7;">We will confirm the booking as soon as the receipt is approved. A copy of this email has also been sent to the business team.</p>
+                <p style="font-size:14px;color:#555;line-height:1.7;">${isAfterHours ? 'The business will confirm or decline the requested time. No appointment is confirmed yet.' : 'We will confirm the booking as soon as the receipt is approved.'} A copy of this email has also been sent to the business team.</p>
                 <p style="font-size:14px;color:#333;margin-top:28px;">Warm regards,<br><strong>${brand.name} Team</strong></p>
             </div>
             ${footerHtml(brand)}
@@ -516,13 +520,13 @@ async function sendBookingPendingReviewEmail(booking, tenant) {
             from:    getSenderAddress('appointments', brand),
             to:      tenantRecipients,
             replyTo: brand.replyEmail,
-            subject: `Receipt Review Needed — ${brand.name}`,
+            subject: `${isAfterHours ? 'After-hours Request Review Needed' : 'Receipt Review Needed'} — ${brand.name}`,
             html: `
             <div style="font-family:Arial,sans-serif;color:#1a1a1a;max-width:600px;margin:0 auto;border:1px solid #e8e8e8;">
                 ${headerHtml(brand)}
                 <div style="padding:40px 36px;background:#fff;">
-                    <h3 style="margin-top:0;">Manual transfer review required</h3>
-                    <p style="font-size:15px;line-height:1.7;">A client submitted a bank transfer receipt for review.</p>
+                    <h3 style="margin-top:0;">${isAfterHours ? 'After-hours request review required' : 'Manual transfer review required'}</h3>
+                    <p style="font-size:15px;line-height:1.7;">${isAfterHours ? 'A client requested a time outside your regular business hours.' : 'A client submitted a bank transfer receipt for review.'}</p>
                     <div style="background:#f9f9f9;border-left:4px solid ${brand.primaryColor};padding:18px 22px;margin:24px 0;border-radius:2px;">
                         <p style="margin:6px 0;font-size:15px;"><strong>Client:</strong> ${booking.name || 'Unknown client'}</p>
                         <p style="margin:6px 0;font-size:15px;"><strong>Email:</strong> ${booking.email || '—'}</p>
@@ -530,14 +534,15 @@ async function sendBookingPendingReviewEmail(booking, tenant) {
                         ${serviceName ? `<p style="margin:6px 0;font-size:15px;"><strong>Service:</strong> ${serviceName}</p>` : ''}
                         <p style="margin:6px 0;font-size:15px;"><strong>Date:</strong> ${displayDate}</p>
                         <p style="margin:6px 0;font-size:15px;"><strong>Time:</strong> ${displayTime}</p>
+                        ${isAfterHours ? `<p style="margin:6px 0;font-size:15px;"><strong>Additional cost:</strong> ${feeText}</p>` : ''}
                     </div>
                     <p style="font-size:14px;color:#555;line-height:1.7;">
-                        ${receiptAttachment ? 'The uploaded transfer receipt is attached to this email for review.' : 'No receipt attachment could be recovered from the booking record.'}
+                        ${isAfterHours ? 'Open the Bookings page to approve or decline this request.' : (receiptAttachment ? 'The uploaded transfer receipt is attached to this email for review.' : 'No receipt attachment could be recovered from the booking record.')}
                     </p>
                 </div>
                 ${footerHtml(brand)}
             </div>`,
-            attachments: receiptAttachment ? [receiptAttachment] : undefined
+            attachments: !isAfterHours && receiptAttachment ? [receiptAttachment] : undefined
         });
     }
 
@@ -979,6 +984,32 @@ async function sendSubscriptionInvoiceEmail({ to, ownerName, businessName, amoun
     console.log(`[Email] Subscription invoice ${invoiceNumber} sent to ${to}`);
 }
 
+async function sendPartnerAgreementEmail({ to, subject, message, pdfBuffer, link }) {
+    const resend = getResend();
+    if (!resend) { console.warn(`[Email] RESEND_API_KEY not set; skipped agreement email to ${to}`); return false; }
+    const safe = String(message).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+    await resend.emails.send({
+        from: 'ICSS Contracts <contracts@icssbookings.com>', to: [to], subject,
+        html: `<div style="font-family:Arial,sans-serif;max-width:620px;margin:auto"><h2 style="color:#7C6EF7">ICSS Partner Agreement</h2><p style="line-height:1.6">${safe}</p>${link ? `<p><a href="${link}" style="background:#7C6EF7;color:#fff;padding:12px 20px;border-radius:6px;text-decoration:none">Review agreement</a></p>` : ''}</div>`,
+        text: `${message}${link ? `\n\nReview agreement: ${link}` : ''}`,
+        attachments: pdfBuffer ? [{ filename: 'ICSS_Marketing_Revenue_Share_Agreement.pdf', content: pdfBuffer.toString('base64') }] : undefined
+    });
+    return true;
+}
+
+async function sendSupportJobStatusEmail({ to, tenantName, subject, status, note }) {
+    const resend = getResend();
+    if (!resend || !to) return false;
+    const safe = value => escapeHtml(String(value || ''));
+    await resend.emails.send({
+        from: 'ICSS Developer Support <support@icssbookings.com>', to: [to],
+        subject: `Issue ${status === 'completed' ? 'completed' : 'in review'} — ${subject}`,
+        html: `<div style="font-family:Arial,sans-serif;max-width:620px;margin:auto"><h2>Your support job is ${safe(status.replace('_',' '))}</h2><p><strong>${safe(subject)}</strong></p><p>${safe(note || (status === 'completed' ? 'The developer team has completed this job.' : 'The developer team is now reviewing this job.'))}</p><p style="color:#777">${safe(tenantName)} · ICSS Booking System</p></div>`,
+        text: `${subject}\nStatus: ${status}\n${note || ''}`
+    });
+    return true;
+}
+
 module.exports = {
     getSupportContactEmail,
     sendBookingConfirmation,
@@ -991,4 +1022,6 @@ module.exports = {
     sendSignupWelcomeEmail,
     sendWelcomeEmail,
     sendSubscriptionInvoiceEmail,
+    sendPartnerAgreementEmail,
+    sendSupportJobStatusEmail,
 };

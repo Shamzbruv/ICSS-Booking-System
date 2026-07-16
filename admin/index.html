@@ -60,11 +60,15 @@
         <a href="settings.html" class="nav-item" id="nav-settings">
             <span class="nav-icon">⚙️</span> Settings
         </a>
+        <a href="customize.html" class="nav-item" id="nav-customize"><span class="nav-icon">🎨</span> Customize</a>
         <a href="services.html" class="nav-item" id="nav-services">
             <span class="nav-icon">📦</span> Services
         </a>
         <a href="tenants.html" class="nav-item super-admin-only hidden" id="nav-tenants">
             <span class="nav-icon">🏢</span> Tenants
+        </a>
+        <a href="contracts.html" class="nav-item super-admin-only hidden" id="nav-contracts">
+            <span class="nav-icon">✍️</span> Partner Contracts
         </a>
     </nav>
 
@@ -151,6 +155,9 @@
     <section class="quick-actions" data-tour="quick-actions">
         <h2 class="section-title" data-tour="quick-actions-title">Quick Actions</h2>
         <div class="action-grid">
+            <button type="button" class="action-card" onclick="openSupportModal()" style="text-align:left;border:1px solid var(--border);cursor:pointer;">
+                <div class="action-icon">🧰</div><div class="action-label">Report an Issue</div>
+            </button>
             <a href="bookings.html" class="action-card" data-tour="view-all-bookings">
                 <div class="action-icon">📋</div>
                 <div class="action-label">View All Bookings</div>

@@ -302,7 +302,8 @@ router.get('/:slug/payment-settings', authenticate, async (req, res) => {
     try {
         const result = await query(
             `SELECT default_payment_mode, wipay_enabled, manual_payment_enabled, 
-                    hold_timeout_minutes, bank_transfer_instructions, payment_settings, business_hours 
+                    hold_timeout_minutes, bank_transfer_instructions, payment_settings, business_hours,
+                    after_hours_requests_enabled, after_hours_fee, paypal_payments_enabled, paypal_payment_link
              FROM tenants WHERE slug = $1`, 
             [req.params.slug]
         );
@@ -334,7 +335,8 @@ router.patch('/:slug/payment-settings', authenticate, async (req, res) => {
     }
     const { 
         default_payment_mode, wipay_enabled, manual_payment_enabled, 
-        hold_timeout_minutes, bank_transfer_instructions, payment_settings, business_hours 
+        hold_timeout_minutes, bank_transfer_instructions, payment_settings, business_hours,
+        after_hours_requests_enabled, after_hours_fee, paypal_payments_enabled, paypal_payment_link
     } = req.body;
     
     try {
@@ -353,6 +355,14 @@ router.patch('/:slug/payment-settings', authenticate, async (req, res) => {
             }
         }
 
+        let normalizedPayPalLink = null;
+        if (paypal_payment_link !== undefined) {
+            normalizedPayPalLink = String(paypal_payment_link || '').trim().replace(/\/$/, '');
+            if (normalizedPayPalLink && !/^https:\/\/(www\.)?paypal\.me\/[A-Za-z0-9._-]+$/i.test(normalizedPayPalLink)) {
+                return res.status(400).json({ error: 'Enter a valid PayPal.Me link, for example https://paypal.me/YourName.' });
+            }
+        }
+
         const result = await query(
             `UPDATE tenants 
              SET default_payment_mode = COALESCE($1, default_payment_mode),
@@ -361,20 +371,30 @@ router.patch('/:slug/payment-settings', authenticate, async (req, res) => {
                  hold_timeout_minutes = COALESCE($4, hold_timeout_minutes),
                  bank_transfer_instructions = COALESCE($5, bank_transfer_instructions),
                  payment_settings = $6,
-                 business_hours = COALESCE($7, business_hours)
-             WHERE slug = $8 RETURNING id`,
+                 business_hours = COALESCE($7, business_hours),
+                 after_hours_requests_enabled = COALESCE($8, after_hours_requests_enabled),
+                 after_hours_fee = COALESCE($9, after_hours_fee),
+                 paypal_payments_enabled = COALESCE($10, paypal_payments_enabled),
+                 paypal_payment_link = COALESCE($11, paypal_payment_link),
+                 updated_at = NOW()
+             WHERE slug = $12 RETURNING id`,
             [
                 default_payment_mode, 
-                wipay_enabled !== undefined ? Boolean(wipay_enabled) : null,
+                false,
                 manual_payment_enabled !== undefined ? Boolean(manual_payment_enabled) : null,
                 hold_timeout_minutes ? parseInt(hold_timeout_minutes) : null,
                 bank_transfer_instructions,
                 JSON.stringify(newSettings),
                 business_hours ? JSON.stringify(business_hours) : null,
+                after_hours_requests_enabled !== undefined ? Boolean(after_hours_requests_enabled) : null,
+                after_hours_fee !== undefined && after_hours_fee !== null && after_hours_fee !== '' ? Math.max(0, Number(after_hours_fee)) : null,
+                paypal_payments_enabled !== undefined ? Boolean(paypal_payments_enabled) : null,
+                normalizedPayPalLink,
                 req.params.slug
             ]
         );
         if (result.rows.length === 0) return res.status(404).json({ error: 'Tenant not found.' });
+        invalidateTenantCache(req.params.slug);
         res.json({ success: true, message: 'Payment settings saved successfully.' });
     } catch (err) {
         console.error('[Tenants/Payment Settings]', err.message);
@@ -399,6 +419,7 @@ router.patch('/:slug/branding', authenticate, async (req, res) => {
         stylists,
         bookingFooterNote,
         serviceSectionImageUrl,
+        customPalette,
     } = req.body;
 
     try {
@@ -420,6 +441,7 @@ router.patch('/:slug/branding', authenticate, async (req, res) => {
             ...(Array.isArray(stylists)       && { stylists }),
             ...(bookingFooterNote !== undefined && { bookingFooterNote }),
             ...(serviceSectionImageUrl !== undefined && { serviceSectionImageUrl }),
+            ...(customPalette && typeof customPalette === 'object' && { customPalette }),
         };
 
         await query(

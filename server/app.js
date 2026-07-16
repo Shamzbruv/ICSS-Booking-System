@@ -22,6 +22,7 @@ const calendarRoutes    = require('./routes/v1/calendar');
 const themesRoutes      = require('./routes/v1/themes');
 const servicesRoutes    = require('./routes/v1/services');
 const platformRoutes    = require('./routes/v1/platform');
+const partnerRoutes     = require('./routes/v1/partners');
 
 const app = express();
 app.set('trust proxy', 1); // Trust first proxy for reverse proxy rate limiting
@@ -60,7 +61,7 @@ app.use('/api/', rateLimiter);
 // Injects req.tenant on every /api/v1/ request
 // Platform routes bypass tenant resolution — they operate cross-tenant
 app.use('/api/v1', (req, res, next) => {
-    if (req.path.startsWith('/platform')) return next();
+    if (req.path.startsWith('/platform') || req.path.startsWith('/partners')) return next();
     tenantResolver(req, res, next);
 });
 
@@ -82,6 +83,7 @@ app.use('/api/v1/auth',         authRoutes);
 app.use('/api/v1/availability', availabilityRoutes);
 app.use('/api/v1/bookings',     bookingRoutes);
 app.use('/api/v1/orders',       orderRoutes);
+app.use('/api/v1/payments/wipay', (req, res) => res.status(410).json({ error: 'WiPay has been retired. Use the tenant PayPal payment link.' }));
 app.use('/api/v1/payments',     paymentRoutes);
 app.use('/api/v1/admin',        adminRoutes);
 app.use('/api/v1/tenants',      tenantRoutes);
@@ -91,6 +93,7 @@ app.use('/api/v1/calendar',     calendarRoutes);
 app.use('/api/v1/themes',       themesRoutes);
 app.use('/api/v1/services',     servicesRoutes);
 app.use('/api/v1/platform',     platformRoutes);
+app.use('/api/v1/partners',     partnerRoutes);
 
 // ─── Health Check ─────────────────────────────────────────────────────────────
 app.get('/health', (req, res) => {

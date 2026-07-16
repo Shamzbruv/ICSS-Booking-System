@@ -33,14 +33,14 @@ router.post('/custom-request', authenticate, async (req, res) => {
 
     try {
         const result = await query(
-            `INSERT INTO custom_theme_requests (tenant_id, notes, status, deposit_required)
-             VALUES ($1, $2, 'pending', true) RETURNING *`,
+            `INSERT INTO custom_theme_requests (tenant_id, notes, status, deposit_required, quoted_price, final_price, payment_state)
+             VALUES ($1, $2, 'pending', false, 10000, 10000, 'unpaid') RETURNING *`,
             [tenantId, notes]
         );
         res.status(201).json({ 
             success: true, 
             request: result.rows[0],
-            message: 'Custom theme request submitted. Our team will review and provide a quote soon.'
+            message: 'Custom theme request submitted for JMD $10,000. It is now visible in the developer job queue.'
         });
     } catch (err) {
         console.error('[Themes/CustomRequest]', err.message);

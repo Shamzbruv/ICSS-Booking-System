@@ -93,6 +93,8 @@ export const api = {
 
     // Diagnostics
     getJobs:              ()          => apiFetch('/platform/jobs'),
+    updateJobStatus:      (id,status,note) => apiFetch(`/platform/jobs/${id}/status`, { method:'PATCH', body:{status,note} }),
+    getDashboardAnalytics:()          => apiFetch('/platform/dashboard-analytics'),
     getAuditLog:          (tenantId)  => apiFetch(`/platform/audit-log${tenantId ? `?tenantId=${tenantId}` : ''}`),
     getPayments:          (tenantId)  => apiFetch(`/platform/payments${tenantId ? `?tenantId=${tenantId}` : ''}`),
     getBuildInfo:         ()          => apiFetch('/platform/build-info'),
@@ -107,6 +109,8 @@ export const api = {
     elevateImpersonation: (sessionId, reason) =>
       apiFetch(`/platform/impersonation/${sessionId}/elevate`, { method: 'POST', body: { reason } }),
     getActiveSessions:    () => apiFetch('/platform/impersonation/active'),
+    getDeveloperAdmins:   () => apiFetch('/platform/developer-admins'),
+    createDeveloperAdmin: (body) => apiFetch('/platform/developer-admins', { method: 'POST', body }),
 
     // Safe write actions
     expireHold:           (bookingId) =>

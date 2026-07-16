@@ -57,13 +57,18 @@ function ConsoleLogin() {
 
 // ── Sidebar nav ────────────────────────────────────────────────────────────────
 const NAV = [
+  { id: 'dashboard',  icon: '📊', label: 'Dashboard' },
   { id: 'tenants',    icon: '🏢', label: 'Tenants' },
   { id: 'themes',     icon: '🎨', label: 'Themes' },
   { id: 'jobs',       icon: '⚙️', label: 'Jobs & Queue' },
   { id: 'payments',   icon: '💳', label: 'Payments' },
   { id: 'audit',      icon: '📋', label: 'Audit Log' },
+  { id: 'team',       icon: '👥', label: 'Developer Admins', ownerOnly: true },
   { id: 'system',     icon: '🖥', label: 'System' },
 ];
+
+const money = value => `JMD ${Number(value || 0).toLocaleString(undefined,{maximumFractionDigits:2})}`;
+function DashboardView(){const [d,setD]=useState(null);useEffect(()=>{api.platform.getDashboardAnalytics().then(setD)},[]);if(!d)return <div className={s.loading}>Loading platform analytics…</div>;const max=Math.max(1,...d.monthly.map(x=>Number(x.payments)));const totalStatus=Math.max(1,d.statuses.reduce((n,x)=>n+x.count,0));let angle=0;const colors=['#7c6ef7','#4ade80','#facc15','#fb923c','#f87171','#38bdf8','#a78bfa'];const stops=d.statuses.map((x,i)=>{const start=angle;angle+=x.count/totalStatus*360;return `${colors[i%colors.length]} ${start}deg ${angle}deg`});const points=d.monthly.map((x,i)=>`${i*(520/Math.max(1,d.monthly.length-1))},${150-(Number(x.bookings)/Math.max(1,...d.monthly.map(y=>y.bookings)))*130}`).join(' ');return <div className={s.view}><div className={s.view__header}><h2 className={s.view__title}>Platform Health Dashboard</h2></div><div className={s.metricGrid}><div className={s.metricCard}><span>Total booking payments</span><strong>{money(d.summary.total_paid)}</strong></div><div className={s.metricCard}><span>Payments — last 30 days</span><strong>{money(d.summary.paid_30d)}</strong></div><div className={s.metricCard}><span>Total bookings</span><strong>{d.summary.total_bookings}</strong></div><div className={s.metricCard}><span>Active tenants</span><strong>{d.summary.active_tenants}</strong></div></div><div className={s.chartGrid}><Section title="Monthly booking payments"><div className={s.barChart}>{d.monthly.map(x=><div className={s.barItem} key={x.month} title={`${x.month}: ${money(x.payments)}`}><div className={s.bar} style={{height:`${Math.max(3,Number(x.payments)/max*170)}px`}}/><span>{x.month.slice(5)}</span></div>)}</div></Section><Section title="Booking status mix"><div className={s.pieWrap}><div className={s.pie} style={{background:`conic-gradient(${stops.join(',')})`}}/><div>{d.statuses.map((x,i)=><div key={x.status} className={s.legend}><i style={{background:colors[i%colors.length]}}/>{x.status.replaceAll('_',' ')} ({x.count})</div>)}</div></div></Section><Section title="Booking activity — 12 months"><svg className={s.lineChart} viewBox="0 0 520 170" role="img" aria-label="Monthly bookings line graph"><polyline points={points} fill="none" stroke="#7c6ef7" strokeWidth="4" strokeLinejoin="round"/>{points.split(' ').map((p,i)=>{const [x,y]=p.split(',');return <circle key={i} cx={x} cy={y} r="4" fill="#fff"/>})}</svg></Section><Section title="Top tenants by booking payments"><table className={s.table}><thead><tr><th>Tenant</th><th>Bookings</th><th>Paid</th></tr></thead><tbody>{d.tenants.map(t=><tr key={t.slug}><td>{t.name}<div className={s.muted}>{t.slug}</div></td><td>{t.bookings}</td><td>{money(t.payments)}</td></tr>)}</tbody></table></Section></div></div>}
 
 // ── Tenants view ──────────────────────────────────────────────────────────────
 function TenantsView() {
@@ -91,10 +96,10 @@ function TenantsView() {
     debounceRef.current = setTimeout(() => load(v), 350);
   };
 
-  const quickImpersonate = async (tenant, mode = 'read_only') => {
+  const quickImpersonate = async (tenant, mode = 'read_only', page = 'index.html') => {
     try {
       const session = await startImpersonation(tenant.id, mode, 'Console Quick Access');
-      window.open(`/admin/index.html?tenant=${tenant.slug}&_impToken=${session.token}`, '_blank');
+      window.open(`/admin/${page}?tenant=${tenant.slug}&_impToken=${session.token}`, '_blank');
     } catch (err) {
       alert('Failed to open admin: ' + (err.message || 'Unknown error'));
     }
@@ -190,14 +195,14 @@ function TenantsView() {
                   </td>
                   <td onClick={e => e.stopPropagation()}>
                     <div className={s.rowActions}>
-                      <a href={`/${t.slug}`} target="_blank" rel="noreferrer" className={s.rowBtn} title="Open Public Page">🌐</a>
-                      <a href={`/editor?_tenant=${t.slug}`} target="_blank" rel="noreferrer" className={s.rowBtn} title="Open Editor">🎨</a>
-                      <button className={s.rowBtn} title="Reset Dashboard Tutorial" onClick={() => quickResetTour(t)}>🧭</button>
-                      <button className={s.rowBtn} title="Reset Password" onClick={() => quickResetPassword(t)}>🔑</button>
-                      <button className={s.rowBtn} title={t.active ? "Suspend Account" : "Activate Account"} onClick={() => quickToggleStatus(t)}>{t.active ? '🛑' : '✅'}</button>
-                      <button className={s.rowBtn} title="Delete Account" onClick={() => quickDelete(t)}>🗑️</button>
-                      <button className={s.rowBtn} title="Open Admin (Edit)" onClick={() => quickImpersonate(t, 'edit')}>🛠</button>
-                      <button className={`${s.rowBtn} ${s['rowBtn--imp']}`} title="Impersonate (Read-Only)" onClick={() => quickImpersonate(t, 'read_only')}>👁</button>
+                      <a href={`/${t.slug}`} target="_blank" rel="noreferrer" className={s.rowBtn} title="Open customer booking site">Site</a>
+                      <button className={s.rowBtn} title="Open tenant color customization with edit access" onClick={() => quickImpersonate(t,'edit','customize.html')}>Customize</button>
+                      <button className={s.rowBtn} title="Reset dashboard tutorial" onClick={() => quickResetTour(t)}>Reset Tour</button>
+                      <button className={s.rowBtn} title="Send owner password reset email" onClick={() => quickResetPassword(t)}>Reset Password</button>
+                      <button className={s.rowBtn} title={t.active ? "Suspend account" : "Activate account"} onClick={() => quickToggleStatus(t)}>{t.active ? 'Suspend' : 'Activate'}</button>
+                      <button className={s.rowBtn} title="Permanently delete account" onClick={() => quickDelete(t)}>Delete</button>
+                      <button className={s.rowBtn} title="Open tenant admin with edit access" onClick={() => quickImpersonate(t, 'edit')}>Edit Admin</button>
+                      <button className={`${s.rowBtn} ${s['rowBtn--imp']}`} title="Open tenant admin read-only" onClick={() => quickImpersonate(t, 'read_only')}>View Admin</button>
                     </div>
                   </td>
                 </tr>
@@ -257,16 +262,23 @@ function JobsView() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.platform.getJobs()
-      .then(setData)
-      .finally(() => setLoading(false));
+    api.platform.getJobs().then(setData).finally(() => setLoading(false));
   }, []);
+  const update=async(job,status)=>{const note=window.prompt(`Optional note for the tenant (${status.replace('_',' ')}):`)??null;if(note===null)return;await api.platform.updateJobStatus(job.id,status,note);setData(await api.platform.getJobs())};
 
   return (
     <div className={s.view}>
       <div className={s.view__header}><h2 className={s.view__title}>Jobs & Queue</h2></div>
       {loading ? <div className={s.loading}>Loading…</div> : (
         <>
+          <Section title={`🧰 Tenant Issues (${data?.supportJobs?.length || 0})`}>
+            {(data?.supportJobs || []).length===0?<div className={s.empty}>No tenant issues submitted.</div>:<table className={s.table}><thead><tr><th>Tenant</th><th>Issue</th><th>Status</th><th>Submitted</th><th>Actions</th></tr></thead><tbody>{data.supportJobs.map(j=><tr key={j.id}><td>{j.tenant_name}<div className={s.muted}>{j.submitter_email}</div></td><td><strong>{j.subject}</strong><div className={s.muted}>{j.description}</div>{j.developer_note&&<div>Developer note: {j.developer_note}</div>}</td><td><span className={s.badge}>{j.status.replace('_',' ')}</span></td><td>{new Date(j.created_at).toLocaleString()}</td><td><div className={s.rowActions}>{j.status!=='in_review'&&j.status!=='completed'&&<button className={s.rowBtn} title="Mark in review" onClick={()=>update(j,'in_review')}>Review</button>}{j.status!=='completed'&&<button className={s.rowBtn} title="Mark completed" onClick={()=>update(j,'completed')}>Done</button>}</div></td></tr>)}</tbody></table>}
+          </Section>
+          <Section title={`🎨 Custom Theme Requests (${data?.themeRequests?.length || 0})`}>
+            {(data?.themeRequests || []).length === 0 ? <div className={s.empty}>No custom theme requests.</div> : (
+              <table className={s.table}><thead><tr><th>Tenant</th><th>Request</th><th>Price</th><th>Status</th><th>Created</th></tr></thead><tbody>{data.themeRequests.map(j => <tr key={j.id}><td>{j.tenant_name}<div className={s.muted}>{j.tenant_slug}</div></td><td>{j.notes}</td><td>JMD ${Number(j.final_price || 10000).toLocaleString()}</td><td><span className={s.badge}>{j.status}</span></td><td>{new Date(j.created_at).toLocaleString()}</td></tr>)}</tbody></table>
+            )}
+          </Section>
           <Section title={`⚠️ Failed Jobs (${data?.failed?.length || 0})`}>
             {(data?.failed || []).length === 0 ? <div className={s.empty}>No failed jobs. ✅</div> : (
               <table className={s.table}>
@@ -376,6 +388,14 @@ function AuditView() {
   );
 }
 
+function DeveloperAdminsView() {
+  const [admins,setAdmins]=useState([]); const [form,setForm]=useState({name:'',email:'',password:''}); const [message,setMessage]=useState('');
+  const load=()=>api.platform.getDeveloperAdmins().then(r=>setAdmins(r.admins||[]));
+  useEffect(()=>{load()},[]);
+  const submit=async e=>{e.preventDefault();setMessage('');try{await api.platform.createDeveloperAdmin(form);setForm({name:'',email:'',password:''});setMessage('Developer admin created.');load()}catch(err){setMessage(err.message)}};
+  return <div className={s.view}><div className={s.view__header}><h2 className={s.view__title}>Developer Admins</h2></div><Section title="Create developer platform account"><form onSubmit={submit} className={s.loginForm} style={{maxWidth:520}}><input className={s.loginInput} placeholder="Full name" value={form.name} onChange={e=>setForm({...form,name:e.target.value})} required/><input className={s.loginInput} type="email" placeholder="Email" value={form.email} onChange={e=>setForm({...form,email:e.target.value})} required/><input className={s.loginInput} type="password" minLength="10" placeholder="Temporary password (10+ characters)" value={form.password} onChange={e=>setForm({...form,password:e.target.value})} required/><button className={s.btnPrimary}>Create Developer Admin</button>{message&&<div className={s.muted}>{message}</div>}</form></Section><Section title={`Accounts (${admins.length})`}><table className={s.table}><thead><tr><th>Name</th><th>Email</th><th>Status</th><th>Created</th></tr></thead><tbody>{admins.map(a=><tr key={a.id}><td>{a.name}</td><td>{a.email}</td><td>{a.active?'Active':'Disabled'}</td><td>{new Date(a.created_at).toLocaleString()}</td></tr>)}</tbody></table></Section></div>;
+}
+
 // ── System / build info view ──────────────────────────────────────────────────
 function SystemView() {
   const [info, setInfo]     = useState(null);
@@ -446,18 +466,20 @@ function InfoRow({ label, value }) {
 }
 
 const VIEW_MAP = {
+  dashboard:<DashboardView />,
   tenants:  <TenantsView />,
   themes:   <ThemesView />,
   jobs:     <JobsView />,
   payments: <PaymentsView />,
   audit:    <AuditView />,
+  team:     <DeveloperAdminsView />,
   system:   <SystemView />,
 };
 
 // ── Console shell ─────────────────────────────────────────────────────────────
 function ConsoleShell() {
   const { platformUser, logout, loading, authError, isImpersonating } = useConsole();
-  const [activeView, setActiveView] = useState('tenants');
+  const [activeView, setActiveView] = useState('dashboard');
 
   if (loading) return <div className={s.fullscreen}><div className={s.spinner} /></div>;
   if (!platformUser) return <ConsoleLogin />;
@@ -474,7 +496,7 @@ function ConsoleShell() {
         </div>
 
         <nav className={s.sidebar__nav}>
-          {NAV.map(item => (
+          {NAV.filter(item => !item.ownerOnly || platformUser.role === 'platform_owner').map(item => (
             <button
               key={item.id}
               className={`${s.navItem} ${activeView === item.id ? s['navItem--active'] : ''}`}
@@ -493,7 +515,7 @@ function ConsoleShell() {
             </div>
             <div>
               <div className={s.sidebar__userName}>{platformUser.name || 'Owner'}</div>
-              <div className={s.sidebar__userRole}>platform_owner</div>
+              <div className={s.sidebar__userRole}>{platformUser.role}</div>
             </div>
           </div>
           <button className={s.logoutBtn} onClick={logout} title="Sign Out">↩</button>

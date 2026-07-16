@@ -126,6 +126,11 @@ router.post('/support-request', async (req, res) => {
     }
 
     try {
+        const ticketResult = await query(
+            `INSERT INTO support_jobs (tenant_id,submitted_by,category,subject,description,page_url)
+             VALUES ($1,$2,$3,$4,$5,$6) RETURNING id,status,created_at`,
+            [req.tenant.id, req.user.id, category, subject, message, pageUrl || null]
+        );
         await sendSupportRequestEmail({
             tenant: req.tenant,
             user: req.user,
@@ -137,13 +142,21 @@ router.post('/support-request', async (req, res) => {
 
         res.json({
             success: true,
-            message: 'Your support request was sent to the developer team.',
+            job: ticketResult.rows[0],
+            message: `Your issue was submitted as job #${ticketResult.rows[0].id.slice(0, 8)}. You will be notified when it is reviewed or completed.`,
             supportEmail: getSupportContactEmail()
         });
     } catch (err) {
         console.error('[Admin/SupportRequest]', err.message);
         res.status(500).json({ error: 'We could not send your support request right now.' });
     }
+});
+
+router.get('/support-jobs', async (req, res) => {
+    try {
+        const result = await query(`SELECT id,category,subject,description,status,developer_note,created_at,updated_at,completed_at FROM support_jobs WHERE tenant_id=$1 ORDER BY created_at DESC LIMIT 100`, [req.tenant.id]);
+        res.json({ jobs: result.rows });
+    } catch (err) { res.status(500).json({ error: 'Could not load submitted issues.' }); }
 });
 
 // ── Availability / Blocking ────────────────────────────────────────────────────
