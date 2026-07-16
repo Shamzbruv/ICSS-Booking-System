@@ -8,7 +8,8 @@ const router  = express.Router();
 const { query, transaction }    = require('../../db/connection');
 const { authenticate, requireRole } = require('../../middleware/auth');
 const { enforceBookingLimit }   = require('../../services/subscription');
-const { sendBookingConfirmation, sendBookingCancellationEmail, sendBookingPendingReviewEmail } = require('../../services/email');
+const { sendBookingCancellationEmail, sendBookingPendingReviewEmail } = require('../../services/email');
+const { sendBookingConfirmationNotifications } = require('../../services/bookingNotifications');
 const calendarSync              = require('../../services/calendarSync');
 const { normalizeDepositConfig, calculateAmountDue } = require('../../services/paymentRules');
 
@@ -136,7 +137,7 @@ async function validateTenantAvailability(client, tenant, date, time, totalServi
 
 // POST /api/v1/bookings — Create a new booking
 router.post('/', enforceBookingLimit, async (req, res) => {
-    const { name, email, phone, date, time, notes, region, service_id, receipt_image, after_hours_request } = req.body;
+    const { name, email, phone, date, time, notes, region, service_id, receipt_image, after_hours_request, whatsapp_opt_in } = req.body;
     const tenant = req.tenant;
     const tenantId = tenant.id;
     const timezone = tenant.branding?.timezone || 'America/Jamaica';
@@ -241,10 +242,10 @@ router.post('/', enforceBookingLimit, async (req, res) => {
 
             // 5. Insert Booking
             const bookingRes = await client.query(
-                `INSERT INTO bookings (tenant_id, service_id, name, email, phone, booking_date, booking_time, start_time, end_time, notes, region, status, payment_mode, expires_at, is_after_hours_request, after_hours_fee, service_price, service_currency)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+                `INSERT INTO bookings (tenant_id, service_id, name, email, phone, booking_date, booking_time, start_time, end_time, notes, region, status, payment_mode, expires_at, is_after_hours_request, after_hours_fee, service_price, service_currency, whatsapp_opt_in, whatsapp_status)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
                  RETURNING *`,
-                [tenantId, service_id, name, email.toLowerCase().trim(), phone, date, time, startTime, endTime, sanitizedNotes, region || 'Jamaica', status, paymentMode, expiresAt, afterHoursRequested, afterHoursRequested ? Number(tenant.after_hours_fee || 0) : 0, Number(service.price || 0), service.currency || 'JMD']
+                [tenantId, service_id, name, email.toLowerCase().trim(), phone, date, time, startTime, endTime, sanitizedNotes, region || 'Jamaica', status, paymentMode, expiresAt, afterHoursRequested, afterHoursRequested ? Number(tenant.after_hours_fee || 0) : 0, Number(service.price || 0), service.currency || 'JMD', whatsapp_opt_in === true, whatsapp_opt_in === true ? 'pending' : 'not_requested']
             );
             const booking = bookingRes.rows[0];
 
@@ -284,7 +285,7 @@ router.post('/', enforceBookingLimit, async (req, res) => {
             // Attach service_name so the email template can display it
             const enrichedBooking = { ...result.booking, service_name: result.service_name };
             calendarSync.syncBookingWithExternal(req.tenant.id, enrichedBooking).catch(console.error);
-            sendBookingConfirmation(enrichedBooking, req.tenant).catch(console.error);
+            sendBookingConfirmationNotifications(enrichedBooking, req.tenant).catch(console.error);
         } else if (result.booking.status === 'pending_manual_confirmation' || result.booking.status === 'pending_after_hours_confirmation') {
             const enrichedBooking = { ...result.booking, service_name: result.service_name };
             sendBookingPendingReviewEmail(enrichedBooking, req.tenant).catch(console.error);
@@ -356,7 +357,7 @@ router.post('/:id/verify-payment', async (req, res) => {
         if (result.status === 'confirmed') {
             const tRes = await query(`SELECT * FROM tenants WHERE id = $1`, [result.tenant_id]);
             calendarSync.syncBookingWithExternal(result.tenant_id, result).catch(console.error);
-            sendBookingConfirmation(result, tRes.rows[0]).catch(console.error);
+            sendBookingConfirmationNotifications(result, tRes.rows[0]).catch(console.error);
         }
 
         res.json({ success: true, booking: serializeBooking(result) });
@@ -490,7 +491,7 @@ router.patch('/:id/status', authenticate, requireRole('staff', 'tenant_admin'), 
         // Async tasks
         if (status === 'confirmed') {
             calendarSync.syncBookingWithExternal(req.tenant.id, result).catch(console.error);
-            sendBookingConfirmation(result, req.tenant).catch(console.error);
+            sendBookingConfirmationNotifications(result, req.tenant).catch(console.error);
         } else if (status === 'cancelled' || status === 'rejected') {
             sendBookingCancellationEmail(result, note, req.tenant).catch(console.error);
         }

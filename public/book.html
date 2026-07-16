@@ -146,6 +146,10 @@
                     <label for="fieldEmail">Email Address <span class="req">*</span></label>
                     <input type="email" id="fieldEmail" placeholder="you@example.com" required autocomplete="email">
                 </div>
+                <label class="whatsapp-consent" for="fieldWhatsappOptIn">
+                    <input type="checkbox" id="fieldWhatsappOptIn">
+                    <span><strong>Send my booking confirmation by WhatsApp too</strong><small>We will only use this number for booking updates. You can also add the confirmed appointment to your calendar from WhatsApp.</small></span>
+                </label>
                 <div class="field-wrap">
                     <label for="fieldNotes">Additional Notes <span class="opt">(optional)</span></label>
                     <textarea id="fieldNotes" rows="3" placeholder="Any preferences or special requests…" maxlength="500"></textarea>
@@ -164,7 +168,7 @@
             <div class="confirmation-wrap">
                 <div class="confirm-icon">✓</div>
                 <h2 class="confirm-title">You're Booked!</h2>
-                <p class="confirm-sub">A confirmation email has been sent to <strong id="confirmEmail">—</strong></p>
+                <p class="confirm-sub" id="confirmationDelivery"><span id="deliveryPrefix">A confirmation email has been sent to </span><strong id="confirmEmail">—</strong><span id="deliverySuffix"></span></p>
                 <div class="confirm-card" id="confirmCard">
                     <div class="confirm-row"><span>Date</span><strong id="confirmDate">—</strong></div>
                     <div class="confirm-row"><span>Time</span><strong id="confirmTime">—</strong></div>

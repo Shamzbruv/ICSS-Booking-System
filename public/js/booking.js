@@ -257,6 +257,7 @@ async function submitBooking(e) {
     const email = document.getElementById('fieldEmail').value.trim();
     const phone = document.getElementById('fieldPhone').value.trim();
     const notes = document.getElementById('fieldNotes').value.trim();
+    const whatsappOptIn = document.getElementById('fieldWhatsappOptIn').checked;
 
     if (!name || !email || !phone) {
         errEl.textContent = 'Name, email, and phone are required.';
@@ -276,7 +277,7 @@ async function submitBooking(e) {
             method:  'POST',
             headers: { 'Content-Type': 'application/json' },
             body:    JSON.stringify({
-                name, email, phone, notes,
+                name, email, phone, notes, whatsapp_opt_in: whatsappOptIn,
                 date: state.selectedDate,
                 time: state.selectedTime
             })
@@ -291,6 +292,10 @@ async function submitBooking(e) {
         document.getElementById('confirmTime').textContent  = state.selectedLabel;
         document.getElementById('confirmName').textContent  = name;
         document.getElementById('confirmEmail').textContent = email;
+        document.getElementById('deliveryPrefix').textContent = whatsappOptIn
+            ? 'Your confirmation is being sent by email to '
+            : 'A confirmation email has been sent to ';
+        document.getElementById('deliverySuffix').textContent = whatsappOptIn ? ' and by WhatsApp.' : '.';
 
         goToStep(4);
     } catch (err) {
