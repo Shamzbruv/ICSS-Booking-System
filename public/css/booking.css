@@ -286,6 +286,20 @@ body {
 }
 
 .field-wrap { display: flex; flex-direction: column; gap: 5px; }
+.whatsapp-consent {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 16px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--surface) 92%, #25d366 8%);
+    cursor: pointer;
+}
+.whatsapp-consent input { width: 18px; height: 18px; margin-top: 2px; accent-color: #25d366; flex: 0 0 auto; }
+.whatsapp-consent span { display: flex; flex-direction: column; gap: 4px; line-height: 1.4; }
+.whatsapp-consent strong { font-size: 14px; }
+.whatsapp-consent small { color: var(--text-dim); font-size: 12px; }
 
 label {
     font-size: 12px;
