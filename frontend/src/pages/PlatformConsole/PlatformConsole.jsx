@@ -412,23 +412,33 @@ function AuditView() {
       .finally(() => setLoading(false));
   }, []);
 
+  const affectedAccount = entry => {
+    const metadata = entry.metadata || {};
+    const name = entry.tenant_name || metadata.impersonatedTenantName;
+    const slug = entry.tenant_slug || metadata.impersonatedTenantSlug;
+    const email = entry.target_account_email || metadata.impersonatedAccountEmail;
+    if (!name && !slug && !email) return <span className={s.muted}>Platform-wide</span>;
+    return <div><strong>{name || slug || email}</strong>{slug && <div className={s.muted}>@{slug}</div>}{email && <div className={s.muted}>{email}</div>}</div>;
+  };
+
   return (
     <div className={s.view}>
       <div className={s.view__header}><h2 className={s.view__title}>Audit Log</h2></div>
       {loading ? <div className={s.loading}>Loading…</div> : (
         <div className={s.tableWrap}>
           <table className={s.table}>
-            <thead><tr><th>Action</th><th>Actor</th><th>Entity</th><th>Timestamp</th></tr></thead>
+            <thead><tr><th>Action</th><th>Actor</th><th>Affected account</th><th>Entity</th><th>Timestamp</th></tr></thead>
             <tbody>
               {entries.map(e => (
                 <tr key={e.id}>
                   <td><span className={s.badge}>{e.action}</span></td>
                   <td>{e.actor_email || '—'}</td>
+                  <td>{affectedAccount(e)}</td>
                   <td>{e.entity ? `${e.entity}${e.entity_id ? ' #'+e.entity_id.slice(0,8) : ''}` : '—'}</td>
                   <td className={s.muted}>{new Date(e.created_at).toLocaleString()}</td>
                 </tr>
               ))}
-              {entries.length === 0 && <tr><td colSpan={4} className={s.empty}>No audit entries.</td></tr>}
+              {entries.length === 0 && <tr><td colSpan={5} className={s.empty}>No audit entries.</td></tr>}
             </tbody>
           </table>
         </div>
