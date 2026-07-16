@@ -355,6 +355,16 @@ async function runMigrations(client) {
     try { await client.query(`ALTER TABLE bookings ADD COLUMN payment_mode TEXT DEFAULT 'none'`); } catch(e){}
     await client.query(`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS is_after_hours_request BOOLEAN DEFAULT false`);
     await client.query(`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS after_hours_fee NUMERIC(12,2) DEFAULT 0`);
+    await client.query(`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS service_price NUMERIC(12,2)`);
+    await client.query(`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS service_currency TEXT`);
+    await client.query(`
+        UPDATE bookings b
+        SET service_price = s.price,
+            service_currency = COALESCE(s.currency, 'JMD')
+        FROM services s
+        WHERE b.service_id = s.id
+          AND (b.service_price IS NULL OR b.service_currency IS NULL)
+    `);
 
     // Indexes for fast overlap checks (Must run after columns are added)
     await client.query(`CREATE INDEX IF NOT EXISTS idx_bookings_tenant_time ON bookings (tenant_id, start_time, end_time)`);
