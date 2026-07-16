@@ -17,7 +17,8 @@ const { query } = require('../../db/connection');
 const { authenticate, requirePlatformOwner, signToken } = require('../../middleware/auth');
 const { invalidateTenantCache } = require('../../middleware/tenantResolver');
 const bcrypt = require('bcryptjs');
-const { sendSupportJobStatusEmail } = require('../../services/email');
+const crypto = require('crypto');
+const { sendSupportJobStatusEmail, sendPartnerAgreementEmail } = require('../../services/email');
 
 function formatDateOnlyValue(value) {
     if (!value) return value;
@@ -66,10 +67,18 @@ router.post('/developer-admins', ownerOnly, async (req, res) => {
     try {
         const duplicate = await query(`SELECT id FROM users WHERE LOWER(email)=LOWER($1) LIMIT 1`, [email]);
         if (duplicate.rows.length) return res.status(409).json({ error:'An account with this email already exists.' });
-        const hash = await bcrypt.hash(password, 12);
-        const result = await query(`INSERT INTO users (email,password_hash,name,role,active) VALUES ($1,$2,$3,'developer_admin',true) RETURNING id,email,name,role,active,created_at`, [email,hash,name]);
-        await auditLog(req.user.id, null, 'developer_admin_created', { entity:'user', entityId:result.rows[0].id, email }, req);
-        res.status(201).json({ admin: result.rows[0] });
+        const pending = await query(`SELECT id FROM partner_agreements WHERE LOWER(partner_email)=LOWER($1) AND access_role='developer_admin' AND status<>'completed' LIMIT 1`, [email]);
+        if (pending.rows.length) return res.status(409).json({ error:'This developer already has a pending contract invitation.' });
+        const token = crypto.randomBytes(32).toString('base64url');
+        const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+        const passwordHash = await bcrypt.hash(password, 12);
+        const result = await query(`INSERT INTO partner_agreements (partner_email,partner_name,signing_token_hash,signing_token_expires_at,access_role,pending_password_hash)
+            VALUES ($1,$2,$3,NOW()+INTERVAL '7 days','developer_admin',$4) RETURNING id,partner_email,partner_name,status,signing_token_expires_at,access_role,created_at`, [email,name,tokenHash,passwordHash]);
+        const origin = String(process.env.BASE_URL || `${req.protocol}://${req.get('host')}`).replace(/\/$/, '');
+        const signingLink = `${origin}/partner-contract.html?token=${encodeURIComponent(token)}`;
+        await sendPartnerAgreementEmail({ to:email,subject:'Your ICSS agreement — signature required before developer access',message:`You have been invited to join the ICSS developer platform. Review and sign the agreement using this private one-time link, which expires in 7 days. Your developer credentials will remain inactive until the Owner countersigns the agreement.`,link:signingLink });
+        await auditLog(req.user.id, null, 'developer_admin_contract_invited', { entity:'partner_agreement', entityId:result.rows[0].id, email, name }, req);
+        res.status(201).json({ agreement:result.rows[0], message:'Contract invitation emailed. The developer account will be created after both parties sign.' });
     } catch (err) { if (err.code === '23505') return res.status(409).json({ error:'An account with this email already exists.' }); res.status(500).json({ error:'Could not create developer admin.' }); }
 });
 

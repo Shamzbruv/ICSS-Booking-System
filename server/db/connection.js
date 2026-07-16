@@ -405,6 +405,8 @@ async function runMigrations(client) {
         )
     `);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_partner_agreements_email ON partner_agreements (LOWER(partner_email))`);
+    await client.query(`ALTER TABLE partner_agreements ADD COLUMN IF NOT EXISTS access_role TEXT NOT NULL DEFAULT 'platform_partner'`);
+    await client.query(`ALTER TABLE partner_agreements ADD COLUMN IF NOT EXISTS pending_password_hash TEXT`);
     
     try { await client.query(`ALTER TABLE services ADD COLUMN buffer_time_minutes INT DEFAULT 0`); } catch(e){}
     try { await client.query(`ALTER TABLE services ADD COLUMN payment_mode TEXT DEFAULT 'tenant_default'`); } catch(e){}
