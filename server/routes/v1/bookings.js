@@ -241,10 +241,10 @@ router.post('/', enforceBookingLimit, async (req, res) => {
 
             // 5. Insert Booking
             const bookingRes = await client.query(
-                `INSERT INTO bookings (tenant_id, service_id, name, email, phone, booking_date, booking_time, start_time, end_time, notes, region, status, payment_mode, expires_at, is_after_hours_request, after_hours_fee)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+                `INSERT INTO bookings (tenant_id, service_id, name, email, phone, booking_date, booking_time, start_time, end_time, notes, region, status, payment_mode, expires_at, is_after_hours_request, after_hours_fee, service_price, service_currency)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
                  RETURNING *`,
-                [tenantId, service_id, name, email.toLowerCase().trim(), phone, date, time, startTime, endTime, sanitizedNotes, region || 'Jamaica', status, paymentMode, expiresAt, afterHoursRequested, afterHoursRequested ? Number(tenant.after_hours_fee || 0) : 0]
+                [tenantId, service_id, name, email.toLowerCase().trim(), phone, date, time, startTime, endTime, sanitizedNotes, region || 'Jamaica', status, paymentMode, expiresAt, afterHoursRequested, afterHoursRequested ? Number(tenant.after_hours_fee || 0) : 0, Number(service.price || 0), service.currency || 'JMD']
             );
             const booking = bookingRes.rows[0];
 
