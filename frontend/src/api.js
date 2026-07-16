@@ -21,6 +21,16 @@ async function apiFetch(path, options = {}, overrideToken = null) {
   return res.json();
 }
 
+async function apiBlob(path) {
+  const token = localStorage.getItem('icss_token');
+  const res = await fetch(`${BASE}${path}`, { headers: token ? { Authorization:`Bearer ${token}` } : {} });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error:res.statusText }));
+    throw new Error(err.error || 'Download failed');
+  }
+  return res.blob();
+}
+
 export const api = {
   // Auth
   login:  (body) => apiFetch('/auth/login', { method: 'POST', body }),
@@ -111,6 +121,10 @@ export const api = {
     getActiveSessions:    () => apiFetch('/platform/impersonation/active'),
     getDeveloperAdmins:   () => apiFetch('/platform/developer-admins'),
     createDeveloperAdmin: (body) => apiFetch('/platform/developer-admins', { method: 'POST', body }),
+    getAgreements:        () => apiFetch('/partners'),
+    ownerSignAgreement:   (id,body) => apiFetch(`/partners/${id}/owner-sign`, { method:'POST', body }),
+    getAgreementPdf:      (id) => apiBlob(`/partners/${id}/download`),
+    getAgreementTemplate: () => apiBlob('/partners/template/download'),
 
     // Safe write actions
     expireHold:           (bookingId) =>
