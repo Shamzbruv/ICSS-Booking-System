@@ -68,7 +68,56 @@ const NAV = [
 ];
 
 const money = value => `JMD ${Number(value || 0).toLocaleString(undefined,{maximumFractionDigits:2})}`;
-function DashboardView(){const [d,setD]=useState(null);useEffect(()=>{api.platform.getDashboardAnalytics().then(setD)},[]);if(!d)return <div className={s.loading}>Loading platform analytics…</div>;const max=Math.max(1,...d.monthly.map(x=>Number(x.payments)));const totalStatus=Math.max(1,d.statuses.reduce((n,x)=>n+x.count,0));let angle=0;const colors=['#7c6ef7','#4ade80','#facc15','#fb923c','#f87171','#38bdf8','#a78bfa'];const stops=d.statuses.map((x,i)=>{const start=angle;angle+=x.count/totalStatus*360;return `${colors[i%colors.length]} ${start}deg ${angle}deg`});const points=d.monthly.map((x,i)=>`${i*(520/Math.max(1,d.monthly.length-1))},${150-(Number(x.bookings)/Math.max(1,...d.monthly.map(y=>y.bookings)))*130}`).join(' ');return <div className={s.view}><div className={s.view__header}><h2 className={s.view__title}>Platform Health Dashboard</h2></div><div className={s.metricGrid}><div className={s.metricCard}><span>Total booking payments</span><strong>{money(d.summary.total_paid)}</strong></div><div className={s.metricCard}><span>Payments — last 30 days</span><strong>{money(d.summary.paid_30d)}</strong></div><div className={s.metricCard}><span>Total bookings</span><strong>{d.summary.total_bookings}</strong></div><div className={s.metricCard}><span>Active tenants</span><strong>{d.summary.active_tenants}</strong></div></div><div className={s.chartGrid}><Section title="Monthly booking payments"><div className={s.barChart}>{d.monthly.map(x=><div className={s.barItem} key={x.month} title={`${x.month}: ${money(x.payments)}`}><div className={s.bar} style={{height:`${Math.max(3,Number(x.payments)/max*170)}px`}}/><span>{x.month.slice(5)}</span></div>)}</div></Section><Section title="Booking status mix"><div className={s.pieWrap}><div className={s.pie} style={{background:`conic-gradient(${stops.join(',')})`}}/><div>{d.statuses.map((x,i)=><div key={x.status} className={s.legend}><i style={{background:colors[i%colors.length]}}/>{x.status.replaceAll('_',' ')} ({x.count})</div>)}</div></div></Section><Section title="Booking activity — 12 months"><svg className={s.lineChart} viewBox="0 0 520 170" role="img" aria-label="Monthly bookings line graph"><polyline points={points} fill="none" stroke="#7c6ef7" strokeWidth="4" strokeLinejoin="round"/>{points.split(' ').map((p,i)=>{const [x,y]=p.split(',');return <circle key={i} cx={x} cy={y} r="4" fill="#fff"/>})}</svg></Section><Section title="Top tenants by booking payments"><table className={s.table}><thead><tr><th>Tenant</th><th>Bookings</th><th>Paid</th></tr></thead><tbody>{d.tenants.map(t=><tr key={t.slug}><td>{t.name}<div className={s.muted}>{t.slug}</div></td><td>{t.bookings}</td><td>{money(t.payments)}</td></tr>)}</tbody></table></Section></div></div>}
+
+function DashboardView() {
+  const [d, setD] = useState(null);
+  const [selected, setSelected] = useState(null);
+  useEffect(() => { api.platform.getDashboardAnalytics().then(setD); }, []);
+  if (!d) return <div className={s.loading}>Loading platform analytics…</div>;
+
+  const colors = ['#7c6ef7','#4ade80','#facc15','#fb923c','#f87171','#38bdf8','#a78bfa'];
+  const maxPayment = Math.max(1, ...d.monthly.map(x => Number(x.payments)));
+  const maxBookings = Math.max(1, ...d.monthly.map(x => Number(x.bookings)));
+  const totalStatus = Math.max(1, d.statuses.reduce((n, x) => n + x.count, 0));
+  const linePoints = d.monthly.map((x, i) => ({
+    ...x,
+    x: i * (520 / Math.max(1, d.monthly.length - 1)),
+    y: 150 - (Number(x.bookings) / maxBookings) * 130
+  }));
+  let pieOffset = 0;
+  const pieSegments = d.statuses.map((item, i) => {
+    const fraction = item.count / totalStatus;
+    const segment = { ...item, color: colors[i % colors.length], fraction, offset: pieOffset };
+    pieOffset += fraction;
+    return segment;
+  });
+  const choose = (title, detail) => setSelected({ title, detail });
+
+  return <div className={s.view}>
+    <div className={s.view__header}><div><h2 className={s.view__title}>Platform Health Dashboard</h2><p className={s.chartHint}>Hover or focus any chart item for its value. Click it to keep the explanation open.</p></div></div>
+    <div className={s.metricGrid}>
+      {[
+        ['Total booking payments', money(d.summary.total_paid), 'All verified JMD booking payments recorded across every tenant.'],
+        ['Payments — last 30 days', money(d.summary.paid_30d), 'Verified JMD booking payments recorded during the most recent 30 days.'],
+        ['Total bookings', d.summary.total_bookings, 'All booking records created across the platform.'],
+        ['Active tenants', d.summary.active_tenants, 'Tenant accounts currently enabled and available.']
+      ].map(([label,value,help]) => <button key={label} className={s.metricCard} onClick={() => choose(label, `${value} — ${help}`)}><span>{label}</span><strong>{value}</strong><small>{help}</small></button>)}
+    </div>
+    {selected && <div className={s.chartSelection} role="status"><div><strong>{selected.title}</strong><span>{selected.detail}</span></div><button onClick={() => setSelected(null)} aria-label="Close selected chart detail">×</button></div>}
+    <div className={s.chartGrid}>
+      <Section title="Monthly booking payments">
+        <div className={s.barChart}>{d.monthly.map(x => <button className={s.barItem} key={x.month} onClick={() => choose(`Payments in ${x.month}`, `${money(x.payments)} from verified booking payments; ${x.bookings} bookings were created.`)} aria-label={`${x.month}: ${money(x.payments)}, ${x.bookings} bookings`}><span className={s.chartTooltip}>{x.month}<br/><strong>{money(x.payments)}</strong><br/>{x.bookings} bookings</span><div className={s.bar} style={{height:`${Math.max(3,Number(x.payments)/maxPayment*170)}px`}}/><span>{x.month.slice(5)}</span></button>)}</div>
+      </Section>
+      <Section title="Booking status mix">
+        <div className={s.pieWrap}><svg className={s.pie} viewBox="0 0 42 42" aria-label="Booking status pie chart">{pieSegments.map(segment => <circle key={segment.status} className={s.pieSegment} cx="21" cy="21" r="15.915" fill="transparent" stroke={segment.color} strokeWidth="8" strokeDasharray={`${segment.fraction*100} ${100-segment.fraction*100}`} strokeDashoffset={25-segment.offset*100} tabIndex="0" role="button" aria-label={`${segment.status}: ${segment.count} bookings`} onClick={() => choose(segment.status.replaceAll('_',' '), `${segment.count} bookings — ${(segment.fraction*100).toFixed(1)}% of all bookings.`)} onKeyDown={e => (e.key==='Enter'||e.key===' ') && choose(segment.status.replaceAll('_',' '), `${segment.count} bookings — ${(segment.fraction*100).toFixed(1)}% of all bookings.`)}/>)}</svg><div>{pieSegments.map(segment => <button key={segment.status} className={s.legend} onClick={() => choose(segment.status.replaceAll('_',' '), `${segment.count} bookings — ${(segment.fraction*100).toFixed(1)}% of all bookings.`)}><i style={{background:segment.color}}/>{segment.status.replaceAll('_',' ')} ({segment.count})</button>)}</div></div>
+      </Section>
+      <Section title="Booking activity — 12 months">
+        <div className={s.lineChartWrap}><svg className={s.lineChart} viewBox="-8 0 536 180" role="img" aria-label="Monthly bookings line graph"><polyline points={linePoints.map(p=>`${p.x},${p.y}`).join(' ')} fill="none" stroke="#7c6ef7" strokeWidth="4" strokeLinejoin="round"/>{linePoints.map(p=><g key={p.month} className={s.linePoint} tabIndex="0" role="button" aria-label={`${p.month}: ${p.bookings} bookings`} onClick={() => choose(`Bookings in ${p.month}`, `${p.bookings} bookings created; ${money(p.payments)} in verified payments.`)} onKeyDown={e => (e.key==='Enter'||e.key===' ') && choose(`Bookings in ${p.month}`, `${p.bookings} bookings created; ${money(p.payments)} in verified payments.`)}><circle cx={p.x} cy={p.y} r="7"/><text x={p.x} y={Math.max(12,p.y-13)} textAnchor="middle">{p.bookings}</text></g>)}</svg></div>
+      </Section>
+      <Section title="Top tenants by booking payments"><table className={s.table}><thead><tr><th>Tenant</th><th>Bookings</th><th>Paid</th></tr></thead><tbody>{d.tenants.map(t=><tr key={t.slug} className={s.interactiveRow} tabIndex="0" onClick={() => choose(t.name, `${t.bookings} bookings and ${money(t.payments)} in verified JMD booking payments.`)} onKeyDown={e => e.key==='Enter' && choose(t.name, `${t.bookings} bookings and ${money(t.payments)} in verified JMD booking payments.`)}><td>{t.name}<div className={s.muted}>{t.slug}</div></td><td>{t.bookings}</td><td>{money(t.payments)}</td></tr>)}</tbody></table></Section>
+    </div>
+  </div>;
+}
 
 // ── Tenants view ──────────────────────────────────────────────────────────────
 function TenantsView() {
