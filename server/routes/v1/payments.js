@@ -1,7 +1,6 @@
 /**
  * Payments Routes — /api/v1/payments
- * WiPay (Jamaica) + Stripe-ready structure
- * Ported from Windross with full multi-tenant support.
+ * PayPal subscriptions and retired-provider compatibility responses.
  */
 
 const express = require('express');
@@ -11,8 +10,9 @@ const https   = require('https');
 const { query }  = require('../../db/connection');
 const { paymentLimiter } = require('../../middleware/rateLimiter');
 const { enqueueProvisioningJob } = require('../../services/provisioning');
-const { sendSignupWelcomeEmail } = require('../../services/email');
+const { enqueueEmailOutbox } = require('../../services/emailOutbox');
 const { getPayPalSignupConfig, normalizeInternalSignupPlanId } = require('../../services/paypalConfig');
+const { verifySignupSubscription } = require('../../services/paypalApi');
 const CURRENT_TERMS_VERSION = '2026-05-05';
 
 // Helper to enforce webhook idempotency
@@ -34,82 +34,24 @@ async function checkIdempotency(provider, eventId, payload) {
 
 async function sendSignupWelcomeEmailOnce(signupToken, signupConfig = getPayPalSignupConfig()) {
     if (!signupToken) return false;
-
-    const lockRes = await query(
-        `INSERT INTO idempotency_keys (provider, event_id, payload)
-         VALUES ('signup_welcome_email', $1, $2)
-         ON CONFLICT (provider, event_id) DO NOTHING
-         RETURNING id`,
-        [signupToken, JSON.stringify({ type: 'signup_welcome_email' })]
-    );
-
-    if (lockRes.rows.length === 0) {
-        return false;
-    }
-
-    try {
-        const pendingRes = await query(
+    const pendingRes = await query(
             `SELECT admin_email, admin_owner_name, tenant_name
              FROM pending_signups
              WHERE signup_token = $1`,
             [signupToken]
         );
-
-        if (pendingRes.rows.length === 0) {
-            await query(
-                `DELETE FROM idempotency_keys
-                 WHERE provider = 'signup_welcome_email' AND event_id = $1`,
-                [signupToken]
-            );
-            return false;
-        }
-
-        const signup = pendingRes.rows[0];
-
-        await sendSignupWelcomeEmail(
-            signup.admin_email,
-            (signup.admin_owner_name || signup.admin_email).split(' ')[0],
-            signup.tenant_name,
-            {
-                trialDays: signupConfig.trialDays,
-                monthlyPriceUsd: signupConfig.monthlyPriceUsd
-            }
-        );
-
-        return true;
-    } catch (err) {
-        try {
-            await query(
-                `DELETE FROM idempotency_keys
-                 WHERE provider = 'signup_welcome_email' AND event_id = $1`,
-                [signupToken]
-            );
-        } catch (cleanupErr) {
-            console.error('[Signup Welcome Email] Failed to release idempotency lock:', cleanupErr.message);
-        }
-        throw err;
-    }
+    if (!pendingRes.rows.length) return false;
+    const signup = pendingRes.rows[0];
+    await enqueueEmailOutbox({
+        messageType:'signup_received',dedupeKey:`signup_received:${signupToken}`,recipient:signup.admin_email,
+        payload:{ firstName:(signup.admin_owner_name || signup.admin_email).split(' ')[0],tenantName:signup.tenant_name,options:{ trialDays:signupConfig.trialDays,monthlyPriceUsd:signupConfig.monthlyPriceUsd } }
+    });
+    return true;
 }
 
 // POST /api/v1/payments/stripe/webhook
 router.post('/stripe/webhook', async (req, res) => {
-    try {
-        const stripeEvent = req.body;
-        
-        const isNew = await checkIdempotency('stripe', stripeEvent.id, stripeEvent);
-        if (!isNew) {
-            console.log(`[Stripe Webhook] Duplicate event ${stripeEvent.id} ignored.`);
-            return res.json({ received: true, duplicate: true });
-        }
-
-        const { handleStripeWebhookEvent } = require('../../services/subscription');
-        await handleStripeWebhookEvent(stripeEvent);
-        res.json({received: true});
-    } catch (e) {
-        console.error('[Stripe Webhook Error]', e);
-        const isValidation = e.message.includes('signature') || e.message.includes('payload');
-        res.status(isValidation ? 400 : 500).send(`Webhook Error: ${e.message}`);
-    }
+    res.status(410).json({ error:'Stripe webhook processing is disabled until signed webhook verification is configured.' });
 });
 
 // ── PayPal Webhook Signature Verification ─────────────────────────────────────
@@ -152,8 +94,7 @@ function fetchCert(url) {
 async function verifyPayPalWebhookSignature(req) {
     const webhookId = process.env.PAYPAL_WEBHOOK_ID;
     if (!webhookId) {
-        console.warn('[PayPal Webhook] PAYPAL_WEBHOOK_ID missing — skipping signature check in Dev.');
-        return true;
+        throw new Error('PayPal webhook verification is unavailable: PAYPAL_WEBHOOK_ID is not configured.');
     }
 
     const transmissionId   = req.headers['paypal-transmission-id'];
@@ -193,16 +134,19 @@ async function verifyPayPalWebhookSignature(req) {
 
 // POST /api/v1/payments/paypal/webhook
 router.post('/paypal/webhook', async (req, res) => {
+    let claimedEventId = null;
     try {
         await verifyPayPalWebhookSignature(req);
 
         const paypalEvent = req.body;
+        if (!paypalEvent?.id || !paypalEvent?.event_type) throw new Error('Missing required PayPal event identity.');
         
         const isNew = await checkIdempotency('paypal', paypalEvent.id, paypalEvent);
         if (!isNew) {
             console.log(`[PayPal Webhook] Duplicate event ${paypalEvent.id} ignored.`);
             return res.json({ received: true, duplicate: true });
         }
+        claimedEventId = paypalEvent.id;
 
         const { handlePayPalWebhookEvent } = require('../../services/subscription');
         await handlePayPalWebhookEvent(paypalEvent);
@@ -217,25 +161,36 @@ router.post('/paypal/webhook', async (req, res) => {
              if (custom_id) {
                  // Custom ID is the signup_token.
                  // We don't try to parse it as JSON. We just enqueue it securely.
-                 try {
-                     const pendingRes = await query(`SELECT tenant_slug FROM pending_signups WHERE signup_token = $1`, [custom_id]);
-                     if (pendingRes.rows.length > 0) {
+                 const pendingRes = await query(`SELECT tenant_slug FROM pending_signups WHERE signup_token = $1`, [custom_id]);
+                 if (pendingRes.rows.length > 0) {
                          const slug = pendingRes.rows[0].tenant_slug || null;
+                         const signupConfig = getPayPalSignupConfig();
+                         if (paypalEvent.resource?.plan_id !== signupConfig.planId || !paypalEvent.resource?.id) {
+                             throw new Error('Verified PayPal event does not match the configured signup plan.');
+                         }
+                         const verified = await query(
+                             `UPDATE pending_signups SET status='payment_verified',paypal_subscription_id=$2,payment_verified_at=NOW()
+                              WHERE signup_token=$1 AND expires_at>NOW() AND status<>'provisioned' RETURNING id`,
+                             [custom_id,paypalEvent.resource.id]
+                         );
+                         if (!verified.rows.length) throw new Error('The signup session is expired or has already been provisioned.');
                          await enqueueProvisioningJob(slug, custom_id, paypalEvent.id, paypalEvent.resource);
                          await sendSignupWelcomeEmailOnce(custom_id).catch((err) => {
                              console.error('[PayPal Webhook] Failed to send signup welcome email:', err.message);
                          });
-                     } else {
-                         console.error(`[PayPal Webhook] signup_token ${custom_id} not found in pending_signups.`);
-                     }
-                 } catch (err) {
-                     console.error('[PayPal Webhook] DB error queuing provision lookup', err);
+                 } else {
+                     throw new Error(`PayPal signup token ${custom_id} was not found.`);
                  }
              }
         }
         res.json({received: true});
     } catch (e) {
         console.error('[PayPal Webhook Error]', e);
+        if (claimedEventId) {
+            await query(`DELETE FROM idempotency_keys WHERE provider='paypal' AND event_id=$1`, [claimedEventId]).catch(err => {
+                console.error('[PayPal Webhook] Could not release failed event claim:', err.message);
+            });
+        }
         // Differentiate between 400 validation errors and 500 processing errors
         const isValidation = e.message.includes('signature') || e.message.includes('Missing required') || e.message.includes('forgery');
         res.status(isValidation ? 400 : 500).send(`Webhook Error: ${e.message}`);
@@ -245,40 +200,40 @@ router.post('/paypal/webhook', async (req, res) => {
 // POST /api/v1/payments/paypal/approve
 // Manual trigger from frontend to ensure provisioning starts immediately
 // without waiting for the async webhook (which might fail locally).
-router.post('/paypal/approve', async (req, res) => {
+router.post('/paypal/approve', paymentLimiter, async (req, res) => {
     try {
         const { signup_token, subscription_id } = req.body;
-        if (!signup_token) return res.status(400).json({ error: 'Missing signup_token' });
+        if (!signup_token || !subscription_id) return res.status(400).json({ error: 'signup_token and subscription_id are required.' });
 
         const pendingRes = await query(
-            `SELECT tenant_slug, admin_email, admin_owner_name, tenant_name
+            `SELECT tenant_slug,admin_email,admin_owner_name,tenant_name,status,expires_at,paypal_subscription_id
              FROM pending_signups
-             WHERE signup_token = $1`,
+             WHERE signup_token = $1 AND expires_at>NOW()`,
             [signup_token]
         );
-        if (pendingRes.rows.length > 0) {
-            const slug = pendingRes.rows[0].tenant_slug || null;
-            const signupConfig = getPayPalSignupConfig();
-            await enqueueProvisioningJob(slug, signup_token, subscription_id, {
-                manual_trigger: true,
-                paypal_subscription_id: subscription_id || null,
-                paypal_plan_id: signupConfig.planId
-            });
-            await sendSignupWelcomeEmailOnce(signup_token, signupConfig).catch((err) => {
-                console.error('[PayPal Approve] Failed to send signup welcome email:', err.message);
-            });
-        }
-        res.json({ success: true });
+        if (!pendingRes.rows.length) return res.status(404).json({ error:'Signup session not found or expired.' });
+        const pending = pendingRes.rows[0];
+        if (pending.paypal_subscription_id && pending.paypal_subscription_id !== subscription_id) return res.status(409).json({ error:'This signup is already bound to another PayPal subscription.' });
+        if (pending.status === 'provisioned') return res.json({ success:true, duplicate:true, status:'provisioned' });
+        const signupConfig = getPayPalSignupConfig();
+        if (!signupConfig.planId) return res.status(503).json({ error:'PayPal signup plan is not configured.' });
+        const subscription = await verifySignupSubscription({ subscriptionId:subscription_id, signupToken:signup_token, expectedPlanId:signupConfig.planId });
+        await query(`UPDATE pending_signups SET status='payment_verified',paypal_subscription_id=$2,payment_verified_at=NOW() WHERE signup_token=$1`, [signup_token,subscription.id]);
+        await enqueueProvisioningJob(pending.tenant_slug || null, signup_token, subscription.id, {
+            manual_trigger:true, paypal_subscription_id:subscription.id, paypal_plan_id:subscription.plan_id
+        });
+        await sendSignupWelcomeEmailOnce(signup_token, signupConfig).catch(err => console.error('[PayPal Approve/Email]', err.message));
+        res.json({ success:true, status:'payment_verified' });
     } catch (e) {
         console.error('[PayPal Approve Error]', e);
-        res.status(500).json({ error: 'Failed to queue provisioning' });
+        res.status(e.status || 500).json({ error: e.status && e.status < 500 ? e.message : 'PayPal subscription verification failed.' });
     }
 });
 
 // POST /api/v1/payments/paypal/create-subscription
 // This endpoint is used by the frontend setup form to securely lodge the tenant config,
 // generate a token, and return it. The frontend will pass this token to the PayPal JS SDK.
-router.post('/paypal/create-subscription', async (req, res) => {
+router.post('/paypal/create-subscription', paymentLimiter, async (req, res) => {
     try {
         const {
             tenant_name, admin_email, admin_password,
@@ -286,14 +241,19 @@ router.post('/paypal/create-subscription', async (req, res) => {
             terms_accepted, terms_version
         } = req.body;
 
-        if (!tenant_name || !admin_email || !admin_password) {
+        const normalizedTenantName = String(tenant_name || '').trim();
+        const normalizedOwnerName = String(admin_owner_name || '').trim();
+        const normalizedEmail = String(admin_email || '').trim().toLowerCase();
+        if (!normalizedTenantName || !normalizedEmail || !admin_password || !normalizedOwnerName) {
             return res.status(400).json({ error: 'Missing required onboarding fields.' });
         }
 
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(admin_email)) {
+        if (!emailRegex.test(normalizedEmail) || normalizedEmail.length > 254) {
             return res.status(400).json({ error: 'Please enter a valid email address.' });
         }
+        if (normalizedTenantName.length < 2 || normalizedTenantName.length > 120 || normalizedOwnerName.length < 2 || normalizedOwnerName.length > 120) return res.status(400).json({ error:'Business and owner names must be between 2 and 120 characters.' });
+        if (String(admin_password).length < 8 || String(admin_password).length > 128 || !/[A-Za-z]/.test(admin_password) || !/\d/.test(admin_password)) return res.status(400).json({ error:'Password must be 8–128 characters and include a letter and number.' });
 
         if (terms_accepted !== true) {
             return res.status(400).json({ error: 'You must accept the Terms & Conditions before creating an account.' });
@@ -306,11 +266,16 @@ router.post('/paypal/create-subscription', async (req, res) => {
         const bcrypt = require('bcryptjs');
         const hash = await bcrypt.hash(admin_password, 12);
         const signupConfig = getPayPalSignupConfig();
+        if (!signupConfig.clientId || !signupConfig.planId) return res.status(503).json({ error:'PayPal signup is not configured.' });
         const normalizedPlanId = normalizeInternalSignupPlanId(plan_id);
         const signup_token = crypto.randomUUID();
         const acceptanceIp = req.ip || null;
         const acceptanceUserAgent = (req.get('user-agent') || '').slice(0, 512) || null;
 
+        if (theme_id) {
+            const theme = await query(`SELECT id FROM themes WHERE id=$1`, [theme_id]);
+            if (!theme.rows.length) return res.status(400).json({ error:'Selected theme is invalid.' });
+        }
         await query(
             `INSERT INTO pending_signups (
                 signup_token, tenant_slug, tenant_name, admin_email, admin_password_hash,
@@ -321,10 +286,10 @@ router.post('/paypal/create-subscription', async (req, res) => {
             [
                 signup_token,
                 null,
-                tenant_name,
-                admin_email.toLowerCase(),
+                normalizedTenantName,
+                normalizedEmail,
                 hash,
-                admin_owner_name || admin_email,
+                normalizedOwnerName,
                 theme_id || null,
                 normalizedPlanId,
                 terms_version,

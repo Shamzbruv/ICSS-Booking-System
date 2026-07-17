@@ -11,7 +11,6 @@
  *   3 — Enter your Details
  *   4 — Payment / Confirmation
  *
- * WiPay return path:  /:slug?booking=<id>&transaction_id=<txn>
  * On load if those params are present, skip to verification state.
  */
 
@@ -41,11 +40,6 @@ function isoDate(d) {
   const m  = String(d.getMonth() + 1).padStart(2, '0');
   const dd = String(d.getDate()).padStart(2, '0');
   return `${y}-${m}-${dd}`;
-}
-
-function buildAccentVars(tenant) {
-  const accent = tenant?.branding?.accent_color || '#7c6ef7';
-  return { '--accent': accent, '--accent-dim': `${accent}22` };
 }
 
 // ── Sub-components ────────────────────────────────────────────────────────────
@@ -291,12 +285,11 @@ function StepDetails({ service, date, slot, onSubmit, submitting, error }) {
 
 // ── Step 4: Confirmation / Payment ────────────────────────────────────────────
 
-function StepConfirm({ result, slug }) {
+function StepConfirm({ result }) {
   const { booking, checkoutUrl, bankInstructions } = result;
+  useEffect(() => { if (checkoutUrl) window.location.href = checkoutUrl; }, [checkoutUrl]);
 
   if (checkoutUrl) {
-    // WiPay — auto-redirect; show a spinner while the browser navigates
-    useEffect(() => { window.location.href = checkoutUrl; }, []);
     return (
       <div className={s.step}>
         <div className={s.successIcon}>💳</div>
@@ -339,53 +332,10 @@ function StepConfirm({ result, slug }) {
   );
 }
 
-// ── WiPay Return Handler ──────────────────────────────────────────────────────
-
-function WiPayReturn({ slug }) {
-  const params   = new URLSearchParams(window.location.search);
-  const bookingId = params.get('booking');
-  const txnId    = params.get('transaction_id');
-
-  const [status, setStatus] = useState('verifying'); // verifying | confirmed | failed | pending
-  const [booking, setBooking] = useState(null);
-
-  useEffect(() => {
-    if (!bookingId || !txnId) { setStatus('failed'); return; }
-    api.publicVerifyPayment(slug, bookingId, txnId)
-      .then(res => {
-        setBooking(res.booking);
-        setStatus(res.booking?.status === 'confirmed' ? 'confirmed' : 'pending');
-      })
-      .catch(() => setStatus('failed'));
-  }, []);
-
-  const icons   = { verifying: '⏳', confirmed: '🎉', failed: '❌', pending: '⏳' };
-  const titles  = { verifying: 'Verifying Payment…', confirmed: 'Payment Confirmed!', failed: 'Verification Failed', pending: 'Payment Pending' };
-  const messages = {
-    verifying: 'Please wait while we verify your payment.',
-    confirmed: 'Your booking is confirmed. See you soon!',
-    failed:    'We could not verify your payment. Please contact us with your booking reference.',
-    pending:   'Payment received. Your booking is pending manual confirmation.',
-  };
-
-  return (
-    <div className={s.centreWrap}>
-      <div className={s.resultCard}>
-        <div className={s.successIcon}>{icons[status]}</div>
-        <h2 className={s.step__title}>{titles[status]}</h2>
-        <p className={s.step__sub}>{messages[status]}</p>
-        {booking && <p style={{ opacity: 0.5, fontSize: 13, marginTop: 12 }}>Ref: #{booking.id?.slice(0, 8).toUpperCase()}</p>}
-      </div>
-    </div>
-  );
-}
-
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function PublicBookingPage() {
   const { slug }  = useParams();
-  const params    = new URLSearchParams(window.location.search);
-  const isWiPayReturn = params.has('booking') && params.has('transaction_id');
 
   const [tenant,   setTenant]   = useState(null);
   const [services, setServices] = useState([]);
@@ -462,16 +412,6 @@ export default function PublicBookingPage() {
     </div>
   );
 
-  // WiPay redirect-back — bypass the wizard and go straight to verification
-  if (isWiPayReturn) {
-    return (
-      <div className={s.page} style={buildAccentVars(tenant)}>
-        <PageHeader tenant={tenant} />
-        <WiPayReturn slug={slug} />
-      </div>
-    );
-  }
-
   // --- THEME ROUTER ---
   if (tenant.themeName === 'Iron & Blade') {
     return <ThemeBarber tenant={tenant} services={services} />;
@@ -497,7 +437,7 @@ export default function PublicBookingPage() {
   if (tenant.themeName === 'Meridian Law') {
     return <ThemeLaw tenant={tenant} services={services} />;
   }
-  if (tenant.themeName === 'Polished & Pure') {
+  if (tenant.themeCode === 'nail-tech' || tenant.themeName === 'Elegant Nails' || tenant.themeName === 'Polished & Pure') {
     return <ThemeNailTech tenant={tenant} services={services} />;
   }
   if (tenant.themeName === 'Lumina Lens') {

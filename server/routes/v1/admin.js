@@ -16,7 +16,7 @@ router.use(requireRole('staff', 'tenant_admin', 'super_admin'));
 
 function getDashboardTourVersion(tenant) {
     const rawVersion = Number(tenant?.branding?.dashboard_tour_version);
-    return Number.isFinite(rawVersion) && rawVersion >= 0 ? rawVersion : 1;
+    return Number.isFinite(rawVersion) && rawVersion >= 2 ? rawVersion : 2;
 }
 
 function sanitizeSupportText(value, maxLength) {
@@ -56,18 +56,20 @@ router.get('/summary', async (req, res) => {
                 [tenantId]
             ),
             query(
-                `SELECT SUM(s.price) AS total_revenue 
-                 FROM bookings b 
-                 JOIN services s ON b.service_id = s.id 
-                 WHERE b.tenant_id=$1 AND b.status IN ('confirmed', 'completed')` + dateFilter,
+                `SELECT COALESCE(b.service_currency,s.currency,'JMD') AS currency,
+                        SUM(COALESCE(b.service_price,s.price,0)+COALESCE(b.after_hours_fee,0)) AS total_revenue
+                 FROM bookings b LEFT JOIN services s ON b.service_id=s.id
+                 WHERE b.tenant_id=$1 AND b.status IN ('confirmed','completed')` + dateFilter + `
+                 GROUP BY COALESCE(b.service_currency,s.currency,'JMD') ORDER BY currency`,
                 params
             ),
             query(
-                `SELECT s.name, COUNT(b.id) as booking_count, SUM(s.price) as revenue 
+                `SELECT COALESCE(s.name,'Deleted service') AS name,COALESCE(b.service_currency,s.currency,'JMD') AS currency,
+                        COUNT(b.id) AS booking_count,SUM(COALESCE(b.service_price,s.price,0)+COALESCE(b.after_hours_fee,0)) AS revenue
                  FROM bookings b 
-                 JOIN services s ON b.service_id = s.id 
+                 LEFT JOIN services s ON b.service_id = s.id
                  WHERE b.tenant_id=$1 AND b.status IN ('confirmed', 'completed')` + dateFilter + `
-                 GROUP BY s.id, s.name 
+                 GROUP BY s.id,s.name,COALESCE(b.service_currency,s.currency,'JMD')
                  ORDER BY revenue DESC LIMIT 5`,
                 params
             )
@@ -83,11 +85,14 @@ router.get('/summary', async (req, res) => {
             totalDesigns:      parseInt(totalDesigns.rows[0].cnt),
             activeBlocks:      parseInt(activeBlocks.rows[0].cnt),
             monthlyBookings:   parseInt(monthlyBookings.rows[0].cnt),
-            totalRevenue:      parseFloat(revenueData.rows[0].total_revenue || 0),
+            totalRevenue:      revenueData.rows.length === 1 ? parseFloat(revenueData.rows[0].total_revenue || 0) : null,
+            revenueCurrency:   revenueData.rows.length === 1 ? revenueData.rows[0].currency : null,
+            revenueByCurrency: revenueData.rows.map(row => ({ currency:row.currency, total:parseFloat(row.total_revenue || 0) })),
             topServices:       topServicesData.rows.map(r => ({
                 name: r.name,
                 count: parseInt(r.booking_count),
                 revenue: parseFloat(r.revenue || 0)
+                ,currency: r.currency
             })),
             monthlyBookingLimit,
             plan:              req.tenant.plan_id,

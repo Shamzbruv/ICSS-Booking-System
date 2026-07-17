@@ -41,8 +41,31 @@ function escapeIcs(value) {
     return String(value || '').replace(/\\/g, '\\\\').replace(/\r?\n/g, '\\n').replace(/,/g, '\\,').replace(/;/g, '\\;');
 }
 
+function localDateTimeToUtc(date, time, timezone) {
+    const [year, month, day] = dateOnly(date).split('-').map(Number);
+    const [hour, minute] = timeOnly(time).split(':').map(Number);
+    if (![year, month, day, hour, minute].every(Number.isFinite)) throw new Error('Booking has an invalid local date or time.');
+    const zone = timezone || 'America/Jamaica';
+    const formatter = new Intl.DateTimeFormat('en-CA', {
+        timeZone: zone, year:'numeric', month:'2-digit', day:'2-digit',
+        hour:'2-digit', minute:'2-digit', second:'2-digit', hourCycle:'h23'
+    });
+    const desired = Date.UTC(year, month - 1, day, hour, minute, 0);
+    let guess = desired;
+    for (let attempt = 0; attempt < 3; attempt++) {
+        const parts = Object.fromEntries(formatter.formatToParts(new Date(guess)).filter(part => part.type !== 'literal').map(part => [part.type, Number(part.value)]));
+        const represented = Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute, parts.second || 0);
+        const adjustment = desired - represented;
+        guess += adjustment;
+        if (adjustment === 0) break;
+    }
+    return new Date(guess);
+}
+
 function calendarDetails(booking) {
-    const start = booking.start_time ? new Date(booking.start_time) : new Date(`${dateOnly(booking.booking_date)}T${timeOnly(booking.booking_time)}:00-05:00`);
+    const start = booking.start_time
+        ? new Date(booking.start_time)
+        : localDateTimeToUtc(booking.booking_date, booking.booking_time, booking.timezone || booking.tenant_timezone);
     const fallbackMinutes = Math.max(30, Number(booking.duration_minutes || 60));
     const end = booking.end_time ? new Date(booking.end_time) : new Date(start.getTime() + fallbackMinutes * 60000);
     const business = booking.tenant_name || 'Your service provider';

@@ -2,8 +2,8 @@ const crypto = require('crypto');
 
 // Requires a 32-byte (256-bit) hex string secret in env
 // e.g. ENCRYPTION_KEY=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
-if (!process.env.ENCRYPTION_KEY) {
-    throw new Error('FATAL: ENCRYPTION_KEY environment variable is required to start the application securely.');
+if (!/^[a-f0-9]{64}$/i.test(String(process.env.ENCRYPTION_KEY || ''))) {
+    throw new Error('FATAL: ENCRYPTION_KEY must be exactly 64 hexadecimal characters.');
 }
 
 const ENCRYPTION_KEY = Buffer.from(process.env.ENCRYPTION_KEY, 'hex');

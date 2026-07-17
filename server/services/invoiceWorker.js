@@ -49,7 +49,8 @@ function buildBillingPeriod(paidAt) {
 
 // ── Main Worker ─────────────────────────────────────────────────────────────────
 async function processInvoiceDispatch(job) {
-    const { tenantId, eventId, amount, subscriptionId, planName: jobPlanName, eventType } = job.data;
+    const { tenantId, eventId, amount, subscriptionId, planName: jobPlanName, eventType } = job?.data || {};
+    if (!tenantId || !eventId) throw new Error('invoice-dispatch job requires tenantId and eventId.');
 
     // ── 1. Validate eventId
     if (!eventId) {

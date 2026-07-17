@@ -7,8 +7,10 @@
     "start": "/usr/local/bin/node server/app.js",
     "dev": "/usr/local/bin/node server/app.js",
     "migrate": "/usr/local/bin/node server/db/migrate.js",
-    "seed": "/usr/local/bin/node server/db/seed.js",
-    "test": "echo \"Tests: run node server/app.js and verify endpoints\""
+    "seed": "/usr/local/bin/node server/db/migrate.js",
+    "test": "/usr/local/bin/node --test test/*.test.js",
+    "lint:frontend": "npm --prefix frontend run lint",
+    "build:frontend": "npm --prefix frontend run build"
   },
   "keywords": [
     "booking",

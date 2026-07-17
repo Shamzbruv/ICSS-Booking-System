@@ -42,14 +42,8 @@ pass "Node.js $NODE_VER"
 
 # ── 2. Check required env vars ───────────────────────────────────────────────
 info "Checking required environment variables..."
-MISSING=()
-for VAR in DATABASE_URL JWT_SECRET RESEND_API_KEY PUBLIC_APP_URL; do
-    [ -z "${!VAR}" ] && MISSING+=("$VAR")
-done
-if [ ${#MISSING[@]} -gt 0 ]; then
-    fail "Missing required env vars: ${MISSING[*]}"
-fi
-pass "All required env vars present"
+NODE_ENV=production node -r dotenv/config -e "require('./server/services/environment').validateEnvironment()" || fail "Production environment schema is invalid"
+pass "Production environment schema is valid"
 
 # ── 3. Backend install ───────────────────────────────────────────────────────
 info "Installing backend dependencies (npm ci)..."

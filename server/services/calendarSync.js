@@ -175,36 +175,32 @@ function resolveBookingWindow(booking, timeZone = 'America/Jamaica', fallbackDur
  * Generate OAuth Authorization URL
  */
 async function generateAuthUrl(provider, tenant_id, user_id, return_to = null) {
-    const state = JSON.stringify({ tenant_id, user_id, return_to });
-    const encodedState = Buffer.from(state).toString('base64');
+    if (!['google','microsoft'].includes(provider)) throw new Error('Unsupported calendar provider');
+    const state = crypto.randomBytes(32).toString('base64url');
+    const stateHash = crypto.createHash('sha256').update(state).digest('hex');
+    await query(`INSERT INTO calendar_oauth_states(state_hash,tenant_id,user_id,provider,return_to) VALUES($1,$2,$3,$4,$5)`, [stateHash,tenant_id,user_id,provider,return_to]);
     
     if (provider === 'google') {
         const client_id = process.env.GOOGLE_CLIENT_ID;
         const redirect_uri = process.env.GOOGLE_REDIRECT_URI;
         const scope = encodeURIComponent('https://www.googleapis.com/auth/calendar.events');
-        return `https://accounts.google.com/o/oauth2/v2/auth?client_id=${client_id}&redirect_uri=${redirect_uri}&response_type=code&scope=${scope}&access_type=offline&prompt=consent&state=${encodedState}`;
+        return `https://accounts.google.com/o/oauth2/v2/auth?client_id=${client_id}&redirect_uri=${redirect_uri}&response_type=code&scope=${scope}&access_type=offline&prompt=consent&state=${encodeURIComponent(state)}`;
     } else if (provider === 'microsoft') {
         const client_id = process.env.MICROSOFT_CLIENT_ID;
         const redirect_uri = process.env.MICROSOFT_REDIRECT_URI;
         const scope = encodeURIComponent('offline_access Calendars.ReadWrite');
-        return `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=${client_id}&redirect_uri=${redirect_uri}&response_type=code&scope=${scope}&state=${encodedState}`;
-    } else {
-        throw new Error('Unsupported calendar provider');
+        return `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=${client_id}&redirect_uri=${redirect_uri}&response_type=code&scope=${scope}&state=${encodeURIComponent(state)}`;
     }
 }
 
 /**
  * Exchange OAuth Code & Save Calendar Connection
  */
-async function handleCallback(provider, code, stateBase64) {
-    let stateParam;
-    try {
-        stateParam = JSON.parse(Buffer.from(stateBase64, 'base64').toString('utf8'));
-    } catch (e) {
-        throw new Error('Invalid state parameter');
-    }
-
-    const { tenant_id, user_id, return_to } = stateParam;
+async function handleCallback(provider, code, state) {
+    const stateHash = crypto.createHash('sha256').update(String(state || '')).digest('hex');
+    const stateResult = await query(`DELETE FROM calendar_oauth_states WHERE state_hash=$1 AND provider=$2 AND expires_at>NOW() RETURNING tenant_id,user_id,return_to`, [stateHash,provider]);
+    if (!stateResult.rows.length) throw new Error('Invalid, expired, or already used OAuth state.');
+    const { tenant_id, user_id, return_to } = stateResult.rows[0];
 
     let accessToken, refreshToken, expiresIn, providerAccountId;
 

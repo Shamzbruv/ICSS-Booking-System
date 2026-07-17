@@ -14,7 +14,6 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useNoIndex } from '../../hooks/useNoIndex';
 import s from './OnboardingWizard.module.css';
 import { api } from '../../api';
 
@@ -106,23 +105,20 @@ function StepBasics({ data, onChange, onNext }) {
 }
 
 // ── Step 1: Theme Selection (delegates to ThemeSelector page) ────────────────
-function StepTheme({ data, onNext, onBack, navigate }) {
+function StepTheme({ data, onChange, onNext, onBack }) {
+  const [themes,setThemes] = useState([]);
+  const [loading,setLoading] = useState(true);
+  useEffect(()=>{api.themes().then(result=>setThemes(result.themes||[])).finally(()=>setLoading(false))},[]);
   return (
     <>
       <h1 className={s.wizard__title}>Pick your starter theme</h1>
       <p className={s.wizard__subtitle}>Your theme defines your public booking page style. You can customise it fully in the editor.</p>
-      <div style={{ padding: '20px', textAlign: 'center', background: 'var(--color-surface-2)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', marginBottom: 8 }}>
-        {data.themeId ? (
-          <p style={{ color: 'var(--color-success)' }}>✓ Theme selected: <strong>{data.themeName}</strong></p>
-        ) : (
-          <p style={{ color: 'var(--color-text-muted)' }}>No theme selected yet.</p>
-        )}
+      <div style={{ display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))',gap:10,marginBottom:16 }}>
+        {loading&&<p>Loading themes…</p>}
+        {themes.map(theme=><button type="button" key={theme.id} onClick={()=>{onChange('themeId',theme.id);onChange('themeName',theme.name)}} style={{padding:14,textAlign:'left',borderRadius:10,border:data.themeId===theme.id?'2px solid #7c6ef7':'1px solid var(--color-border)',background:'var(--color-surface-2)',color:'inherit',cursor:'pointer'}}><strong>{theme.name}</strong><br/><small>{theme.category}</small></button>)}
       </div>
       <div className={s.wizard__actions}>
         <button className={`${s.btn} ${s['btn--ghost']}`} onClick={onBack}>← Back</button>
-        <button className={`${s.btn} ${s['btn--ghost']}`} style={{ flex: 1 }} onClick={() => navigate('/themes?from=onboarding')}>
-          Browse Themes
-        </button>
         <button className={`${s.btn} ${s['btn--primary']}`} onClick={onNext} disabled={!data.themeId}>
           Launch Subscription →
         </button>
@@ -341,7 +337,7 @@ export default function OnboardingWizard() {
   const renderStep = () => {
     switch (step) {
       case 0: return <StepBasics  data={data} onChange={onChange} onNext={onNext} />;
-      case 1: return <StepTheme   data={data} onNext={onNext} onBack={onBack} navigate={navigate} />;
+      case 1: return <StepTheme data={data} onChange={onChange} onNext={onNext} onBack={onBack} />;
       case 2: return <StepPayPal  data={data} onNext={onNext} />;
       case 3: return <StepSuccess navigate={navigate} />;
       default: return null;

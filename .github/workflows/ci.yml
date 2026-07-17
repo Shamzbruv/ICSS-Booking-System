@@ -52,6 +52,18 @@ jobs:
           NODE_ENV: test
         run: npm test
 
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Lint frontend
+        working-directory: frontend
+        run: npm run lint
+
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+
   # ── Job 2: Build & push Docker image to GHCR ────────────────────────────────
   build-docker:
     name: Build Docker Image

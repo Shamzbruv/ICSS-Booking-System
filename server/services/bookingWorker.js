@@ -9,7 +9,8 @@ const { query } = require('../db/connection');
  * Idempotent job to expire temporary holds on unpaid bookings.
  */
 async function processExpireBookingHold(job) {
-    const { bookingId } = job.data;
+    const { bookingId } = job?.data || {};
+    if (!bookingId) throw new Error('expire-booking-hold job is missing bookingId.');
 
     try {
         console.log(`[Queue] Checking expiration for booking: ${bookingId}`);

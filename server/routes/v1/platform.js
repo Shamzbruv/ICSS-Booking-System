@@ -325,10 +325,10 @@ router.get('/themes/:themeId/tenants', async (req, res) => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 // POST /api/v1/platform/tenants/:tenantId/reset-password
-router.post('/tenants/:tenantId/reset-password', async (req, res) => {
+router.post('/tenants/:tenantId/reset-password', ownerOnly, async (req, res) => {
     try {
         // Find owner of tenant
-        const userRes = await query(`SELECT email FROM users WHERE tenant_id = $1 ORDER BY created_at ASC LIMIT 1`, [req.params.tenantId]);
+        const userRes = await query(`SELECT id,email FROM users WHERE tenant_id=$1 AND role='tenant_admin' ORDER BY created_at ASC LIMIT 1`, [req.params.tenantId]);
         if (userRes.rows.length === 0) return res.status(404).json({ error: 'No user found for this tenant.' });
         
         const email = userRes.rows[0].email;
@@ -337,8 +337,7 @@ router.post('/tenants/:tenantId/reset-password', async (req, res) => {
         // It's easiest to just import and call the service
         const crypto = require('crypto');
         const { sendPasswordResetEmail } = require('../../services/email');
-        const userRow = await query(`SELECT id FROM users WHERE email = $1`, [email]);
-        const userId = userRow.rows[0].id;
+        const userId = userRes.rows[0].id;
         
         await query(`UPDATE password_reset_tokens SET used = true WHERE user_id = $1`, [userId]);
         const rawToken = crypto.randomBytes(32).toString('hex');
@@ -415,7 +414,7 @@ router.post('/tenants/:tenantId/reset-dashboard-tour', async (req, res) => {
 });
 
 // PATCH /api/v1/platform/tenants/:tenantId/status
-router.patch('/tenants/:tenantId/status', async (req, res) => {
+router.patch('/tenants/:tenantId/status', ownerOnly, async (req, res) => {
     try {
         const { active } = req.body;
         const result=await query(`UPDATE tenants SET active = $1 WHERE id = $2 RETURNING name`, [active, req.params.tenantId]);
@@ -429,7 +428,7 @@ router.patch('/tenants/:tenantId/status', async (req, res) => {
 });
 
 // DELETE /api/v1/platform/tenants/:tenantId
-router.delete('/tenants/:tenantId', async (req, res) => {
+router.delete('/tenants/:tenantId', ownerOnly, async (req, res) => {
     try {
         const existing=await query(`SELECT name,slug FROM tenants WHERE id=$1`,[req.params.tenantId]);
         if(!existing.rows.length)return res.status(404).json({error:'Tenant not found.'});
@@ -570,8 +569,9 @@ router.get('/build-info', async (req, res) => {
 
 // GET /api/v1/platform/env-check  — presence only, never values
 router.get('/env-check', (req, res) => {
-    const REQUIRED = ['DATABASE_URL','JWT_SECRET','RESEND_API_KEY','PUBLIC_APP_URL'];
-    const OPTIONAL = ['PAYPAL_CLIENT_ID','PAYPAL_SECRET','PAYPAL_WEBHOOK_ID','ENCRYPTION_KEY'];
+    const { REQUIRED_PRODUCTION } = require('../../services/environment');
+    const REQUIRED = [...REQUIRED_PRODUCTION,'PAYPAL_PLAN_ID'];
+    const OPTIONAL = ['GOOGLE_CLIENT_ID','MICROSOFT_CLIENT_ID','WHATSAPP_ENABLED'];
     const check = (keys) => keys.map(k => ({ key: k, present: !!process.env[k] }));
     res.json({ required: check(REQUIRED), optional: check(OPTIONAL) });
 });
@@ -782,16 +782,22 @@ router.post('/bookings/:bookingId/expire-hold', requireEditSession, async (req, 
 });
 
 // POST /api/v1/platform/tenants/:tenantId/replay-provisioning
-router.post('/tenants/:tenantId/replay-provisioning', requireEditSession, async (req, res) => {
+router.post('/tenants/:tenantId/replay-provisioning', ownerOnly, requireEditSession, async (req, res) => {
     try {
-        const { enqueueProvisioningJob } = require('../../services/queue');
+        const { enqueueProvisioningJob } = require('../../services/provisioning');
         const psRes = await query(
-            `SELECT signup_token FROM pending_signups WHERE tenant_id = $1 AND status != 'provisioned' ORDER BY created_at DESC LIMIT 1`,
+            `SELECT signup_token,tenant_slug,paypal_subscription_id FROM pending_signups
+             WHERE tenant_slug=(SELECT slug FROM tenants WHERE id=$1)
+               AND status='payment_verified' AND payment_verified_at IS NOT NULL
+             ORDER BY created_at DESC LIMIT 1`,
             [req.params.tenantId]
         );
-        if (psRes.rows.length === 0) return res.status(404).json({ error: 'No pending provisioning found.' });
+        if (psRes.rows.length === 0) return res.status(404).json({ error: 'No payment-verified pending provisioning was found.' });
 
-        await enqueueProvisioningJob(psRes.rows[0].signup_token);
+        const signup = psRes.rows[0];
+        await enqueueProvisioningJob(signup.tenant_slug,signup.signup_token,`manual:${crypto.randomUUID()}`,{
+            manual_replay:true,paypal_subscription_id:signup.paypal_subscription_id
+        });
         await auditLog(req.user.id, req.params.tenantId, 'platform_replay_provisioning', {}, req);
         res.json({ replayed: true });
     } catch (err) {

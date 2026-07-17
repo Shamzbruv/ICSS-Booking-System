@@ -7,8 +7,8 @@
 const express = require('express');
 const router  = express.Router();
 const bcrypt  = require('bcryptjs');
-const { query }  = require('../../db/connection');
-const { signToken, authenticate, requireRole } = require('../../middleware/auth');
+const { query, transaction }  = require('../../db/connection');
+const { signToken, authenticate, requireRole, requireTenantOwnership } = require('../../middleware/auth');
 const { invalidateTenantCache } = require('../../middleware/tenantResolver');
 const { seedStarterServices } = require('../../services/provisioning');
 
@@ -20,7 +20,8 @@ const RESERVED_SLUGS = new Set([
 // Simple platform admin key middleware (for internal provisioning)
 function platformAdminOnly(req, res, next) {
     const key = req.headers['x-platform-admin-key'];
-    if (!key || key !== process.env.PLATFORM_ADMIN_KEY) {
+    const configuredKey = String(process.env.PLATFORM_ADMIN_KEY || '');
+    if (!configuredKey || !key || key !== configuredKey) {
         return res.status(403).json({ error: 'Platform admin key required.' });
     }
     next();
@@ -171,15 +172,7 @@ router.patch('/:slug/active', platformAdminOnly, async (req, res) => {
 
 // POST /api/v1/tenants/:slug/theme — Switch the tenant's active theme
 // The frontend can query the theme's configurations for 'preview' before calling this to activate.
-router.post('/:slug/theme', authenticate, async (req, res) => {
-    // Basic auth logic - in a real scenario we check if user belongs to this tenant, but we assume req.tenant is isolated
-    if (req.tenant.slug !== req.params.slug) {
-        // Platform admin fallback if they pass the header, otherwise reject
-        if (req.headers['x-platform-admin-key'] !== process.env.PLATFORM_ADMIN_KEY) {
-             return res.status(403).json({ error: 'Unauthorized to change theme for this tenant.' });
-        }
-    }
-
+router.post('/:slug/theme', authenticate, requireTenantOwnership('tenant_admin'), async (req, res) => {
     const { theme_id, seed_services } = req.body;
     try {
         const themeResult = await query(`SELECT id FROM themes WHERE id = $1`, [theme_id]);
@@ -205,11 +198,7 @@ router.post('/:slug/theme', authenticate, async (req, res) => {
 });
 
 // PATCH /api/v1/tenants/:slug/slug — Update tenant slug (editable later)
-router.patch('/:slug/slug', authenticate, async (req, res) => {
-    if (req.tenant.slug !== req.params.slug) {
-        return res.status(403).json({ error: 'Unauthorized to change slug for this tenant.' });
-    }
-
+router.patch('/:slug/slug', authenticate, requireTenantOwnership('tenant_admin'), async (req, res) => {
     const { new_slug } = req.body;
     if (!new_slug) return res.status(400).json({ error: 'new_slug is required.' });
 
@@ -223,29 +212,17 @@ router.patch('/:slug/slug', authenticate, async (req, res) => {
     }
 
     try {
-        await query('BEGIN');
-        
-        await query(
-            `INSERT INTO tenant_slug_history (tenant_id, old_slug) VALUES ($1, $2)`,
-            [req.tenant.id, req.params.slug]
-        );
-
-        const result = await query(
-            `UPDATE tenants SET slug = $1 WHERE slug = $2 RETURNING id, slug`,
-            [new_slug, req.params.slug]
-        );
-        if (result.rows.length === 0) {
-            await query('ROLLBACK');
-            return res.status(404).json({ error: 'Tenant not found.' });
-        }
-        
-        await query('COMMIT');
+        const result = await transaction(async client => {
+            await client.query(`SELECT id FROM tenants WHERE id=$1 FOR UPDATE`, [req.tenant.id]);
+            await client.query(`INSERT INTO tenant_slug_history (tenant_id, old_slug) VALUES ($1, $2)`, [req.tenant.id, req.params.slug]);
+            return client.query(`UPDATE tenants SET slug=$1 WHERE id=$2 AND slug=$3 RETURNING id,slug`, [new_slug, req.tenant.id, req.params.slug]);
+        });
+        if (result.rows.length === 0) return res.status(404).json({ error: 'Tenant not found.' });
 
         invalidateTenantCache(req.params.slug); // invalidate old
         
         res.json({ success: true, tenant: result.rows[0], message: 'Booking link updated successfully.' });
     } catch (err) {
-        await query('ROLLBACK');
         if (err.code === '23505') {
             return res.status(409).json({ error: `The booking link "${new_slug}" is already taken.` });
         }
@@ -255,11 +232,7 @@ router.patch('/:slug/slug', authenticate, async (req, res) => {
 });
 
 // GET /api/v1/tenants/:slug/layout — Get the current grid layout
-router.get('/:slug/layout', authenticate, async (req, res) => {
-    // Basic tenant check
-    if (req.tenant.slug !== req.params.slug) {
-        return res.status(403).json({ error: 'Unauthorized to view layout for this tenant.' });
-    }
+router.get('/:slug/layout', authenticate, requireTenantOwnership('tenant_admin'), async (req, res) => {
     try {
         const result = await query(`SELECT layout FROM tenants WHERE slug = $1`, [req.params.slug]);
         if (result.rows.length === 0) return res.status(404).json({ error: 'Tenant not found.' });
@@ -271,10 +244,7 @@ router.get('/:slug/layout', authenticate, async (req, res) => {
 });
 
 // PATCH /api/v1/tenants/:slug/layout — Save the grid layout
-router.patch('/:slug/layout', authenticate, async (req, res) => {
-    if (req.tenant.slug !== req.params.slug) {
-        return res.status(403).json({ error: 'Unauthorized to save layout for this tenant.' });
-    }
+router.patch('/:slug/layout', authenticate, requireTenantOwnership('tenant_admin'), async (req, res) => {
     const { layout } = req.body;
     if (!layout) return res.status(400).json({ error: 'layout array is required.' });
     
@@ -294,10 +264,7 @@ router.patch('/:slug/layout', authenticate, async (req, res) => {
 const { encrypt, maskSecret } = require('../../services/encryption');
 
 // GET /api/v1/tenants/:slug/payment-settings
-router.get('/:slug/payment-settings', authenticate, async (req, res) => {
-    if (req.tenant.slug !== req.params.slug) {
-        return res.status(403).json({ error: 'Unauthorized to view payment settings for this tenant.' });
-    }
+router.get('/:slug/payment-settings', authenticate, requireTenantOwnership('tenant_admin'), async (req, res) => {
     
     try {
         const result = await query(
@@ -329,10 +296,7 @@ router.get('/:slug/payment-settings', authenticate, async (req, res) => {
 });
 
 // PATCH /api/v1/tenants/:slug/payment-settings — Save the payment configuration
-router.patch('/:slug/payment-settings', authenticate, async (req, res) => {
-    if (req.tenant.slug !== req.params.slug) {
-        return res.status(403).json({ error: 'Unauthorized to save payment settings for this tenant.' });
-    }
+router.patch('/:slug/payment-settings', authenticate, requireTenantOwnership('tenant_admin'), async (req, res) => {
     const { 
         default_payment_mode, wipay_enabled, manual_payment_enabled, 
         hold_timeout_minutes, bank_transfer_instructions, payment_settings, business_hours,
@@ -403,10 +367,7 @@ router.patch('/:slug/payment-settings', authenticate, async (req, res) => {
 });
 
 // PATCH /api/v1/tenants/:slug/branding — Save booking-page branding (logo, tagline, etc.)
-router.patch('/:slug/branding', authenticate, async (req, res) => {
-    if (req.tenant.slug !== req.params.slug && req.user.role !== 'platform_owner' && req.user.role !== 'super_admin') {
-        return res.status(403).json({ error: 'Unauthorized to update branding for this tenant.' });
-    }
+router.patch('/:slug/branding', authenticate, requireTenantOwnership('tenant_admin'), async (req, res) => {
     const {
         logoUrl,
         bookingTagline,
@@ -422,6 +383,22 @@ router.patch('/:slug/branding', authenticate, async (req, res) => {
         customPalette,
     } = req.body;
 
+    const safeUrl = value => {
+        if (value === undefined || value === null || value === '') return value;
+        try {
+            const parsed = new URL(String(value));
+            return ['https:','http:'].includes(parsed.protocol) ? parsed.toString() : null;
+        } catch { return null; }
+    };
+    const normalizedLogoUrl = safeUrl(logoUrl);
+    const normalizedServiceImageUrl = safeUrl(serviceSectionImageUrl);
+    if (logoUrl && !normalizedLogoUrl) return res.status(400).json({ error: 'Logo URL must use http or https.' });
+    if (serviceSectionImageUrl && !normalizedServiceImageUrl) return res.status(400).json({ error: 'Service image URL must use http or https.' });
+    if (timezone !== undefined) {
+        try { new Intl.DateTimeFormat('en', { timeZone: timezone }).format(); }
+        catch { return res.status(400).json({ error: 'Timezone must be a valid IANA timezone, such as America/Jamaica.' }); }
+    }
+
     try {
         // Fetch existing branding to deep-merge
         const cur = await query(`SELECT branding FROM tenants WHERE slug = $1`, [req.params.slug]);
@@ -430,7 +407,7 @@ router.patch('/:slug/branding', authenticate, async (req, res) => {
 
         const merged = {
             ...existing,
-            ...(logoUrl        !== undefined && { logoUrl }),
+            ...(logoUrl        !== undefined && { logoUrl: normalizedLogoUrl }),
             ...(bookingTagline !== undefined && { bookingTagline }),
             ...(location       !== undefined && { location }),
             ...(accentColor    !== undefined && { accentColor }),
@@ -440,7 +417,7 @@ router.patch('/:slug/branding', authenticate, async (req, res) => {
             ...(timezone       !== undefined && { timezone }),
             ...(Array.isArray(stylists)       && { stylists }),
             ...(bookingFooterNote !== undefined && { bookingFooterNote }),
-            ...(serviceSectionImageUrl !== undefined && { serviceSectionImageUrl }),
+            ...(serviceSectionImageUrl !== undefined && { serviceSectionImageUrl: normalizedServiceImageUrl }),
             ...(customPalette && typeof customPalette === 'object' && { customPalette }),
         };
 

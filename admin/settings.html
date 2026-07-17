@@ -1017,7 +1017,16 @@
         const list = document.getElementById('stylistsList');
         const tag = document.createElement('div');
         tag.style.cssText = 'display:flex;align-items:center;justify-content:space-between;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;gap:8px;';
-        tag.innerHTML = `<span style="font-size:14px;">👤 ${name}</span><button type="button" onclick="removeStylist('${name}', this.parentNode)" style="background:none;border:none;color:var(--danger);font-size:18px;cursor:pointer;line-height:1;">×</button>`;
+        const label = document.createElement('span');
+        label.style.fontSize = '14px';
+        label.textContent = `👤 ${name}`;
+        const removeButton = document.createElement('button');
+        removeButton.type = 'button';
+        removeButton.textContent = '×';
+        removeButton.setAttribute('aria-label', `Remove ${name}`);
+        removeButton.style.cssText = 'background:none;border:none;color:var(--danger);font-size:18px;cursor:pointer;line-height:1;';
+        removeButton.addEventListener('click', () => removeStylist(name, tag));
+        tag.append(label, removeButton);
         list.appendChild(tag);
     }
 
@@ -1035,10 +1044,16 @@
 
         // Logo preview
         const logoWrap = document.getElementById('preview_logo_wrap');
+        logoWrap.replaceChildren();
         if (logo) {
-            logoWrap.innerHTML = `<img src="${logo}" style="width:100%;height:100%;object-fit:cover;" onerror="this.parentNode.innerHTML='🌸'">`;
+            const image = document.createElement('img');
+            image.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+            image.alt = 'Business logo preview';
+            image.addEventListener('error', () => logoWrap.replaceChildren(document.createTextNode('🌸')));
+            image.src = logo;
+            logoWrap.appendChild(image);
         } else {
-            logoWrap.innerHTML = '🌸';
+            logoWrap.textContent = '🌸';
         }
 
         // Sub text

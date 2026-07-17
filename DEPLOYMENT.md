@@ -21,7 +21,7 @@ JWT_SECRET=<min 64 chars random string>
 # Email
 RESEND_API_KEY=re_xxxxxxxx
 
-# App URL (used for WiPay return URLs — must be HTTPS in production)
+# Canonical public app URL — must be HTTPS in production
 PUBLIC_APP_URL=https://icssbookings.com
 
 # PayPal (SaaS provisioning)
@@ -29,7 +29,7 @@ PAYPAL_CLIENT_ID=AZM7kD2EdxPGkSVk3I64iMNN_...
 PAYPAL_SECRET=<your PayPal secret>
 PAYPAL_WEBHOOK_ID=<from PayPal developer dashboard>
 
-# WiPay (tenant payment gateway)
+# PayPal tenant subscription checkout
 WIPAY_ACCOUNT_NUMBER=<encrypted via admin settings>
 
 # Encryption
@@ -74,7 +74,7 @@ No separate frontend server is needed.
 
 ### Public booking
 
-- [ ] Visit `https://icssbookings.com/book/<slug>`
+- [ ] Visit `https://icssbookings.com/<slug>`
 - [ ] Service cards render with name, price, duration
 - [ ] Select a service → calendar loads
 - [ ] Select today + 2 days → time slots appear (some may be grey if booked)
@@ -88,11 +88,11 @@ No separate frontend server is needed.
 - [ ] Booking goes directly to `confirmed` status
 - [ ] Check admin panel → booking visible and confirmed
 
-### WiPay booking
+### Tenant payment booking
 
 - [ ] Configure a service with `payment_mode = wipay`
-- [ ] Complete booking → redirected to WiPay checkout
-- [ ] After payment → return URL (`PUBLIC_APP_URL/book/<slug>?booking=<id>&transaction_id=<txn>`) shows verification
+- [ ] PayPal.Me services show the tenant payment destination and exact amount
+- [ ] Manual transfers require proof and tenant confirmation
 - [ ] Admin panel → booking moves to `confirmed`
 
 ### Manual bank transfer
@@ -105,7 +105,7 @@ No separate frontend server is needed.
 
 ### PayPal provisioning
 
-- [ ] Visit `/platform-setup.html`
+- [ ] Visit `/onboarding`
 - [ ] Fill in all fields → select theme → click Subscribe
 - [ ] PayPal button loads and accepts payment
 - [ ] PayPal webhook fires → provisioning worker runs

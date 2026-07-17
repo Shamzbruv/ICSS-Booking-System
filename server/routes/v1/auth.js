@@ -180,14 +180,19 @@ router.get('/me', authenticate, async (req, res) => {
 
 // POST /api/v1/auth/forgot-password
 router.post('/forgot-password', authLimiter, async (req, res) => {
-    const { email } = req.body;
+    const { email, tenant_slug } = req.body;
     if (!email) return res.status(400).json({ error: 'Email is required.' });
 
     try {
-        const userRes = await query(`SELECT id, role, tenant_id FROM users WHERE email = $1`, [email.toLowerCase().trim()]);
+        const userRes = await query(
+            `SELECT u.id,u.role,u.tenant_id FROM users u LEFT JOIN tenants t ON t.id=u.tenant_id
+             WHERE LOWER(u.email)=LOWER($1) AND (($2::text IS NOT NULL AND t.slug=$2) OR $2::text IS NULL)
+             ORDER BY u.created_at`,
+            [email.toLowerCase().trim(), tenant_slug ? String(tenant_slug).trim().toLowerCase() : null]
+        );
         
         // We always return generic success message to prevent email enumeration
-        if (userRes.rows.length > 0) {
+        if (userRes.rows.length === 1) {
             const user = userRes.rows[0];
             
             // Invalidate any older reset tokens for this user
@@ -237,22 +242,18 @@ router.post('/reset-password', authLimiter, async (req, res) => {
     if (newPassword.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters.' });
 
     try {
-        const userRes = await query(`SELECT id, tenant_id FROM users WHERE email = $1`, [email.toLowerCase().trim()]);
-        if (userRes.rows.length === 0) return res.status(400).json({ error: 'Invalid or expired token.' });
-        const user = userRes.rows[0];
-
         // Hash incoming raw token for lookup
         const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
 
-        // Look up valid unexpired token for this user
         const tokenRes = await query(
-            `SELECT id FROM password_reset_tokens 
-             WHERE user_id = $1 AND token_hash = $2 AND used = false AND expires_at > NOW()`,
-            [user.id, tokenHash]
+            `SELECT prt.id,prt.user_id,u.tenant_id FROM password_reset_tokens prt JOIN users u ON u.id=prt.user_id
+             WHERE prt.token_hash=$1 AND prt.used=false AND prt.expires_at>NOW() AND LOWER(u.email)=LOWER($2)`,
+            [tokenHash,email.toLowerCase().trim()]
         );
 
         if (tokenRes.rows.length === 0) return res.status(400).json({ error: 'Invalid or expired token.' });
         const tokenId = tokenRes.rows[0].id;
+        const user = { id:tokenRes.rows[0].user_id, tenant_id:tokenRes.rows[0].tenant_id };
 
         // Hash new password
         const passwordHash = await bcrypt.hash(newPassword, 12);
