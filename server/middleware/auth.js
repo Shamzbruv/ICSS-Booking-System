@@ -74,6 +74,12 @@ async function authenticate(req, res, next) {
                 return res.status(401).json({ error: 'Impersonation session expired or revoked.' });
             }
             req.impersonation = sesRes.rows[0];
+            if (['POST','PUT','PATCH','DELETE'].includes(req.method) && req.impersonation.mode === 'read_only') {
+                return res.status(403).json({
+                    error: 'This impersonation session is read-only. Enable Edit Mode before making changes.',
+                    impersonation_mode: 'read_only',
+                });
+            }
         }
 
         next();
@@ -83,6 +89,23 @@ async function authenticate(req, res, next) {
         }
         return res.status(401).json({ error: 'Invalid or malformed token.' });
     }
+}
+
+function requireTenantOwnership(...allowedRoles) {
+    const roles = allowedRoles.length ? allowedRoles : ['tenant_admin'];
+    return (req, res, next) => {
+        if (!req.user || !req.tenant) return res.status(401).json({ error: 'Tenant authentication is required.' });
+        if (!req.user.tenant_id || String(req.user.tenant_id) !== String(req.tenant.id)) {
+            return res.status(403).json({ error: 'Access denied: Cross-tenant request rejected.' });
+        }
+        if (req.params?.slug && String(req.params.slug) !== String(req.tenant.slug)) {
+            return res.status(403).json({ error: 'Access denied: Tenant route does not match the authenticated account.' });
+        }
+        if (!roles.includes(req.user.role)) {
+            return res.status(403).json({ error: `Access denied. Required role: ${roles.join(' or ')}.` });
+        }
+        next();
+    };
 }
 
 /**
@@ -126,7 +149,7 @@ function requireRole(...roles) {
 }
 
 /**
- * Middleware: only platform_owner may proceed.
+ * Middleware: developer-platform access. Use an additional owner-only guard for destructive operations.
  */
 function requirePlatformOwner(req, res, next) {
     if (!req.user) {
@@ -177,4 +200,4 @@ function optionalAuth(req, res, next) {
     next();
 }
 
-module.exports = { authenticate, requireRole, requirePlatformOwner, requireWriteAccess, signToken, optionalAuth };
+module.exports = { authenticate, requireRole, requirePlatformOwner, requireWriteAccess, requireTenantOwnership, signToken, optionalAuth };

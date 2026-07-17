@@ -185,7 +185,7 @@
     let dashboardTour = null;
     let dashboardTourContext = {
         tenantSlug: getTenantSlug() || 'default',
-        version: 1
+        version: 2
     };
 
     let currentStartDate = '';
@@ -244,7 +244,7 @@
             // Populate Financial Overview
             const revenueVal = document.getElementById('totalRevenueVal');
             if (revenueVal) {
-                revenueVal.textContent = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(data.totalRevenue || 0);
+                revenueVal.textContent = (data.revenueByCurrency || []).map(item => new Intl.NumberFormat('en-US', { style:'currency', currency:item.currency }).format(item.total)).join(' · ') || '—';
             }
 
             const topServicesList = document.getElementById('topServicesList');
@@ -252,12 +252,12 @@
                 if (data.topServices.length === 0) {
                     topServicesList.innerHTML = '<div class="empty-state" style="color: #666; font-size: 0.9rem;">No services booked in this period.</div>';
                 } else {
-                    topServicesList.innerHTML = data.topServices.map(ts => `
-                        <div class="top-service-item" style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: rgba(255,255,255,0.02); border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
-                            <div class="top-service-name" style="font-weight: 500; color: #e2e8f0; font-size: 0.95rem;">${ts.name} <span class="service-count" style="color: #8888aa; font-size: 0.85rem; font-weight: 400; margin-left: 6px;">(${ts.count} bookings)</span></div>
-                            <div class="top-service-revenue" style="font-family: 'Clash Display', monospace; font-weight: 600; color: #4ade80;">${new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(ts.revenue)}</div>
-                        </div>
-                    `).join('');
+                    topServicesList.replaceChildren(...data.topServices.map(ts => {
+                        const row=document.createElement('div');row.className='top-service-item';row.style.cssText='display:flex;justify-content:space-between;align-items:center;padding:12px;background:rgba(255,255,255,.02);border-radius:8px;border:1px solid rgba(255,255,255,.05)';
+                        const name=document.createElement('div');name.className='top-service-name';name.textContent=`${ts.name} (${ts.count} bookings)`;
+                        const revenue=document.createElement('div');revenue.className='top-service-revenue';revenue.textContent=new Intl.NumberFormat('en-US',{style:'currency',currency:ts.currency||data.revenueCurrency||'JMD'}).format(ts.revenue);
+                        row.append(name,revenue);return row;
+                    }));
                 }
             }
 
@@ -269,7 +269,7 @@
                 tenantSlug: data.tenantSlug || getTenantSlug() || 'default',
                 version: Number.isFinite(Number(data.dashboardTourVersion)) && Number(data.dashboardTourVersion) > 0
                     ? Number(data.dashboardTourVersion)
-                    : 1
+                    : 2
             };
         } catch (e) {
             console.error('Summary load error:', e);
@@ -373,15 +373,15 @@
             {
                 title: 'Subscription Plan',
                 message: 'This section shows the current subscription plan connected to the account. The user can quickly confirm what plan they are currently using.',
-                target: '[data-tour="subscription-plan"]',
-                mobileTarget: '[data-tour="subscription-plan-summary"]',
+                target: '[data-tour="account-panel"]',
+                mobileTarget: '[data-tour="mobile-menu-button"]',
                 mobileContextLabel: 'Subscription Plan'
             },
             {
                 title: 'Monthly Bookings',
                 message: 'This area shows monthly booking usage or activity. It should help the user understand how many bookings they are receiving within the month.',
-                target: '[data-tour="monthly-bookings"]',
-                mobileTarget: '[data-tour="monthly-bookings"]',
+                target: '[data-tour="financial-overview"]',
+                mobileTarget: '[data-tour="financial-overview"]',
                 mobileContextLabel: 'Monthly Bookings',
                 placement: 'left'
             },

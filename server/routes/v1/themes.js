@@ -54,7 +54,8 @@ router.patch('/requests/:id', async (req, res) => {
     // In a real application, ensure `req` is authenticated as a platform admin via a middleware.
     // For MVP, we will assume a platform_admin_key check or similar.
     const platformAdminKey = req.headers['x-platform-admin-key'];
-    if (platformAdminKey !== process.env.PLATFORM_ADMIN_KEY && process.env.NODE_ENV !== 'development') {
+    const configuredKey = String(process.env.PLATFORM_ADMIN_KEY || '');
+    if (!configuredKey || !platformAdminKey || platformAdminKey !== configuredKey) {
         return res.status(403).json({ error: 'Forbidden: Admin access required.' });
     }
 

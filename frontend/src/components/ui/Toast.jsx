@@ -2,7 +2,7 @@
 // Usage: import { useToast } from './ToastProvider';
 //        const toast = useToast();
 //        toast.success('Saved!');
-import { createContext, useContext, useState, useCallback, useRef } from 'react';
+import { createContext, useContext, useState, useCallback } from 'react';
 import styles from './Toast.module.css';
 
 const ToastCtx = createContext(null);

@@ -11,7 +11,7 @@ Generalized from the [Windross Tailoring & Designs](https://windrosstailoringand
 - **Multi-tenant architecture** — shared PostgreSQL DB with `tenant_id` isolation on every table
 - **JWT authentication + RBAC** — 4 roles: `customer`, `staff`, `tenant_admin`, `super_admin`
 - **Subscription plans** — Starter / Pro / Enterprise with booking limits and feature flags
-- **WiPay payment integration** — with HMAC hash verification and multi-tenant credentials
+- **Tenant payment options** — PayPal.Me and manual bank-transfer confirmation
 - **Per-tenant branded emails** — confirmation, cancellation, order, and design inquiry emails via Resend
 - **PDF invoices** — PDFKit-based booking confirmations and order invoices with tenant branding
 - **Per-tenant pricing engine** — configurable styles, fabric grades, construction types, and size surcharges
@@ -129,8 +129,8 @@ All endpoints are versioned under `/api/v1/`.
 | GET | `/bookings` | JWT | List tenant's bookings |
 | PATCH | `/bookings/:id/cancel` | JWT | Cancel a booking |
 | POST | `/orders` | JWT | Create a custom order |
-| POST | `/payments/wipay/order` | JWT | Initiate WiPay order payment |
-| POST | `/payments/wipay/verify` | Public | WiPay payment callback |
+| POST | `/payments/paypal/create-subscription` | Public | Begin verified tenant subscription checkout |
+| POST | `/payments/paypal/approve` | Public | Verify PayPal subscription and queue provisioning |
 | GET | `/admin/summary` | tenant_admin | Dashboard stats |
 | GET | `/admin/designs` | tenant_admin | List design inquiries |
 | POST | `/tenants` | Platform key | Provision new tenant |
@@ -152,8 +152,8 @@ See [`.env.example`](.env.example) for the full list. Key variables:
 | `JWT_SECRET` | Secret for signing JWT tokens |
 | `RESEND_API_KEY` | Resend API key for transactional email |
 | `BUSINESS_NOTIFICATION_EMAIL` | Default business inbox used for email CC and reply-to |
-| `WIPAY_ACCOUNT_NUMBER` | WiPay merchant account number |
-| `WIPAY_API_KEY` | WiPay API key |
+| `PAYPAL_CLIENT_ID` / `PAYPAL_SECRET` | PayPal subscription API credentials |
+| `PAYPAL_WEBHOOK_ID` | Required PayPal webhook signature identity |
 | `PLATFORM_ADMIN_KEY` | Key to protect tenant provisioning routes |
 | `NODE_ENV` | `development` or `production` |
 
@@ -179,7 +179,7 @@ See [`.env.example`](.env.example) for the full list. Key variables:
 | Auth | JWT + bcryptjs |
 | Email | Resend |
 | PDF | PDFKit |
-| Payments | WiPay |
+| Payments | PayPal subscriptions, PayPal.Me, manual transfer |
 | Containerization | Docker + docker-compose |
 | CI/CD | GitHub Actions + GHCR |
 

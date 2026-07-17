@@ -11,7 +11,8 @@ const { createTransaction } = require('./ledger');
  * confirms an actual charge.
  */
 async function processPayPalWebhook(job) {
-    const paypalEvent = job.data;
+    const paypalEvent = job?.data;
+    if (!paypalEvent?.id || !paypalEvent?.event_type) throw new Error('paypal-webhooks job requires an event id and event_type.');
 
     try {
         // ── Subscription Status Sync only — do NOT generate an invoice ────────

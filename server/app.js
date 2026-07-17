@@ -7,6 +7,7 @@ const path = require('path');
 const { tenantResolver } = require('./middleware/tenantResolver');
 const { rateLimiter } = require('./middleware/rateLimiter');
 const { initDatabase } = require('./db/connection');
+const { validateEnvironment } = require('./services/environment');
 
 // ─── Route Modules ────────────────────────────────────────────────────────────
 const authRoutes        = require('./routes/v1/auth');
@@ -30,7 +31,18 @@ const PORT = process.env.PORT || 3000;
 
 // ─── Security Headers ─────────────────────────────────────────────────────────
 app.use(helmet({
-    contentSecurityPolicy: false, // Relaxed for admin panel — tighten in production
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc:["'self'"],
+            scriptSrc:["'self'","'unsafe-inline'",'https://www.paypal.com','https://www.paypalobjects.com','https://www.googletagmanager.com'],
+            styleSrc:["'self'","'unsafe-inline'",'https://fonts.googleapis.com','https://cdnjs.cloudflare.com'],
+            fontSrc:["'self'",'https://fonts.gstatic.com','https://cdnjs.cloudflare.com','data:'],
+            imgSrc:["'self'",'data:','https:'],
+            connectSrc:["'self'",'https://api-m.paypal.com','https://api-m.sandbox.paypal.com','https://www.paypal.com','https://www.google-analytics.com'],
+            frameSrc:["'self'",'https://www.paypal.com'],
+            objectSrc:["'none'"],baseUri:["'self'"],frameAncestors:["'self'"],
+        }
+    },
     crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" } // Required for PayPal popup communication
 }));
 
@@ -66,6 +78,7 @@ app.use('/api/v1', (req, res, next) => {
 });
 
 // ─── Static Files (Admin Dashboard + React Frontend) ───────────────────────
+app.get(['/platform-setup','/platform-setup.html'], (req,res) => res.redirect(308, '/onboarding'));
 app.use('/admin', express.static(path.join(__dirname, '../admin')));
 app.use('/Template', express.static(path.join(__dirname, '../Template')));
 
@@ -109,13 +122,6 @@ app.get('/health', (req, res) => {
 // Serve React SPA for app routes. Static public pages (/, /industries/*, /faq, /terms)
 // are already handled above by express.static(public) — so exclude them here.
 app.get(/^\/(?!api\/|admin\/|admin$|Template\/|health$|industries\/|industries$|faq|terms|sitemap\.xml|robots\.txt|favicon|logo)/, (req, res) => {
-    // Only send the SPA if the static middleware didn't match
-    // (i.e. file doesn't exist in public/ — checked by trying the file first)
-    const staticPublic = path.join(__dirname, '../public', req.path);
-    const fs = require('fs');
-    if (fs.existsSync(staticPublic) && fs.statSync(staticPublic).isFile()) {
-        return res.sendFile(staticPublic);
-    }
     res.sendFile(path.join(frontendDist, 'index.html'));
 });
 
@@ -140,6 +146,7 @@ const { initQueue } = require('./services/queue');
 
 async function start() {
     try {
+        validateEnvironment();
         await initDatabase();
         await initQueue();
         app.listen(PORT, () => {
@@ -156,4 +163,6 @@ async function start() {
     }
 }
 
-start();
+if (require.main === module) start();
+
+module.exports = { app, start };

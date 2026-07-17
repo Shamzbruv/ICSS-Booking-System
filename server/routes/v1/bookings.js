@@ -214,16 +214,19 @@ router.post('/', enforceBookingLimit, async (req, res) => {
             }
 
             // 3. Validate selected date and time against the tenant's published schedule
-            const startTimeStr = `${date}T${time}:00`;
             const duration = (service.duration_minutes || 30) + (service.buffer_time_minutes || 0);
             const availabilityResult = await validateTenantAvailability(client, tenant, date, time, duration, afterHoursRequested);
             if (afterHoursRequested && !availabilityResult.outsideHours) {
                 const err = new Error('This time is within normal business hours. Please select it from the available schedule.'); err.status = 400; throw err;
             }
 
-            // PostgreSQL parses this assuming the DB timezone, but we enforce overlap relatively.
-            // Using precise timestamps:
-            const startTimeQuery = await client.query(`SELECT $1::timestamptz AS st, $1::timestamptz + interval '${duration} minutes' AS et`, [startTimeStr]);
+            const [year,month,day] = date.split('-').map(Number);
+            const [hour,minute] = time.split(':').map(Number);
+            const startTimeQuery = await client.query(
+                `SELECT make_timestamptz($1,$2,$3,$4,$5,0,$6) AS st,
+                        make_timestamptz($1,$2,$3,$4,$5,0,$6) + ($7 * interval '1 minute') AS et`,
+                [year,month,day,hour,minute,timezone,duration]
+            );
             const startTime = startTimeQuery.rows[0].st;
             const endTime = startTimeQuery.rows[0].et;
 

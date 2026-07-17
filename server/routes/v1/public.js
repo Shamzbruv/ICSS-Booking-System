@@ -18,14 +18,17 @@ router.get('/tenant', async (req, res) => {
     } = req.tenant;
 
     let themeSlug = 'universal_booking';
+    let themeCode = 'universal';
     if (theme_id) {
         try {
-            const tRes = await query(`SELECT name FROM themes WHERE id = $1`, [theme_id]);
+            const tRes = await query(`SELECT name,category FROM themes WHERE id = $1`, [theme_id]);
             if (tRes.rows.length > 0) {
                 // Convert names like "Iron & Blade" to "barber" or whatever the template name is.
                 // Or just use the theme name to derive the component name.
                 // Wait, it's better to get the actual file name. Let's just return the raw name.
                 themeSlug = tRes.rows[0].name;
+                const category = String(tRes.rows[0].category || '').toLowerCase();
+                themeCode = category.includes('nail') ? 'nail-tech' : category.replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
             }
         } catch(e) {}
     }
@@ -53,6 +56,7 @@ router.get('/tenant', async (req, res) => {
         branding: safeBranding,
         layout: req.tenant.layout,
         themeName: themeSlug,
+        themeCode,
         default_payment_mode: default_payment_mode || 'none',
         manual_payment_enabled: Boolean(manual_payment_enabled),
         bank_transfer_instructions: bank_transfer_instructions || null,

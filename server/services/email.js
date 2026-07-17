@@ -16,7 +16,14 @@ const { query } = require('../db/connection');
 function getResend() {
     const key = process.env.RESEND_API_KEY;
     if (!key) return null;
-    return new Resend(key);
+    const client = new Resend(key);
+    const providerSend = client.emails.send.bind(client.emails);
+    client.emails.send = async payload => {
+        const result = await providerSend(payload);
+        if (result?.error) throw new Error(result.error.message || result.error.name || 'Email provider rejected the message.');
+        return result?.data || result;
+    };
+    return client;
 }
 
 function getEmailSafeAssetUrl(value) {
@@ -794,14 +801,13 @@ async function sendPasswordResetEmail(email, resetUrl) {
 async function sendSignupWelcomeEmail(email, firstName, tenantName, options = {}) {
     const resend = getResend();
     if (!resend) {
-        console.warn('[Email] No RESEND_API_KEY — skipping signup welcome email to:', email);
-        return;
+        throw new Error('RESEND_API_KEY is required to deliver the signup welcome email.');
     }
 
     const trialDays = Number(options.trialDays || 7);
     const monthlyPriceUsd = Number(options.monthlyPriceUsd || 31.67).toFixed(2);
 
-    await resend.emails.send({
+    const sent = await resend.emails.send({
         from:    'ICSS Booking <welcome@icssbookings.com>',
         to:      [email],
         subject: `Welcome to ICSS Booking System`,
@@ -825,16 +831,20 @@ async function sendSignupWelcomeEmail(email, firstName, tenantName, options = {}
     });
 
     console.log(`[Email] Signup welcome email sent to ${email}`);
+    return sent;
 }
 
-async function sendWelcomeEmail(email, firstName, tenantName) {
+async function sendWelcomeEmail(email, firstName, tenantName, options = {}) {
     const resend = getResend();
     if (!resend) {
-        console.warn('[Email] No RESEND_API_KEY — skipping welcome email to:', email);
-        return;
+        throw new Error('RESEND_API_KEY is required to deliver the platform-ready email.');
     }
 
-    await resend.emails.send({
+    const baseUrl = String(process.env.PUBLIC_APP_URL || process.env.BASE_URL || 'https://icssbookings.com').replace(/\/$/, '');
+    const tenantSlug = String(options.tenantSlug || '').trim();
+    const dashboardUrl = `${baseUrl}/admin`;
+    const bookingUrl = tenantSlug ? `${baseUrl}/${encodeURIComponent(tenantSlug)}` : baseUrl;
+    const sent = await resend.emails.send({
         from:    'ICSS Booking <welcome@icssbookings.com>',
         to:      [email],
         subject: `Your ICSS Booking Platform Is Ready`,
@@ -844,13 +854,14 @@ async function sendWelcomeEmail(email, firstName, tenantName) {
                 <h2 style="color:#fff;margin:0;font-family:Georgia,serif;letter-spacing:2px;">PLATFORM READY</h2>
             </div>
             <div style="padding:32px 36px;background:#fff;color:#333;">
-                <p>Hello ${firstName || 'there'},</p>
-                <p>Your ICSS Booking setup for <strong>${tenantName}</strong> is complete.</p>
-                <p>Your account has been successfully provisioned. You can now access your dashboard to configure your services, set up your calendar, and start accepting bookings.</p>
+                <p>Hello ${escapeHtml(firstName || 'there')},</p>
+                <p>Your ICSS Booking setup for <strong>${escapeHtml(tenantName)}</strong> is complete.</p>
+                ${tenantSlug ? `<p><strong>Business handle:</strong> ${escapeHtml(tenantSlug)}<br><strong>Public booking page:</strong> <a href="${bookingUrl}">${bookingUrl}</a></p>` : ''}
+                <p>First login checklist:</p><ol><li>Review your services and prices</li><li>Set your availability and timezone</li><li>Add your PayPal or bank-transfer details</li><li>Customize your branding</li><li>Preview and share your booking link</li></ol>
                 <div style="text-align:center;margin:30px 0;">
-                    <a href="https://icssbookings.com/admin" style="background:#7C6EF7;color:#fff;text-decoration:none;padding:14px 28px;border-radius:4px;font-weight:bold;display:inline-block;letter-spacing:1px;">GO TO DASHBOARD</a>
+                    <a href="${dashboardUrl}" style="background:#7C6EF7;color:#fff;text-decoration:none;padding:14px 28px;border-radius:4px;font-weight:bold;display:inline-block;letter-spacing:1px;">GO TO DASHBOARD</a>
                 </div>
-                <p>If you have any questions, feel free to reply to this email. We're here to help you succeed.</p>
+                <p>If you need help, reply to this email or use Report Issue inside your dashboard.</p>
                 <p>Warm regards,<br><strong>The ICSS Team</strong></p>
             </div>
             <div style="background:#f9f9f9;padding:20px;text-align:center;font-size:12px;color:#999;border-top:1px solid #eee;">
@@ -860,6 +871,7 @@ async function sendWelcomeEmail(email, firstName, tenantName) {
     });
 
     console.log(`[Email] Welcome email sent to ${email}`);
+    return sent;
 }
 
 async function sendSubscriptionInvoiceEmail({ to, ownerName, businessName, amount, currency = 'USD',

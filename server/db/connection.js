@@ -335,6 +335,21 @@ async function runMigrations(client) {
     try { await client.query(`ALTER TABLE pending_signups ADD COLUMN terms_accepted_at TIMESTAMPTZ`); } catch(e){}
     try { await client.query(`ALTER TABLE pending_signups ADD COLUMN terms_acceptance_ip TEXT`); } catch(e){}
     try { await client.query(`ALTER TABLE pending_signups ADD COLUMN terms_acceptance_user_agent TEXT`); } catch(e){}
+    await client.query(`ALTER TABLE pending_signups ADD COLUMN IF NOT EXISTS paypal_subscription_id TEXT`);
+    await client.query(`ALTER TABLE pending_signups ADD COLUMN IF NOT EXISTS payment_verified_at TIMESTAMPTZ`);
+    await client.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_pending_signups_paypal_subscription ON pending_signups(paypal_subscription_id) WHERE paypal_subscription_id IS NOT NULL`);
+    await client.query(`WITH ranked AS (
+        SELECT id,ROW_NUMBER() OVER(PARTITION BY signup_token ORDER BY created_at,id) AS rn
+        FROM provisioning_jobs WHERE signup_token IS NOT NULL
+    ) UPDATE provisioning_jobs p SET signup_token=NULL,status='superseded',error_message='Superseded by idempotent provisioning migration',updated_at=NOW()
+      FROM ranked r WHERE p.id=r.id AND r.rn>1`);
+    await client.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_provisioning_jobs_signup ON provisioning_jobs(signup_token) WHERE signup_token IS NOT NULL`);
+    await client.query(`CREATE TABLE IF NOT EXISTS email_outbox (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),message_type TEXT NOT NULL,dedupe_key TEXT NOT NULL UNIQUE,
+        recipient TEXT NOT NULL,payload JSONB NOT NULL DEFAULT '{}',status TEXT NOT NULL DEFAULT 'pending',
+        provider_message_id TEXT,attempts INTEGER NOT NULL DEFAULT 0,next_attempt_at TIMESTAMPTZ DEFAULT NOW(),
+        last_error TEXT,sent_at TIMESTAMPTZ,created_at TIMESTAMPTZ DEFAULT NOW(),updated_at TIMESTAMPTZ DEFAULT NOW()
+    )`);
     try { await client.query(`ALTER TABLE provisioning_jobs ALTER COLUMN tenant_slug DROP NOT NULL`); } catch(e){}
     try { await client.query(`ALTER TABLE tenants ADD COLUMN subscription_status TEXT DEFAULT 'trial'`); } catch(e){}
     try { await client.query(`ALTER TABLE tenants ADD COLUMN stripe_customer_id TEXT`); } catch(e){}
@@ -512,6 +527,11 @@ async function runMigrations(client) {
 
     await client.query(`CREATE INDEX IF NOT EXISTS idx_calendar_conn_tenant ON calendar_connections(tenant_id)`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_calendar_conn_webhook ON calendar_connections(sync_channel_id)`);
+    await client.query(`CREATE TABLE IF NOT EXISTS calendar_oauth_states (
+        state_hash TEXT PRIMARY KEY,tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+        user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,provider TEXT NOT NULL,return_to TEXT,
+        expires_at TIMESTAMPTZ NOT NULL DEFAULT NOW()+INTERVAL '10 minutes',created_at TIMESTAMPTZ DEFAULT NOW()
+    )`);
 
     // ── Orders ────────────────────────────────────────────────────────────────
     await client.query(`
@@ -704,11 +724,12 @@ async function runMigrations(client) {
         ('Pulse Studio', 'Fitness', '/Template/Fitness.html', '{"services": [{"name": "HIIT FUSION", "duration_minutes": 45, "price": 0}, {"name": "POWER VINYASA", "duration_minutes": 60, "price": 0}]}'::jsonb),
         ('Meridian Law', 'Legal', '/Template/Law.html', '{"services": [{"name": "Initial Consultation", "duration_minutes": 30, "price": 150}, {"name": "Extended Consultation", "duration_minutes": 60, "price": 275}]}'::jsonb),
         ('Iron & Blade', 'Barber', '/Template/barber.html', '{"services": [{"name": "Signature Haircut", "duration_minutes": 45, "price": 40}, {"name": "Fade & Blend", "duration_minutes": 50, "price": 45}, {"name": "Beard Trim & Shape", "duration_minutes": 30, "price": 25}, {"name": "The Full Treatment", "duration_minutes": 75, "price": 60}, {"name": "Hot Towel Shave", "duration_minutes": 40, "price": 35}]}'::jsonb),
-        ('Elegant Nails', 'Nail Tech', '/Template/Nail Tech.html', '{"services": [{"name": "Acrylic Full Set", "duration_minutes": 90, "price": 80}]}'::jsonb),
+        ('Elegant Nails', 'Nail Tech', '/Template/nail_tech.html', '{"services": [{"name": "Acrylic Full Set", "duration_minutes": 90, "price": 80}]}'::jsonb),
         ('Pro Auto Care', 'Mechanic', '/Template/mechanic.html', '{"services": [{"name": "Oil Change & Inspection", "duration_minutes": 45, "price": 120}, {"name": "Brake Pad Replacement", "duration_minutes": 120, "price": 250}, {"name": "Full Diagnostics", "duration_minutes": 90, "price": 150}]}'::jsonb),
         ('Universal Services', 'General / Universal', '/Template/universal_booking.html', '{"services": [{"name": "Consultation", "duration_minutes": 30, "price": 50}, {"name": "Professional Service", "duration_minutes": 60, "price": 120}]}'::jsonb)
         ON CONFLICT (name) DO NOTHING
     `);
+    await client.query(`UPDATE themes SET template_path='/Template/nail_tech.html' WHERE name='Elegant Nails' AND template_path<>'/Template/nail_tech.html'`);
 
     // ── Impersonation Sessions (Platform Console) ──────────────────────────────
     await client.query(`
