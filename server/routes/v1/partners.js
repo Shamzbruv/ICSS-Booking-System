@@ -99,6 +99,30 @@ router.post('/:id/owner-sign', authenticate, requirePlatformOwner, requireActual
     } catch (err) { console.error('[Partners/OwnerSign]', err); res.status(err.status || 500).json({ error: err.message || 'Could not complete the agreement.' }); }
 });
 
+router.delete('/:id', authenticate, requirePlatformOwner, requireActualOwner, async (req, res) => {
+    try {
+        const result = await query(
+            `DELETE FROM partner_agreements
+             WHERE id=$1 AND status='invited' AND partner_signed_at IS NULL AND owner_signed_at IS NULL
+             RETURNING id,partner_email,partner_name,access_role`,
+            [req.params.id]
+        );
+        if (!result.rows.length) {
+            return res.status(409).json({ error: 'Only unsigned invitations can be revoked. Signed and completed contracts must be retained.' });
+        }
+        const revoked = result.rows[0];
+        await query(
+            `INSERT INTO audit_log (actor_user_id,action,entity,entity_id,metadata,ip_address)
+             VALUES ($1,'partner_contract_invite_revoked','partner_agreement',$2,$3,$4)`,
+            [req.user.id, revoked.id, JSON.stringify({ email:revoked.partner_email, name:revoked.partner_name, accessRole:revoked.access_role }), req.ip || null]
+        ).catch(err => console.error('[Partners/RevokeAudit]', err.message));
+        res.json({ message: `Invitation for ${revoked.partner_email} was revoked and its signing link is no longer valid.` });
+    } catch (err) {
+        console.error('[Partners/Revoke]', err);
+        res.status(500).json({ error: 'Could not revoke the invitation.' });
+    }
+});
+
 router.get('/template/download', authenticate, requirePlatformOwner, requireActualOwner, async (req, res) => {
     const pdf = await generateAgreementPdf({ id:'TEMPLATE-PREVIEW', partner_name:'Alex Morgan', partner_email:'alex@example.com', partner_address:'12 Hope Road, Kingston, Jamaica', approved_social_platforms:'Instagram, Facebook and TikTok' });
     res.set({ 'Content-Type':'application/pdf', 'Content-Disposition':'inline; filename="ICSS_Agreement_Template.pdf"', 'Cache-Control':'private, no-store' }).send(pdf);

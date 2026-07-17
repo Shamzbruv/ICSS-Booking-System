@@ -123,6 +123,7 @@ export const api = {
     createDeveloperAdmin: (body) => apiFetch('/platform/developer-admins', { method: 'POST', body }),
     getAgreements:        () => apiFetch('/partners'),
     ownerSignAgreement:   (id,body) => apiFetch(`/partners/${id}/owner-sign`, { method:'POST', body }),
+    revokeAgreementInvite:(id) => apiFetch(`/partners/${id}`, { method:'DELETE' }),
     getAgreementPdf:      (id) => apiBlob(`/partners/${id}/download`),
     getAgreementTemplate: () => apiBlob('/partners/template/download'),
 
