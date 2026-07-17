@@ -601,6 +601,7 @@
 .contractHead{display:flex;justify-content:space-between;gap:14px;align-items:flex-start}.contractHead h3{margin:0 0 5px;font-size:1.05rem}.contractHead p{margin:0;color:var(--pc-muted);font-size:.83rem}
 .contractFacts{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:18px 0}.contractFacts span{padding:10px;background:#ffffff05;border-radius:9px;font-size:.8rem;color:var(--pc-muted)}.contractFacts b{display:block;color:var(--pc-text);font-size:.7rem;text-transform:uppercase;margin-bottom:5px}
 .contractActions{display:flex;gap:8px;border-top:1px solid var(--pc-border);padding-top:12px}
+.btnDanger{background:transparent;border:1px solid rgba(239,68,68,.55);color:#f87171;border-radius:9px;padding:8px 12px;font:inherit;font-weight:700;cursor:pointer;margin-left:auto}.btnDanger:hover{background:rgba(239,68,68,.12);border-color:#ef4444}
 .ownerFields{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px;padding-top:16px;border-top:1px solid var(--pc-border)}.ownerFields h4,.ownerFields button{grid-column:1/-1}.ownerFields h4{margin:0;color:#c7c2ff}
 .badge{display:inline-flex;padding:5px 9px;border-radius:99px;background:#7c6ef722;color:#b8b1ff;font-size:.7rem;text-transform:capitalize;white-space:nowrap}
 @media(max-width:700px){.contractGrid{grid-template-columns:1fr}.contractFacts,.ownerFields{grid-template-columns:1fr}}
