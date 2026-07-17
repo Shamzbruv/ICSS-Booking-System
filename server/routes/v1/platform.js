@@ -569,9 +569,9 @@ router.get('/build-info', async (req, res) => {
 
 // GET /api/v1/platform/env-check  — presence only, never values
 router.get('/env-check', (req, res) => {
-    const { REQUIRED_PRODUCTION } = require('../../services/environment');
-    const REQUIRED = [...REQUIRED_PRODUCTION,'PAYPAL_PLAN_ID'];
-    const OPTIONAL = ['GOOGLE_CLIENT_ID','MICROSOFT_CLIENT_ID','WHATSAPP_ENABLED'];
+    const { REQUIRED_PRODUCTION, RECOMMENDED_PRODUCTION } = require('../../services/environment');
+    const REQUIRED = REQUIRED_PRODUCTION;
+    const OPTIONAL = [...RECOMMENDED_PRODUCTION,'PAYPAL_PLAN_ID','GOOGLE_CLIENT_ID','MICROSOFT_CLIENT_ID','WHATSAPP_ENABLED'];
     const check = (keys) => keys.map(k => ({ key: k, present: !!process.env[k] }));
     res.json({ required: check(REQUIRED), optional: check(OPTIONAL) });
 });
