@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const { singleJobWorker, QUEUE_RETRY_OPTIONS } = require('../server/services/queue');
 const { requireTenantOwnership } = require('../server/middleware/auth');
 const { validateEnvironment } = require('../server/services/environment');
+const { agreementParagraphs } = require('../server/services/partnerAgreement');
 
 test('pg-boss adapter passes one job object to a worker', async () => {
     let received;
@@ -51,4 +52,14 @@ test('production environment validation fails closed', () => {
     };
     assert.equal(validateEnvironment(base), true);
     assert.throws(() => validateEnvironment({ ...base, ENCRYPTION_KEY:'short' }), /64 hexadecimal/);
+});
+
+test('partner agreement uses automatic platform-wide revenue sharing', () => {
+    const agreement = agreementParagraphs().join('\n');
+    assert.match(agreement, /every Tenant whose paid Platform subscription begins on or after the Effective Date/i);
+    assert.match(agreement, /pay the Partner’s share promptly after each qualifying subscription payment/i);
+    assert.match(agreement, /Once every two weeks, on Friday/i);
+    assert.match(agreement, /no fixed schedule, minimum shift, or prescribed working hours/i);
+    assert.match(agreement, /Owner is responsible for calculating, reporting, withholding, remitting, and paying taxes/i);
+    assert.doesNotMatch(agreement, /referral link|referral code|Referred Tenant|Referral Attribution/i);
 });
