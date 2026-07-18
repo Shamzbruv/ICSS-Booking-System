@@ -124,7 +124,12 @@ router.delete('/:id', authenticate, requirePlatformOwner, requireActualOwner, as
 });
 
 router.get('/template/download', authenticate, requirePlatformOwner, requireActualOwner, async (req, res) => {
-    const pdf = await generateAgreementPdf({ id:'TEMPLATE-PREVIEW', partner_name:'Alex Morgan', partner_email:'alex@example.com', partner_address:'12 Hope Road, Kingston, Jamaica', approved_social_platforms:'Instagram, Facebook and TikTok' });
+    const latest = await query(`SELECT * FROM partner_agreements ORDER BY created_at DESC LIMIT 1`);
+    const agreement = latest.rows[0] || {
+        id:'OWNER-PREVIEW', partner_name:'[PARTNER LEGAL NAME]', partner_email:'[PARTNER EMAIL]',
+        partner_address:'[PARTNER ADDRESS]', approved_social_platforms:'[APPROVED SOCIAL PLATFORMS]'
+    };
+    const pdf = await generateAgreementPdf(agreement);
     res.set({ 'Content-Type':'application/pdf', 'Content-Disposition':'inline; filename="ICSS_Agreement_Template.pdf"', 'Cache-Control':'private, no-store' }).send(pdf);
 });
 
