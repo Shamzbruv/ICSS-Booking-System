@@ -46,6 +46,13 @@
         <a href="customize.html" class="nav-item"><span class="nav-icon">🎨</span> Customize</a>
         <a href="services.html" class="nav-item active"><span class="nav-icon">📦</span> Services</a>
     </nav>
+    <div class="sidebar-footer">
+        <div class="user-info">
+            <div class="user-avatar" id="userAvatar">?</div>
+            <div><div class="user-name" id="userName">—</div><div class="user-role" id="userRole">—</div></div>
+        </div>
+        <button class="logout-btn" type="button">Sign Out</button>
+    </div>
 </aside>
 
 <main class="main-content">
@@ -160,7 +167,7 @@
                 <label>Service Image <span style="color:var(--text-dim);font-weight:400;">(optional card photo)</span></label>
                 <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
                     <input type="file" id="svc_image_file" class="form-control" accept="image/*" style="flex:1;min-width:240px;padding:7px 10px;">
-                    <button type="button" class="btn btn-secondary" id="svcImageRemoveBtn" style="display:none;" onclick="removeServiceImage()">Remove</button>
+                    <button type="button" class="btn btn-secondary" id="svcImageRemoveBtn" style="display:none;">Remove</button>
                 </div>
                 <small style="display:block;margin-top:6px;color:var(--text-dim);">
                     Use a square or portrait image to make the service stand out. If blank, the booking page shows a built-in icon.
@@ -184,13 +191,15 @@
 <script src="js/admin.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', async () => {
-        requireAuth();
-        setupMobileNav();
+        if (!requireAuth()) return;
+        populateUserUI();
         await loadServices();
 
         document.getElementById('addServiceBtn').addEventListener('click', showCreateModal);
         document.getElementById('modalCloseBtn').addEventListener('click', closeModal);
         document.getElementById('modalCancelBtn').addEventListener('click', closeModal);
+        document.getElementById('svcImageRemoveBtn').addEventListener('click', removeServiceImage);
+        document.getElementById('servicesList').addEventListener('click', handleServiceAction);
 
         // Close when clicking outside modal content
         document.getElementById('serviceModal').addEventListener('click', (e) => {
@@ -210,22 +219,6 @@
     const SERVICE_IMAGE_MAX_BYTES = 700 * 1024;
     const SERVICE_IMAGE_MAX_DIMENSION = 1200;
     const SERVICE_IMAGE_MIN_QUALITY = 0.55;
-
-    function setupMobileNav() {
-        const hamburger = document.getElementById('hamburgerBtn');
-        const sidebar   = document.getElementById('sidebar');
-        const backdrop  = document.getElementById('sidebarBackdrop');
-        if (!hamburger) return;
-
-        hamburger.addEventListener('click', () => {
-            sidebar.classList.toggle('open');
-            backdrop.classList.toggle('show');
-        });
-        backdrop.addEventListener('click', () => {
-            sidebar.classList.remove('open');
-            backdrop.classList.remove('show');
-        });
-    }
 
     function closeModal() {
         document.getElementById('serviceModal').classList.remove('open');
@@ -439,8 +432,8 @@
                     <td data-label="Payment" style="padding: 1rem;"><span style="background:var(--gold-glow);color:var(--gold);padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;">${escHtml(svc.payment_mode || 'default')}</span></td>
                     <td data-label="Deposit" style="padding: 1rem;">${formatDepositRule(svc)}</td>
                     <td style="padding: 1rem;">
-                        <button class="btn btn-secondary btn-sm" onclick="editService('${svc.id}')">✏️ Edit</button>
-                        <button class="btn btn-danger btn-sm" onclick="deleteService('${svc.id}')" style="margin-left:6px;">🗑️ Delete</button>
+                        <button class="btn btn-secondary btn-sm" type="button" data-service-action="edit" data-service-id="${svc.id}">✏️ Edit</button>
+                        <button class="btn btn-danger btn-sm" type="button" data-service-action="delete" data-service-id="${svc.id}" style="margin-left:6px;">🗑️ Delete</button>
                     </td>
                 `;
                 tbody.appendChild(tr);
@@ -454,6 +447,13 @@
     function escHtml(str) {
         if (!str) return '';
         return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function handleServiceAction(event) {
+        const button = event.target.closest('[data-service-action]');
+        if (!button) return;
+        if (button.dataset.serviceAction === 'edit') editService(button.dataset.serviceId);
+        if (button.dataset.serviceAction === 'delete') deleteService(button.dataset.serviceId);
     }
 
     function showCreateModal() {

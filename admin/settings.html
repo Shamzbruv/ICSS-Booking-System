@@ -42,6 +42,13 @@
         <a href="customize.html" class="nav-item"><span class="nav-icon">🎨</span> Customize</a>
         <a href="services.html" class="nav-item"><span class="nav-icon">📦</span> Services</a>
     </nav>
+    <div class="sidebar-footer">
+        <div class="user-info">
+            <div class="user-avatar" id="userAvatar">?</div>
+            <div><div class="user-name" id="userName">—</div><div class="user-role" id="userRole">—</div></div>
+        </div>
+        <button class="logout-btn" type="button">Sign Out</button>
+    </div>
 </aside>
 
 <main class="main-content settings-page">
@@ -118,7 +125,7 @@
                 <label>Business Logo</label>
                 <div class="settings-inline-row">
                     <input type="file" id="branding_logo_file" class="form-control" accept="image/*" style="flex: 1; padding: 7px 10px;">
-                    <button type="button" class="btn btn-secondary" id="removeLogoBtn" style="display: none; height: 38px;" onclick="removeLogo()">Remove</button>
+                    <button type="button" class="btn btn-secondary" id="removeLogoBtn" style="display: none; height: 38px;">Remove</button>
                 </div>
                 <small style="color: var(--text-dim); margin-top: 6px; display: block;">
                     Upload an image file (PNG, JPG, etc.). Large images are automatically optimized so they can be used here.
@@ -136,7 +143,7 @@
                 <label>Service Section Image <span style="color:var(--text-dim);font-weight:400;">(optional image beside “Choose a Service”)</span></label>
                 <div class="settings-inline-row">
                     <input type="file" id="branding_service_section_image_file" class="form-control" accept="image/*" style="flex: 1; padding: 7px 10px;">
-                    <button type="button" class="btn btn-secondary" id="removeServiceSectionImageBtn" style="display: none; height: 38px;" onclick="removeServiceSectionImage()">Remove</button>
+                    <button type="button" class="btn btn-secondary" id="removeServiceSectionImageBtn" style="display: none; height: 38px;">Remove</button>
                 </div>
                 <small style="color: var(--text-dim); margin-top: 6px; display: block;">
                     Add a hero image for the service panel. If blank, the booking page uses a built-in service icon instead.
@@ -233,9 +240,8 @@
                 </p>
                 <div id="stylistsList" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px;"></div>
                 <div class="stylist-input-row">
-                    <input type="text" id="newStylistName" class="form-control" placeholder="e.g. Krystal, Maya, Sasha..." style="flex:1;" maxlength="50"
-                           onkeydown="if(event.key==='Enter'){event.preventDefault();addStylist();}">
-                    <button type="button" class="btn btn-secondary" onclick="addStylist()" style="white-space:nowrap;">+ Add</button>
+                    <input type="text" id="newStylistName" class="form-control" placeholder="e.g. Krystal, Maya, Sasha..." style="flex:1;" maxlength="50">
+                    <button type="button" class="btn btn-secondary" id="addStylistBtn" style="white-space:nowrap;">+ Add</button>
                 </div>
             </div>
 
@@ -278,7 +284,7 @@
         </div>
 
         <div style="margin-top: 1.5rem;">
-            <button type="button" class="btn btn-primary" style="width: 100%;" onclick="saveSchedule()">Save Schedule</button>
+            <button type="button" class="btn btn-primary" id="saveScheduleBtn" style="width: 100%;">Save Schedule</button>
         </div>
     </section>
 
@@ -296,7 +302,7 @@
         </div>
 
         <div style="margin-bottom: 1rem;">
-            <button type="button" id="subscribeCalendarBtn" class="btn btn-primary" style="width: 100%; pointer-events: none; opacity: 0.6;" onclick="subscribeToCalendar()">Choose Calendar App</button>
+            <button type="button" id="subscribeCalendarBtn" class="btn btn-primary" style="width: 100%; pointer-events: none; opacity: 0.6;">Choose Calendar App</button>
         </div>
 
         <p style="margin-top: 0; margin-bottom: 0; color: var(--text-dim); font-size: 0.9rem;">
@@ -305,14 +311,14 @@
     </section>
 </main>
 
-<div id="calendarSubscribeModal" class="modal-overlay" aria-hidden="true" onclick="handleCalendarSubscribeBackdrop(event)">
-    <div class="modal calendar-subscribe-modal" role="dialog" aria-modal="true" aria-labelledby="calendarSubscribeModalTitle" onclick="event.stopPropagation()">
+<div id="calendarSubscribeModal" class="modal-overlay" aria-hidden="true">
+    <div class="modal calendar-subscribe-modal" role="dialog" aria-modal="true" aria-labelledby="calendarSubscribeModalTitle">
         <div class="modal-header">
             <div>
                 <p class="settings-section-kicker" style="margin-bottom: 6px;">Calendar</p>
                 <h3 id="calendarSubscribeModalTitle" class="modal-title">Subscribe to your calendar</h3>
             </div>
-            <button type="button" class="modal-close" aria-label="Close" onclick="closeCalendarSubscribeModal()">&times;</button>
+            <button type="button" class="modal-close" id="closeCalendarSubscribeModalBtn" aria-label="Close">&times;</button>
         </div>
 
         <p class="page-subtitle" style="margin-top: 0;">
@@ -320,17 +326,17 @@
         </p>
 
         <div class="calendar-subscribe-grid">
-            <button type="button" class="calendar-subscribe-card" onclick="subscribeWithAppleCalendar()">
+            <button type="button" class="calendar-subscribe-card" id="subscribeAppleCalendarBtn">
                 <strong>Apple Calendar</strong>
                 <span>Best for Mac, iPhone, and iPad. Tries to open the live subscription directly.</span>
             </button>
 
-            <button type="button" class="calendar-subscribe-card" onclick="subscribeWithGoogleCalendar()">
+            <button type="button" class="calendar-subscribe-card" id="subscribeGoogleCalendarBtn">
                 <strong>Google Calendar</strong>
                 <span>Copies your feed link and opens Google's Add by URL screen.</span>
             </button>
 
-            <button type="button" class="calendar-subscribe-card" onclick="subscribeWithOutlookCalendar()">
+            <button type="button" class="calendar-subscribe-card" id="subscribeOutlookCalendarBtn">
                 <strong>Outlook</strong>
                 <span>Copies your feed link and opens Outlook on the web.</span>
             </button>
@@ -350,7 +356,7 @@
                     value=""
                     aria-label="Calendar feed URL"
                 />
-                <button type="button" id="copyCalendarFeedBtn" class="btn btn-secondary" onclick="copyCalendarFeedUrl()">Copy Link</button>
+                <button type="button" id="copyCalendarFeedBtn" class="btn btn-secondary">Copy Link</button>
             </div>
 
             <div id="calendarSubscribeSteps" class="calendar-subscribe-steps"></div>
@@ -412,8 +418,26 @@
     };
 
     document.addEventListener('DOMContentLoaded', async () => {
-        requireAuth();
+        if (!requireAuth()) return;
+        populateUserUI();
         buildScheduleGrid(DEFAULT_HOURS);
+        document.getElementById('removeLogoBtn').addEventListener('click', removeLogo);
+        document.getElementById('removeServiceSectionImageBtn').addEventListener('click', removeServiceSectionImage);
+        document.getElementById('addStylistBtn').addEventListener('click', addStylist);
+        document.getElementById('newStylistName').addEventListener('keydown', (event) => {
+            if (event.key !== 'Enter') return;
+            event.preventDefault();
+            addStylist();
+        });
+        document.getElementById('saveScheduleBtn').addEventListener('click', saveSchedule);
+        document.getElementById('subscribeCalendarBtn').addEventListener('click', subscribeToCalendar);
+        document.getElementById('calendarSubscribeModal').addEventListener('click', handleCalendarSubscribeBackdrop);
+        document.getElementById('closeCalendarSubscribeModalBtn').addEventListener('click', closeCalendarSubscribeModal);
+        document.getElementById('subscribeAppleCalendarBtn').addEventListener('click', subscribeWithAppleCalendar);
+        document.getElementById('subscribeGoogleCalendarBtn').addEventListener('click', subscribeWithGoogleCalendar);
+        document.getElementById('subscribeOutlookCalendarBtn').addEventListener('click', subscribeWithOutlookCalendar);
+        document.getElementById('copyCalendarFeedBtn').addEventListener('click', () => copyCalendarFeedUrl());
+        document.getElementById('scheduleGrid').addEventListener('change', handleScheduleControlChange);
         await loadSettings();
         document.getElementById('settingsForm').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -458,6 +482,13 @@
             });
         });
     });
+
+    function handleScheduleControlChange(event) {
+        const control = event.target.closest('[data-schedule-action]');
+        if (!control) return;
+        if (control.dataset.scheduleAction === 'toggle-day') toggleDayRow(control.dataset.day);
+        if (control.dataset.scheduleAction === 'toggle-24-hours') toggle24Hours(control.dataset.day);
+    }
 
     const BRANDING_IMAGE_MAX_BYTES = 700 * 1024;
     const BRANDING_IMAGE_MAX_DIMENSION = 1200;
@@ -623,13 +654,13 @@
             row.innerHTML = `
                 <div class="schedule-row-head">
                     <label class="schedule-day-toggle">
-                        <input type="checkbox" id="day_active_${day}" class="schedule-day-checkbox" ${h.active ? 'checked' : ''} onchange="toggleDayRow('${day}')" style="accent-color:var(--gold);">
+                        <input type="checkbox" id="day_active_${day}" class="schedule-day-checkbox" ${h.active ? 'checked' : ''} data-schedule-action="toggle-day" data-day="${day}" style="accent-color:var(--gold);">
                         <span class="schedule-day-name">${DAY_LABELS[day]}</span>
                     </label>
                     <div class="schedule-row-meta">
                         <span class="schedule-status ${statusClass}" id="day_status_${day}">${statusText}</span>
                         <label class="hours-24-toggle" id="day_24_wrap_${day}" style="display:${h.active ? 'inline-flex' : 'none'};">
-                            <input type="checkbox" id="day_24_${day}" ${h.is24Hours ? 'checked' : ''} onchange="toggle24Hours('${day}')">
+                            <input type="checkbox" id="day_24_${day}" ${h.is24Hours ? 'checked' : ''} data-schedule-action="toggle-24-hours" data-day="${day}">
                             <span>24 Hours</span>
                         </label>
                     </div>

@@ -4,11 +4,11 @@
   "description": "ICSS Commercial Multi-Tenant Booking System — SaaS platform powering booking engines for multiple business clients",
   "main": "server/app.js",
   "scripts": {
-    "start": "/usr/local/bin/node server/app.js",
-    "dev": "/usr/local/bin/node server/app.js",
-    "migrate": "/usr/local/bin/node server/db/migrate.js",
-    "seed": "/usr/local/bin/node server/db/migrate.js",
-    "test": "/usr/local/bin/node --test test/*.test.js",
+    "start": "node server/app.js",
+    "dev": "node server/app.js",
+    "migrate": "node server/db/migrate.js",
+    "seed": "node server/db/migrate.js",
+    "test": "node --test test/*.test.js",
     "lint:frontend": "npm --prefix frontend run lint",
     "build:frontend": "npm --prefix frontend run build"
   },

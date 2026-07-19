@@ -24,6 +24,8 @@
 
 <!-- Global Backgrounds -->
 <div class="gradient-bg"></div>
+<button class="hamburger" id="hamburgerBtn" type="button" aria-label="Open menu"><span></span><span></span><span></span></button>
+<div class="sidebar-backdrop" id="sidebarBackdrop"></div>
 <div class="grid-pattern"></div>
 <aside class="sidebar" id="sidebar">
     <div class="sidebar-brand">
@@ -52,7 +54,7 @@
             <div class="user-avatar" id="userAvatar">?</div>
             <div><div class="user-name" id="userName">—</div><div class="user-role" id="userRole">—</div></div>
         </div>
-        <button class="logout-btn" onclick="logout()">Sign Out</button>
+        <button class="logout-btn" type="button">Sign Out</button>
     </div>
 </aside>
 
@@ -63,7 +65,7 @@
             <p class="page-subtitle">Provision and manage all client tenants on the platform</p>
         </div>
         <div class="header-actions">
-            <button class="btn btn-primary" onclick="openProvisionModal()">+ New Tenant</button>
+            <button class="btn btn-primary" id="openProvisionModalBtn" type="button">+ New Tenant</button>
         </div>
     </header>
 
@@ -77,7 +79,7 @@
     <div class="table-wrap">
         <div class="table-toolbar">
             <span style="font-weight:600;font-size:14px;">All Tenants</span>
-            <button class="btn btn-secondary btn-sm" onclick="loadTenants()">↻ Refresh</button>
+            <button class="btn btn-secondary btn-sm" id="refreshTenantsBtn" type="button">↻ Refresh</button>
         </div>
         <div id="tableBody"><div class="spinner"></div></div>
     </div>
@@ -88,7 +90,7 @@
     <div class="modal" style="max-width:560px;">
         <div class="modal-header">
             <h2 class="modal-title">Provision New Tenant</h2>
-            <button class="modal-close" onclick="closeModal('provisionModal')">✕</button>
+            <button class="modal-close" type="button" data-close-modal="provisionModal" aria-label="Close provision tenant dialog">✕</button>
         </div>
         <div class="form-row">
             <div class="form-group">
@@ -131,8 +133,8 @@
         <input type="password" id="pAdminKey" placeholder="X-Platform-Admin-Key" style="width:100%;margin-bottom:16px;">
         <div class="login-error" id="provisionError" style="text-align:left;margin-bottom:8px;"></div>
         <div class="modal-footer">
-            <button class="btn btn-secondary" onclick="closeModal('provisionModal')">Cancel</button>
-            <button class="btn btn-primary" id="provisionBtn" onclick="provisionTenant()">Provision Tenant</button>
+            <button class="btn btn-secondary" type="button" data-close-modal="provisionModal">Cancel</button>
+            <button class="btn btn-primary" id="provisionBtn" type="button">Provision Tenant</button>
         </div>
     </div>
 </div>
@@ -142,7 +144,7 @@
     <div class="modal" style="max-width:420px;">
         <div class="modal-header">
             <h2 class="modal-title">Change Plan</h2>
-            <button class="modal-close" onclick="closeModal('planModal')">✕</button>
+            <button class="modal-close" type="button" data-close-modal="planModal" aria-label="Close plan dialog">✕</button>
         </div>
         <p style="color:var(--text-dim);font-size:13px;margin-bottom:16px;">
             Changing plan for: <strong id="planModalSlug">—</strong>
@@ -157,8 +159,8 @@
         </div>
         <input type="password" id="planAdminKey" placeholder="Platform Admin Key" style="width:100%;margin-bottom:16px;">
         <div class="modal-footer">
-            <button class="btn btn-secondary" onclick="closeModal('planModal')">Cancel</button>
-            <button class="btn btn-primary" onclick="changePlan()">Update Plan</button>
+            <button class="btn btn-secondary" type="button" data-close-modal="planModal">Cancel</button>
+            <button class="btn btn-primary" id="changePlanBtn" type="button">Update Plan</button>
         </div>
     </div>
 </div>
@@ -166,40 +168,66 @@
 <script src="js/admin.js"></script>
 <script>
     let planTargetSlug = null;
+    let platformAdminKey = '';
 
     document.addEventListener('DOMContentLoaded', () => {
-        requireAuth();
+        if (!requireAuth()) return;
         populateUserUI();
         const user = getUser();
-        if (user?.role !== 'super_admin') {
+        if (!['super_admin', 'platform_owner', 'developer_admin'].includes(user?.role)) {
             document.querySelector('.main-content').innerHTML =
                 '<div class="empty-state"><div class="empty-state-icon">🔒</div><p class="empty-state-text">Super Admin access required.</p></div>';
             return;
         }
+        document.getElementById('openProvisionModalBtn').addEventListener('click', openProvisionModal);
+        document.getElementById('refreshTenantsBtn').addEventListener('click', () => loadTenants({ forcePrompt: true }));
+        document.getElementById('provisionBtn').addEventListener('click', provisionTenant);
+        document.getElementById('changePlanBtn').addEventListener('click', changePlan);
+        document.querySelectorAll('[data-close-modal]').forEach(button => {
+            button.addEventListener('click', () => closeModal(button.dataset.closeModal));
+        });
+        document.getElementById('tableBody').addEventListener('click', handleTenantAction);
         loadTenants();
     });
 
-    async function loadTenants() {
+    function handleTenantAction(event) {
+        const button = event.target.closest('[data-tenant-action]');
+        if (!button) return;
+        if (button.dataset.tenantAction === 'plan') {
+            openPlanModal(button.dataset.slug, button.dataset.plan);
+            return;
+        }
+        if (button.dataset.tenantAction === 'active') {
+            toggleActive(button.dataset.slug, button.dataset.active === 'true');
+        }
+    }
+
+    async function loadTenants({ forcePrompt = false } = {}) {
         document.getElementById('tableBody').innerHTML = '<div class="spinner"></div>';
-        const key = prompt('Enter Platform Admin Key:');
-        if (!key) return;
+        if (forcePrompt || !platformAdminKey) {
+            platformAdminKey = prompt('Enter Platform Admin Key:') || '';
+        }
+        if (!platformAdminKey) {
+            document.getElementById('tableBody').innerHTML = '<div class="empty-state"><p class="empty-state-text">Platform Admin Key is required.</p></div>';
+            return;
+        }
 
         try {
             const data = await apiFetch('/api/v1/tenants', {
-                headers: { 'X-Platform-Admin-Key': key }
+                headers: { 'X-Platform-Admin-Key': platformAdminKey }
             });
             const tenants = data.tenants || [];
             document.getElementById('totalTenants').textContent  = tenants.length;
             document.getElementById('activeTenants').textContent  = tenants.filter(t => t.active).length;
             document.getElementById('totalBookings').textContent  = tenants.reduce((s, t) => s + parseInt(t.total_bookings || 0), 0);
-            renderTenants(tenants, key);
+            renderTenants(tenants);
         } catch (e) {
             document.getElementById('tableBody').innerHTML =
-                `<div class="empty-state"><div class="empty-state-icon">⚠️</div><p>${e.message}</p></div>`;
+                `<div class="empty-state"><div class="empty-state-icon">⚠️</div><p>${escHtml(e.message)}</p></div>`;
         }
     }
 
-    function renderTenants(tenants, key) {
+    function renderTenants(tenants) {
         if (tenants.length === 0) {
             document.getElementById('tableBody').innerHTML =
                 '<div class="empty-state"><div class="empty-state-icon">🏢</div><p class="empty-state-text">No tenants yet. Provision your first one!</p></div>';
@@ -218,8 +246,8 @@
                 <td data-label="Created">${formatDate(t.created_at)}</td>
                 <td data-label="Status"><span class="badge ${t.active ? 'badge-confirmed' : 'badge-cancelled'}">${t.active ? 'Active' : 'Suspended'}</span></td>
                 <td data-label="Actions">
-                    <button class="btn btn-secondary btn-sm" onclick="openPlanModal('${t.slug}','${t.plan_id}')">Change Plan</button>
-                    <button class="btn btn-${t.active ? 'danger' : 'primary'} btn-sm" onclick="toggleActive('${t.slug}',${!t.active},'${key}')">
+                    <button class="btn btn-secondary btn-sm" type="button" data-tenant-action="plan" data-slug="${escHtml(t.slug)}" data-plan="${escHtml(t.plan_id)}">Change Plan</button>
+                    <button class="btn btn-${t.active ? 'danger' : 'primary'} btn-sm" type="button" data-tenant-action="active" data-slug="${escHtml(t.slug)}" data-active="${String(!t.active)}">
                         ${t.active ? 'Suspend' : 'Reactivate'}
                     </button>
                 </td>
@@ -309,13 +337,13 @@
         }
     }
 
-    async function toggleActive(slug, active, key) {
+    async function toggleActive(slug, active) {
         const label = active ? 'reactivate' : 'suspend';
         if (!confirm(`Are you sure you want to ${label} tenant "${slug}"?`)) return;
         try {
             await apiFetch(`/api/v1/tenants/${slug}/active`, {
                 method:  'PATCH',
-                headers: { 'X-Platform-Admin-Key': key },
+                headers: { 'X-Platform-Admin-Key': platformAdminKey },
                 body:    JSON.stringify({ active })
             });
             showToast(`Tenant ${active ? 'reactivated' : 'suspended'}.`);

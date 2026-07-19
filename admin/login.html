@@ -38,7 +38,7 @@
             <p class="login-subtitle">Booking System Management</p>
         </div>
 
-        <form class="login-form" id="loginForm" onsubmit="handleLogin(event)">
+        <form class="login-form" id="loginForm">
             <div class="login-notice hidden" id="loginNotice"></div>
             <div class="form-group">
                 <label for="loginSlug">Business Handle <span style="font-size: 11px; color: var(--text-dim); font-weight: normal;">(Optional)</span></label>
@@ -133,6 +133,8 @@
                 btn.disabled      = false;
             }
         }
+
+        document.getElementById('loginForm').addEventListener('submit', handleLogin);
     </script>
 </body>
 </html>

@@ -56,7 +56,7 @@
             <div class="user-avatar" id="userAvatar">?</div>
             <div><div class="user-name" id="userName">—</div><div class="user-role" id="userRole">—</div></div>
         </div>
-        <button class="logout-btn" onclick="logout()">Sign Out</button>
+        <button class="logout-btn" type="button">Sign Out</button>
     </div>
 </aside>
 
@@ -71,8 +71,8 @@
     <div class="table-wrap">
         <div class="table-toolbar">
             <div style="display:flex;gap:10px;flex-wrap:wrap;">
-                <input type="date" id="filterDate" style="max-width:170px;" onchange="loadBookings()">
-                <select id="filterStatus" onchange="loadBookings()">
+                <input type="date" id="filterDate" style="max-width:170px;">
+                <select id="filterStatus">
                     <option value="">All Statuses</option>
                     <option value="pending_payment">Pending PayPal</option>
                     <option value="pending_manual_confirmation">Pending Bank Transfer</option>
@@ -83,11 +83,11 @@
                     <option value="completed">Completed</option>
                     <option value="no_show">No Show</option>
                 </select>
-                <input type="text" id="filterSearch" placeholder="Search name, email…" oninput="debounceLoad()" style="min-width:200px;">
+                <input type="text" id="filterSearch" placeholder="Search name, email…" style="min-width:200px;">
             </div>
             <div style="display:flex;gap:8px;">
                 <span id="bookingCount" style="font-size:13px;color:var(--text-dim);align-self:center;"></span>
-                <button class="btn btn-secondary btn-sm" onclick="loadBookings()">↻</button>
+                <button class="btn btn-secondary btn-sm" id="refreshBookingsBtn" type="button" aria-label="Refresh bookings">↻</button>
             </div>
         </div>
 
@@ -102,7 +102,7 @@
     <div class="modal">
         <div class="modal-header">
             <h2 class="modal-title">Cancel Booking</h2>
-            <button class="modal-close" onclick="closeModal('cancelModal')">✕</button>
+            <button class="modal-close" id="cancelModalCloseBtn" type="button" aria-label="Close cancellation dialog">✕</button>
         </div>
         <p style="margin-bottom:16px;color:var(--text-dim);font-size:14px;">
             This will cancel the booking and send an apology email to the customer.
@@ -112,8 +112,8 @@
             <textarea id="cancelReason" rows="3" placeholder="e.g. Staff unavailability, emergency closure..."></textarea>
         </div>
         <div class="modal-footer">
-            <button class="btn btn-secondary" onclick="closeModal('cancelModal')">Go Back</button>
-            <button class="btn btn-danger" id="confirmCancelBtn" onclick="confirmCancel()">Cancel Booking</button>
+            <button class="btn btn-secondary" id="cancelModalBackBtn" type="button">Go Back</button>
+            <button class="btn btn-danger" id="confirmCancelBtn" type="button">Cancel Booking</button>
         </div>
     </div>
 </div>
@@ -122,10 +122,19 @@
 <script>
     let cancelTargetId = null;
     let searchTimer    = null;
+    const bookingStatusBusy = new Set();
 
     document.addEventListener('DOMContentLoaded', () => {
-        requireAuth();
+        if (!requireAuth()) return;
         populateUserUI();
+        document.getElementById('filterDate').addEventListener('change', loadBookings);
+        document.getElementById('filterStatus').addEventListener('change', loadBookings);
+        document.getElementById('filterSearch').addEventListener('input', debounceLoad);
+        document.getElementById('refreshBookingsBtn').addEventListener('click', loadBookings);
+        document.getElementById('cancelModalCloseBtn').addEventListener('click', () => closeModal('cancelModal'));
+        document.getElementById('cancelModalBackBtn').addEventListener('click', () => closeModal('cancelModal'));
+        document.getElementById('confirmCancelBtn').addEventListener('click', confirmCancel);
+        document.getElementById('tableBody').addEventListener('click', handleBookingAction);
         loadBookings();
     });
 
@@ -152,7 +161,7 @@
             renderTable(data.bookings || [], data.total || 0);
         } catch (e) {
             document.getElementById('tableBody').innerHTML =
-                `<div class="empty-state"><div class="empty-state-icon">⚠️</div><p class="empty-state-text">${e.message}</p></div>`;
+                `<div class="empty-state"><div class="empty-state-icon">⚠️</div><p class="empty-state-text">${escHtml(e.message)}</p></div>`;
         }
     }
 
@@ -176,21 +185,21 @@
                 <td data-label="Status">${statusBadge(b.status)}</td>
                 <td data-label="Actions">
                     ${b.status === 'confirmed' ? `
-                        <button class="btn btn-secondary btn-sm" onclick="updateStatus('${b.id}', 'completed')">✓ Complete</button>
-                        <button class="btn btn-danger btn-sm" onclick="openCancelModal('${b.id}')">✕ Cancel</button>
+                        <button class="btn btn-secondary btn-sm" type="button" data-booking-action="status" data-booking-id="${b.id}" data-booking-status="completed">✓ Complete</button>
+                        <button class="btn btn-danger btn-sm" type="button" data-booking-action="cancel" data-booking-id="${b.id}">✕ Cancel</button>
                     ` : ''}
                     ${b.status === 'pending_manual_confirmation' ? `
-                        <button class="btn btn-primary btn-sm" style="background:#10b981;" onclick="updateStatus('${b.id}', 'confirmed', 'Bank transfer approved.')">✓ Approve Transfer</button>
-                        <button class="btn btn-danger btn-sm" onclick="updateStatus('${b.id}', 'rejected', 'Bank transfer not received.')">✕ Reject</button>
+                        <button class="btn btn-primary btn-sm" type="button" style="background:#10b981;" data-booking-action="status" data-booking-id="${b.id}" data-booking-status="confirmed" data-booking-note="Bank transfer approved.">✓ Approve Transfer</button>
+                        <button class="btn btn-danger btn-sm" type="button" data-booking-action="status" data-booking-id="${b.id}" data-booking-status="rejected" data-booking-note="Bank transfer not received.">✕ Reject</button>
                     ` : ''}
                     ${b.status === 'pending_payment' && b.payment_mode === 'paypal' ? `
-                        <button class="btn btn-primary btn-sm" style="background:#10b981;" onclick="updateStatus('${b.id}', 'confirmed', 'PayPal payment verified.')">✓ Verify PayPal Payment</button>
-                        <button class="btn btn-danger btn-sm" onclick="updateStatus('${b.id}', 'rejected', 'PayPal payment not received.')">✕ Reject</button>
+                        <button class="btn btn-primary btn-sm" type="button" style="background:#10b981;" data-booking-action="status" data-booking-id="${b.id}" data-booking-status="confirmed" data-booking-note="PayPal payment verified.">✓ Verify PayPal Payment</button>
+                        <button class="btn btn-danger btn-sm" type="button" data-booking-action="status" data-booking-id="${b.id}" data-booking-status="rejected" data-booking-note="PayPal payment not received.">✕ Reject</button>
                     ` : ''}
                     ${b.status === 'pending_after_hours_confirmation' ? `
                         <div style="font-size:11px;color:var(--text-dim);margin-bottom:6px;">After-hours fee: ${escHtml(b.after_hours_fee || '0')}</div>
-                        <button class="btn btn-primary btn-sm" style="background:#10b981;" onclick="updateStatus('${b.id}', 'confirmed', 'After-hours request approved.')">✓ Approve Request</button>
-                        <button class="btn btn-danger btn-sm" onclick="updateStatus('${b.id}', 'rejected', 'After-hours request unavailable.')">✕ Decline</button>
+                        <button class="btn btn-primary btn-sm" type="button" style="background:#10b981;" data-booking-action="status" data-booking-id="${b.id}" data-booking-status="confirmed" data-booking-note="After-hours request approved.">✓ Approve Request</button>
+                        <button class="btn btn-danger btn-sm" type="button" data-booking-action="status" data-booking-id="${b.id}" data-booking-status="rejected" data-booking-note="After-hours request unavailable.">✕ Decline</button>
                     ` : ''}
                 </td>
             </tr>
@@ -208,19 +217,39 @@
             </table>`;
     }
 
-    async function updateStatus(id, newStatus, note = '') {
+    function handleBookingAction(event) {
+        const button = event.target.closest('[data-booking-action]');
+        if (!button) return;
+        const id = button.dataset.bookingId;
+        if (button.dataset.bookingAction === 'cancel') {
+            openCancelModal(id);
+            return;
+        }
+        updateStatus(id, button.dataset.bookingStatus, button.dataset.bookingNote || '', button);
+    }
+
+    async function updateStatus(id, newStatus, note = '', triggerButton = null) {
+        if (bookingStatusBusy.has(id)) return;
         if (newStatus === 'rejected' && !confirmDialog('Are you sure you want to reject this booking?')) return;
         if (newStatus === 'confirmed' && !confirmDialog('Approve this request and confirm the booking?')) return;
-        
+
+        bookingStatusBusy.add(id);
+        const originalText = triggerButton?.textContent;
+        document.querySelectorAll(`[data-booking-id="${id}"]`).forEach(button => { button.disabled = true; });
+        if (triggerButton) triggerButton.textContent = 'Updating…';
         try {
             await apiFetch(`/api/v1/bookings/${id}/status`, {
                 method: 'PATCH',
-                body: JSON.stringify({ status: newStatus, note })
+                body: { status: newStatus, note }
             });
             showToast('Booking status updated to ' + newStatus);
-            loadBookings();
+            await loadBookings();
         } catch (e) {
             showToast(e.message, 'error');
+            document.querySelectorAll(`[data-booking-id="${id}"]`).forEach(button => { button.disabled = false; });
+            if (triggerButton && originalText) triggerButton.textContent = originalText;
+        } finally {
+            bookingStatusBusy.delete(id);
         }
     }
 
@@ -243,7 +272,7 @@
         try {
             await apiFetch(`/api/v1/bookings/${cancelTargetId}/cancel`, {
                 method: 'POST',
-                body: JSON.stringify({ reason })
+                body: { reason }
             });
             showToast('Booking cancelled. Customer has been notified.');
             closeModal('cancelModal');

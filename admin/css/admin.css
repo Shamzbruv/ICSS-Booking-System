@@ -1457,6 +1457,42 @@ select option { background: var(--surface-2); }
 @media (max-width: 900px) {
     :root { --sidebar-w: 64px; }
 
+    .hamburger {
+        display: flex;
+        position: fixed;
+        top: 14px;
+        left: 14px;
+        z-index: 300;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 9px 11px;
+        cursor: pointer;
+        backdrop-filter: blur(12px);
+        gap: 4px;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+    }
+    .hamburger span {
+        display: block;
+        width: 18px;
+        height: 2px;
+        background: var(--text);
+        border-radius: 2px;
+    }
+
+    .sidebar-backdrop {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.6);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        z-index: 150;
+    }
+    .sidebar-backdrop.show { display: block; }
+
     .sidebar {
         width: 64px;
         overflow: hidden;
@@ -1476,7 +1512,7 @@ select option { background: var(--surface-2); }
     .sidebar.open .user-role,
     .sidebar.open .logout-btn { display: block; }
 
-    .main-content { margin-left: 64px; padding: 20px 16px; }
+    .main-content { margin-left: 64px; padding: 70px 16px 20px; }
     .page-header { flex-direction: column; align-items: flex-start; gap: 12px; }
     .page-header button { align-self: stretch; justify-content: center; }
     .header-actions { width: 100%; flex-wrap: wrap; }

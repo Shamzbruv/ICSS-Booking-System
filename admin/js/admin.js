@@ -55,10 +55,20 @@ function setAuth(token, user) {
 }
 
 function clearAuth() {
-    localStorage.removeItem('icss_token');
-    localStorage.removeItem('icss_user');
-    sessionStorage.removeItem('_impToken');
-    sessionStorage.removeItem('_impTenant');
+    // Storage can be unavailable in strict/private browser modes. A failed
+    // cleanup must never prevent the user from reaching the login screen.
+    try {
+        localStorage.removeItem('icss_token');
+        localStorage.removeItem('icss_user');
+    } catch (error) {
+        console.warn('Unable to clear persistent authentication storage', error);
+    }
+    try {
+        sessionStorage.removeItem('_impToken');
+        sessionStorage.removeItem('_impTenant');
+    } catch (error) {
+        console.warn('Unable to clear impersonation storage', error);
+    }
 }
 
 function requireAuth() {
@@ -75,9 +85,10 @@ function requireAuth() {
     return true;
 }
 
-function logout() {
+function logout(event) {
+    event?.preventDefault?.();
     clearAuth();
-    window.location.href = 'login.html';
+    window.location.replace('login.html');
 }
 
 function populateUserUI() {
@@ -132,7 +143,12 @@ async function apiFetch(path, options = {}) {
     }
 
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+    if (!res.ok) {
+        const error = new Error(data.error || `HTTP ${res.status}`);
+        error.status = res.status;
+        if (data && typeof data === 'object') Object.assign(error, data);
+        throw error;
+    }
     return data;
 }
 
@@ -554,6 +570,9 @@ window.toggleSidebar = toggleSidebar;
 
 // Auto-init mobile nav on every page (runs after DOM ready)
 document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.logout-btn').forEach((button) => {
+        button.addEventListener('click', logout);
+    });
     setupMobileNav();
     ensureHelpMenuEntry();
     if (getToken() && document.querySelector('.sidebar-nav')) {

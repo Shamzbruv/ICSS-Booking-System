@@ -73,7 +73,7 @@
             <div class="user-avatar" id="userAvatar">?</div>
             <div><div class="user-name" id="userName">—</div><div class="user-role" id="userRole">—</div></div>
         </div>
-        <button class="logout-btn" onclick="logout()">Sign Out</button>
+        <button class="logout-btn" type="button">Sign Out</button>
     </div>
 </aside>
 
@@ -89,9 +89,9 @@
         <!-- Calendar -->
         <div class="table-wrap" style="padding:20px;">
             <div class="month-nav">
-                <button class="btn btn-secondary btn-sm" id="prevMonthBtn" onclick="changeMonth(-1)">‹</button>
+                <button class="btn btn-secondary btn-sm" id="prevMonthBtn" type="button" aria-label="Previous month">‹</button>
                 <div class="month-title" id="monthTitle">—</div>
-                <button class="btn btn-secondary btn-sm" id="nextMonthBtn" onclick="changeMonth(1)">›</button>
+                <button class="btn btn-secondary btn-sm" id="nextMonthBtn" type="button" aria-label="Next month">›</button>
             </div>
             <div class="calendar-grid">
                 <div class="cal-header">Sun</div><div class="cal-header">Mon</div><div class="cal-header">Tue</div>
@@ -132,10 +132,35 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-        requireAuth();
+        if (!requireAuth()) return;
         populateUserUI();
+        document.getElementById('prevMonthBtn').addEventListener('click', () => changeMonth(-1));
+        document.getElementById('nextMonthBtn').addEventListener('click', () => changeMonth(1));
+        document.querySelector('.calendar-grid').addEventListener('click', handleAvailabilityAction);
+        document.querySelector('.calendar-grid').addEventListener('keydown', handleAvailabilityKeyboard);
+        document.getElementById('detailPanel').addEventListener('click', handleAvailabilityAction);
+        document.getElementById('detailPanel').addEventListener('keydown', handleAvailabilityKeyboard);
         renderCalendar();
     });
+
+    function handleAvailabilityKeyboard(event) {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        const target = event.target.closest('[data-availability-action]');
+        if (!target) return;
+        event.preventDefault();
+        target.click();
+    }
+
+    function handleAvailabilityAction(event) {
+        const target = event.target.closest('[data-availability-action]');
+        if (!target) return;
+        const action = target.dataset.availabilityAction;
+        if (action === 'select-day') selectDay(target.dataset.date);
+        if (action === 'block-day') blockDay(target.dataset.date);
+        if (action === 'unblock-day') unblockDay(target.dataset.blockId);
+        if (action === 'block-slot') blockSlot(target.dataset.date, target.dataset.time);
+        if (action === 'unblock-slot') unblockSlot(target.dataset.blockId);
+    }
 
     function changeMonth(dir) {
         currentMonth += dir;
@@ -176,7 +201,7 @@
             if (isBlocked) cls += ' blocked';
             if (isSelected) cls += ' selected';
 
-            html += `<div class="${cls}" data-date="${dateStr}" onclick="selectDay('${dateStr}')">${d}</div>`;
+            html += `<div class="${cls}" data-availability-action="select-day" data-date="${dateStr}" role="button" tabindex="0">${d}</div>`;
         }
 
         // Re-mount (hacky but avoids React)
@@ -208,8 +233,8 @@
 
             ${isDayBlocked
                 ? `<div style="background:rgba(239,68,68,0.1);border:1px solid var(--danger);border-radius:var(--radius-sm);padding:14px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;">
-                       <div><strong style="color:var(--danger);">Day Blocked</strong> ${dayBlockObj?.reason ? `<span style="color:var(--text-dim);font-size:12px;"> — ${dayBlockObj.reason}</span>` : ''}</div>
-                       <button class="btn btn-secondary btn-sm" onclick="unblockDay('${dayBlockObj?.id}')">Unblock Day</button>
+                       <div><strong style="color:var(--danger);">Day Blocked</strong> ${dayBlockObj?.reason ? `<span style="color:var(--text-dim);font-size:12px;"> — ${escapeHtml(dayBlockObj.reason)}</span>` : ''}</div>
+                       <button class="btn btn-secondary btn-sm" type="button" data-availability-action="unblock-day" data-block-id="${dayBlockObj?.id || ''}">Unblock Day</button>
                    </div>`
                 : `<div style="margin-bottom:20px;">
                        <div class="form-row" style="align-items:flex-end;">
@@ -217,7 +242,7 @@
                                <label>Block Reason (optional)</label>
                                <input type="text" id="blockDayReason" placeholder="e.g. Holiday, Team event">
                            </div>
-                           <button class="btn btn-danger" onclick="blockDay('${dateStr}')">🔒 Block Entire Day</button>
+                           <button class="btn btn-danger" type="button" data-availability-action="block-day" data-date="${dateStr}">🔒 Block Entire Day</button>
                        </div>
                    </div>`
             }
@@ -229,7 +254,7 @@
                     ${SLOTS.map(s => {
                         const isSlotBlocked = blockedTimes.has(s.time);
                         const blockId = dayBlocks.find(b => b.block_type === 'slot' && b.block_time?.slice(0, 5) === s.time)?.id;
-                        return `<div class="slot-chip ${isSlotBlocked ? 'blocked' : ''}" onclick="${isSlotBlocked ? `unblockSlot('${blockId}')` : `blockSlot('${dateStr}', '${s.time}')`}">
+                        return `<div class="slot-chip ${isSlotBlocked ? 'blocked' : ''}" role="button" tabindex="0" data-availability-action="${isSlotBlocked ? 'unblock-slot' : 'block-slot'}" data-block-id="${blockId || ''}" data-date="${dateStr}" data-time="${s.time}">
                             ${s.label}${isSlotBlocked ? ' 🔒' : ''}
                         </div>`;
                     }).join('')}
