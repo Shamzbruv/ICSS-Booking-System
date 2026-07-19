@@ -35,6 +35,7 @@ app.use(helmet({
         directives: {
             defaultSrc:["'self'"],
             scriptSrc:["'self'","'unsafe-inline'",'https://www.paypal.com','https://www.paypalobjects.com','https://www.googletagmanager.com'],
+            scriptSrcAttr:["'none'"],
             styleSrc:["'self'","'unsafe-inline'",'https://fonts.googleapis.com','https://cdnjs.cloudflare.com'],
             fontSrc:["'self'",'https://fonts.gstatic.com','https://cdnjs.cloudflare.com','data:'],
             imgSrc:["'self'",'data:','https:'],
