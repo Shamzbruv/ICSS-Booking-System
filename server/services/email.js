@@ -607,6 +607,40 @@ async function sendBookingCancellationEmail(booking, reason, tenant) {
     console.log(`[Email] Cancellation email sent to ${booking.email}`);
 }
 
+// ── Booking Fulfilled ─────────────────────────────────────────────────────────
+async function sendBookingCompletedEmail(booking, tenant) {
+    const resend = getResend();
+    if (!resend || !booking?.email) return false;
+    const brand = getBrand(tenant);
+    const service = await getBookingServiceDetails(booking);
+    const firstName = escapeHtml((booking.name || '').split(' ')[0] || 'there');
+    const displayDate = formatDate(booking.booking_date);
+    const displayTime = formatTime(String(booking.booking_time || '').slice(0, 5));
+
+    await resend.emails.send({
+        from: getSenderAddress('appointments', brand),
+        to: [booking.email],
+        replyTo: brand.replyEmail,
+        subject: `Appointment Completed — ${brand.name}`,
+        html: `<div style="font-family:Arial,sans-serif;color:#1a1a1a;max-width:600px;margin:0 auto;border:1px solid #e8e8e8;">
+            ${headerHtml(brand)}
+            <div style="padding:40px 36px;background:#fff;">
+                <p style="font-size:15px;">Dear ${firstName},</p>
+                <h2 style="margin:0 0 12px;">Your appointment is complete</h2>
+                <p style="font-size:15px;line-height:1.7;">${escapeHtml(brand.name)} has marked your booking as fulfilled. Thank you for choosing us.</p>
+                <div style="background:#f9f9f9;border-left:4px solid ${brand.primaryColor};padding:18px 22px;margin:24px 0;">
+                    ${service.name ? `<p style="margin:6px 0;"><strong>Service:</strong> ${escapeHtml(service.name)}</p>` : ''}
+                    <p style="margin:6px 0;"><strong>Date:</strong> ${escapeHtml(displayDate)}</p>
+                    <p style="margin:6px 0;"><strong>Time:</strong> ${escapeHtml(displayTime)}</p>
+                </div>
+                <p style="font-size:14px;color:#555;line-height:1.7;">If anything about this booking needs attention, reply to this email and the business will assist you.</p>
+            </div>${footerHtml(brand)}
+        </div>`
+    });
+    console.log(`[Email] Booking completion sent to ${booking.email}`);
+    return true;
+}
+
 // ── Order Confirmation ─────────────────────────────────────────────────────────
 async function sendOrderConfirmation(order, items, tenant) {
     const resend = getResend();
@@ -1027,6 +1061,7 @@ module.exports = {
     sendBookingConfirmation,
     sendBookingPendingReviewEmail,
     sendBookingCancellationEmail,
+    sendBookingCompletedEmail,
     sendOrderConfirmation,
     sendDesignInquiryEmail,
     sendSupportRequestEmail,

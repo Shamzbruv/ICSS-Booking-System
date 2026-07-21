@@ -621,7 +621,24 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
       });
 
       if (res.checkoutUrl) {
-        window.location.href = res.checkoutUrl;
+        const conversion = res.paypalConversion;
+        const source = conversion
+          ? formatCurrency(conversion.sourceAmount, conversion.sourceCurrency)
+          : formatCurrency(paymentDetails.dueToday, selectedService.currency || 'JMD');
+        const usd = conversion ? `USD $${Number(conversion.usdAmount).toFixed(2)}` : 'the USD amount shown';
+        setConfirmModal({
+          service: selectedService.name,
+          date: selectedDate,
+          time: selectedTime,
+          duration: selectedService.duration_minutes,
+          status: 'pending_payment',
+          title: 'Continue to PayPal',
+          text: `${source} has been converted to ${usd} for PayPal. Open PayPal below, complete payment, then return to this screen. Your booking remains pending until the business verifies the payment.`,
+          checkoutUrl: res.checkoutUrl,
+          sourceAmount: source,
+          paypalAmount: usd,
+          rate: conversion?.jmdPerUsd
+        });
       } else {
         setConfirmModal({
           service: selectedService.name,
@@ -970,7 +987,20 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
                 {' at '}
                 {formatDisplayTime(confirmModal.time)}
               </p>
+              {confirmModal.checkoutUrl && (
+                <div className={styles.conversionSummary}>
+                  <span>{confirmModal.sourceAmount}</span>
+                  <span aria-hidden="true">→</span>
+                  <strong>{confirmModal.paypalAmount}</strong>
+                  {confirmModal.rate && <small>Conversion rate: JMD ${Number(confirmModal.rate).toFixed(2)} = USD $1.00</small>}
+                </div>
+              )}
             </div>
+            {confirmModal.checkoutUrl && (
+              <a href={confirmModal.checkoutUrl} target="_blank" rel="noreferrer" className={styles.paypalButton}>
+                Open PayPal and Pay {confirmModal.paypalAmount}
+              </a>
+            )}
             {confirmModal.status === 'confirmed' && (
               <>
                 <p className={styles.modalToolsLabel}>Add to your calendar</p>
@@ -993,8 +1023,8 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
                 </div>
               </>
             )}
-            <button type="button" onClick={() => { setConfirmModal(null); window.location.reload(); }} className={styles.primaryButton}>
-              Done
+            <button type="button" onClick={() => { setConfirmModal(null); window.location.reload(); }} className={confirmModal.checkoutUrl ? styles.secondaryButton : styles.primaryButton}>
+              {confirmModal.checkoutUrl ? 'Return to booking site' : 'Done'}
             </button>
           </div>
         </div>

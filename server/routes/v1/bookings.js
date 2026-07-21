@@ -8,10 +8,11 @@ const router  = express.Router();
 const { query, transaction }    = require('../../db/connection');
 const { authenticate, requireRole } = require('../../middleware/auth');
 const { enforceBookingLimit }   = require('../../services/subscription');
-const { sendBookingCancellationEmail, sendBookingPendingReviewEmail } = require('../../services/email');
+const { sendBookingCancellationEmail, sendBookingPendingReviewEmail, sendBookingCompletedEmail } = require('../../services/email');
 const { sendBookingConfirmationNotifications } = require('../../services/bookingNotifications');
 const calendarSync              = require('../../services/calendarSync');
 const { normalizeDepositConfig, calculateAmountDue } = require('../../services/paymentRules');
+const { convertForPayPal } = require('../../services/currencyConversion');
 
 const MAX_BOOKINGS_PER_DAY = 14;
 const MAX_DAYS_AHEAD       = 30;
@@ -253,6 +254,7 @@ router.post('/', enforceBookingLimit, async (req, res) => {
             const booking = bookingRes.rows[0];
 
             let checkoutUrl = null;
+            let paypalConversion = null;
             let bankInstructions = null;
 
             // 6. Handle Payment Records
@@ -266,13 +268,14 @@ router.post('/', enforceBookingLimit, async (req, res) => {
 
                 if (paymentMode === 'paypal') {
                     const currency = String(service.currency || 'JMD').toUpperCase();
-                    checkoutUrl = `${String(tenant.paypal_payment_link).replace(/\/$/, '')}/${Number(amountDue).toFixed(2)}${currency}`;
+                    paypalConversion = convertForPayPal(amountDue, currency);
+                    checkoutUrl = `${String(tenant.paypal_payment_link).replace(/\/$/, '')}/${paypalConversion.usdAmount.toFixed(2)}USD`;
                 } else if (paymentMode === 'manual') {
                     bankInstructions = tenant.bank_transfer_instructions;
                 }
             }
 
-            return { booking, checkoutUrl, bankInstructions, service_name: service.name };
+            return { booking, checkoutUrl, paypalConversion, bankInstructions, service_name: service.name };
         });
 
         // 7. Enqueue Expiration Job if there is a hold
@@ -441,12 +444,14 @@ router.patch('/:id/status', authenticate, requireRole('staff', 'tenant_admin'), 
     }
     
     try {
+        let previousStatus = null;
         const result = await transaction(async (client) => {
             const bRes = await client.query(`SELECT * FROM bookings WHERE id = $1 AND tenant_id = $2 FOR UPDATE`, [req.params.id, req.tenant.id]);
             if (bRes.rows.length === 0) {
                 const err = new Error('Booking not found.'); err.status = 404; throw err;
             }
             const booking = bRes.rows[0];
+            previousStatus = booking.status;
 
             if (booking.status === 'pending_after_hours_confirmation' && status === 'confirmed') {
                 const conflicts = await client.query(
@@ -497,6 +502,8 @@ router.patch('/:id/status', authenticate, requireRole('staff', 'tenant_admin'), 
             sendBookingConfirmationNotifications(result, req.tenant).catch(console.error);
         } else if (status === 'cancelled' || status === 'rejected') {
             sendBookingCancellationEmail(result, note, req.tenant).catch(console.error);
+        } else if (status === 'completed' && previousStatus !== 'completed') {
+            sendBookingCompletedEmail(result, req.tenant).catch(console.error);
         }
 
         res.json({ success: true, booking: serializeBooking(result) });
