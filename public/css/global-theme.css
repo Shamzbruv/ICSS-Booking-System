@@ -27,9 +27,8 @@ body {
   left: 0;
   right: 0;
   bottom: 0;
-  background: radial-gradient(circle at 20% 30%, rgba(99, 102, 241, 0.15) 0%, transparent 40%),
-              radial-gradient(circle at 80% 70%, rgba(236, 72, 153, 0.12) 0%, transparent 45%),
-              radial-gradient(circle at 50% 50%, rgba(16, 185, 129, 0.08) 0%, transparent 50%),
+  background: radial-gradient(circle at 20% 30%, rgba(109, 40, 217, 0.18) 0%, transparent 40%),
+              radial-gradient(circle at 80% 70%, rgba(124, 110, 247, 0.12) 0%, transparent 45%),
               #0a0a0f;
   z-index: -2;
 }
@@ -101,6 +100,7 @@ body {
   gap: 40px;
   align-items: center;
 }
+.nav-menu-toggle, .nav-mobile-cta { display: none; }
 
 .nav-links a {
   color: #a1a1aa;
@@ -1078,14 +1078,31 @@ body {
 
 @media (max-width: 768px) {
   .navbar {
-    flex-direction: column;
-    gap: 20px;
+    position: relative;
+    flex-direction: row;
+    gap: 12px;
   }
   .nav-links {
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 16px;
+    display: none;
+    position: absolute;
+    z-index: 50;
+    top: calc(100% + 8px);
+    left: 0;
+    right: 0;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+    padding: 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    background: var(--bg-secondary);
+    box-shadow: 0 18px 50px rgba(0,0,0,.35);
   }
+  .nav-links.is-open { display: flex; }
+  .nav-links a { min-height: 44px; display: flex; align-items: center; padding: 10px 12px; }
+  .nav-mobile-cta { display: inline-flex; min-height: 44px; margin-left: auto; align-items: center; padding: 0 14px; border-radius: 999px; background: #6d28d9; color: #fff; font-size: .82rem; font-weight: 700; }
+  .nav-menu-toggle { display: inline-flex; width: 44px; height: 44px; flex-direction: column; align-items: center; justify-content: center; gap: 5px; color: #fff; border: 1px solid rgba(255,255,255,.12); border-radius: 12px; }
+  .nav-menu-toggle span { width: 19px; height: 2px; border-radius: 2px; background: currentColor; }
   .hero h1 {
     font-size: 2.8rem;
   }
@@ -1110,7 +1127,7 @@ body {
     gap: 40px;
   }
   .preview-container {
-    min-height: 600px;
+    min-height: 500px;
   }
   .section-header h2 {
     font-size: 2rem;
@@ -1183,9 +1200,16 @@ body {
     font-size: 2.8rem;
   }
   .industry-tabs {
+    justify-content: flex-start;
+    flex-wrap: nowrap;
     gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 8px;
+    scrollbar-width: none;
   }
+  .industry-tabs::-webkit-scrollbar { display: none; }
   .tab-btn {
+    flex: 0 0 auto;
     padding: 10px 16px;
     font-size: 0.85rem;
   }

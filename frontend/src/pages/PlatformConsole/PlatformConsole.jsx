@@ -554,6 +554,8 @@ const VIEW_MAP = {
 function ConsoleShell() {
   const { platformUser, logout, loading, authError, isImpersonating } = useConsole();
   const [activeView, setActiveView] = useState('dashboard');
+  const [navOpen, setNavOpen] = useState(false);
+  const activeLabel = NAV.find(item => item.id === activeView)?.label || 'Platform Console';
 
   if (loading) return <div className={s.fullscreen}><div className={s.spinner} /></div>;
   if (!platformUser) return <ConsoleLogin />;
@@ -562,8 +564,14 @@ function ConsoleShell() {
     <div className={s.shell}>
       <ImpersonationBanner />
 
+      <header className={s.mobileHeader}>
+        <button type="button" onClick={() => setNavOpen(true)} aria-label="Open navigation">☰</button>
+        <strong>{activeLabel}</strong>
+      </header>
+      {navOpen && <button type="button" className={s.navBackdrop} aria-label="Close navigation" onClick={() => setNavOpen(false)} />}
+
       {/* Sidebar */}
-      <aside className={s.sidebar}>
+      <aside className={`${s.sidebar} ${navOpen ? s.sidebarOpen : ''}`}>
         <div className={s.sidebar__brand}>
           <span className={s.sidebar__brandIcon}>⚙️</span>
           <span>Platform Console</span>
@@ -574,7 +582,7 @@ function ConsoleShell() {
             <button
               key={item.id}
               className={`${s.navItem} ${activeView === item.id ? s['navItem--active'] : ''}`}
-              onClick={() => setActiveView(item.id)}
+              onClick={() => { setActiveView(item.id); setNavOpen(false); }}
             >
               <span className={s.navItem__icon}>{item.icon}</span>
               <span>{item.label}</span>

@@ -23,6 +23,7 @@
   font-size: 14px;
   overflow: hidden;
 }
+.mobileHeader, .navBackdrop { display: none; }
 
 .fullscreen {
   min-height: 100vh;
@@ -166,6 +167,22 @@
   flex: 1;
   overflow-y: auto;
   height: 100vh;
+}
+
+@media (max-width: 760px) {
+  .shell { display: block; height: auto; min-height: 100dvh; overflow: visible; padding-top: calc(58px + env(safe-area-inset-top)); }
+  .mobileHeader { position: fixed; inset: 0 0 auto; z-index: 510; display: flex; align-items: center; gap: 12px; height: calc(58px + env(safe-area-inset-top)); padding: env(safe-area-inset-top) 16px 0; background: var(--pc-surface); border-bottom: 1px solid var(--pc-border); }
+  .mobileHeader button { min-width: 44px; min-height: 44px; color: var(--pc-text); font-size: 20px; }
+  .navBackdrop { display: block; position: fixed; inset: 0; z-index: 520; width: 100%; height: 100%; background: rgba(0,0,0,.65); }
+  .sidebar { position: fixed; z-index: 530; inset: 0 auto 0 0; width: min(86vw, 320px); height: 100dvh; padding-top: env(safe-area-inset-top); transform: translateX(-102%); transition: transform .22s ease; }
+  .sidebarOpen { transform: translateX(0); }
+  .navItem { min-height: 44px; }
+  .main { height: auto; min-height: calc(100dvh - 58px); overflow: visible; }
+  .view { padding: 20px max(14px, env(safe-area-inset-right)) calc(28px + env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left)); }
+  .view__header { align-items: stretch; flex-direction: column; }
+  .view__header input, .view__header select { width: 100%; }
+  .table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .drawer, .tenantDrawer { width: 100% !important; max-width: none !important; height: 100dvh; padding-bottom: env(safe-area-inset-bottom); }
 }
 
 .view { padding: 28px 32px; }

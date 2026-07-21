@@ -130,7 +130,9 @@
           <span style="font-size: 0.55rem; letter-spacing: 2px; color: #a1a1aa; font-weight: 600; line-height: 1; margin-top: 2px;">BOOKING MANAGEMENT</span>
         </div>
       </div>
-      <div class="nav-links">
+      <a href="platform-setup.html" class="nav-mobile-cta">Start Free Trial</a>
+      <button class="nav-menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false" aria-controls="primaryNav"><span></span><span></span><span></span></button>
+      <div class="nav-links" id="primaryNav">
         <a href="#features">Product</a>
         <a href="#showcase">Solutions</a>
         <a href="platform-setup.html">Pricing</a>
@@ -153,7 +155,7 @@
           <a href="platform-setup.html" class="btn-primary">
             <i class="fas fa-rocket"></i> Start your 7-day free trial
           </a>
-          <button class="btn-secondary" onclick="document.getElementById('showcase').scrollIntoView({behavior: 'smooth'})">
+          <button class="btn-secondary" data-scroll-target="showcase">
             <i class="fas fa-play"></i> See it in action
           </button>
         </div>
@@ -1135,7 +1137,7 @@
               <a href="platform-setup.html" class="btn-primary">
                 <i class="fas fa-rocket"></i> Start your 7-day free trial
               </a>
-              <button class="btn-secondary" onclick="document.getElementById('showcase').scrollIntoView({behavior: 'smooth'})">
+              <button class="btn-secondary" data-scroll-target="showcase">
                 <i class="fas fa-eye"></i> View starter kits
               </button>
             </div>
@@ -1369,6 +1371,22 @@
   </div>
 
   <script>
+    document.querySelectorAll('[data-scroll-target]').forEach(button => {
+      button.addEventListener('click', () => {
+        document.getElementById(button.dataset.scrollTarget)?.scrollIntoView({ behavior: 'smooth' });
+      });
+    });
+    const menuToggle = document.querySelector('.nav-menu-toggle');
+    const primaryNav = document.getElementById('primaryNav');
+    menuToggle?.addEventListener('click', () => {
+      const isOpen = primaryNav.classList.toggle('is-open');
+      menuToggle.setAttribute('aria-expanded', String(isOpen));
+      menuToggle.setAttribute('aria-label', isOpen ? 'Close navigation' : 'Open navigation');
+    });
+    primaryNav?.querySelectorAll('a').forEach(link => link.addEventListener('click', () => {
+      primaryNav.classList.remove('is-open');
+      menuToggle?.setAttribute('aria-expanded', 'false');
+    }));
     // Industry tab switching with smooth transitions
     const tabs = document.querySelectorAll('.tab-btn');
     const panels = {

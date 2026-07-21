@@ -5,6 +5,8 @@
   background: var(--color-bg);
 }
 
+.mobileModes { display: none; }
+
 .sidebar {
   width: 260px;
   background: var(--color-surface);
@@ -229,8 +231,27 @@
 .btnDanger:hover {
   background: rgba(245, 101, 101, 0.2);
 }
+.reorderActions { display: flex; gap: 8px; }
+.reorderActions button { flex: 1; padding: 10px; color: var(--color-text); border: 1px solid var(--color-border); border-radius: 8px; }
 
 .gridItem--selected {
   border-color: var(--color-primary);
   box-shadow: 0 0 0 2px var(--color-primary);
+}
+
+@media (max-width: 760px) {
+  .editorLayout { display: block; height: 100dvh; padding-bottom: calc(64px + var(--safe-bottom)); overflow: hidden; }
+  .sidebar, .canvas, .propertiesPanel { width: 100%; height: 100%; border: 0; }
+  .sidebar, .propertiesPanel { display: none; }
+  .canvas__toolbar { height: auto; min-height: 58px; padding: calc(8px + var(--safe-top)) 14px 8px; }
+  .canvas__toolbar h2 { font-size: 13px; }
+  .deviceToggle { display: none; }
+  .gridContainer { padding: 12px; }
+  .mobileModes { position: fixed; z-index: 200; display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; left: 0; right: 0; bottom: 0; padding: 8px 10px calc(8px + var(--safe-bottom)); background: var(--color-surface); border-top: 1px solid var(--color-border); }
+  .mobileModes button { color: var(--color-text-muted); border-radius: 8px; font-size: 12px; }
+  .mobileModes button.active { color: #fff; background: var(--color-primary); }
+  .showBlocks .sidebar, .showStyle .propertiesPanel { display: flex; padding-top: var(--safe-top); }
+  .showBlocks .canvas, .showStyle .canvas { display: none; }
+  .componentBox { min-height: 54px; cursor: pointer; }
+  .propInput { font-size: 16px; min-height: 44px; }
 }

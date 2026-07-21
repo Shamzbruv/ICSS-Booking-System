@@ -13,6 +13,7 @@ export default function ThemeSelector() {
   const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('All');
+  const [previewWidth, setPreviewWidth] = useState('100%');
 
   useEffect(() => {
     api.themes().then(d => {
@@ -119,11 +120,11 @@ export default function ThemeSelector() {
           </div>
           <div className={s.previewPanel__device}>
             <div className={s.deviceToggle}>
-              <button onClick={() => document.getElementById('previewFrame').style.width = '100%'}>🖥 Desktop</button>
-              <button onClick={() => document.getElementById('previewFrame').style.width = '390px'}>📱 Mobile</button>
+              <button onClick={() => setPreviewWidth('100%')}>Desktop</button>
+              <button onClick={() => setPreviewWidth('390px')}>Mobile</button>
             </div>
             <iframe id="previewFrame" src={preview} title="Theme Preview"
-              style={{ width: '100%', height: '100%', border: 'none', background: '#fff', borderRadius: 8 }} />
+              style={{ width: previewWidth, maxWidth: '100%', height: '100%', border: 'none', background: '#fff', borderRadius: 8 }} />
           </div>
           <div className={s.previewPanel__actions}>
             <button className={s.btnGhost} onClick={() => setPreview(null)}>Back to Grid</button>

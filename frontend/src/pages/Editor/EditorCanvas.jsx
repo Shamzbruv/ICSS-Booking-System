@@ -20,6 +20,15 @@ export default function EditorCanvas() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [selectedItemId, setSelectedItemId] = useState(null);
+  const [mobileMode, setMobileMode] = useState('canvas');
+  const [isMobile, setIsMobile] = useState(() => window.matchMedia('(max-width: 760px)').matches);
+
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 760px)');
+    const update = () => setIsMobile(media.matches);
+    media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
+  }, []);
 
   useEffect(() => {
     api.me().then(user => {
@@ -78,6 +87,31 @@ export default function EditorCanvas() {
     setSelectedItemId(id);
   };
 
+  const addComponent = (type) => {
+    const maxY = layout.reduce((value, item) => Math.max(value, item.y + item.h), 0);
+    const props = type === 'header'
+      ? { text: 'New Header', bgColor: '#111318', textColor: '#e8eaf0' }
+      : type === 'services'
+        ? { showPrices: true, showDesc: true, cardColor: '#191c24' }
+        : { themeColor: '#7c6ef7' };
+    const item = { i: `${type}_${Date.now()}`, type, x: 0, y: maxY, w: type === 'services' ? 8 : 12, h: type === 'calendar' ? 4 : type === 'services' ? 4 : 2, minW: 2, minH: 2, props };
+    setLayout(previous => [...previous, item]);
+    setSelectedItemId(item.i);
+    setMobileMode('canvas');
+  };
+
+  const moveSelected = (direction) => {
+    setLayout(previous => {
+      const ordered = [...previous].sort((a, b) => a.y - b.y);
+      const index = ordered.findIndex(item => item.i === selectedItemId);
+      const destination = index + direction;
+      if (index < 0 || destination < 0 || destination >= ordered.length) return previous;
+      [ordered[index], ordered[destination]] = [ordered[destination], ordered[index]];
+      let y = 0;
+      return ordered.map(item => { const next = { ...item, x: 0, y }; y += item.h; return next; });
+    });
+  };
+
   const saveLayout = async () => {
     if (!tenantSlug) return;
     setSaving(true);
@@ -108,19 +142,19 @@ export default function EditorCanvas() {
   const selectedItem = layout.find(item => item.i === selectedItemId);
 
   return (
-    <div className={s.editorLayout}>
+    <div className={`${s.editorLayout} ${mobileMode === 'blocks' ? s.showBlocks : ''} ${mobileMode === 'style' ? s.showStyle : ''}`}>
       <aside className={s.sidebar}>
         <div className={s.sidebar__header}>Components</div>
         <div className={s.sidebar__list}>
-          <div className={s.componentBox} draggable="true" onDragStart={e => e.dataTransfer.setData('text/plain', 'header')}>
+          <button type="button" className={s.componentBox} draggable={!isMobile} onClick={() => isMobile && addComponent('header')} onDragStart={e => e.dataTransfer.setData('text/plain', 'header')}>
             Banner & Header
-          </div>
-          <div className={s.componentBox} draggable="true" onDragStart={e => e.dataTransfer.setData('text/plain', 'services')}>
+          </button>
+          <button type="button" className={s.componentBox} draggable={!isMobile} onClick={() => isMobile && addComponent('services')} onDragStart={e => e.dataTransfer.setData('text/plain', 'services')}>
             Service Menu
-          </div>
-          <div className={s.componentBox} draggable="true" onDragStart={e => e.dataTransfer.setData('text/plain', 'calendar')}>
+          </button>
+          <button type="button" className={s.componentBox} draggable={!isMobile} onClick={() => isMobile && addComponent('calendar')} onDragStart={e => e.dataTransfer.setData('text/plain', 'calendar')}>
             Booking Calendar
-          </div>
+          </button>
         </div>
         <div className={s.sidebar__actions}>
           <button className={s.btnSave} onClick={saveLayout} disabled={saving}>
@@ -155,6 +189,8 @@ export default function EditorCanvas() {
               isDroppable={true}
               onDrop={onDrop}
               isBounded={true}
+              isDraggable={!isMobile}
+              isResizable={!isMobile}
             >
               {layout.map((item) => (
                 <div 
@@ -260,10 +296,19 @@ export default function EditorCanvas() {
               <button className={s.btnDanger} onClick={deleteSelected}>
                 🗑 Delete Component
               </button>
+              <div className={s.reorderActions}>
+                <button type="button" onClick={() => moveSelected(-1)}>Move up</button>
+                <button type="button" onClick={() => moveSelected(1)}>Move down</button>
+              </div>
             </>
           )}
         </div>
       </aside>
+      <nav className={s.mobileModes} aria-label="Editor modes">
+        <button type="button" className={mobileMode === 'canvas' ? s.active : ''} onClick={() => setMobileMode('canvas')}>Canvas</button>
+        <button type="button" className={mobileMode === 'blocks' ? s.active : ''} onClick={() => setMobileMode('blocks')}>Add Blocks</button>
+        <button type="button" className={mobileMode === 'style' ? s.active : ''} onClick={() => setMobileMode('style')}>Style</button>
+      </nav>
     </div>
   );
 }

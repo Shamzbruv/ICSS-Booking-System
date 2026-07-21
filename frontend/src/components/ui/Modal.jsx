@@ -21,8 +21,12 @@ export default function Modal({
     const el = dialogRef.current;
     if (!el) return;
 
-    // Lock body scroll
+    // Lock body scroll without losing the current iOS scroll position.
+    const scrollY = window.scrollY;
     document.body.classList.add('modal-open');
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.width = '100%';
 
     // Focus first focusable element
     const focusable = el.querySelectorAll(
@@ -49,6 +53,10 @@ export default function Modal({
       el.removeEventListener('keydown', trap);
       el.removeEventListener('keydown', esc);
       document.body.classList.remove('modal-open');
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.width = '';
+      window.scrollTo(0, scrollY);
     };
   }, [isOpen, onClose]);
 
