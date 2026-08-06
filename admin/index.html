@@ -92,10 +92,10 @@
             <p class="page-subtitle" id="currentDate">Loading...</p>
         </div>
         <div class="header-actions">
-            <div class="date-filter" style="display: flex; gap: 8px; align-items: center; background: rgba(255,255,255,0.03); border: 1px solid var(--border); padding: 6px 12px; border-radius: 8px;">
-                <input type="date" id="filterStartDate" class="date-input" aria-label="Start Date" style="background: transparent; color: white; border: none; font-family: inherit; font-size: 14px; outline: none; color-scheme: dark;">
+            <div class="date-filter" style="display: flex; gap: 8px; align-items: center; background: var(--surface-2); border: 1px solid var(--border); padding: 6px 12px; border-radius: 8px;">
+                <input type="date" id="filterStartDate" class="date-input" aria-label="Start Date" style="background: transparent; color: var(--text); border: none; font-family: inherit; font-size: 14px; outline: none; color-scheme: light;">
                 <span style="color: #666;">-</span>
-                <input type="date" id="filterEndDate" class="date-input" aria-label="End Date" style="background: transparent; color: white; border: none; font-family: inherit; font-size: 14px; outline: none; color-scheme: dark;">
+                <input type="date" id="filterEndDate" class="date-input" aria-label="End Date" style="background: transparent; color: var(--text); border: none; font-family: inherit; font-size: 14px; outline: none; color-scheme: light;">
                 <button class="btn btn-primary" id="applyDateFilterBtn" type="button" style="padding: 6px 12px; font-size: 13px; min-height: unset; height: auto;">Apply</button>
             </div>
             <button class="btn btn-secondary" type="button" id="startTourBtn">✦ Start Tutorial</button>
@@ -256,7 +256,7 @@
                     topServicesList.innerHTML = '<div class="empty-state" style="color: #666; font-size: 0.9rem;">No services booked in this period.</div>';
                 } else {
                     topServicesList.replaceChildren(...data.topServices.map(ts => {
-                        const row=document.createElement('div');row.className='top-service-item';row.style.cssText='display:flex;justify-content:space-between;align-items:center;padding:12px;background: var(--surface-2);border-radius:8px;border:1px solid rgba(255,255,255,.05)';
+                        const row=document.createElement('div');row.className='top-service-item';row.style.cssText='display:flex;justify-content:space-between;align-items:center;padding:12px;background: var(--surface-2);border-radius:8px;border: 1px solid var(--border)';
                         const name=document.createElement('div');name.className='top-service-name';name.textContent=`${ts.name} (${ts.count} bookings)`;
                         const revenue=document.createElement('div');revenue.className='top-service-revenue';revenue.textContent=new Intl.NumberFormat('en-US',{style:'currency',currency:ts.currency||data.revenueCurrency||'JMD'}).format(ts.revenue);
                         row.append(name,revenue);return row;
