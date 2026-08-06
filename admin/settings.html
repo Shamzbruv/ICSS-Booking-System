@@ -273,7 +273,7 @@
 
         <div class="schedule-notice" style="margin-top:1.5rem;padding:18px;">
             <label style="display:flex;align-items:flex-start;gap:12px;cursor:pointer;">
-                <input type="checkbox" id="after_hours_requests_enabled" style="width:18px;height:18px;margin-top:2px;accent-color:var(--gold);">
+                <input type="checkbox" id="after_hours_requests_enabled" style="width:18px;height:18px;margin-top:2px;accent-color:var(--primary);">
                 <span><strong>Allow after-hours time requests</strong><br><small style="color:var(--text-dim);">Clients may request a custom time outside this schedule. Requests stay pending until you approve or decline them.</small></span>
             </label>
             <div class="form-group" style="margin-top:16px;max-width:280px;">
@@ -654,7 +654,7 @@
             row.innerHTML = `
                 <div class="schedule-row-head">
                     <label class="schedule-day-toggle">
-                        <input type="checkbox" id="day_active_${day}" class="schedule-day-checkbox" ${h.active ? 'checked' : ''} data-schedule-action="toggle-day" data-day="${day}" style="accent-color:var(--gold);">
+                        <input type="checkbox" id="day_active_${day}" class="schedule-day-checkbox" ${h.active ? 'checked' : ''} data-schedule-action="toggle-day" data-day="${day}" style="accent-color:var(--primary);">
                         <span class="schedule-day-name">${DAY_LABELS[day]}</span>
                     </label>
                     <div class="schedule-row-meta">

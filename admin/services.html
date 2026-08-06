@@ -429,7 +429,7 @@
                     </td>
                     <td data-label="Duration" style="padding: 1rem;">${formatDuration(svc.duration_minutes)}${svc.buffer_time_minutes > 0 ? ` + ${formatDuration(svc.buffer_time_minutes)} buffer` : ''}</td>
                     <td data-label="Price" style="padding: 1rem;">${escHtml(svc.currency || 'JMD')} ${Number(svc.price).toLocaleString()}</td>
-                    <td data-label="Payment" style="padding: 1rem;"><span style="background:var(--gold-glow);color:var(--gold);padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;">${escHtml(svc.payment_mode || 'default')}</span></td>
+                    <td data-label="Payment" style="padding: 1rem;"><span style="background:var(--primary-glow);color:var(--primary);padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;">${escHtml(svc.payment_mode || 'default')}</span></td>
                     <td data-label="Deposit" style="padding: 1rem;">${formatDepositRule(svc)}</td>
                     <td style="padding: 1rem;">
                         <button class="btn btn-secondary btn-sm" type="button" data-service-action="edit" data-service-id="${svc.id}">✏️ Edit</button>

@@ -226,7 +226,7 @@
         const rows = tenants.map(t => `
             <tr>
                 <td data-label="Name"><strong>${escHtml(t.name)}</strong></td>
-                <td data-label="Handle" style="color:var(--gold);font-family:monospace;">${escHtml(t.slug)}</td>
+                <td data-label="Handle" style="color:var(--primary);font-family:monospace;">${escHtml(t.slug)}</td>
                 <td data-label="Plan"><span class="badge ${planColors[t.plan_id] || 'badge-default'}">${capitalize(t.plan_id || '—')}</span></td>
                 <td data-label="Bookings">${parseInt(t.total_bookings || 0).toLocaleString()}</td>
                 <td data-label="Users">${parseInt(t.total_users || 0)}</td>
