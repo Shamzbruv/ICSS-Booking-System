@@ -76,19 +76,21 @@ router.post('/login', authLimiter, async (req, res) => {
 
     try {
         // ── Platform-level login — no tenant association required ─────────────
-        const ownerRes = await query(
-            `SELECT id, email, name, role, password_hash FROM users
-             WHERE email = $1 AND role IN ('platform_owner', 'developer_admin', 'platform_partner') AND active = true`,
-            [email.toLowerCase().trim()]
-        );
+        if (!tenantSlug) {
+            const ownerRes = await query(
+                `SELECT id, email, name, role, password_hash FROM users
+                 WHERE email = $1 AND role IN ('platform_owner', 'developer_admin', 'platform_partner') AND active = true`,
+                [email.toLowerCase().trim()]
+            );
 
-        if (ownerRes.rows.length > 0) {
-            const owner = ownerRes.rows[0];
-            const valid = await bcrypt.compare(password, owner.password_hash);
-            if (!valid) return res.status(401).json({ error: 'Invalid email or password.' });
+            if (ownerRes.rows.length > 0) {
+                const owner = ownerRes.rows[0];
+                const valid = await bcrypt.compare(password, owner.password_hash);
+                if (!valid) return res.status(401).json({ error: 'Invalid email or password.' });
 
-            const token = signToken({ id: owner.id, email: owner.email, role: owner.role }, tokenExpiry);
-            return res.json({ token, user: { id: owner.id, email: owner.email, name: owner.name, role: owner.role } });
+                const token = signToken({ id: owner.id, email: owner.email, role: owner.role }, tokenExpiry);
+                return res.json({ token, user: { id: owner.id, email: owner.email, name: owner.name, role: owner.role } });
+            }
         }
 
         // ── Standard tenant-scoped login ──────────────────────────────────────

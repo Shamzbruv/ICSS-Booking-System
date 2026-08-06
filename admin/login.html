@@ -121,9 +121,12 @@
                     body:    JSON.stringify({ email, password, tenantSlug: slug, rememberMe })
                 });
                 setAuth(data.token, data.user);
-                window.location.href = 'index.html';
+                if (['platform_owner', 'super_admin', 'developer_admin'].includes(data.user.role)) {
+                    window.location.href = 'tenants.html';
+                } else {
+                    window.location.href = 'index.html';
+                }
             } catch (err) {
-                // If the backend needs the handle to disambiguate multiple accounts
                 if (err.requiresHandle) {
                     slugEl.style.borderColor = 'var(--danger)';
                     slugEl.focus();
