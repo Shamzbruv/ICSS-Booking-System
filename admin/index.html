@@ -92,9 +92,9 @@
         </div>
         <div class="header-actions">
             <div class="date-filter" style="display: flex; gap: 8px; align-items: center; background: var(--surface-2); border: 1px solid var(--border); padding: 6px 12px; border-radius: 8px;">
-                <input type="date" id="filterStartDate" class="date-input" aria-label="Start Date" style="background: transparent; color: var(--text); border: none; font-family: inherit; font-size: 14px; outline: none; color-scheme: light;">
+                <input type="text" id="filterStartDate" class="date-input" placeholder="Start Date" aria-label="Start Date" onfocus="(this.type='date')" onblur="(this.type=this.value?'date':'text')" style="background: transparent; color: var(--text); border: none; font-family: inherit; font-size: 14px; outline: none;">
                 <span style="color: #666;">-</span>
-                <input type="date" id="filterEndDate" class="date-input" aria-label="End Date" style="background: transparent; color: var(--text); border: none; font-family: inherit; font-size: 14px; outline: none; color-scheme: light;">
+                <input type="text" id="filterEndDate" class="date-input" placeholder="End Date" aria-label="End Date" onfocus="(this.type='date')" onblur="(this.type=this.value?'date':'text')" style="background: transparent; color: var(--text); border: none; font-family: inherit; font-size: 14px; outline: none;">
                 <button class="btn btn-primary" id="applyDateFilterBtn" type="button" style="padding: 6px 12px; font-size: 13px; min-height: unset; height: auto;">Apply</button>
             </div>
             <button class="btn btn-secondary" type="button" id="startTourBtn">✦ Start Tutorial</button>
