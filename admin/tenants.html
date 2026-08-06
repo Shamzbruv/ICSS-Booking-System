@@ -129,8 +129,6 @@
                 </div>
             </div>
         </div>
-        <div style="font-size:12px;color:var(--text-dim);margin-bottom:4px;">Platform Admin Key</div>
-        <input type="password" id="pAdminKey" placeholder="X-Platform-Admin-Key" style="width:100%;margin-bottom:16px;">
         <div class="login-error" id="provisionError" style="text-align:left;margin-bottom:8px;"></div>
         <div class="modal-footer">
             <button class="btn btn-secondary" type="button" data-close-modal="provisionModal">Cancel</button>
@@ -157,7 +155,6 @@
                 <option value="enterprise">Enterprise ($199/mo)</option>
             </select>
         </div>
-        <input type="password" id="planAdminKey" placeholder="Platform Admin Key" style="width:100%;margin-bottom:16px;">
         <div class="modal-footer">
             <button class="btn btn-secondary" type="button" data-close-modal="planModal">Cancel</button>
             <button class="btn btn-primary" id="changePlanBtn" type="button">Update Plan</button>
@@ -168,7 +165,6 @@
 <script src="js/admin.js"></script>
 <script>
     let planTargetSlug = null;
-    let platformAdminKey = '';
 
     document.addEventListener('DOMContentLoaded', () => {
         if (!requireAuth()) return;
@@ -204,18 +200,9 @@
 
     async function loadTenants({ forcePrompt = false } = {}) {
         document.getElementById('tableBody').innerHTML = '<div class="spinner"></div>';
-        if (forcePrompt || !platformAdminKey) {
-            platformAdminKey = prompt('Enter Platform Admin Key:') || '';
-        }
-        if (!platformAdminKey) {
-            document.getElementById('tableBody').innerHTML = '<div class="empty-state"><p class="empty-state-text">Platform Admin Key is required.</p></div>';
-            return;
-        }
 
         try {
-            const data = await apiFetch('/api/v1/tenants', {
-                headers: { 'X-Platform-Admin-Key': platformAdminKey }
-            });
+            const data = await apiFetch('/api/v1/tenants');
             const tenants = data.tenants || [];
             document.getElementById('totalTenants').textContent  = tenants.length;
             document.getElementById('activeTenants').textContent  = tenants.filter(t => t.active).length;
@@ -280,12 +267,11 @@
         const color    = document.getElementById('pColor').value.trim();
         const email    = document.getElementById('pAdminEmail').value.trim();
         const password = document.getElementById('pAdminPw').value;
-        const adminKey = document.getElementById('pAdminKey').value;
         const errEl    = document.getElementById('provisionError');
         const btn      = document.getElementById('provisionBtn');
 
         errEl.textContent = '';
-        if (!slug || !name || !email || !password || !adminKey) {
+        if (!slug || !name || !email || !password) {
             errEl.textContent = 'All required fields must be filled.';
             return;
         }
@@ -295,7 +281,6 @@
         try {
             const data = await apiFetch('/api/v1/tenants', {
                 method:  'POST',
-                headers: { 'X-Platform-Admin-Key': adminKey },
                 body:    JSON.stringify({
                     slug, name, plan,
                     adminEmail: email, adminPassword: password,
@@ -322,11 +307,9 @@
 
     async function changePlan() {
         const plan = document.getElementById('newPlan').value;
-        const key  = document.getElementById('planAdminKey').value;
         try {
             await apiFetch(`/api/v1/tenants/${planTargetSlug}/plan`, {
                 method:  'PATCH',
-                headers: { 'X-Platform-Admin-Key': key },
                 body:    JSON.stringify({ plan })
             });
             showToast(`Plan updated to ${capitalize(plan)}.`);
@@ -343,7 +326,6 @@
         try {
             await apiFetch(`/api/v1/tenants/${slug}/active`, {
                 method:  'PATCH',
-                headers: { 'X-Platform-Admin-Key': platformAdminKey },
                 body:    JSON.stringify({ active })
             });
             showToast(`Tenant ${active ? 'reactivated' : 'suspended'}.`);

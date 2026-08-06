@@ -17,14 +17,30 @@ const RESERVED_SLUGS = new Set([
     'auth', 'billing', 'support', 'help', 'docs', 'blog', 'static', 'assets'
 ]);
 
-// Simple platform admin key middleware (for internal provisioning)
+// Platform admin key or JWT middleware
 function platformAdminOnly(req, res, next) {
+    // 1. Try JWT
+    const authHeader = req.headers['authorization'];
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+        const token = authHeader.slice(7);
+        try {
+            const jwt = require('jsonwebtoken');
+            const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_change_in_production';
+            const decoded = jwt.verify(token, JWT_SECRET);
+            if (['platform_owner', 'super_admin', 'developer_admin'].includes(decoded.role)) {
+                req.user = decoded;
+                return next();
+            }
+        } catch (e) {}
+    }
+
+    // 2. Fallback to API Key
     const key = req.headers['x-platform-admin-key'];
     const configuredKey = String(process.env.PLATFORM_ADMIN_KEY || '');
-    if (!configuredKey || !key || key !== configuredKey) {
-        return res.status(403).json({ error: 'Platform admin key required.' });
+    if (configuredKey && key === configuredKey) {
+        return next();
     }
-    next();
+    return res.status(403).json({ error: 'Platform admin access required.' });
 }
 
 // POST /api/v1/tenants — Provision a new tenant + admin user
