@@ -37,8 +37,8 @@
         <div style="display: flex; align-items: center; gap: 10px;">
               <img src="./favicon.png" alt="ICSS Icon" style="width: 36px; height: 36px; border-radius: 8px; object-fit: contain;">
               <div style="display: flex; flex-direction: column; justify-content: center;">
-                <span style="font-family: 'Clash Display', sans-serif; font-weight: 700; font-size: 1.2rem; background: linear-gradient(135deg, #ffffff, #a5b4fc); -webkit-background-clip: text; background-clip: text; color: transparent; line-height: 1;">ICSS</span>
-                <span style="font-size: 0.45rem; letter-spacing: 1px; color: #8888aa; font-weight: 600; line-height: 1; margin-top: 2px;">BOOKING MANAGEMENT</span>
+                <span style="font-family: 'Clash Display', sans-serif; font-weight: 700; font-size: 1.2rem; background: linear-gradient(135deg, var(--primary), var(--primary-dim)); -webkit-background-clip: text; background-clip: text; color: transparent; line-height: 1;">ICSS</span>
+                <span style="font-size: 0.45rem; letter-spacing: 1px; color: var(--text-dim); font-weight: 600; line-height: 1; margin-top: 2px;">BOOKING MANAGEMENT</span>
               </div>
             </div>
         <div class="brand-text">
@@ -92,7 +92,7 @@
             <p class="page-subtitle" id="currentDate">Loading...</p>
         </div>
         <div class="header-actions">
-            <div class="date-filter" style="display: flex; gap: 8px; align-items: center; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); padding: 6px 12px; border-radius: 8px;">
+            <div class="date-filter" style="display: flex; gap: 8px; align-items: center; background: rgba(255,255,255,0.03); border: 1px solid var(--border); padding: 6px 12px; border-radius: 8px;">
                 <input type="date" id="filterStartDate" class="date-input" aria-label="Start Date" style="background: transparent; color: white; border: none; font-family: inherit; font-size: 14px; outline: none; color-scheme: dark;">
                 <span style="color: #666;">-</span>
                 <input type="date" id="filterEndDate" class="date-input" aria-label="End Date" style="background: transparent; color: white; border: none; font-family: inherit; font-size: 14px; outline: none; color-scheme: dark;">
@@ -131,20 +131,20 @@
 
     <!-- Financial Overview Card -->
     <section class="plan-card financial-card" id="financialOverview" data-tour="financial-overview" style="display: flex; flex-direction: column; gap: 20px;">
-        <div class="plan-header" style="border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 20px; margin-bottom: 0;">
+        <div class="plan-header" style="border-bottom: 1px solid var(--border); padding-bottom: 20px; margin-bottom: 0;">
             <div>
-                <h2 class="plan-title" style="font-size: 1.5rem; background: linear-gradient(135deg, #fff, #a5b4fc); -webkit-background-clip: text; background-clip: text; color: transparent;">Financial Overview</h2>
-                <p class="plan-name" style="font-size: 0.9rem; color: #8888aa; margin-top: 4px;">Estimated revenue based on confirmed bookings for the selected period</p>
+                <h2 class="plan-title" style="font-size: 1.5rem; background: linear-gradient(135deg, var(--primary), var(--primary-dim)); -webkit-background-clip: text; background-clip: text; color: transparent;">Financial Overview</h2>
+                <p class="plan-name" style="font-size: 0.9rem; color: var(--text-dim); margin-top: 4px;">Estimated revenue based on confirmed bookings for the selected period</p>
             </div>
             <div class="plan-usage">
                 <div class="usage-bar-wrap" style="align-items: flex-end; text-align: right;">
-                    <div class="usage-label" style="font-size: 0.85rem; color: #8888aa; text-transform: uppercase; letter-spacing: 1px;">Total Revenue</div>
-                    <div class="usage-text" id="totalRevenueVal" style="font-size: 2rem; font-weight: 700; color: #fff; line-height: 1; margin-top: 4px;">$0.00</div>
+                    <div class="usage-label" style="font-size: 0.85rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px;">Total Revenue</div>
+                    <div class="usage-text" id="totalRevenueVal" style="font-size: 2rem; font-weight: 700; color: var(--text); line-height: 1; margin-top: 4px;">$0.00</div>
                 </div>
             </div>
         </div>
         <div class="top-services-container">
-            <h3 style="font-family: 'Clash Display', sans-serif; font-size: 1.1rem; font-weight: 600; color: #fff; margin-bottom: 15px;">Top Services</h3>
+            <h3 style="font-family: 'Clash Display', sans-serif; font-size: 1.1rem; font-weight: 600; color: var(--text); margin-bottom: 15px;">Top Services</h3>
             <div class="top-services-list" id="topServicesList" style="display: flex; flex-direction: column; gap: 12px;">
                 <div class="empty-state" style="color: #666; font-size: 0.9rem;">No services booked in this period.</div>
             </div>
@@ -256,7 +256,7 @@
                     topServicesList.innerHTML = '<div class="empty-state" style="color: #666; font-size: 0.9rem;">No services booked in this period.</div>';
                 } else {
                     topServicesList.replaceChildren(...data.topServices.map(ts => {
-                        const row=document.createElement('div');row.className='top-service-item';row.style.cssText='display:flex;justify-content:space-between;align-items:center;padding:12px;background:rgba(255,255,255,.02);border-radius:8px;border:1px solid rgba(255,255,255,.05)';
+                        const row=document.createElement('div');row.className='top-service-item';row.style.cssText='display:flex;justify-content:space-between;align-items:center;padding:12px;background: var(--surface-2);border-radius:8px;border:1px solid rgba(255,255,255,.05)';
                         const name=document.createElement('div');name.className='top-service-name';name.textContent=`${ts.name} (${ts.count} bookings)`;
                         const revenue=document.createElement('div');revenue.className='top-service-revenue';revenue.textContent=new Intl.NumberFormat('en-US',{style:'currency',currency:ts.currency||data.revenueCurrency||'JMD'}).format(ts.revenue);
                         row.append(name,revenue);return row;

@@ -39,6 +39,22 @@ body {
     line-height: 1.6;
 }
 
+/* ── Override global-theme.css Backgrounds for Light Mode ── */
+.gradient-bg {
+    position: fixed; inset: 0; z-index: -2;
+    background: radial-gradient(circle at 20% 30%, var(--primary-glow) 0%, transparent 40%),
+                radial-gradient(circle at 80% 70%, var(--primary-glow) 0%, transparent 45%),
+                var(--bg);
+}
+
+.grid-pattern {
+    position: fixed; inset: 0; z-index: -1; pointer-events: none;
+    background-image: 
+        linear-gradient(rgba(0, 0, 0, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 0, 0, 0.03) 1px, transparent 1px);
+    background-size: 60px 60px;
+}
+
 body.tour-open {
     touch-action: none;
     overscroll-behavior: contain;
