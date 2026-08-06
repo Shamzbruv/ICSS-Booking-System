@@ -337,7 +337,7 @@ button.nav-item {
     font-weight: 700;
     letter-spacing: 0.12em;
     text-transform: uppercase;
-    color: #a5b4fc;
+    color: var(--primary);
     margin-bottom: 6px;
 }
 
@@ -529,7 +529,7 @@ button.nav-item {
 }
 
 .tour-step-hint {
-    color: #a5b4fc;
+    color: var(--primary);
     background: rgba(99, 102, 241, 0.12);
     border: 1px solid rgba(129, 140, 248, 0.2);
 }
@@ -559,8 +559,8 @@ button.nav-item {
     min-height: 32px;
     padding: 0 12px;
     border-radius: 999px;
-    color: #bfdbfe;
-    background: rgba(0,0,0,0.4);
+    color: var(--info);
+    background: var(--surface-2);
     border: 1px solid rgba(129, 140, 248, 0.22);
     font-size: 0.76rem;
     font-weight: 600;
@@ -839,8 +839,8 @@ tbody tr:hover td { background: var(--surface-2); }
     position: relative;
     overflow: hidden;
     background: var(--surface-2);
-    border: 1px solid rgba(255, 255, 255, 0.09);
-    box-shadow: 0 24px 60px rgba(6, 10, 22, 0.22);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-sm);
 }
 
 .settings-card::after {
@@ -848,8 +848,8 @@ tbody tr:hover td { background: var(--surface-2); }
     position: absolute;
     inset: 0;
     background:
-        radial-gradient(circle at top right, rgba(99, 102, 241, 0.12), transparent 32%),
-        radial-gradient(circle at bottom left, rgba(236, 72, 153, 0.07), transparent 28%);
+        radial-gradient(circle at top right, var(--primary-glow), transparent 32%),
+        transparent;
     pointer-events: none;
 }
 
@@ -878,7 +878,7 @@ tbody tr:hover td { background: var(--surface-2); }
     font-weight: 700;
     letter-spacing: 0.12em;
     text-transform: uppercase;
-    color: #a5b4fc;
+    color: var(--primary);
     margin-bottom: 8px;
 }
 
@@ -1305,7 +1305,7 @@ tbody tr:hover td { background: var(--surface-2); }
     height: 34px;
     border-radius: 50%;
     background: rgba(255, 255, 255, 0.04);
-    color: #a5b4fc;
+    color: var(--primary);
     font-size: 16px;
 }
 
