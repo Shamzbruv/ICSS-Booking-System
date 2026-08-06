@@ -3,14 +3,14 @@ const { query, transaction } = require('../server/db/connection');
 const TENANT_ID = 'd45e3755-6675-44b9-9ac9-6eb073d115a3'; // iCreate - Testing Account
 
 const SERVICES = [
-    { name: 'Premium Marketing Consultation', duration: 60, price: 15000 },
-    { name: 'SEO Audit & Strategy', duration: 120, price: 35000 },
-    { name: 'Social Media Management Kickoff', duration: 90, price: 20000 },
-    { name: 'Branding & Identity Session', duration: 60, price: 25000 },
-    { name: 'Website Design Review', duration: 45, price: 10000 },
-    { name: 'Ad Campaign Setup', duration: 120, price: 40000 },
-    { name: 'Content Marketing Workshop', duration: 180, price: 50000 },
-    { name: 'Email Marketing Strategy', duration: 60, price: 15000 }
+    { name: 'Classic Haircut', duration: 45, price: 2500 },
+    { name: 'Haircut & Beard Trim', duration: 60, price: 3500 },
+    { name: 'Shape Up / Edge Up', duration: 30, price: 2000 },
+    { name: 'Hot Towel Shave', duration: 45, price: 3000 },
+    { name: 'Kids Haircut', duration: 40, price: 2000 },
+    { name: 'Premium Full Grooming', duration: 90, price: 5000 },
+    { name: 'Hair Dye / Color', duration: 60, price: 4000 },
+    { name: 'Scalp Treatment', duration: 30, price: 2500 }
 ];
 
 const FIRST_NAMES = ['James', 'Mary', 'John', 'Patricia', 'Robert', 'Jennifer', 'Michael', 'Linda', 'William', 'Elizabeth', 'David', 'Barbara', 'Richard', 'Susan', 'Joseph', 'Jessica', 'Thomas', 'Sarah', 'Charles', 'Karen', 'Christopher', 'Lisa', 'Daniel', 'Nancy', 'Matthew', 'Betty', 'Anthony', 'Margaret', 'Mark', 'Sandra', 'Donald', 'Ashley', 'Steven', 'Kimberly', 'Paul', 'Emily', 'Andrew', 'Donna', 'Joshua', 'Michelle'];
@@ -45,6 +45,11 @@ async function run() {
     console.log(`Starting fake data seeding for tenant: ${TENANT_ID}`);
 
     try {
+        console.log('Clearing old testing data...');
+        await query('DELETE FROM booking_payments WHERE tenant_id = $1', [TENANT_ID]);
+        await query('DELETE FROM bookings WHERE tenant_id = $1', [TENANT_ID]);
+        await query('DELETE FROM services WHERE tenant_id = $1', [TENANT_ID]);
+        await query('DELETE FROM users WHERE tenant_id = $1', [TENANT_ID]);
         // 1. Insert Services
             console.log('Inserting services...');
             const serviceIds = [];
