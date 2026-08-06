@@ -1343,15 +1343,17 @@ label {
 }
 
 input, select, textarea {
-    background: var(--surface-2);
+    width: 100%;
+    padding: 10px 14px;
+    background: var(--surface-3);
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
     color: var(--text);
     font-family: inherit;
-    font-size: 14px;
-    padding: 10px 14px;
+    font-size: 13px;
     transition: border-color var(--transition);
     outline: none;
+    color-scheme: light;
 }
 
 input:focus, select:focus, textarea:focus { border-color: var(--primary); }
