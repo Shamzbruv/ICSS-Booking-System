@@ -35,5 +35,9 @@ test('customizer exposes visible control-to-preview highlighting', () => {
     const customizer = fs.readFileSync(path.join(root, 'admin/customize.html'), 'utf8');
     assert.match(customizer, /function highlightPreview\(key\)/);
     assert.match(customizer, /data-icss-color-highlight/);
+    assert.match(customizer, /const targetSelectors=/);
+    assert.match(customizer, /_inputShell_/);
+    assert.match(customizer, /icssCustomizerPulse/);
+    assert.match(customizer, /Outlined in blue/);
     assert.match(customizer, /Select a color to highlight every area it controls/);
 });
