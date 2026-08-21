@@ -45,6 +45,7 @@ async function run() {
     console.log(`Starting fake data seeding for tenant: ${TENANT_ID}`);
 
     try {
+        await query('UPDATE tenants SET is_test_account = true WHERE id = $1', [TENANT_ID]);
         console.log('Clearing old testing data...');
         await query('DELETE FROM booking_payments WHERE tenant_id = $1', [TENANT_ID]);
         await query('DELETE FROM bookings WHERE tenant_id = $1', [TENANT_ID]);

@@ -180,6 +180,7 @@ async function runMigrations(client) {
             branding JSONB DEFAULT '{}',
             layout JSONB DEFAULT '[]'::jsonb,
             active BOOLEAN DEFAULT true,
+            is_test_account BOOLEAN NOT NULL DEFAULT false,
             default_payment_mode TEXT DEFAULT 'none',
             wipay_enabled BOOLEAN DEFAULT false,
             manual_payment_enabled BOOLEAN DEFAULT false,
@@ -204,6 +205,9 @@ async function runMigrations(client) {
     await client.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS after_hours_fee NUMERIC(12,2) DEFAULT 0`);
     await client.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS paypal_payments_enabled BOOLEAN DEFAULT false`);
     await client.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS paypal_payment_link TEXT`);
+    await client.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS is_test_account BOOLEAN DEFAULT false`);
+    // Keep seeded/demo activity available for QA without polluting production analytics.
+    await client.query(`UPDATE tenants SET is_test_account = true WHERE slug = 'icreate-testing-account' AND is_test_account IS DISTINCT FROM true`);
 
     // ── Tenant Slug History (for redirects) ──────────────────────────────────
     await client.query(`

@@ -487,10 +487,62 @@ router.patch('/jobs/:jobId/status', async (req, res) => {
 router.get('/dashboard-analytics', async (req, res) => {
     try {
         const [summary, monthly, tenants, statuses] = await Promise.all([
-            query(`SELECT (SELECT COUNT(*) FROM tenants WHERE active=true)::int AS active_tenants,(SELECT COUNT(*) FROM bookings)::int AS total_bookings,(SELECT COUNT(*) FROM bookings WHERE created_at>=NOW()-INTERVAL '30 days')::int AS bookings_30d,COALESCE((SELECT SUM(COALESCE(b.service_price,s.price,0)+COALESCE(b.after_hours_fee,0)) FROM bookings b LEFT JOIN services s ON s.id=b.service_id WHERE b.status IN ('confirmed','completed') AND COALESCE(b.service_currency,s.currency,'JMD')='JMD'),0)::numeric AS total_paid,COALESCE((SELECT SUM(COALESCE(b.service_price,s.price,0)+COALESCE(b.after_hours_fee,0)) FROM bookings b LEFT JOIN services s ON s.id=b.service_id WHERE b.status IN ('confirmed','completed') AND COALESCE(b.service_currency,s.currency,'JMD')='JMD' AND b.created_at>=NOW()-INTERVAL '30 days'),0)::numeric AS paid_30d`),
-            query(`SELECT TO_CHAR(month,'YYYY-MM') AS month,COALESCE(SUM(COALESCE(b.service_price,s.price,0)+COALESCE(b.after_hours_fee,0)) FILTER(WHERE b.status IN ('confirmed','completed') AND COALESCE(b.service_currency,s.currency,'JMD')='JMD'),0)::numeric AS payments,COUNT(b.id) FILTER(WHERE b.status IN ('confirmed','completed'))::int AS bookings FROM generate_series(date_trunc('month',NOW())-INTERVAL '11 months',date_trunc('month',NOW()),INTERVAL '1 month') month LEFT JOIN bookings b ON date_trunc('month',b.created_at)=month LEFT JOIN services s ON s.id=b.service_id GROUP BY month ORDER BY month`),
-            query(`SELECT t.name,t.slug,COUNT(b.id) FILTER(WHERE b.status IN ('confirmed','completed'))::int AS bookings,COALESCE(SUM(COALESCE(b.service_price,s.price,0)+COALESCE(b.after_hours_fee,0)) FILTER(WHERE b.status IN ('confirmed','completed') AND COALESCE(b.service_currency,s.currency,'JMD')='JMD'),0)::numeric AS payments FROM tenants t LEFT JOIN bookings b ON b.tenant_id=t.id LEFT JOIN services s ON s.id=b.service_id GROUP BY t.id ORDER BY payments DESC LIMIT 10`),
-            query(`SELECT status,COUNT(*)::int AS count FROM bookings GROUP BY status ORDER BY count DESC`)
+            query(`WITH production_tenants AS (
+                       SELECT id FROM tenants WHERE COALESCE(is_test_account, false) = false
+                   )
+                   SELECT
+                       (SELECT COUNT(*) FROM tenants WHERE active = true AND COALESCE(is_test_account, false) = false)::int AS active_tenants,
+                       (SELECT COUNT(*) FROM bookings b JOIN production_tenants pt ON pt.id = b.tenant_id)::int AS total_bookings,
+                       (SELECT COUNT(*) FROM bookings b JOIN production_tenants pt ON pt.id = b.tenant_id WHERE b.created_at >= NOW() - INTERVAL '30 days')::int AS bookings_30d,
+                       COALESCE((
+                           SELECT SUM(COALESCE(b.service_price, s.price, 0) + COALESCE(b.after_hours_fee, 0))
+                           FROM bookings b
+                           JOIN production_tenants pt ON pt.id = b.tenant_id
+                           LEFT JOIN services s ON s.id = b.service_id
+                           WHERE b.status IN ('confirmed', 'completed')
+                             AND COALESCE(b.service_currency, s.currency, 'JMD') = 'JMD'
+                       ), 0)::numeric AS total_paid,
+                       COALESCE((
+                           SELECT SUM(COALESCE(b.service_price, s.price, 0) + COALESCE(b.after_hours_fee, 0))
+                           FROM bookings b
+                           JOIN production_tenants pt ON pt.id = b.tenant_id
+                           LEFT JOIN services s ON s.id = b.service_id
+                           WHERE b.status IN ('confirmed', 'completed')
+                             AND COALESCE(b.service_currency, s.currency, 'JMD') = 'JMD'
+                             AND b.created_at >= NOW() - INTERVAL '30 days'
+                       ), 0)::numeric AS paid_30d`),
+            query(`WITH production_bookings AS (
+                       SELECT b.*
+                       FROM bookings b
+                       JOIN tenants t ON t.id = b.tenant_id
+                       WHERE COALESCE(t.is_test_account, false) = false
+                   )
+                   SELECT TO_CHAR(month, 'YYYY-MM') AS month,
+                          COALESCE(SUM(COALESCE(b.service_price, s.price, 0) + COALESCE(b.after_hours_fee, 0))
+                              FILTER (WHERE b.status IN ('confirmed', 'completed') AND COALESCE(b.service_currency, s.currency, 'JMD') = 'JMD'), 0)::numeric AS payments,
+                          COUNT(b.id) FILTER (WHERE b.status IN ('confirmed', 'completed'))::int AS bookings
+                   FROM generate_series(date_trunc('month', NOW()) - INTERVAL '11 months', date_trunc('month', NOW()), INTERVAL '1 month') month
+                   LEFT JOIN production_bookings b ON date_trunc('month', b.created_at) = month
+                   LEFT JOIN services s ON s.id = b.service_id
+                   GROUP BY month
+                   ORDER BY month`),
+            query(`SELECT t.name, t.slug,
+                          COUNT(b.id) FILTER (WHERE b.status IN ('confirmed', 'completed'))::int AS bookings,
+                          COALESCE(SUM(COALESCE(b.service_price, s.price, 0) + COALESCE(b.after_hours_fee, 0))
+                              FILTER (WHERE b.status IN ('confirmed', 'completed') AND COALESCE(b.service_currency, s.currency, 'JMD') = 'JMD'), 0)::numeric AS payments
+                   FROM tenants t
+                   LEFT JOIN bookings b ON b.tenant_id = t.id
+                   LEFT JOIN services s ON s.id = b.service_id
+                   WHERE COALESCE(t.is_test_account, false) = false
+                   GROUP BY t.id
+                   ORDER BY payments DESC
+                   LIMIT 10`),
+            query(`SELECT b.status, COUNT(*)::int AS count
+                   FROM bookings b
+                   JOIN tenants t ON t.id = b.tenant_id
+                   WHERE COALESCE(t.is_test_account, false) = false
+                   GROUP BY b.status
+                   ORDER BY count DESC`)
         ]);
         res.json({ summary:summary.rows[0],monthly:monthly.rows,tenants:tenants.rows,statuses:statuses.rows });
     } catch(err) { console.error('[Platform/Analytics]',err.message); res.status(500).json({ error:'Could not load dashboard analytics.' }); }
