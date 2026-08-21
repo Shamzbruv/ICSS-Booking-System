@@ -544,7 +544,7 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
     : baseTotal + addonsTotal;
   const totalAmount = normalTotal + (isAfterHoursRequest ? Number(afterHours.fee || 0) : 0);
   const paymentDetails = resolvePaymentDetails(selectedService, tenant);
-  const needsReceipt = !isAfterHoursRequest && paymentDetails.collectNow && paymentDetails.mode === 'manual' && !paymentDetails.hasConfigurationIssue;
+  const needsReceipt = paymentDetails.collectNow && paymentDetails.mode === 'manual' && !paymentDetails.hasConfigurationIssue;
 
   const handleExtraFieldChange = (nameToSet, value) => {
     setExtraState((prev) => ({ ...prev, [nameToSet]: value }));
@@ -652,7 +652,9 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
             ? (paymentDetails.requirement === 'deposit' ? 'Deposit Submitted' : 'Payment Submitted')
             : (theme.confirmationTitle || 'Booking Confirmed'),
           text: res.booking?.status === 'pending_after_hours_confirmation'
-            ? 'Your requested time is pending approval. The business will confirm whether it is available.'
+            ? (needsReceipt
+              ? 'Your requested time and payment receipt are pending review. The business will confirm the appointment after both are approved.'
+              : 'Your requested time is pending approval. The business will confirm whether it is available.')
             : res.booking?.status === 'pending_manual_confirmation'
             ? 'Your booking is pending review. We will confirm it once your payment receipt is approved.'
             : (theme.confirmationText || 'A confirmation email is on its way with all of your appointment details.')
@@ -946,7 +948,7 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
                   </div>
                 </div>
 
-                <button type="submit" className={styles.primaryButton} disabled={!selectedService || (!isAfterHoursRequest && paymentDetails.hasConfigurationIssue)}>
+                <button type="submit" className={styles.primaryButton} disabled={!selectedService || paymentDetails.hasConfigurationIssue}>
                   {isAfterHoursRequest ? 'Submit time request' : (theme.bookButtonLabel || paymentDetails.buttonLabel)}
                 </button>
                 <div className={styles.footerNote}>

@@ -6,7 +6,7 @@
 const express = require('express');
 const router  = express.Router();
 const bcrypt  = require('bcryptjs');
-const { query }      = require('../../db/connection');
+const { query, transaction } = require('../../db/connection');
 const { signToken, authenticate } = require('../../middleware/auth');
 const { authLimiter } = require('../../middleware/rateLimiter');
 const crypto = require('crypto');
@@ -182,15 +182,17 @@ router.get('/me', authenticate, async (req, res) => {
 
 // POST /api/v1/auth/forgot-password
 router.post('/forgot-password', authLimiter, async (req, res) => {
-    const { email, tenant_slug } = req.body;
+    const { email, tenant_slug, tenantSlug } = req.body;
     if (!email) return res.status(400).json({ error: 'Email is required.' });
+    const requestedTenantSlug = String(tenant_slug || tenantSlug || '').trim().toLowerCase() || null;
 
     try {
         const userRes = await query(
             `SELECT u.id,u.role,u.tenant_id FROM users u LEFT JOIN tenants t ON t.id=u.tenant_id
-             WHERE LOWER(u.email)=LOWER($1) AND (($2::text IS NOT NULL AND t.slug=$2) OR $2::text IS NULL)
+             WHERE LOWER(u.email)=LOWER($1) AND u.active=true
+               AND (($2::text IS NOT NULL AND t.slug=$2) OR $2::text IS NULL)
              ORDER BY u.created_at`,
-            [email.toLowerCase().trim(), tenant_slug ? String(tenant_slug).trim().toLowerCase() : null]
+            [email.toLowerCase().trim(), requestedTenantSlug]
         );
         
         // We always return generic success message to prevent email enumeration
@@ -214,7 +216,7 @@ router.post('/forgot-password', authLimiter, async (req, res) => {
             );
 
             // Determine base URL safely
-            const baseUrl = process.env.PUBLIC_APP_URL || process.env.BASE_URL || 'https://icssbookings.com';
+            const baseUrl = String(process.env.PUBLIC_APP_URL || process.env.BASE_URL || 'https://icssbookings.com').replace(/\/$/, '');
             const resetUrl = `${baseUrl}/reset-password?token=${rawToken}&email=${encodeURIComponent(email.toLowerCase().trim())}`;
 
             // Send Email
@@ -247,24 +249,26 @@ router.post('/reset-password', authLimiter, async (req, res) => {
         // Hash incoming raw token for lookup
         const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
 
-        const tokenRes = await query(
-            `SELECT prt.id,prt.user_id,u.tenant_id FROM password_reset_tokens prt JOIN users u ON u.id=prt.user_id
-             WHERE prt.token_hash=$1 AND prt.used=false AND prt.expires_at>NOW() AND LOWER(u.email)=LOWER($2)`,
-            [tokenHash,email.toLowerCase().trim()]
-        );
-
-        if (tokenRes.rows.length === 0) return res.status(400).json({ error: 'Invalid or expired token.' });
-        const tokenId = tokenRes.rows[0].id;
-        const user = { id:tokenRes.rows[0].user_id, tenant_id:tokenRes.rows[0].tenant_id };
-
-        // Hash new password
         const passwordHash = await bcrypt.hash(newPassword, 12);
+        const user = await transaction(async (client) => {
+            const tokenRes = await client.query(
+                `SELECT prt.id,prt.user_id,u.tenant_id FROM password_reset_tokens prt JOIN users u ON u.id=prt.user_id
+                 WHERE prt.token_hash=$1 AND prt.used=false AND prt.expires_at>NOW() AND LOWER(u.email)=LOWER($2)
+                 FOR UPDATE OF prt`,
+                [tokenHash,email.toLowerCase().trim()]
+            );
+            if (tokenRes.rows.length === 0) {
+                const invalidToken = new Error('Invalid or expired token.');
+                invalidToken.status = 400;
+                throw invalidToken;
+            }
 
-        // Update user
-        await query(`UPDATE users SET password_hash = $1 WHERE id = $2`, [passwordHash, user.id]);
-
-        // Invalidate the token
-        await query(`UPDATE password_reset_tokens SET used = true WHERE id = $1`, [tokenId]);
+            const resolvedUser = { id:tokenRes.rows[0].user_id, tenant_id:tokenRes.rows[0].tenant_id };
+            await client.query(`UPDATE users SET password_hash = $1 WHERE id = $2`, [passwordHash, resolvedUser.id]);
+            // A successful reset invalidates every outstanding link for the account.
+            await client.query(`UPDATE password_reset_tokens SET used = true WHERE user_id = $1 AND used = false`, [resolvedUser.id]);
+            return resolvedUser;
+        });
 
         // End active impersonation sessions safely if user is platform owner
         try {
@@ -282,6 +286,7 @@ router.post('/reset-password', authLimiter, async (req, res) => {
 
         res.json({ success: true, message: 'Password has been successfully reset. You can now log in.' });
     } catch (err) {
+        if (err.status) return res.status(err.status).json({ error: err.message });
         console.error('[Auth/ResetPassword]', err.message);
         res.status(500).json({ error: 'Failed to process request.' });
     }

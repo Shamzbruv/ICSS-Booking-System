@@ -3,6 +3,7 @@ import { api } from '../../api';
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState('');
+  const [tenantSlug, setTenantSlug] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -14,7 +15,7 @@ export default function ForgotPassword() {
     setError('');
 
     try {
-      const res = await api.forgotPassword(email);
+      const res = await api.forgotPassword(email, tenantSlug);
       setMessage(res.message);
     } catch (err) {
       setError(err.message || 'Failed to request password reset.');
@@ -27,7 +28,7 @@ export default function ForgotPassword() {
     <div style={styles.container}>
       <div style={styles.card}>
         <h2 style={styles.title}>Reset Password</h2>
-        <p style={styles.subtitle}>Enter your email address and we'll send you a link to reset your password.</p>
+        <p style={styles.subtitle}>Enter your tenant email address and we'll send you a secure reset link.</p>
         
         {message && <div style={styles.successMessage}>{message}</div>}
         {error && <div style={styles.errorMessage}>{error}</div>}
@@ -41,6 +42,15 @@ export default function ForgotPassword() {
             required
             style={styles.input}
           />
+          <input
+            type="text"
+            placeholder="Business handle (recommended)"
+            value={tenantSlug}
+            onChange={(e) => setTenantSlug(e.target.value)}
+            autoComplete="organization"
+            style={styles.input}
+          />
+          <p style={styles.helper}>Use the handle from your public booking link. It is required when the same email manages more than one business.</p>
           <button type="submit" disabled={loading || message} style={styles.button}>
             {loading ? 'Sending...' : 'Send Reset Link'}
           </button>
@@ -89,6 +99,13 @@ const styles = {
     display: 'flex',
     flexDirection: 'column',
     gap: '16px'
+  },
+  helper: {
+    color: '#a1a1aa',
+    fontSize: '12px',
+    lineHeight: '1.45',
+    margin: '-6px 0 0',
+    textAlign: 'left'
   },
   input: {
     background: 'rgba(255,255,255,0.03)',

@@ -389,7 +389,13 @@ async function runMigrations(client) {
     // Indexes for fast overlap checks (Must run after columns are added)
     await client.query(`CREATE INDEX IF NOT EXISTS idx_bookings_tenant_time ON bookings (tenant_id, start_time, end_time)`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_bookings_status ON bookings (status)`);
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_bookings_active_states ON bookings (tenant_id, start_time, end_time) WHERE status IN ('confirmed', 'pending_payment', 'pending_manual_confirmation')`);
+    // The original table-level uniqueness also covered cancelled/rejected rows,
+    // preventing an exact timeslot from ever being booked again. Active overlap
+    // safety is enforced transactionally while inactive slots remain reusable.
+    await client.query(`ALTER TABLE bookings DROP CONSTRAINT IF EXISTS bookings_tenant_id_start_time_end_time_key`);
+    // Replace the old partial index once; the versioned index is idempotent on boot.
+    await client.query(`DROP INDEX IF EXISTS idx_bookings_active_states`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_bookings_active_states_v2 ON bookings (tenant_id, start_time, end_time) WHERE status IN ('confirmed', 'pending_payment', 'pending_manual_confirmation', 'pending_after_hours_confirmation')`);
 
     // ── Marketing partner agreements ────────────────────────────────────────
     // The public token is stored only as a SHA-256 hash. It is consumed when
@@ -762,6 +768,7 @@ async function runMigrations(client) {
         )
     `);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_prt_user ON password_reset_tokens(user_id)`);
+    await client.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_prt_token_hash ON password_reset_tokens(token_hash)`);
 
     // ── Subscription Invoices ────────────────────────────────────────────────
     // Tracks every subscription invoice dispatched by the platform.

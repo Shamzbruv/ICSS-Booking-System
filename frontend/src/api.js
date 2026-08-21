@@ -35,7 +35,7 @@ export const api = {
   // Auth
   login:  (body) => apiFetch('/auth/login', { method: 'POST', body }),
   me:     ()     => apiFetch('/auth/me'),
-  forgotPassword: (email) => apiFetch('/auth/forgot-password', { method: 'POST', body: { email } }),
+  forgotPassword: (email, tenantSlug) => apiFetch('/auth/forgot-password', { method: 'POST', body: { email, tenantSlug } }),
   resetPassword: (email, token, newPassword) => apiFetch('/auth/reset-password', { method: 'POST', body: { email, token, newPassword } }),
 
   // Themes

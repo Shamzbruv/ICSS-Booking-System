@@ -13,6 +13,7 @@ const { sendBookingConfirmationNotifications } = require('../../services/booking
 const calendarSync              = require('../../services/calendarSync');
 const { normalizeDepositConfig, calculateAmountDue } = require('../../services/paymentRules');
 const { convertForPayPal } = require('../../services/currencyConversion');
+const { ACTIVE_BOOKING_STATUSES_SQL, serviceOverlapsBlockedSlot, timeTextToMinutes } = require('../../services/bookingAvailabilityRules');
 
 const MAX_BOOKINGS_PER_DAY = 14;
 const MAX_DAYS_AHEAD       = 30;
@@ -125,9 +126,11 @@ async function validateTenantAvailability(client, tenant, date, time, totalServi
         throw err;
     }
 
-    const slotBlock = blocksResult.rows.find((block) =>
-        block.block_type === 'slot' && String(block.block_time || '').slice(0, 5) === time
-    );
+    const slotBlock = blocksResult.rows.find((block) => {
+        if (block.block_type !== 'slot') return false;
+        const blockStartMins = timeTextToMinutes(block.block_time);
+        return blockStartMins !== null && serviceOverlapsBlockedSlot(slotStartMins, totalServiceMins, blockStartMins);
+    });
     if (slotBlock) {
         const err = new Error(slotBlock.reason || 'This time slot is unavailable.');
         err.status = 400;
@@ -196,10 +199,7 @@ router.post('/', enforceBookingLimit, async (req, res) => {
                 const err = new Error('After-hours requests are not enabled for this business.'); err.status = 400; throw err;
             }
 
-            if (afterHoursRequested) {
-                status = 'pending_after_hours_confirmation';
-                paymentMode = 'none';
-            } else if (paymentRequested && paymentMode === 'paypal' && tenant.paypal_payments_enabled && tenant.paypal_payment_link) {
+            if (paymentRequested && paymentMode === 'paypal' && tenant.paypal_payments_enabled && tenant.paypal_payment_link) {
                 status = 'pending_payment';
                 expiresAt = null;
             } else if (paymentRequested && paymentMode === 'manual' && tenant.manual_payment_enabled) {
@@ -214,8 +214,15 @@ router.post('/', enforceBookingLimit, async (req, res) => {
                 paymentMode = 'none';
             }
 
+            // An after-hours request still has to satisfy the service's payment
+            // rules. Keep the resolved payment mode/receipt, while using the
+            // after-hours status so the tenant must approve the requested time.
+            if (afterHoursRequested) {
+                status = 'pending_after_hours_confirmation';
+            }
+
             // 3. Validate selected date and time against the tenant's published schedule
-            const duration = (service.duration_minutes || 30) + (service.buffer_time_minutes || 0);
+            const duration = (Number(service.duration_minutes) || 30) + (Number(service.buffer_time_minutes) || 0);
             const availabilityResult = await validateTenantAvailability(client, tenant, date, time, duration, afterHoursRequested);
             if (afterHoursRequested && !availabilityResult.outsideHours) {
                 const err = new Error('This time is within normal business hours. Please select it from the available schedule.'); err.status = 400; throw err;
@@ -235,7 +242,7 @@ router.post('/', enforceBookingLimit, async (req, res) => {
             const overlapCheck = await client.query(
                 `SELECT id FROM bookings 
                  WHERE tenant_id = $1 
-                 AND status IN ('confirmed', 'pending_payment', 'pending_manual_confirmation')
+                 AND status IN (${ACTIVE_BOOKING_STATUSES_SQL})
                  AND start_time < $3 AND end_time > $2`,
                 [tenantId, startTime, endTime]
             );
@@ -456,7 +463,7 @@ router.patch('/:id/status', authenticate, requireRole('staff', 'tenant_admin'), 
             if (booking.status === 'pending_after_hours_confirmation' && status === 'confirmed') {
                 const conflicts = await client.query(
                     `SELECT id FROM bookings WHERE tenant_id=$1 AND id<>$2
-                     AND status IN ('confirmed','pending_payment','pending_manual_confirmation')
+                     AND status IN (${ACTIVE_BOOKING_STATUSES_SQL})
                      AND start_time < $4 AND end_time > $3`,
                     [req.tenant.id, booking.id, booking.start_time, booking.end_time]
                 );
@@ -471,7 +478,7 @@ router.patch('/:id/status', authenticate, requireRole('staff', 'tenant_admin'), 
             }
 
             // Audit Logging for manual bank transfer approvals/rejections
-            if (booking.payment_mode === 'manual' && booking.status === 'pending_manual_confirmation') {
+            if (booking.payment_mode === 'manual' && ['pending_manual_confirmation', 'pending_after_hours_confirmation'].includes(booking.status)) {
                 if (status === 'confirmed' || status === 'rejected') {
                     await client.query(
                         `INSERT INTO audit_log (tenant_id, user_id, actor_user_id, action, entity, entity_id, old_status, new_status, note)

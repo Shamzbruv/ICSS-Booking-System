@@ -10,9 +10,15 @@
 const express = require('express');
 const router  = express.Router();
 const { query } = require('../../db/connection');
+const {
+    ACTIVE_BOOKING_STATUSES_SQL,
+    SLOT_INTERVAL_MINS,
+    intervalsOverlap,
+    serviceOverlapsBlockedSlot,
+    timeTextToMinutes
+} = require('../../services/bookingAvailabilityRules');
 
 // ─── Business Rule Constants ───────────────────────────────────────────────────
-const SLOT_INTERVAL_MINS   = 30;
 const DAY_START_HOUR       = 9;    // 9:00 AM
 const DAY_END_HOUR         = 19;
 const DAY_END_MINS         = 0;    // 7:00 PM last possible slot start
@@ -20,13 +26,6 @@ const MAX_BOOKINGS_PER_DAY = 14;
 const MIN_BUFFER_MINS      = 15;   // Reject slots within 15 min of now
 const MAX_DAYS_AHEAD       = 30;
 const BUSINESS_CLOSE_MINS  = 20 * 60; // 8:00 PM — no service can run past this
-
-function timeTextToMinutes(value) {
-    if (!value) return null;
-    const [hours, minutes] = String(value).slice(0, 5).split(':').map(Number);
-    if (Number.isNaN(hours) || Number.isNaN(minutes)) return null;
-    return (hours * 60) + minutes;
-}
 
 function getTzTimeStr(tz = 'America/Jamaica', addMinutes = 0, addDays = 0) {
     const now = new Date();
@@ -132,8 +131,8 @@ router.get('/', async (req, res) => {
                 [service_id, tenantId]
             );
             if (svcRes.rows.length > 0) {
-                serviceDurationMins = svcRes.rows[0].duration_minutes || 30;
-                serviceBufferMins   = svcRes.rows[0].buffer_time_minutes || 0;
+                serviceDurationMins = Number(svcRes.rows[0].duration_minutes) || 30;
+                serviceBufferMins   = Number(svcRes.rows[0].buffer_time_minutes) || 0;
             }
         } catch (e) {
             console.warn('[Availability] Could not fetch service duration:', e.message);
@@ -190,17 +189,24 @@ router.get('/', async (req, res) => {
             return res.json({ date, slots, dayBlocked: true, afterHours: { enabled: false } });
         }
 
-        const slotBlockMap = {};
-        adminBlocks.filter(b => b.block_type === 'slot').forEach(b => {
-            slotBlockMap[b.block_time.slice(0, 5)] = b.reason || null;
-        });
+        const slotBlocks = adminBlocks
+            .filter((block) => block.block_type === 'slot')
+            .map((block) => ({
+                ...block,
+                startMins: timeTextToMinutes(block.block_time)
+            }))
+            .filter((block) => block.startMins !== null);
 
         slots.forEach(slot => {
-            if (slot.available && Object.prototype.hasOwnProperty.call(slotBlockMap, slot.time)) {
-                slot.available  = false;
-                slot.reason     = 'UNAVAILABLE';
-                if (slotBlockMap[slot.time]) slot.adminReason = slotBlockMap[slot.time];
-            }
+            if (!slot.available) return;
+            const slotStartMins = timeTextToMinutes(slot.time);
+            const overlappingBlock = slotBlocks.find((block) =>
+                serviceOverlapsBlockedSlot(slotStartMins, totalServiceMins, block.startMins)
+            );
+            if (!overlappingBlock) return;
+            slot.available = false;
+            slot.reason = 'UNAVAILABLE';
+            if (overlappingBlock.reason) slot.adminReason = overlappingBlock.reason;
         });
 
         // 2. Check overlapping bookings using precise start_time/end_time columns.
@@ -216,7 +222,7 @@ router.get('/', async (req, res) => {
              LEFT JOIN services s ON s.id = b.service_id
              WHERE b.tenant_id = $1
                AND b.booking_date = $2
-               AND b.status IN ('confirmed', 'pending_payment', 'pending_manual_confirmation')`,
+               AND b.status IN (${ACTIVE_BOOKING_STATUSES_SQL})`,
             [tenantId, date]
         );
 
@@ -253,7 +259,7 @@ router.get('/', async (req, res) => {
                 }
 
                 // Overlap: slot window intersects booking window
-                if (slotStartMins < bEndMins && slotEndMins > bStartMins) {
+                if (intervalsOverlap(slotStartMins, slotEndMins, bStartMins, bEndMins)) {
                     slot.available = false;
                     slot.reason    = 'BOOKED';
                     break;
