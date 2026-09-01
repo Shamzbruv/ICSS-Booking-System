@@ -186,6 +186,16 @@ router.patch('/:slug/active', platformAdminOnly, async (req, res) => {
     }
 });
 
+// GET /api/v1/tenants/:slug/theme — Get the tenant's active industry theme
+// (and whether this account is flagged as the testing account — the customizer
+// only surfaces the "apply any theme" Theme Library for that account).
+router.get('/:slug/theme', authenticate, requireTenantOwnership('tenant_admin'), async (req, res) => {
+    res.json({
+        theme_id: req.tenant.theme_id || null,
+        is_test_account: Boolean(req.tenant.is_test_account)
+    });
+});
+
 // POST /api/v1/tenants/:slug/theme — Switch the tenant's active theme
 // The frontend can query the theme's configurations for 'preview' before calling this to activate.
 router.post('/:slug/theme', authenticate, requireTenantOwnership('tenant_admin'), async (req, res) => {
