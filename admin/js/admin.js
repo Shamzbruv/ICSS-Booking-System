@@ -17,6 +17,18 @@ const API_BASE = '';  // Same-origin; update if API is on a separate domain
     if (ten) sessionStorage.setItem('_impTenant', ten);
 })();
 
+// ── Admin Theme (paint-time bootstrap) ───────────────────────────────────────
+// Apply the last-known theme from localStorage *synchronously*, before the rest
+// of the page renders, so returning testing-account visitors don't see a flash
+// of the default 'light' theme. initAdminThemeSwitcher() (below) later confirms
+// this against the backend and is the only place allowed to change it.
+(function bootstrapAdminTheme() {
+    try {
+        const cached = localStorage.getItem('icss_admin_theme');
+        if (cached) document.documentElement.setAttribute('data-admin-theme', cached);
+    } catch (error) { /* localStorage unavailable — fall back to the default theme */ }
+})();
+
 // ── Auth Helpers ──────────────────────────────────────────────────────────────
 function getImpToken()  { return new URLSearchParams(window.location.search).get('_impToken') || sessionStorage.getItem('_impToken'); }
 function getImpTenant() { return new URLSearchParams(window.location.search).get('tenant')    || sessionStorage.getItem('_impTenant'); }
@@ -525,6 +537,98 @@ async function submitSupportRequest(event) {
     }
 }
 
+// ── Admin Theme Switcher (testing account only) ──────────────────────────────
+// Lets the internal testing account flip between admin dashboard color themes,
+// live, without a page reload. Every other tenant never sees this UI — the
+// backend also refuses the PATCH for anyone whose tenant isn't is_test_account,
+// so this stays testing-account-only even if the request is called directly.
+const ADMIN_THEMES = [
+    { id: 'light',    label: 'Light',    bg: '#f8fafc', accent: '#7e22ce' },
+    { id: 'dark',     label: 'Dark',     bg: '#0f1117', accent: '#a855f7' },
+    { id: 'midnight', label: 'Midnight', bg: '#0a0a0f', accent: '#8b5cf6' },
+    { id: 'ocean',    label: 'Ocean',    bg: '#f0f9fb', accent: '#0891b2' }
+];
+
+function applyAdminTheme(theme) {
+    document.documentElement.setAttribute('data-admin-theme', theme);
+    try { localStorage.setItem('icss_admin_theme', theme); } catch (error) { /* private-mode storage, ignore */ }
+}
+
+function renderAdminThemeWidget(activeTheme) {
+    if (document.getElementById('adminThemeFab')) return; // already mounted on this page
+
+    const fab = document.createElement('button');
+    fab.type = 'button';
+    fab.id = 'adminThemeFab';
+    fab.className = 'admin-theme-fab';
+    fab.innerHTML = '<span class="admin-theme-fab-icon">🎨</span> Theme <span class="admin-theme-fab-badge">Test account</span>';
+    fab.setAttribute('aria-haspopup', 'true');
+    fab.setAttribute('aria-expanded', 'false');
+
+    const panel = document.createElement('div');
+    panel.id = 'adminThemePanel';
+    panel.className = 'admin-theme-panel';
+    panel.setAttribute('role', 'menu');
+    panel.innerHTML = `
+        <p class="admin-theme-panel-title">Dashboard theme</p>
+        <div class="admin-theme-options">
+            ${ADMIN_THEMES.map(t => `
+                <button type="button" class="admin-theme-option${t.id === activeTheme ? ' is-active' : ''}" data-theme="${t.id}" role="menuitemradio" aria-checked="${t.id === activeTheme}">
+                    <span class="admin-theme-swatch" style="background:linear-gradient(135deg, ${t.bg}, ${t.accent})"></span>
+                    ${t.label}
+                    <span class="admin-theme-option-check">✓</span>
+                </button>
+            `).join('')}
+        </div>
+    `;
+
+    document.body.appendChild(fab);
+    document.body.appendChild(panel);
+
+    const closePanel = () => { panel.classList.remove('is-open'); fab.setAttribute('aria-expanded', 'false'); };
+    const togglePanel = () => {
+        const willOpen = !panel.classList.contains('is-open');
+        panel.classList.toggle('is-open', willOpen);
+        fab.setAttribute('aria-expanded', String(willOpen));
+    };
+
+    fab.addEventListener('click', (event) => { event.stopPropagation(); togglePanel(); });
+    document.addEventListener('click', (event) => {
+        if (!panel.contains(event.target) && event.target !== fab) closePanel();
+    });
+    document.addEventListener('keydown', (event) => { if (event.key === 'Escape') closePanel(); });
+
+    panel.querySelectorAll('.admin-theme-option').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+            const theme = btn.dataset.theme;
+            applyAdminTheme(theme); // fluid — flips instantly, before the save round-trip
+            panel.querySelectorAll('.admin-theme-option').forEach((opt) => {
+                const isActive = opt === btn;
+                opt.classList.toggle('is-active', isActive);
+                opt.setAttribute('aria-checked', String(isActive));
+            });
+            closePanel();
+            try {
+                await apiFetch(`/api/v1/tenants/${getTenantSlug()}/admin-theme`, { method: 'PATCH', body: { theme } });
+            } catch (error) {
+                showToast(error.message || 'Could not save your theme choice.', 'error');
+            }
+        });
+    });
+}
+
+async function initAdminThemeSwitcher() {
+    if (!getToken() || !getTenantSlug()) return;
+    try {
+        const data = await apiFetch(`/api/v1/tenants/${getTenantSlug()}/admin-theme`);
+        applyAdminTheme(data.admin_theme || 'light');
+        if (data.is_test_account) renderAdminThemeWidget(data.admin_theme || 'light');
+    } catch (error) {
+        // Not fatal — the page just keeps whatever theme bootstrapAdminTheme() applied.
+        console.warn('Admin theme sync skipped:', error.message);
+    }
+}
+
 // ── Mobile Navigation ─────────────────────────────────────────────────────────
 function openSidebar() {
     const sidebar = document.getElementById('sidebar');
@@ -578,6 +682,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (getToken() && document.querySelector('.sidebar-nav')) {
         ensureSupportModal();
     }
+    initAdminThemeSwitcher();
     document.addEventListener('keydown', (event) => {
         if (event.key === 'Escape' && document.getElementById('supportModal')?.classList.contains('open')) {
             closeSupportModal();

@@ -3,7 +3,14 @@
    ───────────────────────────────────────────────────────────────────────────── */
 
 /* ── Reset & Base ──────────────────────────────────────────────────────────── */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+*, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    /* Low-specificity default so switching --admin-theme (test account only) fades
+       colors in smoothly; any element with its own `transition` keeps that instead. */
+    transition: background-color .2s ease, color .2s ease, border-color .2s ease;
+}
 
 :root {
     --primary:    #7e22ce;
@@ -26,6 +33,68 @@
     --transition: 200ms ease;
     --shadow-sm:  0 1px 2px 0 rgba(0, 0, 0, 0.05);
     --shadow-md:  0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --native-color-scheme: light;
+}
+
+/* ── Admin Dashboard Themes ────────────────────────────────────────────────────
+   Switching between these is a testing-account-only feature — see the theme
+   switcher wired up in admin.js (initAdminThemeSwitcher). Every other tenant
+   stays on the default ('light') palette above. */
+html[data-admin-theme="dark"] {
+    --primary:      #a855f7;
+    --primary-dim:  #c084fc;
+    --primary-glow: rgba(168, 85, 247, 0.22);
+    --bg:           #0f1117;
+    --surface:      #171923;
+    --surface-2:    #1e212c;
+    --surface-3:    #272b38;
+    --border:       #2d3140;
+    --text:         #f1f5f9;
+    --text-dim:     #94a3b8;
+    --success:      #22c55e;
+    --danger:       #f87171;
+    --warning:      #fbbf24;
+    --info:         #60a5fa;
+    --shadow-sm:    0 1px 2px 0 rgba(0, 0, 0, 0.35);
+    --shadow-md:    0 4px 6px -1px rgba(0, 0, 0, 0.45), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
+    --native-color-scheme: dark;
+}
+
+html[data-admin-theme="midnight"] {
+    --primary:      #8b5cf6;
+    --primary-dim:  #a78bfa;
+    --primary-glow: rgba(139, 92, 246, 0.24);
+    --bg:           #0a0a0f;
+    --surface:      #13131c;
+    --surface-2:    #191926;
+    --surface-3:    #232333;
+    --border:       #2a2a3d;
+    --text:         #f4f3ff;
+    --text-dim:     #a5a3c2;
+    --success:      #34d399;
+    --danger:       #fb7185;
+    --warning:      #fbbf24;
+    --info:         #818cf8;
+    --shadow-sm:    0 1px 2px 0 rgba(0, 0, 0, 0.4);
+    --shadow-md:    0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -1px rgba(0, 0, 0, 0.35);
+    --native-color-scheme: dark;
+}
+
+html[data-admin-theme="ocean"] {
+    --primary:      #0891b2;
+    --primary-dim:  #0e7490;
+    --primary-glow: rgba(8, 145, 178, 0.14);
+    --bg:           #f0f9fb;
+    --surface:      #ffffff;
+    --surface-2:    #e6f4f7;
+    --surface-3:    #d3ecf1;
+    --border:       #bfe3ea;
+    --text:         #073042;
+    --text-dim:     #4b7a89;
+    --success:      #16a34a;
+    --danger:       #dc2626;
+    --warning:      #d97706;
+    --info:         #2563eb;
 }
 
 html { font-size: 15px; background-color: var(--bg); overscroll-behavior-y: none; }
@@ -1353,7 +1422,9 @@ input, select, textarea {
     font-size: 13px;
     transition: border-color var(--transition);
     outline: none;
-    color-scheme: light;
+    /* color-scheme is set per-theme on :root below so native pickers/scrollbars
+       (date inputs, autofill, etc.) match whichever theme is active, not just light. */
+    color-scheme: var(--native-color-scheme, light);
 }
 
 input:focus, select:focus, textarea:focus { border-color: var(--primary); }
@@ -1874,4 +1945,88 @@ select option { background: var(--surface-2); }
     .modal { width: 100%; max-width: none; max-height: calc(100dvh - env(safe-area-inset-top)); margin: 0; padding: 22px 18px calc(18px + env(safe-area-inset-bottom)); border-radius: 22px 22px 0 0; }
     .modal-footer { position: sticky; bottom: calc(-18px - env(safe-area-inset-bottom)); flex-direction: column; padding: 12px 0 calc(12px + env(safe-area-inset-bottom)); background: var(--surface); }
     .modal-footer > * { width: 100%; }
+}
+
+/* ── Admin Theme Switcher (testing account only) ──────────────────────────────
+   Injected by initAdminThemeSwitcher() in admin.js — never rendered for a
+   tenant whose is_test_account flag is false. */
+.admin-theme-fab {
+    position: fixed;
+    right: 22px;
+    bottom: 22px;
+    z-index: 900;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--surface);
+    color: var(--text);
+    box-shadow: var(--shadow-md);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.admin-theme-fab:hover { border-color: var(--primary); color: var(--primary); }
+.admin-theme-fab .admin-theme-fab-icon { font-size: 16px; line-height: 1; }
+.admin-theme-fab .admin-theme-fab-badge {
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: var(--primary-glow);
+    color: var(--primary);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .5px;
+    text-transform: uppercase;
+}
+
+.admin-theme-panel {
+    position: fixed;
+    right: 22px;
+    bottom: 78px;
+    z-index: 901;
+    width: 232px;
+    padding: 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    box-shadow: var(--shadow-md);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(8px) scale(.98);
+    transition: opacity .18s ease, transform .18s ease, visibility .18s ease;
+}
+.admin-theme-panel.is-open { opacity: 1; visibility: visible; transform: translateY(0) scale(1); }
+.admin-theme-panel-title { font-size: 11px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; color: var(--text-dim); margin-bottom: 10px; }
+.admin-theme-options { display: grid; gap: 6px; }
+.admin-theme-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--text);
+    font-size: 13px;
+    font-weight: 500;
+    text-align: left;
+    cursor: pointer;
+}
+.admin-theme-option:hover { background: var(--surface-2); }
+.admin-theme-option.is-active { border-color: var(--primary); background: var(--primary-glow); color: var(--primary); font-weight: 600; }
+.admin-theme-swatch {
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+    border-radius: 7px;
+    border: 1px solid rgba(0, 0, 0, .08);
+}
+.admin-theme-option-check { margin-left: auto; opacity: 0; }
+.admin-theme-option.is-active .admin-theme-option-check { opacity: 1; }
+@media (max-width: 480px) {
+    .admin-theme-fab { right: 14px; bottom: 14px; }
+    .admin-theme-panel { right: 14px; left: 14px; width: auto; bottom: 76px; }
 }

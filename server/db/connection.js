@@ -206,6 +206,9 @@ async function runMigrations(client) {
     await client.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS paypal_payments_enabled BOOLEAN DEFAULT false`);
     await client.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS paypal_payment_link TEXT`);
     await client.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS is_test_account BOOLEAN DEFAULT false`);
+    // Admin dashboard color theme. Switching between themes is a testing-account-only
+    // feature (see /api/v1/tenants/:slug/admin-theme) so every other tenant stays on 'light'.
+    await client.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS admin_theme TEXT NOT NULL DEFAULT 'light'`);
     // Keep seeded/demo activity available for QA without polluting production analytics.
     await client.query(`UPDATE tenants SET is_test_account = true WHERE slug = 'icreate-testing-account' AND is_test_account IS DISTINCT FROM true`);
 

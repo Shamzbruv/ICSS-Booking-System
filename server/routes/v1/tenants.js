@@ -277,6 +277,40 @@ router.patch('/:slug/layout', authenticate, requireTenantOwnership('tenant_admin
     }
 });
 
+// Admin dashboard color themes. Kept in sync with ADMIN_THEMES in admin/js/admin.js.
+const ADMIN_THEMES = new Set(['light', 'dark', 'midnight', 'ocean']);
+
+// GET /api/v1/tenants/:slug/admin-theme — Get the tenant's admin dashboard theme
+// (and whether this account is allowed to change it — testing accounts only).
+router.get('/:slug/admin-theme', authenticate, requireTenantOwnership('tenant_admin'), async (req, res) => {
+    res.json({
+        admin_theme: req.tenant.admin_theme || 'light',
+        is_test_account: Boolean(req.tenant.is_test_account)
+    });
+});
+
+// PATCH /api/v1/tenants/:slug/admin-theme — Switch the admin dashboard theme.
+// Restricted to the internal testing account; every other tenant stays on the default look.
+router.patch('/:slug/admin-theme', authenticate, requireTenantOwnership('tenant_admin'), async (req, res) => {
+    if (!req.tenant.is_test_account) {
+        return res.status(403).json({ error: 'Theme switching is only available on the testing account.' });
+    }
+
+    const { theme } = req.body;
+    if (!ADMIN_THEMES.has(theme)) {
+        return res.status(400).json({ error: `Theme must be one of: ${[...ADMIN_THEMES].join(', ')}.` });
+    }
+
+    try {
+        await query(`UPDATE tenants SET admin_theme = $1 WHERE slug = $2`, [theme, req.params.slug]);
+        invalidateTenantCache(req.params.slug);
+        res.json({ success: true, admin_theme: theme });
+    } catch (err) {
+        console.error('[Tenants/Admin Theme]', err.message);
+        res.status(500).json({ error: 'Failed to save admin theme.' });
+    }
+});
+
 const { encrypt, maskSecret } = require('../../services/encryption');
 
 // GET /api/v1/tenants/:slug/payment-settings
