@@ -2030,3 +2030,20 @@ select option { background: var(--surface-2); }
     .admin-theme-fab { right: 14px; bottom: 14px; }
     .admin-theme-panel { right: 14px; left: 14px; width: auto; bottom: 76px; }
 }
+
+/* Consistent public sign-in experience. */
+.login-page { padding:24px 16px; min-height:100vh; min-height:100dvh; background:#f6f5fa; background-image:none; color-scheme:light; }
+.login-card { padding:32px; border-radius:20px; max-width:480px; box-shadow:0 12px 40px rgba(30,20,60,.05); }
+.login-card .login-logo { margin-bottom:24px; }
+.login-card .login-form { gap:0; margin-top:24px; }
+.login-card input:not([type="checkbox"]) { min-height:48px; font-size:16px; }
+.login-card input[type="checkbox"] { appearance:auto; width:18px!important; height:18px; min-height:18px; accent-color:#6d28d9; }
+.login-card a { color:#6d28d9; }
+.login-notice { color:#166534; }
+.login-footer { margin-top:22px; color:#625c70; font-size:13px; text-align:center; line-height:1.8; }
+.login-back { display:inline-flex; color:#625c70!important; font-size:13px; margin-bottom:24px; }
+@media(max-width:480px) { .login-card { padding:24px 20px; } }
+
+.login-page, .login-card { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
+.login-remember { flex-direction:row!important; align-items:center!important; justify-content:flex-start; }
+.login-remember label { text-transform:none; letter-spacing:0; }

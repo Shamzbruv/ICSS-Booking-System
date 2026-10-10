@@ -14,7 +14,7 @@
   --color-primary-glow: rgba(124, 110, 247, 0.25);
   --color-accent:       #4fd1c5;
   --color-text:         #e8eaf0;
-  --color-text-muted:   #7a7f94;
+  --color-text-muted:   #a4a9bc;
   --color-error:        #f56565;
   --color-success:      #48bb78;
   --color-warning:      #f6ad55;
@@ -63,15 +63,15 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   /* Full height on mobile, accounting for browser chrome */
-  min-height: 100dvh;
-  min-height: 100vh; /* fallback */
+  min-height: 100vh;
+  min-height: 100dvh; /* fallback */
   /* Prevent horizontal overflow globally */
   overflow-x: hidden;
 }
 
 #root {
-  min-height: 100dvh;
   min-height: 100vh;
+  min-height: 100dvh;
 }
 
 /* ── Scroll lock (applied by Modal when open) ───────────────────────────── */
@@ -159,3 +159,6 @@ img, svg { max-width: 100%; display: block; }
   white-space: nowrap;
   border: 0;
 }
+
+/* Native checks must not inherit full-width text input dimensions. */
+input[type="checkbox"], input[type="radio"] { appearance: auto; width: 18px; min-height: 18px; height: 18px; padding: 0; accent-color: var(--color-primary); }

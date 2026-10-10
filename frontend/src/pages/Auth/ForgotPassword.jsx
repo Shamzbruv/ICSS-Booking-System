@@ -35,7 +35,7 @@ export default function ForgotPassword() {
 
         <form onSubmit={handleSubmit} style={styles.form}>
           <input
-            type="email"
+            type="email" aria-label="Email address" autoComplete="email"
             placeholder="Your email address"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -43,7 +43,7 @@ export default function ForgotPassword() {
             style={styles.input}
           />
           <input
-            type="text"
+            type="text" aria-label="Business handle"
             placeholder="Business handle (recommended)"
             value={tenantSlug}
             onChange={(e) => setTenantSlug(e.target.value)}
@@ -65,19 +65,22 @@ export default function ForgotPassword() {
 
 const styles = {
   container: {
-    minHeight: '100vh',
+    minHeight: '100dvh',
+    padding: '24px 16px',
+    color: '#201a2d',
+    colorScheme: 'light',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#08090e',
+    backgroundColor: '#f6f5fa',
     backgroundImage: 'radial-gradient(ellipse at 50% 10%, rgba(124,110,247,0.1) 0%, transparent 80%)',
     fontFamily: "'Inter', sans-serif"
   },
   card: {
-    background: '#111218',
-    border: '1px solid rgba(255,255,255,0.07)',
+    background: '#ffffff',
+    border: '1px solid #dfd9e9',
     borderRadius: '16px',
-    padding: '40px',
+    padding: 'clamp(24px, 5vw, 36px)',
     width: '100%',
     maxWidth: '420px',
     textAlign: 'center',
@@ -85,13 +88,13 @@ const styles = {
   },
   title: {
     margin: '0 0 10px',
-    color: '#e4e4f0',
+    color: '#201a2d',
     fontSize: '24px',
     fontWeight: '700'
   },
   subtitle: {
     margin: '0 0 24px',
-    color: '#71717a',
+    color: '#625c70',
     fontSize: '14px',
     lineHeight: '1.5'
   },
@@ -101,29 +104,29 @@ const styles = {
     gap: '16px'
   },
   helper: {
-    color: '#a1a1aa',
+    color: '#625c70',
     fontSize: '12px',
     lineHeight: '1.45',
     margin: '-6px 0 0',
     textAlign: 'left'
   },
   input: {
-    background: 'rgba(255,255,255,0.03)',
-    border: '1px solid rgba(255,255,255,0.1)',
+    background: '#fff',
+    border: '1px solid #dfd9e9',
     borderRadius: '10px',
     padding: '12px 16px',
-    color: '#fff',
-    fontSize: '15px',
+    color: '#201a2d',
+    fontSize: '16px',
     outline: 'none',
     transition: 'border-color 0.2s'
   },
   button: {
-    background: '#7c6ef7',
+    background: '#6d28d9',
     color: '#fff',
     border: 'none',
-    borderRadius: '30px',
+    borderRadius: '10px',
     padding: '14px',
-    fontSize: '15px',
+    fontSize: '16px',
     fontWeight: '600',
     cursor: 'pointer',
     transition: 'opacity 0.2s'
@@ -131,7 +134,7 @@ const styles = {
   successMessage: {
     background: 'rgba(34,197,94,0.1)',
     border: '1px solid rgba(34,197,94,0.3)',
-    color: '#4ade80',
+    color: '#166534',
     padding: '12px',
     borderRadius: '8px',
     marginBottom: '20px',
@@ -141,7 +144,7 @@ const styles = {
   errorMessage: {
     background: 'rgba(239,68,68,0.1)',
     border: '1px solid rgba(239,68,68,0.3)',
-    color: '#f87171',
+    color: '#b42318',
     padding: '12px',
     borderRadius: '8px',
     marginBottom: '20px',
@@ -153,7 +156,7 @@ const styles = {
     fontSize: '14px'
   },
   link: {
-    color: '#7c6ef7',
+    color: '#6d28d9',
     textDecoration: 'none'
   }
 };

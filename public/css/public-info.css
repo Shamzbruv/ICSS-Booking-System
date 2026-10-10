@@ -1,0 +1,28 @@
+
+body.public-info { background:#f8f7fb; color:#201a2d; font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif; --text-muted:#625c70; }
+.public-info .gradient-bg,.public-info .grid-pattern { display:none; }
+.public-info .logo-text,.public-info .legal-hero h1 { background:none; color:#201a2d; -webkit-text-fill-color:currentColor; }
+.public-info .navbar { gap:16px; margin-bottom:24px; flex-wrap:wrap; }
+.public-info .nav-links { display:flex; position:static; flex-direction:row; flex-wrap:wrap; gap:12px; padding:0; background:none; border:0; box-shadow:none; }
+.public-info .nav-links a,.public-info .footer-links a { color:#625c70; }
+.public-info .nav-links .nav-cta,.public-info .btn-primary { color:#fff; background:#6d28d9; box-shadow:none; border:0; }
+.public-info .btn-secondary { color:#201a2d; border:1px solid #dfd9e9; background:#fff; }
+.public-info .legal-summary-card,.public-info .legal-content,.public-info .legal-meta-card,.public-info .faq-item,.public-info .legal-note,.public-info .legal-contact-card { background:#fff; border-color:#dfd9e9; box-shadow:none; }
+.public-info .legal-hero p,.public-info .legal-summary-card p,.public-info .legal-header p,.public-info .legal-section p,.public-info .legal-section li,.public-info .legal-meta-label,.public-info .faq-answer,.public-info .faq-utility,.public-info .faq-utility p,.public-info .legal-contact-card p,.public-info .footer { color:#625c70; }
+.public-info .legal-header h2,.public-info .legal-section h3,.public-info .legal-section h4,.public-info .legal-meta-value,.public-info .faq-question,.public-info .faq-question-text,.public-info .legal-contact-card h3 { color:#201a2d; }
+.public-info .legal-label,.public-info .legal-chip,.public-info .faq-filter-btn,.public-info .faq-filter-button,.public-info .faq-category { color:#6d28d9; background:#efe8fb; border-color:#dfd2f3; }
+.public-info .faq-filter-button.active,.public-info .faq-filter-btn.active { color:#fff; background:#6d28d9; }
+.public-info .faq-more-button { color:#6d28d9; background:#efe8fb; border-color:#dfd2f3; }
+.public-info .breadcrumb-bar a,.public-info .legal-section a,.public-info .faq-answer a,.public-info .legal-contact-card a { color:#6d28d9; }
+.public-info .legal-section a.btn-primary { color:#fff; }
+.public-info a:focus-visible,.public-info button:focus-visible { outline:3px solid #6d28d9; outline-offset:4px; }
+.public-info .legal-summary-grid,.public-info .legal-meta-grid { grid-template-columns:repeat(auto-fit,minmax(min(240px,100%),1fr)); }
+.public-info .legal-content { overflow-wrap:anywhere; }
+@media(max-width:600px) { .public-info .landing-page { padding-inline:16px; } .public-info .legal-content { padding:24px 18px; } .public-info .legal-hero h1 { font-size:32px; } .public-info .nav-links a { padding:8px 0; font-size:13px; min-height:44px; } }
+.public-info .faq-button,.public-info .legal-list li strong { color:#201a2d; }
+.public-info .faq-answer-inner p,.public-info .faq-answer-inner ul { color:#625c70; }
+.public-info .faq-filter,.public-info .faq-eyebrow,.public-info .faq-chevron { color:#6d28d9; }
+.public-info .faq-filter { background:#f5f1fb; border-color:#dfd9e9; }
+.public-info .faq-filter:hover,.public-info .faq-filter.is-active { background:#6d28d9; color:#fff; border-color:#6d28d9; }
+.public-info .legal-section,.public-info .legal-header { border-color:#dfd9e9; }
+.public-info .legal-contact-grid { grid-template-columns:repeat(auto-fit,minmax(min(220px,100%),1fr)); }

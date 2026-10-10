@@ -29,7 +29,7 @@ const TOTAL_STEPS = 3;
 
 function StepDots({ current }) {
   return (
-    <div className={s.wizard__steps}>
+    <div className={s.wizard__steps} aria-hidden="true">
       {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
         <div
           key={i}
@@ -49,9 +49,10 @@ function StepBasics({ data, onChange, onNext }) {
 
   const submit = () => {
     const pw = passwordRef.current;
-    if (!data.businessName || !data.ownerName || !data.email || !pw) {
+    if (!data.businessName.trim() || !data.ownerName.trim() || !data.email.trim() || !pw) {
       return setErr('All fields are required.');
     }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email.trim())) return setErr('Enter a valid email address.');
     if (pw.length < 8) return setErr('Password must be at least 8 characters.');
     if (!data.termsAccepted) return setErr('You must accept the Terms & Conditions before continuing.');
     setErr('');
@@ -65,22 +66,22 @@ function StepBasics({ data, onChange, onNext }) {
       <h1 className={s.wizard__title}>Start your free trial</h1>
       <p className={s.wizard__subtitle}>7 days free, then {'$'}{MONTHLY_PRICE_USD} USD/month. Cancel anytime.</p>
       <div className={s.wizard__field}>
-        <label className={s.wizard__label}>Business Name</label>
-        <input value={data.businessName} onChange={e => onChange('businessName', e.target.value)} placeholder="e.g. Luxe Hair Studio" />
+        <label className={s.wizard__label} htmlFor="business-name">Business Name</label>
+        <input id="business-name" autoComplete="organization" required value={data.businessName} onChange={e => onChange('businessName', e.target.value)} placeholder="e.g. Luxe Hair Studio" />
       </div>
       <div className={s.wizard__field}>
-        <label className={s.wizard__label}>Your Full Name</label>
-        <input value={data.ownerName} onChange={e => onChange('ownerName', e.target.value)} placeholder="e.g. Jordan Clarke" />
+        <label className={s.wizard__label} htmlFor="owner-name">Your Full Name</label>
+        <input id="owner-name" autoComplete="name" required value={data.ownerName} onChange={e => onChange('ownerName', e.target.value)} placeholder="e.g. Jordan Clarke" />
       </div>
       <div className={s.wizard__field}>
-        <label className={s.wizard__label}>Email Address</label>
-        <input type="email" value={data.email} onChange={e => onChange('email', e.target.value)} placeholder="you@example.com" />
+        <label className={s.wizard__label} htmlFor="email">Email Address</label>
+        <input type="email" id="email" autoComplete="email" required value={data.email} onChange={e => onChange('email', e.target.value)} placeholder="you@example.com" />
       </div>
       <div className={s.wizard__field}>
-        <label className={s.wizard__label}>Password</label>
+        <label className={s.wizard__label} htmlFor="password">Password</label>
         {/* Uncontrolled input — value never enters state or localStorage */}
         <input
-          type="password"
+          type="password" id="password" autoComplete="new-password" minLength={8} required
           placeholder="Min 8 characters"
           onChange={e => { passwordRef.current = e.target.value; }}
         />
@@ -96,7 +97,7 @@ function StepBasics({ data, onChange, onNext }) {
         </span>
       </label>
       <p className={s.wizard__hint}>The full terms open in a new tab so you can review them before continuing.</p>
-      {err && <p className={s.wizard__error}>{err}</p>}
+      {err && <p role="alert" className={s.wizard__error}>{err}</p>}
       <div className={s.wizard__actions}>
         <button className={`${s.btn} ${s['btn--primary']}`} onClick={submit} disabled={!data.termsAccepted}>Continue →</button>
       </div>
@@ -108,14 +109,18 @@ function StepBasics({ data, onChange, onNext }) {
 function StepTheme({ data, onChange, onNext, onBack }) {
   const [themes,setThemes] = useState([]);
   const [loading,setLoading] = useState(true);
-  useEffect(()=>{api.themes().then(result=>setThemes(result.themes||[])).finally(()=>setLoading(false))},[]);
+  const [error,setError] = useState('');
+  const loadThemes = () => { setLoading(true); setError(''); api.themes().then(result=>setThemes(result.themes||[])).catch(()=>setError('We could not load the themes. Please try again.')).finally(()=>setLoading(false)); };
+  useEffect(loadThemes,[]);
   return (
     <>
       <h1 className={s.wizard__title}>Pick your starter theme</h1>
       <p className={s.wizard__subtitle}>Your theme defines your public booking page style. You can customise it fully in the editor.</p>
       <div style={{ display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))',gap:10,marginBottom:16 }}>
-        {loading&&<p>Loading themes…</p>}
-        {themes.map(theme=><button type="button" key={theme.id} onClick={()=>{onChange('themeId',theme.id);onChange('themeName',theme.name)}} style={{padding:14,textAlign:'left',borderRadius:10,border:data.themeId===theme.id?'2px solid #7c6ef7':'1px solid var(--color-border)',background:'var(--color-surface-2)',color:'inherit',cursor:'pointer'}}><strong>{theme.name}</strong><br/><small>{theme.category}</small></button>)}
+        {loading&&<p role="status">Loading themes…</p>}
+        {error&&<div role="alert"><p>{error}</p><button type="button" className={`${s.btn} ${s['btn--ghost']}`} onClick={loadThemes}>Try again</button></div>}
+        {!loading&&!error&&themes.length===0&&<p>No themes are available yet. Please contact support for help.</p>}
+        {themes.map(theme=><button type="button" key={theme.id} aria-pressed={data.themeId===theme.id} onClick={()=>{onChange('themeId',theme.id);onChange('themeName',theme.name)}} style={{padding:14,textAlign:'left',borderRadius:10,border:data.themeId===theme.id?'2px solid #7c6ef7':'1px solid var(--color-border)',background:'var(--color-surface-2)',color:'inherit',cursor:'pointer'}}><strong>{theme.name}</strong><br/><small>{theme.category}</small></button>)}
       </div>
       <div className={s.wizard__actions}>
         <button className={`${s.btn} ${s['btn--ghost']}`} onClick={onBack}>← Back</button>
@@ -259,7 +264,7 @@ function StepPayPal({ data, onNext }) {
           By continuing with checkout, you confirm your acceptance of the <a href={TERMS_URL} target="_blank" rel="noopener noreferrer">Terms &amp; Conditions</a>.
         </p>
       </div>
-      {err && <p className={s.wizard__error}>{err}</p>}
+      {err && <p role="alert" className={s.wizard__error}>{err}</p>}
     </>
   );
 }
@@ -346,17 +351,17 @@ export default function OnboardingWizard() {
 
   return (
     <div className={s.wizard}>
+      <nav className={s.wizard__nav} aria-label="Signup navigation"><a href="/">← Back to home</a><a href="/admin/login.html">Already a member? Sign in</a></nav>
       <div className={s.wizard__card}>
-        <div className={s.wizard__logo} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <img src="/favicon.png" alt="ICSS Icon" style={{ width: '42px', height: '42px', borderRadius: '12px', objectFit: 'contain' }} />
-          <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-            <span style={{ fontFamily: '"Clash Display", sans-serif', fontWeight: 700, fontSize: '1.5rem', background: 'linear-gradient(135deg, #ffffff, #a5b4fc)', WebkitBackgroundClip: 'text', color: 'transparent', lineHeight: 1 }}>ICSS</span>
-            <span style={{ fontSize: '0.55rem', letterSpacing: '1.5px', color: '#a1a1aa', fontWeight: 600, lineHeight: 1, marginTop: '2px' }}>BOOKING MANAGEMENT</span>
-          </div>
-        </div>
+        <a href="/" className={s.wizard__logo} aria-label="ICSS Bookings home">
+          <img src="/favicon.png" alt="" />
+          <div className={s.wizard__brand}><strong>ICSS Bookings</strong><span>BY ICREATE SOLUTIONS &amp; SERVICES</span></div>
+        </a>
         <StepDots current={step} />
+        <p className={s['wizard__step-label']} role="status">{step < TOTAL_STEPS ? `Step ${step + 1} of 3 · ${['Your business', 'Your booking page', 'Your subscription'][step]}` : 'Setup complete'}</p>
         {renderStep()}
       </div>
+      <p className={s.wizard__footer}>Built in Jamaica. Here to help.<br /><a href="https://wa.me/18765857469">Chat on WhatsApp</a> · <a href="mailto:icreatesolutions.ja@gmail.com">Email support</a></p>
     </div>
   );
 }

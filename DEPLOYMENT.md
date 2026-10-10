@@ -61,14 +61,21 @@ npm start
 
 The Express server serves the built `frontend/dist` statically.
 
-## Railway / Render
+## Railway automatic deployment
 
-The `npm start` script runs the Express server, which:
-- Auto-initialises all DB tables on first boot (idempotent)
-- Serves `frontend/dist` as static files
-- Starts all `pg-boss` workers
+The existing Railway service is connected to `Shamzbruv/ICSS-Booking-System` on `main`.
+Push production changes to that branch. Railway builds the root Dockerfile, which runs
+`npm ci` and `npm run build` in the frontend stage before copying `frontend/dist` into
+the server image. `railway.json` explicitly selects that Dockerfile and checks `/health`
+before replacing the previous deployment.
 
-No separate frontend server is needed.
+The GitHub Actions deploy job currently prints instructions only; it does **not** deploy.
+The native Railway GitHub integration is the deployment path. Confirm the Railway commit
+status for the exact new SHA and check the live site after every push. If a push produces
+no Railway status, inspect the service's source branch, auto-deploy toggle and watch paths.
+
+The Express server auto-initialises tables, serves the built frontend and starts queue workers.
+Production environment values stay in Railway; do not put secrets in this repository.
 
 ## Smoke test checklist (run after every deploy)
 

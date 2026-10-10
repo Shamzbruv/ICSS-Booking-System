@@ -73,3 +73,5 @@
 
 .success h2 { margin-bottom: 12px; }
 .success p { color: var(--color-text-muted); margin-bottom: 24px; line-height: 1.6; }
+
+@media (max-width: 600px) { .page { padding: 16px; min-height: 100dvh; } .card { padding: 24px 20px; } }

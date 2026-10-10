@@ -15,7 +15,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>ICSS Admin — Login</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700,900&f[]=clash-display@400,500,600,700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/global-theme.css">
     <link rel="stylesheet" href="css/admin.css">
   <link rel="icon" type="image/png" href="./favicon.png">
@@ -25,6 +24,7 @@
 
 
     <div class="login-card">
+        <a class="login-back" href="/">← Back to ICSS Bookings</a>
         <div class="login-logo">
             <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; margin-bottom: 1rem;">
                 <img src="./favicon.png" alt="ICSS Icon" style="width: 56px; height: 56px; border-radius: 12px; object-fit: contain;">
@@ -33,8 +33,8 @@
                     <span style="font-size: 0.65rem; letter-spacing: 2px; color: var(--text-dim); font-weight: 600; line-height: 1; margin-top: 4px;">BOOKING MANAGEMENT</span>
                 </div>
             </div>
-            <h1 class="login-title">Admin Portal</h1>
-            <p class="login-subtitle">Booking System Management</p>
+            <h1 class="login-title">Welcome back</h1>
+            <p class="login-subtitle">Sign in to manage your business and bookings.</p>
         </div>
 
         <form class="login-form" id="loginForm">
@@ -52,16 +52,17 @@
                 <label for="loginPassword">Password</label>
                 <input type="password" id="loginPassword" placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;" autocomplete="current-password" required>
                 <div style="text-align: right; margin-top: 8px;">
-                    <a href="/forgot-password" style="color: #a5b4fc; font-size: 13px; text-decoration: none;">Forgot Password?</a>
+                    <a href="/forgot-password" style="color: #6d28d9; font-size: 13px; text-decoration: none;">Forgot Password?</a>
                 </div>
             </div>
-            <div class="form-group" style="display: flex; align-items: center; gap: 8px; margin-bottom: 24px;">
+            <div class="form-group login-remember" style="display: flex; align-items: center; gap: 8px; margin-bottom: 24px;">
                 <input type="checkbox" id="rememberMe" style="width: auto; margin: 0;">
-                <label for="rememberMe" style="margin: 0; font-weight: normal; color: var(--text-muted); font-size: 14px; cursor: pointer;">Keep me signed in</label>
+                <label for="rememberMe" style="margin: 0; font-weight: normal; color: var(--text-dim); font-size: 14px; cursor: pointer;">Keep me signed in</label>
             </div>
-            <div class="login-error" id="loginError"></div>
+            <div class="login-error" id="loginError" role="alert"></div>
             <button type="submit" class="login-submit" id="loginBtn">Sign In</button>
         </form>
+        <p class="login-footer">New to ICSS Bookings? <a href="/onboarding">Start your free trial</a><br /><a href="https://wa.me/18765857469">Need help? Chat with us</a></p>
     </div>
 
     <script src="js/admin.js"></script>
