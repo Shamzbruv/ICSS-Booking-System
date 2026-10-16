@@ -545,7 +545,7 @@ async function sendBookingPendingReviewEmail(booking, tenant) {
                     </div>
                     <p style="font-size:14px;color:#555;line-height:1.7;">
                         ${isAfterHours
-                            ? (booking.payment_mode === 'manual'
+                            ? (['manual', 'lynk'].includes(booking.payment_mode)
                                 ? (receiptAttachment ? 'The uploaded transfer receipt is attached. Review the receipt and requested time before approving or declining.' : 'No receipt attachment could be recovered. Do not approve this request until payment proof is verified.')
                                 : 'Open the Bookings page to approve or decline this request.')
                             : (receiptAttachment ? 'The uploaded transfer receipt is attached to this email for review.' : 'No receipt attachment could be recovered from the booking record.')}

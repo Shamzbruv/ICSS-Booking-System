@@ -8,6 +8,7 @@ const router  = express.Router();
 const { query }  = require('../../db/connection');
 const { authenticate, requireRole } = require('../../middleware/auth');
 const { normalizeDepositConfig } = require('../../services/paymentRules');
+const { SERVICE_PAYMENT_MODES } = require('../../services/paymentGateways');
 
 router.use(authenticate);
 router.use(requireRole('staff', 'tenant_admin'));
@@ -33,6 +34,9 @@ router.post('/', async (req, res) => {
     } = req.body;
 
     if (!name || !name.trim()) return res.status(400).json({ error: 'Name is required.' });
+    if (payment_mode && !SERVICE_PAYMENT_MODES.includes(payment_mode)) {
+        return res.status(400).json({ error: 'Unsupported payment method.' });
+    }
 
     const normalized = normalizeDepositConfig({
         payment_requirement_type,
@@ -77,6 +81,10 @@ router.patch('/:id', async (req, res) => {
         name, description, image_url, duration_minutes, buffer_time_minutes, price, currency,
         payment_mode, payment_requirement_type, deposit_type, deposit_amount, active
     } = req.body;
+
+    if (payment_mode && !SERVICE_PAYMENT_MODES.includes(payment_mode)) {
+        return res.status(400).json({ error: 'Unsupported payment method.' });
+    }
 
     const normalized = normalizeDepositConfig({
         payment_requirement_type,

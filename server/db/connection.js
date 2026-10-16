@@ -10,6 +10,7 @@
 
 require('dotenv').config();
 const { Pool } = require('pg');
+const { THEME_KEYS } = require('../services/siteConfig');
 
 let pool;
 
@@ -742,7 +743,33 @@ async function runMigrations(client) {
         ('Universal Services', 'General / Universal', '/Template/universal_booking.html', '{"services": [{"name": "Consultation", "duration_minutes": 30, "price": 50}, {"name": "Professional Service", "duration_minutes": 60, "price": 120}]}'::jsonb)
         ON CONFLICT (name) DO NOTHING
     `);
-    await client.query(`UPDATE themes SET template_path='/Template/nail_tech.html' WHERE name='Elegant Nails' AND template_path<>'/Template/nail_tech.html'`);
+    // Theme previews now open the live website demo for that template.
+    for (const [themeName, themeKey] of Object.entries(THEME_KEYS)) {
+        await client.query(`UPDATE themes SET template_path = $1 WHERE name = $2 AND template_path IS DISTINCT FROM $1`, [`/demo/${themeKey}`, themeName]);
+    }
+
+    // ── Tenant Website (Website Builder) ──────────────────────────────────────
+    await client.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS site_config JSONB DEFAULT NULL`);
+    await client.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS site_draft JSONB DEFAULT NULL`);
+    await client.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS site_published_at TIMESTAMPTZ`);
+    await client.query(`
+        CREATE TABLE IF NOT EXISTS tenant_media (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+            kind TEXT NOT NULL,
+            mime TEXT NOT NULL,
+            filename TEXT,
+            size_bytes INTEGER NOT NULL,
+            width INTEGER,
+            height INTEGER,
+            duration_seconds NUMERIC,
+            data BYTEA NOT NULL,
+            created_at TIMESTAMPTZ DEFAULT NOW()
+        )
+    `);
+    // EXTERNAL = uncompressed TOAST, so byte-range reads for video don't decompress the whole file.
+    await client.query(`ALTER TABLE tenant_media ALTER COLUMN data SET STORAGE EXTERNAL`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_tenant_media_tenant ON tenant_media(tenant_id, created_at DESC)`);
 
     // ── Impersonation Sessions (Platform Console) ──────────────────────────────
     await client.query(`

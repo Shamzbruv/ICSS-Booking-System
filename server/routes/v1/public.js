@@ -8,6 +8,8 @@ const express = require('express');
 const router  = express.Router();
 const { query } = require('../../db/connection');
 const { normalizeDepositConfig } = require('../../services/paymentRules');
+const { publicGatewaySummary } = require('../../services/paymentGateways');
+const { themeKeyForName } = require('../../services/siteConfig');
 
 // GET /api/v1/public/tenant — Expose safe branding for the booking widget
 router.get('/tenant', async (req, res) => {
@@ -17,7 +19,7 @@ router.get('/tenant', async (req, res) => {
         after_hours_requests_enabled, after_hours_fee, paypal_payments_enabled
     } = req.tenant;
 
-    let themeSlug = 'universal_booking';
+    let themeSlug = 'Universal Services';
     let themeCode = 'universal';
     if (theme_id) {
         try {
@@ -63,6 +65,10 @@ router.get('/tenant', async (req, res) => {
         after_hours_requests_enabled: Boolean(after_hours_requests_enabled),
         after_hours_fee: Number(after_hours_fee || 0)
         ,paypal_payments_enabled: Boolean(paypal_payments_enabled)
+        ,payment_gateways: publicGatewaySummary(req.tenant)
+        ,themeKey: themeKeyForName(themeSlug)
+        // Published website only — drafts are delivered to the builder preview via postMessage.
+        ,site: req.tenant.site_config || null
     });
 });
 

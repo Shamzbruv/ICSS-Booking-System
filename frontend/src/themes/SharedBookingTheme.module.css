@@ -802,3 +802,15 @@
 .afterHoursRequest p { margin: 0; font-size: 0.84rem; opacity: 0.76; line-height: 1.45; }
 .afterHoursRequest input { min-width: 128px; padding: 10px; border-radius: 9px; border: 1px solid rgba(127,127,127,.3); background: transparent; color: inherit; }
 @media (max-width: 620px) { .afterHoursRequest { align-items: stretch; flex-direction: column; } .afterHoursRequest input { width: 100%; box-sizing: border-box; } }
+
+/* Embedded inside a tenant website page: the site supplies the page chrome. */
+.embedded {
+  min-height: 0;
+  padding: 8px 0 0;
+  background: transparent;
+}
+.embedded .header[hidden] { display: none; }
+.embedded .shell { box-shadow: none; }
+@media (max-width: 720px) {
+  .embedded { padding: 0; }
+}

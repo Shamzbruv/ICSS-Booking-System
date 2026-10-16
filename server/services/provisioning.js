@@ -8,7 +8,9 @@ const { query, transaction } = require('../db/connection');
 const { normalizeInternalSignupPlanId, isConfiguredTrialPlan } = require('./paypalConfig');
 const RESERVED_SLUGS = new Set([
     'admin', 'api', 'login', 'signup', 'dashboard', 'settings', 'www', 'app',
-    'auth', 'billing', 'support', 'help', 'docs', 'blog', 'static', 'assets'
+    'auth', 'billing', 'support', 'help', 'docs', 'blog', 'static', 'assets',
+    'demo', 'media', 'playground', 'platform', 'onboarding', 'themes', 'editor',
+    'provisioning', 'custom-theme', 'forgot-password', 'reset-password', 'template'
 ]);
 
 function slugifyBusinessName(name) {

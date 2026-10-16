@@ -14,7 +14,9 @@ const { seedStarterServices } = require('../../services/provisioning');
 
 const RESERVED_SLUGS = new Set([
     'admin', 'api', 'login', 'signup', 'dashboard', 'settings', 'www', 'app',
-    'auth', 'billing', 'support', 'help', 'docs', 'blog', 'static', 'assets'
+    'auth', 'billing', 'support', 'help', 'docs', 'blog', 'static', 'assets',
+    'demo', 'media', 'playground', 'platform', 'onboarding', 'themes', 'editor',
+    'provisioning', 'custom-theme', 'forgot-password', 'reset-password', 'template'
 ]);
 
 // Platform admin key or JWT middleware
@@ -322,6 +324,7 @@ router.patch('/:slug/admin-theme', authenticate, requireTenantOwnership('tenant_
 });
 
 const { encrypt, maskSecret } = require('../../services/encryption');
+const { PAYMENT_MODES, GATEWAYS, normalizeGatewaySettings } = require('../../services/paymentGateways');
 
 // GET /api/v1/tenants/:slug/payment-settings
 router.get('/:slug/payment-settings', authenticate, requireTenantOwnership('tenant_admin'), async (req, res) => {
@@ -349,7 +352,13 @@ router.get('/:slug/payment-settings', authenticate, requireTenantOwnership('tena
             }
         }
         
-        res.json({ settings: { ...data, payment_settings: maskedSettings } });
+        const gatewayCatalog = Object.values(GATEWAYS).map(({ key, label, kind, summary, defaultAmountParam, defaultReferenceParam, linkHosts }) => ({
+            key, label, kind, summary,
+            defaultAmountParam: defaultAmountParam || '',
+            defaultReferenceParam: defaultReferenceParam || '',
+            linkHosts: linkHosts || []
+        }));
+        res.json({ settings: { ...data, payment_settings: maskedSettings }, gateway_catalog: gatewayCatalog });
     } catch (err) {
         res.status(500).json({ error: 'Failed to fetch settings.' });
     }
@@ -369,6 +378,21 @@ router.patch('/:slug/payment-settings', authenticate, requireTenantOwnership('te
         let existingSettings = currentRes.rows[0]?.payment_settings || {};
         
         let newSettings = { ...existingSettings };
+
+        if (default_payment_mode !== undefined && default_payment_mode !== null && !PAYMENT_MODES.includes(default_payment_mode)) {
+            return res.status(400).json({ error: `Default payment mode must be one of: ${PAYMENT_MODES.join(', ')}.` });
+        }
+
+        if (payment_settings && payment_settings.gateways) {
+            try {
+                newSettings.gateways = normalizeGatewaySettings(payment_settings.gateways, existingSettings.gateways || {});
+            } catch (validationError) {
+                return res.status(400).json({ error: validationError.message });
+            }
+        }
+        if (payment_settings && payment_settings.provider) {
+            newSettings.provider = String(payment_settings.provider).slice(0, 40);
+        }
         
         if (payment_settings) {
             if (payment_settings.wipay_merchant_code && !payment_settings.wipay_merchant_code.includes('(Set)')) {
@@ -491,6 +515,144 @@ router.patch('/:slug/branding', authenticate, requireTenantOwnership('tenant_adm
     } catch (err) {
         console.error('[Tenants/Branding]', err.message);
         res.status(500).json({ error: 'Failed to save branding.' });
+    }
+});
+
+// ── Website Builder ───────────────────────────────────────────────────────────
+// The builder autosaves to `site_draft`; customers only ever see `site_config`.
+const { sanitizeSiteConfig } = require('../../services/siteConfig');
+const { storeMedia, listMedia, deleteMedia, MAX_UPLOAD_BYTES } = require('../../services/media');
+
+function siteState(row) {
+    const draft = row.site_draft || null;
+    const published = row.site_config || null;
+    return {
+        draft,
+        published,
+        published_at: row.site_published_at || null,
+        has_unpublished_changes: Boolean(draft) && JSON.stringify(draft) !== JSON.stringify(published)
+    };
+}
+
+// GET /api/v1/tenants/:slug/site — Draft + published website documents
+router.get('/:slug/site', authenticate, requireTenantOwnership('tenant_admin'), async (req, res) => {
+    try {
+        const result = await query(`SELECT site_draft, site_config, site_published_at FROM tenants WHERE id = $1`, [req.tenant.id]);
+        if (result.rows.length === 0) return res.status(404).json({ error: 'Tenant not found.' });
+        res.json(siteState(result.rows[0]));
+    } catch (err) {
+        console.error('[Tenants/Site Load]', err.message);
+        res.status(500).json({ error: 'Failed to load website settings.' });
+    }
+});
+
+// PUT /api/v1/tenants/:slug/site/draft — Autosave the work-in-progress website
+router.put('/:slug/site/draft', authenticate, requireTenantOwnership('tenant_admin'), async (req, res) => {
+    let site;
+    try { site = sanitizeSiteConfig(req.body?.site); }
+    catch (err) { return res.status(400).json({ error: err.message }); }
+    try {
+        const result = await query(
+            `UPDATE tenants SET site_draft = $1, updated_at = NOW() WHERE id = $2
+             RETURNING site_draft, site_config, site_published_at`,
+            [JSON.stringify(site), req.tenant.id]
+        );
+        invalidateTenantCache(req.tenant.slug);
+        res.json({ success: true, ...siteState(result.rows[0]) });
+    } catch (err) {
+        console.error('[Tenants/Site Draft]', err.message);
+        res.status(500).json({ error: 'Failed to save your draft.' });
+    }
+});
+
+// POST /api/v1/tenants/:slug/site/publish — Make the draft live
+router.post('/:slug/site/publish', authenticate, requireTenantOwnership('tenant_admin'), async (req, res) => {
+    try {
+        let site = null;
+        if (req.body?.site) {
+            try { site = sanitizeSiteConfig(req.body.site); }
+            catch (err) { return res.status(400).json({ error: err.message }); }
+        } else {
+            const current = await query(`SELECT site_draft FROM tenants WHERE id = $1`, [req.tenant.id]);
+            site = current.rows[0]?.site_draft;
+            if (!site) return res.status(400).json({ error: 'There are no changes to publish yet.' });
+        }
+        const result = await query(
+            `UPDATE tenants SET site_config = $1, site_draft = $1, site_published_at = NOW(), updated_at = NOW()
+             WHERE id = $2 RETURNING site_draft, site_config, site_published_at`,
+            [JSON.stringify(site), req.tenant.id]
+        );
+        invalidateTenantCache(req.tenant.slug);
+        res.json({ success: true, message: 'Your website is live.', ...siteState(result.rows[0]) });
+    } catch (err) {
+        console.error('[Tenants/Site Publish]', err.message);
+        res.status(500).json({ error: 'Failed to publish your website.' });
+    }
+});
+
+// DELETE /api/v1/tenants/:slug/site/draft — Throw away unpublished changes
+router.delete('/:slug/site/draft', authenticate, requireTenantOwnership('tenant_admin'), async (req, res) => {
+    try {
+        const result = await query(
+            `UPDATE tenants SET site_draft = NULL, updated_at = NOW() WHERE id = $1
+             RETURNING site_draft, site_config, site_published_at`,
+            [req.tenant.id]
+        );
+        invalidateTenantCache(req.tenant.slug);
+        res.json({ success: true, ...siteState(result.rows[0]) });
+    } catch (err) {
+        console.error('[Tenants/Site Discard]', err.message);
+        res.status(500).json({ error: 'Failed to discard the draft.' });
+    }
+});
+
+// ── Media Library ─────────────────────────────────────────────────────────────
+// Upload body is the raw file (Content-Type = file mime). Metadata travels in headers
+// so large videos don't have to be base64-encoded through JSON.
+router.post('/:slug/media',
+    authenticate,
+    requireTenantOwnership('tenant_admin'),
+    express.raw({ type: ['image/*', 'video/*', 'audio/*'], limit: MAX_UPLOAD_BYTES + 1024 }),
+    async (req, res) => {
+        try {
+            if (!Buffer.isBuffer(req.body)) {
+                return res.status(415).json({ error: 'Send the file itself as the request body with its Content-Type.' });
+            }
+            const media = await storeMedia(req.tenant.id, {
+                buffer: req.body,
+                mime: req.headers['content-type'],
+                filename: decodeURIComponent(String(req.headers['x-file-name'] || 'upload')),
+                width: req.headers['x-media-width'],
+                height: req.headers['x-media-height'],
+                duration: req.headers['x-media-duration']
+            });
+            res.status(201).json({ success: true, media });
+        } catch (err) {
+            if (err.status) return res.status(err.status).json({ error: err.message });
+            console.error('[Tenants/Media Upload]', err.message);
+            res.status(500).json({ error: 'Upload failed. Please try again.' });
+        }
+    }
+);
+
+router.get('/:slug/media', authenticate, requireTenantOwnership('tenant_admin'), async (req, res) => {
+    try {
+        res.json(await listMedia(req.tenant.id));
+    } catch (err) {
+        console.error('[Tenants/Media List]', err.message);
+        res.status(500).json({ error: 'Failed to load your media library.' });
+    }
+});
+
+router.delete('/:slug/media/:mediaId', authenticate, requireTenantOwnership('tenant_admin'), async (req, res) => {
+    if (!/^[0-9a-f-]{36}$/i.test(req.params.mediaId)) return res.status(400).json({ error: 'Invalid media id.' });
+    try {
+        const removed = await deleteMedia(req.tenant.id, req.params.mediaId);
+        if (!removed) return res.status(404).json({ error: 'File not found.' });
+        res.json({ success: true });
+    } catch (err) {
+        console.error('[Tenants/Media Delete]', err.message);
+        res.status(500).json({ error: 'Failed to delete the file.' });
     }
 });
 

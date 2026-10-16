@@ -13,6 +13,7 @@ const { sendBookingConfirmationNotifications } = require('../../services/booking
 const calendarSync              = require('../../services/calendarSync');
 const { normalizeDepositConfig, calculateAmountDue } = require('../../services/paymentRules');
 const { convertForPayPal } = require('../../services/currencyConversion');
+const { getGateway, isLinkGateway, isReceiptGateway, isGatewayEnabled, buildCheckoutUrl } = require('../../services/paymentGateways');
 const { ACTIVE_BOOKING_STATUSES_SQL, serviceOverlapsBlockedSlot, timeTextToMinutes } = require('../../services/bookingAvailabilityRules');
 
 const MAX_BOOKINGS_PER_DAY = 14;
@@ -208,6 +209,17 @@ router.post('/', enforceBookingLimit, async (req, res) => {
                 }
                 status = 'pending_manual_confirmation';
                 expiresAt = null;
+            } else if (paymentRequested && isLinkGateway(paymentMode) && isGatewayEnabled(tenant, paymentMode)) {
+                // Hosted checkout (Fygaro, EasyPay, FAC/PowerTranz). Tenant verifies the payment.
+                status = 'pending_payment';
+                expiresAt = null;
+            } else if (paymentRequested && isReceiptGateway(paymentMode) && isGatewayEnabled(tenant, paymentMode)) {
+                // Wallet payments (Lynk): customer pays the tenant's handle and uploads proof.
+                if (!receipt_image) {
+                    const err = new Error(`A ${getGateway(paymentMode).label} payment screenshot is required.`); err.status = 400; throw err;
+                }
+                status = 'pending_manual_confirmation';
+                expiresAt = null;
             } else if (paymentRequested) {
                 const err = new Error('This service requires payment before booking, but the configured payment method is unavailable.'); err.status = 400; throw err;
             } else {
@@ -263,13 +275,14 @@ router.post('/', enforceBookingLimit, async (req, res) => {
             let checkoutUrl = null;
             let paypalConversion = null;
             let bankInstructions = null;
+            let paymentGateway = null;
 
             // 6. Handle Payment Records
             if (paymentMode !== 'none' && amountDue > 0) {
                 const paymentRes = await client.query(
                     `INSERT INTO booking_payments (booking_id, tenant_id, provider, payment_type, amount_due, currency, status, gateway_response)
                      VALUES ($1, $2, $3, $4, $5, $6, 'pending', $7) RETURNING *`,
-                    [booking.id, tenantId, paymentMode, paymentRequirement, amountDue, service.currency || 'JMD', paymentMode === 'manual' ? JSON.stringify({ receipt_image }) : null]
+                    [booking.id, tenantId, paymentMode, paymentRequirement, amountDue, service.currency || 'JMD', isReceiptGateway(paymentMode) ? JSON.stringify({ receipt_image }) : null]
                 );
                 const payment = paymentRes.rows[0];
 
@@ -279,10 +292,18 @@ router.post('/', enforceBookingLimit, async (req, res) => {
                     checkoutUrl = `${String(tenant.paypal_payment_link).replace(/\/$/, '')}/${paypalConversion.usdAmount.toFixed(2)}USD`;
                 } else if (paymentMode === 'manual') {
                     bankInstructions = tenant.bank_transfer_instructions;
+                } else if (isLinkGateway(paymentMode)) {
+                    const reference = `BK-${String(booking.id).slice(0, 8).toUpperCase()}`;
+                    const currency = String(service.currency || 'JMD').toUpperCase();
+                    checkoutUrl = buildCheckoutUrl(tenant, paymentMode, { amount: amountDue, currency, reference });
+                    paymentGateway = { key: paymentMode, label: getGateway(paymentMode).label, amount: amountDue, currency, reference };
+                    await client.query(`UPDATE booking_payments SET external_reference = $1 WHERE id = $2`, [reference, payment.id]);
+                } else if (isReceiptGateway(paymentMode)) {
+                    paymentGateway = { key: paymentMode, label: getGateway(paymentMode).label, amount: amountDue, currency: String(service.currency || 'JMD').toUpperCase() };
                 }
             }
 
-            return { booking, checkoutUrl, paypalConversion, bankInstructions, service_name: service.name };
+            return { booking, checkoutUrl, paypalConversion, bankInstructions, paymentGateway, service_name: service.name };
         });
 
         // 7. Enqueue Expiration Job if there is a hold
@@ -478,7 +499,7 @@ router.patch('/:id/status', authenticate, requireRole('staff', 'tenant_admin'), 
             }
 
             // Audit Logging for manual bank transfer approvals/rejections
-            if (booking.payment_mode === 'manual' && ['pending_manual_confirmation', 'pending_after_hours_confirmation'].includes(booking.status)) {
+            if (isReceiptGateway(booking.payment_mode) && ['pending_manual_confirmation', 'pending_after_hours_confirmation'].includes(booking.status)) {
                 if (status === 'confirmed' || status === 'rejected') {
                     await client.query(
                         `INSERT INTO audit_log (tenant_id, user_id, actor_user_id, action, entity, entity_id, old_status, new_status, note)
@@ -491,9 +512,9 @@ router.patch('/:id/status', authenticate, requireRole('staff', 'tenant_admin'), 
                     }
                 }
             }
-            if (booking.payment_mode === 'paypal' && booking.status === 'pending_payment' && (status === 'confirmed' || status === 'rejected')) {
+            if (isLinkGateway(booking.payment_mode) && booking.status === 'pending_payment' && (status === 'confirmed' || status === 'rejected')) {
                 await client.query(`UPDATE booking_payments SET status=$1 WHERE booking_id=$2`, [status === 'confirmed' ? 'paid' : 'failed', booking.id]);
-                await client.query(`INSERT INTO audit_log (tenant_id,user_id,actor_user_id,action,entity,entity_id,old_status,new_status,note) VALUES ($1,$2,$2,$3,'booking',$4,$5,$6,$7)`, [req.tenant.id,req.user.id,`paypal_${status}`,booking.id,booking.status,status,note]);
+                await client.query(`INSERT INTO audit_log (tenant_id,user_id,actor_user_id,action,entity,entity_id,old_status,new_status,note) VALUES ($1,$2,$2,$3,'booking',$4,$5,$6,$7)`, [req.tenant.id,req.user.id,`${booking.payment_mode}_${status}`,booking.id,booking.status,status,note]);
             }
 
             const updRes = await client.query(

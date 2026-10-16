@@ -195,11 +195,16 @@ function resolvePaymentDetails(service, tenant) {
     : (tenant.default_payment_mode || 'none');
   const dueToday = calculateRequiredAmount(normalizedService);
   const collectNow = dueToday > 0;
+  const gateway = tenant.payment_gateways?.[rawMode] || null;
   const modeAvailable = rawMode === 'paypal'
     ? Boolean(tenant.paypal_payments_enabled)
     : rawMode === 'manual'
       ? Boolean(tenant.manual_payment_enabled)
-      : rawMode === 'none';
+      : rawMode === 'none'
+        ? true
+        : Boolean(gateway?.enabled);
+  const gatewayLabel = gateway?.label || rawMode;
+  const requiresReceipt = rawMode === 'manual' || gateway?.kind === 'receipt';
   const hasConfigurationIssue = collectNow && (!rawMode || rawMode === 'none' || !modeAvailable);
   const balanceLater = Math.max(0, Number(normalizedService.price || 0) - dueToday);
 
@@ -219,6 +224,14 @@ function resolvePaymentDetails(service, tenant) {
       calloutTitle = requirement === 'deposit' ? 'PayPal deposit required' : 'Pay securely with PayPal';
       calloutCopy = `${formatCurrency(dueToday, normalizedService.currency || 'JMD')} will be filled in automatically when PayPal opens.`;
       buttonLabel = requirement === 'deposit' ? 'Continue to PayPal Deposit' : 'Continue to PayPal';
+    } else if (gateway?.kind === 'link' && modeAvailable) {
+      calloutTitle = requirement === 'deposit' ? `${gatewayLabel} deposit required` : `Pay securely with ${gatewayLabel}`;
+      calloutCopy = gateway.instructions || `You'll continue to ${gatewayLabel}'s secure checkout to pay ${formatCurrency(dueToday, normalizedService.currency || 'JMD')}. Your booking reference is included automatically.`;
+      buttonLabel = requirement === 'deposit' ? `Continue to ${gatewayLabel} Deposit` : `Continue to ${gatewayLabel}`;
+    } else if (gateway?.kind === 'receipt' && modeAvailable) {
+      calloutTitle = `Pay ${formatCurrency(dueToday, normalizedService.currency || 'JMD')} with ${gatewayLabel}`;
+      calloutCopy = gateway.instructions || `Send the payment to ${gateway.handle}${gateway.accountName ? ` (${gateway.accountName})` : ''} in the ${gatewayLabel} app, then upload the confirmation screenshot below.`;
+      buttonLabel = requirement === 'deposit' ? 'Submit Deposit' : 'Submit Payment Proof';
     } else {
       calloutTitle = 'Payment setup needed';
       calloutCopy = 'This service requires payment before booking, but the payment method is not available right now.';
@@ -236,8 +249,19 @@ function resolvePaymentDetails(service, tenant) {
     calloutTitle,
     calloutCopy,
     buttonLabel,
-    balanceLater
+    balanceLater,
+    gatewayLabel,
+    requiresReceipt
   };
+}
+
+// Demo sites (landing page playground) get believable sample slots.
+function buildDemoSlots(dateString) {
+  const day = new Date(`${dateString}T12:00:00`).getDay();
+  const times = ['09:00', '09:45', '10:30', '11:15', '13:00', '14:30', '15:15', '16:00', '17:30'];
+  return times
+    .filter((_, index) => (index + day) % 4 !== 0)
+    .map((time) => ({ time, label: formatDisplayTime(time), available: true }));
 }
 
 function IconGlyph({ kind, className }) {
@@ -404,9 +428,12 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
   const addonItems = typeof theme.addons?.items === 'function' ? theme.addons.items(tenant) : (theme.addons?.items || []);
   const themeVars = buildThemeVars(palette);
   const tenantTimezone = tenant.branding?.timezone || 'America/Jamaica';
+  const embedded = Boolean(tenant.embedInSite);
+  const isDemo = Boolean(tenant.isDemo);
   const todayInputValue = getDateInputValue(tenantTimezone);
 
-  const [selectedService, setSelectedService] = useState(services[0] || null);
+  const pickInitialService = () => services.find((service) => service.id === tenant.preselectServiceId) || services[0] || null;
+  const [selectedService, setSelectedService] = useState(pickInitialService);
   const [selectedDate, setSelectedDate] = useState(() => getDateInputValue(tenant.branding?.timezone || 'America/Jamaica'));
   const [selectedTime, setSelectedTime] = useState(null);
   const [isAfterHoursRequest, setIsAfterHoursRequest] = useState(false);
@@ -430,8 +457,8 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
   const selectedTimeRef = useRef(null);
 
   useEffect(() => {
-    setSelectedService(services[0] || null);
-  }, [services]);
+    setSelectedService(services.find((service) => service.id === tenant.preselectServiceId) || services[0] || null);
+  }, [services, tenant.preselectServiceId]);
 
   useEffect(() => {
     setSelectedDate((current) => (!current || current < todayInputValue ? todayInputValue : current));
@@ -457,6 +484,13 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
     if (!background) {
       setLoadingSlots(true);
       setAvailabilityMessage('');
+    }
+
+    if (isDemo) {
+      setAvailability(buildDemoSlots(selectedDate));
+      setAvailabilityMessage('');
+      setLoadingSlots(false);
+      return;
     }
 
     api.publicAvailability(tenant.slug, selectedDate, selectedService.id)
@@ -497,6 +531,7 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
   }, [
     hasDateInteraction,
     isAfterHoursRequest,
+    isDemo,
     selectedDate,
     selectedService,
     tenant.slug,
@@ -513,7 +548,7 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
   }, [refreshAvailability]);
 
   useEffect(() => {
-    if (!selectedDate || !selectedService) return undefined;
+    if (!selectedDate || !selectedService || isDemo) return undefined;
 
     const intervalId = window.setInterval(() => {
       refreshAvailability({ background: true });
@@ -533,7 +568,7 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
       window.removeEventListener('focus', handleVisibility);
       document.removeEventListener('visibilitychange', handleVisibility);
     };
-  }, [refreshAvailability, selectedDate, selectedService]);
+  }, [refreshAvailability, selectedDate, selectedService, isDemo]);
 
   const selectedAddonItems = addonItems.filter((item) => selectedAddons.has(item.id));
   const priceFormatter = theme.priceFormatter || defaultPriceFormatter;
@@ -544,7 +579,7 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
     : baseTotal + addonsTotal;
   const totalAmount = normalTotal + (isAfterHoursRequest ? Number(afterHours.fee || 0) : 0);
   const paymentDetails = resolvePaymentDetails(selectedService, tenant);
-  const needsReceipt = paymentDetails.collectNow && paymentDetails.mode === 'manual' && !paymentDetails.hasConfigurationIssue;
+  const needsReceipt = paymentDetails.collectNow && paymentDetails.requiresReceipt && !paymentDetails.hasConfigurationIssue;
 
   const handleExtraFieldChange = (nameToSet, value) => {
     setExtraState((prev) => ({ ...prev, [nameToSet]: value }));
@@ -578,6 +613,10 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
     }
     if (!selectedTime) {
       showNotice(theme.selectTimeAlert || 'Please select a time.');
+      return;
+    }
+    if (isDemo) {
+      showNotice('This is a live demo, so no booking was created. Your customers will see their confirmation here.', 'Demo booking');
       return;
     }
     if (needsReceipt && !receiptImage) {
@@ -620,7 +659,22 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
         after_hours_request: isAfterHoursRequest
       });
 
-      if (res.checkoutUrl) {
+      if (res.checkoutUrl && res.paymentGateway && res.paymentGateway.key !== 'paypal') {
+        const gatewayAmount = formatCurrency(res.paymentGateway.amount, res.paymentGateway.currency);
+        setConfirmModal({
+          service: selectedService.name,
+          date: selectedDate,
+          time: selectedTime,
+          duration: selectedService.duration_minutes,
+          status: 'pending_payment',
+          title: `Continue to ${res.paymentGateway.label}`,
+          text: `Pay ${gatewayAmount} on ${res.paymentGateway.label}'s secure checkout. If the amount isn't filled in, enter it exactly and use reference ${res.paymentGateway.reference}. Your booking stays pending until the business verifies the payment.`,
+          checkoutUrl: res.checkoutUrl,
+          gatewayLabel: res.paymentGateway.label,
+          paypalAmount: gatewayAmount,
+          reference: res.paymentGateway.reference
+        });
+      } else if (res.checkoutUrl) {
         const conversion = res.paypalConversion;
         const source = conversion
           ? formatCurrency(conversion.sourceAmount, conversion.sourceCurrency)
@@ -680,9 +734,9 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
 
   return (
     <>
-      <div className={styles.wrapper} style={themeVars}>
+      <div className={`${styles.wrapper} ${embedded ? styles.embedded : ''}`} style={themeVars}>
         <div className={styles.shell}>
-          <div className={styles.header}>
+          <div className={styles.header} hidden={embedded}>
             <div className={styles.brand}>
               <div className={styles.brandIcon}>
                 {tenant.branding?.logoUrl
@@ -899,7 +953,7 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
 
                 {needsReceipt && (
                   <div className={styles.field}>
-                    <label>{theme.receiptLabel || 'Bank transfer receipt'}</label>
+                    <label>{paymentDetails.mode === 'manual' ? (theme.receiptLabel || 'Bank transfer receipt') : `${paymentDetails.gatewayLabel} payment screenshot`}</label>
                     <div className={styles.inputShell}>
                       <input type="file" accept="image/*" required onChange={(e) => setReceiptImage(e.target.files[0])} />
                     </div>
@@ -989,7 +1043,7 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
                 {' at '}
                 {formatDisplayTime(confirmModal.time)}
               </p>
-              {confirmModal.checkoutUrl && (
+              {confirmModal.checkoutUrl && !confirmModal.gatewayLabel && (
                 <div className={styles.conversionSummary}>
                   <span>{confirmModal.sourceAmount}</span>
                   <span aria-hidden="true">→</span>
@@ -997,10 +1051,13 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
                   {confirmModal.rate && <small>Conversion rate: JMD ${Number(confirmModal.rate).toFixed(2)} = USD $1.00</small>}
                 </div>
               )}
+              {confirmModal.checkoutUrl && confirmModal.gatewayLabel && (
+                <p className={styles.modalTime}>Amount: <strong>{confirmModal.paypalAmount}</strong> · Reference: <strong>{confirmModal.reference}</strong></p>
+              )}
             </div>
             {confirmModal.checkoutUrl && (
               <a href={confirmModal.checkoutUrl} target="_blank" rel="noreferrer" className={styles.paypalButton}>
-                Open PayPal and Pay {confirmModal.paypalAmount}
+                Open {confirmModal.gatewayLabel || 'PayPal'} and Pay {confirmModal.paypalAmount}
               </a>
             )}
             {confirmModal.status === 'confirmed' && (

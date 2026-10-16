@@ -9,6 +9,7 @@ const EditorCanvas      = lazy(() => import('./pages/Editor/EditorCanvas'));
 const ProvisioningWait  = lazy(() => import('./pages/ProvisioningWait/ProvisioningWait'));
 const CustomThemeRequest = lazy(() => import('./pages/CustomThemeRequest/CustomThemeRequest'));
 const PublicBookingPage = lazy(() => import('./pages/PublicBookingPage/PublicBookingPage'));
+const DemoSite          = lazy(() => import('./pages/DemoSite/DemoSite'));
 const PlatformConsole   = lazy(() => import('./pages/PlatformConsole/PlatformConsole'));
 const ForgotPassword    = lazy(() => import('./pages/Auth/ForgotPassword'));
 const ResetPassword     = lazy(() => import('./pages/Auth/ResetPassword'));
@@ -29,7 +30,10 @@ function App() {
         <Route path="/platform"         element={<PlatformConsole />} />
         <Route path="/forgot-password"  element={<ForgotPassword />} />
         <Route path="/reset-password"   element={<ResetPassword />} />
-        <Route path="/:slug"            element={<PublicBookingPage />} />
+        {/* Live template demos (theme picker, landing page, builder playground) */}
+        <Route path="/demo/:themeKey/:page?" element={<DemoSite />} />
+        {/* Tenant websites: /:slug (home), /:slug/about, /:slug/gallery, /:slug/book */}
+        <Route path="/:slug/:page?"     element={<PublicBookingPage />} />
       </Routes>
     </Suspense>
   );

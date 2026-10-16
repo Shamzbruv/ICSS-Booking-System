@@ -40,7 +40,9 @@ app.use(helmet({
             fontSrc:["'self'",'https://fonts.gstatic.com','https://cdnjs.cloudflare.com','data:'],
             imgSrc:["'self'",'data:','https:'],
             connectSrc:["'self'",'https://api-m.paypal.com','https://api-m.sandbox.paypal.com','https://www.paypal.com','https://www.google-analytics.com'],
-            frameSrc:["'self'",'https://www.paypal.com'],
+            frameSrc:["'self'",'https://www.paypal.com','https://www.google.com','https://maps.google.com','https://www.youtube-nocookie.com','https://www.youtube.com','https://player.vimeo.com'],
+            // Tenant websites use background videos and theme music (uploaded or linked).
+            mediaSrc:["'self'",'https:','blob:','data:'],
             objectSrc:["'none'"],baseUri:["'self'"],frameAncestors:["'self'"],
         }
     },
@@ -81,6 +83,19 @@ app.use('/api/v1', (req, res, next) => {
 // ─── Static Files (Admin Dashboard + React Frontend) ───────────────────────
 app.get(['/platform-setup','/platform-setup.html'], (req,res) => res.redirect(308, '/onboarding'));
 app.use('/admin', express.static(path.join(__dirname, '../admin')));
+
+// Website media library (hero video, gallery, theme music). Public + cacheable.
+const { serveMedia } = require('./services/media');
+app.get('/media/:id', serveMedia);
+app.head('/media/:id', serveMedia);
+
+// Legacy static theme mockups now redirect to the live website demo of the same theme.
+const { TEMPLATE_FILE_KEYS } = require('./services/siteConfig');
+app.get('/Template/:file', (req, res, next) => {
+    const key = TEMPLATE_FILE_KEYS[String(req.params.file || '').toLowerCase()];
+    if (key && req.query.legacy !== '1') return res.redirect(302, `/demo/${key}`);
+    next();
+});
 app.use('/Template', express.static(path.join(__dirname, '../Template')));
 
 // Serve legacy public folder (landing page, legal pages, industry pages, images, etc.) FIRST
@@ -122,7 +137,7 @@ app.get('/health', (req, res) => {
 // ─── React SPA Fallback ───────────────────────────────────────────────────────
 // Serve React SPA for app routes. Static public pages (/, /industries/*, /faq, /terms)
 // are already handled above by express.static(public) — so exclude them here.
-app.get(/^\/(?!api\/|admin\/|admin$|Template\/|health$|industries\/|industries$|faq|terms|sitemap\.xml|robots\.txt|favicon|logo)/, (req, res) => {
+app.get(/^\/(?!api\/|admin\/|admin$|Template\/|media\/|health$|industries\/|industries$|faq|terms|sitemap\.xml|robots\.txt|favicon|logo)/, (req, res) => {
     res.sendFile(path.join(frontendDist, 'index.html'));
 });
 
