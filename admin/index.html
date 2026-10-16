@@ -169,9 +169,17 @@
                 <div class="action-icon">📦</div>
                 <div class="action-label">Manage Services</div>
             </a>
+            <a href="customize.html" class="action-card" data-tour="website-builder">
+                <div class="action-icon">🎨</div>
+                <div class="action-label">Website Builder</div>
+            </a>
+            <a href="settings.html" class="action-card" data-tour="payment-setup">
+                <div class="action-icon">💳</div>
+                <div class="action-label">Payment Gateways</div>
+            </a>
             <a href="#" target="_blank" class="action-card" id="bookingPageLink" data-tour="view-booking-page">
                 <div class="action-icon">🌐</div>
-                <div class="action-label">View Booking Page</div>
+                <div class="action-label">View My Website</div>
             </a>
         </div>
     </section>
@@ -184,7 +192,7 @@
     let dashboardTour = null;
     let dashboardTourContext = {
         tenantSlug: getTenantSlug() || 'default',
-        version: 2
+        version: 3
     };
 
     let currentStartDate = '';
@@ -321,7 +329,7 @@
         const steps = [
             {
                 title: 'Welcome to Your Booking Dashboard',
-                message: 'This dashboard gives you a quick overview of your bookings, cancellations, subscription plan, and important shortcuts. This short walkthrough will show you how to move around the system.',
+                message: 'This dashboard gives you a quick overview of your bookings, cancellations, subscription plan, and important shortcuts. Your business also has its own website with Home, About, Gallery and Booking pages. This short walkthrough shows you how to move around the system.',
                 placement: 'center',
                 mobileSpotlight: false
             },
@@ -335,11 +343,11 @@
             },
             {
                 title: 'Sidebar Navigation',
-                message: 'This menu is used to move around the system. The user can go to Dashboard, Bookings, Availability, Settings, and Services from here.',
+                message: 'This menu is used to move around the system: Dashboard, Bookings, Availability, Services, Settings (payments and schedule) and the Website Builder, where you design your public website.',
                 target: '[data-tour="sidebar-navigation"]',
                 mobileTarget: '[data-tour="mobile-menu-button"]',
                 mobileContextLabel: 'Menu',
-                mobileMessage: 'The menu icon opens your navigation area, where you can access Dashboard, Bookings, Availability, Settings, Services, and Help.',
+                mobileMessage: 'The menu icon opens your navigation area, where you can access Dashboard, Bookings, Availability, Services, Settings, the Website Builder and Help.',
                 mobileSpotlight: false
             },
             {
@@ -416,15 +424,29 @@
                 mobileContextLabel: 'Manage Services'
             },
             {
-                title: 'View Booking Page',
-                message: 'This shortcut lets the user open or preview the public booking page that customers will use. This helps the business owner see the booking experience from the customer’s side.',
+                title: 'Website Builder',
+                message: 'Design your full website here. Arrange Home, About, Gallery and Booking pages in layers, add a background video or photo slideshow, set colours, fonts and theme music, and check the live preview on desktop, tablet and phone before you publish.',
+                target: '[data-tour="website-builder"]',
+                mobileTarget: '[data-tour="website-builder"]',
+                mobileContextLabel: 'Website Builder'
+            },
+            {
+                title: 'Payment Gateways',
+                message: 'PayPal, Fygaro, EasyPay, First Atlantic Commerce / PowerTranz, Lynk and bank transfer are all ready to use. Open Settings, follow the steps for the gateway you use, paste your details and switch it on.',
+                target: '[data-tour="payment-setup"]',
+                mobileTarget: '[data-tour="payment-setup"]',
+                mobileContextLabel: 'Payment Gateways'
+            },
+            {
+                title: 'View My Website',
+                message: 'Open your live website exactly as customers see it. Share this link on Instagram, WhatsApp and Google so clients can browse your work and book in one place.',
                 target: '[data-tour="view-booking-page"]',
                 mobileTarget: '[data-tour="view-booking-page"]',
-                mobileContextLabel: 'View Booking Page'
+                mobileContextLabel: 'View My Website'
             },
             {
                 title: 'Tutorial Complete',
-                message: 'You now understand the main areas of the ICSS Booking Management dashboard. You can continue managing bookings, availability, services, and your public booking page.',
+                message: 'You now understand the main areas of the ICSS Booking Management dashboard. Next stop: open the Website Builder to make your site your own. It has its own short tour.',
                 placement: 'center',
                 mobileSpotlight: false
             }

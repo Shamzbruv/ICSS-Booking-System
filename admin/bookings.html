@@ -119,6 +119,7 @@
 
 <script src="js/admin.js"></script>
 <script>
+    const LINK_GATEWAY_LABELS = { paypal: 'PayPal', fygaro: 'Fygaro', easypay: 'EasyPay', fac: 'FAC / PowerTranz' };
     let cancelTargetId = null;
     let searchTimer    = null;
     const bookingStatusBusy = new Set();
@@ -187,13 +188,18 @@
                         <button class="btn btn-secondary btn-sm" type="button" data-booking-action="status" data-booking-id="${b.id}" data-booking-status="completed">✓ Complete</button>
                         <button class="btn btn-danger btn-sm" type="button" data-booking-action="cancel" data-booking-id="${b.id}">✕ Cancel</button>
                     ` : ''}
-                    ${b.status === 'pending_manual_confirmation' ? `
+                    ${b.status === 'pending_manual_confirmation' && b.payment_mode === 'lynk' ? `
+                        <button class="btn btn-primary btn-sm" type="button" style="background:#10b981;" data-booking-action="status" data-booking-id="${b.id}" data-booking-status="confirmed" data-booking-note="Lynk payment approved.">✓ Approve Lynk Payment</button>
+                        <button class="btn btn-danger btn-sm" type="button" data-booking-action="status" data-booking-id="${b.id}" data-booking-status="rejected" data-booking-note="Lynk payment not received.">✕ Reject</button>
+                    ` : ''}
+                    ${b.status === 'pending_manual_confirmation' && b.payment_mode !== 'lynk' ? `
                         <button class="btn btn-primary btn-sm" type="button" style="background:#10b981;" data-booking-action="status" data-booking-id="${b.id}" data-booking-status="confirmed" data-booking-note="Bank transfer approved.">✓ Approve Transfer</button>
                         <button class="btn btn-danger btn-sm" type="button" data-booking-action="status" data-booking-id="${b.id}" data-booking-status="rejected" data-booking-note="Bank transfer not received.">✕ Reject</button>
                     ` : ''}
-                    ${b.status === 'pending_payment' && b.payment_mode === 'paypal' ? `
-                        <button class="btn btn-primary btn-sm" type="button" style="background:#10b981;" data-booking-action="status" data-booking-id="${b.id}" data-booking-status="confirmed" data-booking-note="PayPal payment verified.">✓ Verify PayPal Payment</button>
-                        <button class="btn btn-danger btn-sm" type="button" data-booking-action="status" data-booking-id="${b.id}" data-booking-status="rejected" data-booking-note="PayPal payment not received.">✕ Reject</button>
+                    ${b.status === 'pending_payment' && LINK_GATEWAY_LABELS[b.payment_mode] ? `
+                        <div style="font-size:11px;color:var(--text-dim);margin-bottom:6px;">Check ${LINK_GATEWAY_LABELS[b.payment_mode]} for reference BK-${escHtml(String(b.id).slice(0, 8).toUpperCase())}</div>
+                        <button class="btn btn-primary btn-sm" type="button" style="background:#10b981;" data-booking-action="status" data-booking-id="${b.id}" data-booking-status="confirmed" data-booking-note="${LINK_GATEWAY_LABELS[b.payment_mode]} payment verified.">✓ Verify ${LINK_GATEWAY_LABELS[b.payment_mode]} Payment</button>
+                        <button class="btn btn-danger btn-sm" type="button" data-booking-action="status" data-booking-id="${b.id}" data-booking-status="rejected" data-booking-note="${LINK_GATEWAY_LABELS[b.payment_mode]} payment not received.">✕ Reject</button>
                     ` : ''}
                     ${b.status === 'pending_after_hours_confirmation' ? `
                         <div style="font-size:11px;color:var(--text-dim);margin-bottom:6px;">After-hours fee: ${escHtml(b.after_hours_fee || '0')}</div>

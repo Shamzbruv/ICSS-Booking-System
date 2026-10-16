@@ -11,7 +11,10 @@ Generalized from the [Windross Tailoring & Designs](https://windrosstailoringand
 - **Multi-tenant architecture** — shared PostgreSQL DB with `tenant_id` isolation on every table
 - **JWT authentication + RBAC** — 4 roles: `customer`, `staff`, `tenant_admin`, `super_admin`
 - **Subscription plans** — Starter / Pro / Enterprise with booking limits and feature flags
-- **Tenant payment options** — PayPal.Me and manual bank-transfer confirmation
+- **Tenant websites** — every tenant gets a mobile-first website (Home, About, Gallery, Book) built from an individually designed industry template
+- **Website Builder** — layered page/section editor with a pixel-accurate desktop/tablet/phone live preview, draft autosave, undo/redo and one-click publish; background video, photo slideshows, galleries, fonts, colours and theme music
+- **Media library** — uploads stored in Postgres with byte-range streaming (video seeking on iOS), automatic client-side image resizing/compression and size/aspect-ratio guidance
+- **Tenant payment options** — PayPal, Fygaro, EasyPay, First Atlantic Commerce / PowerTranz, Lynk and bank transfer, pre-wired so a tenant only pastes their merchant link/handle
 - **Per-tenant branded emails** — confirmation, cancellation, order, and design inquiry emails via Resend
 - **PDF invoices** — PDFKit-based booking confirmations and order invoices with tenant branding
 - **Per-tenant pricing engine** — configurable styles, fabric grades, construction types, and size surcharges
@@ -112,6 +115,25 @@ curl -X POST http://localhost:3000/api/v1/tenants \
 ```
 
 Then log in to the admin panel at `http://localhost:3000/admin/login.html` using the slug `windross` and the admin credentials.
+
+---
+
+## Tenant Websites & Website Builder
+
+| URL | What it is |
+|---|---|
+| `/:slug`, `/:slug/about`, `/:slug/gallery`, `/:slug/book` | A tenant's public website (published version) |
+| `/admin/customize.html` | Website Builder (tenant admin) |
+| `/demo/:template` | Live demo of any template, with simulated bookings |
+| `/playground` | Public builder playground linked from the landing page (nothing saved) |
+
+- The site document lives in `tenants.site_draft` (autosaved by the builder) and `tenants.site_config` (published, served by `GET /api/v1/public/tenant`).
+- Template presets: `frontend/src/site/presets/*.js`. Section types, fields and the media size guide: `frontend/src/site/siteSchema.js`. The builder (`admin/js/siteBuilder.js`) receives that catalogue from the preview iframe over same-origin `postMessage`, so the forms always match what the site can render.
+- Endpoints: `GET /tenants/:slug/site`, `PUT /tenants/:slug/site/draft`, `POST /tenants/:slug/site/publish`, `DELETE /tenants/:slug/site/draft`, `POST|GET /tenants/:slug/media`, `DELETE /tenants/:slug/media/:id`, and public `GET /media/:id`.
+
+### Payment gateways
+
+Defined in `server/services/paymentGateways.js`. *Link* gateways (PayPal, Fygaro, EasyPay, FAC/PowerTranz) send the customer to the tenant's hosted checkout with the amount and a `BK-XXXXXXXX` reference pre-filled; the booking stays `pending_payment` until the tenant verifies it. *Receipt* gateways (Lynk, bank transfer) require a screenshot and create `pending_manual_confirmation` bookings. Tenants configure everything in **Settings → Payment Gateways**, which includes step-by-step activation instructions.
 
 ---
 

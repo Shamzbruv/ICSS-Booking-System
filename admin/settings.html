@@ -70,41 +70,142 @@
         </div>
     </section>
 
-    <section class="card settings-card payment-card" style="max-width: 800px; margin: 0 auto;">
-        <h2 class="settings-section-title" style="margin-bottom: 1.5rem;">Payment Settings</h2>
+    <section class="card settings-card payment-card" style="max-width: 800px; margin: 0 auto;" data-tour="payment-gateways">
+        <h2 class="settings-section-title" style="margin-bottom: 6px;">Payment Gateways</h2>
+        <p class="page-subtitle" style="margin-bottom: 1.25rem;">Every popular Jamaican payment option is already wired in. Open a gateway, follow the steps to copy your details from your merchant profile, paste them here and switch it on.</p>
         <form id="settingsForm" class="form-grid payment-settings-form">
             <div class="form-group" style="grid-column: 1 / -1;">
-                <label>Default Payment Mode</label>
+                <label for="default_payment_mode">Default payment method for services</label>
                 <select id="default_payment_mode" class="form-control">
                     <option value="none">No Payment Required</option>
                     <option value="paypal">PayPal</option>
+                    <option value="fygaro">Fygaro</option>
+                    <option value="easypay">EasyPay</option>
+                    <option value="fac">First Atlantic Commerce / PowerTranz</option>
+                    <option value="lynk">Lynk</option>
                     <option value="manual">Manual Bank Transfer</option>
                 </select>
+                <small class="gw-help">Services set to "Use business default" use this method. You can pick a different method per service on the Services page.</small>
             </div>
 
-            <div class="payment-method-grid" style="grid-column: 1 / -1;">
-                <label class="payment-method-card"><input type="checkbox" id="paypal_payments_enabled" style="width:18px;height:18px;"> Enable PayPal</label>
-                <label class="payment-method-card">
-                    <input type="checkbox" id="manual_payment_enabled" style="width: 18px; height: 18px;"> Enable Bank Transfer
-                </label>
+            <div class="gw-list" id="gatewayList" style="grid-column: 1 / -1;">
+                <details class="gw-card" data-gateway="paypal">
+                    <summary><span class="gw-title"><span class="gw-logo" aria-hidden="true">🅿️</span><span><strong>PayPal</strong><small>International cards &amp; PayPal balances (auto-converted to USD)</small></span></span><span class="gw-badge" data-gw-badge="paypal">Not set up</span></summary>
+                    <div class="gw-body">
+                        <ol class="gw-steps">
+                            <li>Log in to <strong>paypal.com</strong> with a PayPal Business account (a free upgrade from Personal).</li>
+                            <li>Visit <strong>paypal.me</strong> and create your PayPal.Me link, for example <code>https://paypal.me/YourBusiness</code>.</li>
+                            <li>Paste the link below and switch PayPal on. Customers are sent to it with the USD amount already filled in.</li>
+                        </ol>
+                        <label class="gw-switch"><input type="checkbox" id="paypal_payments_enabled"> <span>Enable PayPal</span></label>
+                        <div class="form-group"><label for="paypal_payment_link">PayPal.Me link</label><input type="url" id="paypal_payment_link" class="form-control" placeholder="https://paypal.me/YourPayPalName"><small class="gw-help">The selected service or deposit amount is added automatically when clients continue to PayPal.</small></div>
+                    </div>
+                </details>
+
+                <details class="gw-card" data-gateway="fygaro">
+                    <summary><span class="gw-title"><span class="gw-logo" aria-hidden="true">💳</span><span><strong>Fygaro</strong><small>Visa &amp; Mastercard through a Fygaro payment link</small></span></span><span class="gw-badge" data-gw-badge="fygaro">Not set up</span></summary>
+                    <div class="gw-body">
+                        <ol class="gw-steps">
+                            <li>Sign in at <strong>fygaro.com</strong> and finish merchant verification (business details and the bank account where you want payouts).</li>
+                            <li>In your dashboard open <strong>Fygaro Links</strong> (Payment Buttons) and click <strong>+ Create</strong>.</li>
+                            <li>Choose a <strong>variable amount</strong> button in <strong>JMD</strong>, so each booking can fill in its own price.</li>
+                            <li>Copy the button's link and paste it below, then switch Fygaro on.</li>
+                        </ol>
+                        <label class="gw-switch"><input type="checkbox" data-gw="fygaro" data-field="enabled"> <span>Enable Fygaro</span></label>
+                        <div class="form-group"><label>Fygaro payment link</label><input type="url" class="form-control" data-gw="fygaro" data-field="link" placeholder="https://fygaro.com/en/pb/your-button-id"></div>
+                        <details class="gw-advanced"><summary>Advanced options</summary>
+                            <div class="gw-grid">
+                                <div class="form-group"><label>Amount URL parameter</label><input type="text" class="form-control" data-gw="fygaro" data-field="amountParam" placeholder="amount"></div>
+                                <div class="form-group"><label>Reference URL parameter</label><input type="text" class="form-control" data-gw="fygaro" data-field="referenceParam" placeholder="client_note"></div>
+                            </div>
+                            <small class="gw-help">Only change these if Fygaro support gives you different names. If a link ignores the amount, customers still see the exact amount and booking reference on screen to type in.</small>
+                        </details>
+                        <div class="form-group"><label>Note shown to customers (optional)</label><textarea class="form-control" rows="2" data-gw="fygaro" data-field="instructions" placeholder="e.g. Pay securely by card. Your booking is confirmed once payment is verified."></textarea></div>
+                    </div>
+                </details>
+
+                <details class="gw-card" data-gateway="easypay">
+                    <summary><span class="gw-title"><span class="gw-logo" aria-hidden="true">⚡</span><span><strong>EasyPay</strong><small>Card payments through your EasyPay hosted checkout link</small></span></span><span class="gw-badge" data-gw-badge="easypay">Not set up</span></summary>
+                    <div class="gw-body">
+                        <ol class="gw-steps">
+                            <li>Log in to your <strong>EasyPay merchant portal</strong>, or ask your EasyPay account manager to turn on online payments for your merchant account.</li>
+                            <li>Create a <strong>payment link / hosted payment page</strong> that accepts a custom amount.</li>
+                            <li>Paste the link below. If EasyPay gave you parameter names for the amount and reference, add them under Advanced options.</li>
+                            <li>Switch EasyPay on.</li>
+                        </ol>
+                        <label class="gw-switch"><input type="checkbox" data-gw="easypay" data-field="enabled"> <span>Enable EasyPay</span></label>
+                        <div class="form-group"><label>EasyPay payment link</label><input type="url" class="form-control" data-gw="easypay" data-field="link" placeholder="https://… (from your EasyPay portal)"></div>
+                        <div class="form-group"><label>Merchant ID (optional, for your records)</label><input type="text" class="form-control" data-gw="easypay" data-field="merchantId"></div>
+                        <details class="gw-advanced"><summary>Advanced options</summary>
+                            <div class="gw-grid">
+                                <div class="form-group"><label>Amount URL parameter</label><input type="text" class="form-control" data-gw="easypay" data-field="amountParam" placeholder="amount"></div>
+                                <div class="form-group"><label>Reference URL parameter</label><input type="text" class="form-control" data-gw="easypay" data-field="referenceParam" placeholder="reference"></div>
+                            </div>
+                        </details>
+                        <div class="form-group"><label>Note shown to customers (optional)</label><textarea class="form-control" rows="2" data-gw="easypay" data-field="instructions"></textarea></div>
+                    </div>
+                </details>
+
+                <details class="gw-card" data-gateway="fac">
+                    <summary><span class="gw-title"><span class="gw-logo" aria-hidden="true">🏦</span><span><strong>First Atlantic Commerce / PowerTranz</strong><small>Bank-grade card processing (NCB and other acquiring banks)</small></span></span><span class="gw-badge" data-gw-badge="fac">Not set up</span></summary>
+                    <div class="gw-body">
+                        <ol class="gw-steps">
+                            <li>Apply for an <strong>e-commerce merchant account</strong> with your bank (for example NCB), which provisions you on First Atlantic Commerce / PowerTranz.</li>
+                            <li>Ask your relationship manager for a <strong>Hosted Payment Page</strong> or <strong>Payment Link</strong> for your merchant ID.</li>
+                            <li>Paste the link below, add the amount and reference parameter names if your page supports them, then switch it on.</li>
+                        </ol>
+                        <label class="gw-switch"><input type="checkbox" data-gw="fac" data-field="enabled"> <span>Enable FAC / PowerTranz</span></label>
+                        <div class="form-group"><label>Hosted payment page link</label><input type="url" class="form-control" data-gw="fac" data-field="link" placeholder="https://…"></div>
+                        <div class="form-group"><label>Merchant ID (optional)</label><input type="text" class="form-control" data-gw="fac" data-field="merchantId"></div>
+                        <details class="gw-advanced"><summary>Advanced options</summary>
+                            <div class="gw-grid">
+                                <div class="form-group"><label>Amount URL parameter</label><input type="text" class="form-control" data-gw="fac" data-field="amountParam" placeholder="(none)"></div>
+                                <div class="form-group"><label>Reference URL parameter</label><input type="text" class="form-control" data-gw="fac" data-field="referenceParam" placeholder="(none)"></div>
+                            </div>
+                        </details>
+                        <div class="form-group"><label>Note shown to customers (optional)</label><textarea class="form-control" rows="2" data-gw="fac" data-field="instructions"></textarea></div>
+                    </div>
+                </details>
+
+                <details class="gw-card" data-gateway="lynk">
+                    <summary><span class="gw-title"><span class="gw-logo" aria-hidden="true">📲</span><span><strong>Lynk</strong><small>Jamaica's mobile wallet: customers pay your handle and upload proof</small></span></span><span class="gw-badge" data-gw-badge="lynk">Not set up</span></summary>
+                    <div class="gw-body">
+                        <ol class="gw-steps">
+                            <li>Download the <strong>Lynk</strong> app and register. Upgrade to a <strong>Lynk business / merchant</strong> account if you want payments to show your business name.</li>
+                            <li>Find your Lynk handle in your profile (for example <code>@yourbusiness</code>).</li>
+                            <li>Enter it below with the account name customers will see, then switch Lynk on.</li>
+                            <li>Customers send the amount in Lynk and upload the confirmation screenshot. Approve it from <strong>Bookings</strong>.</li>
+                        </ol>
+                        <label class="gw-switch"><input type="checkbox" data-gw="lynk" data-field="enabled"> <span>Enable Lynk</span></label>
+                        <div class="gw-grid">
+                            <div class="form-group"><label>Lynk handle</label><input type="text" class="form-control" data-gw="lynk" data-field="handle" placeholder="@yourbusiness"></div>
+                            <div class="form-group"><label>Account name</label><input type="text" class="form-control" data-gw="lynk" data-field="accountName" placeholder="Your Business Ltd"></div>
+                        </div>
+                        <div class="form-group"><label>Note shown to customers (optional)</label><textarea class="form-control" rows="2" data-gw="lynk" data-field="instructions" placeholder="e.g. Add your name and booking date in the Lynk payment note."></textarea></div>
+                    </div>
+                </details>
+
+                <details class="gw-card" data-gateway="manual">
+                    <summary><span class="gw-title"><span class="gw-logo" aria-hidden="true">🧾</span><span><strong>Bank Transfer</strong><small>Customers transfer and upload their receipt</small></span></span><span class="gw-badge" data-gw-badge="manual">Not set up</span></summary>
+                    <div class="gw-body">
+                        <ol class="gw-steps">
+                            <li>Add your bank name, account name, account number, branch and account type below.</li>
+                            <li>Switch bank transfer on. Customers upload their receipt, and you approve it from <strong>Bookings</strong>.</li>
+                        </ol>
+                        <label class="gw-switch"><input type="checkbox" id="manual_payment_enabled"> <span>Enable Bank Transfer</span></label>
+                        <div class="form-group"><label for="bank_transfer_instructions">Bank transfer instructions</label><textarea id="bank_transfer_instructions" class="form-control" rows="4" placeholder="Bank: NCB · Account name: … · Account #: … · Branch: …"></textarea></div>
+                    </div>
+                </details>
+            </div>
+
+            <div class="gw-note" style="grid-column: 1 / -1;">
+                <strong>How confirmation works:</strong> card and link payments arrive as <em>Pending payment</em> bookings with a reference such as <code>BK-1A2B3C4D</code>. Find that reference in your gateway dashboard, then press <em>Verify</em> on the booking. Wallet and bank payments arrive with the customer's screenshot for you to approve.
             </div>
 
             <div class="form-group" style="grid-column: 1 / -1;">
-                <label>Hold Timeout (Minutes)</label>
+                <label for="hold_timeout_minutes">Hold Timeout (Minutes)</label>
                 <input type="number" id="hold_timeout_minutes" class="form-control" value="15" min="5" max="1440">
-                <small style="color: var(--text-dim); margin-top: 6px; display: block;">How long pending bookings are held before expiring.</small>
-            </div>
-
-            <div style="grid-column: 1 / -1;"><hr style="border: 0; border-top: 1px solid var(--border); margin: 0.5rem 0;"></div>
-
-            <h3 style="grid-column:1/-1;font-size:15px;font-weight:600;color:var(--text-dim);">PayPal Payment Link</h3>
-            <div class="form-group" style="grid-column:1/-1"><label>PayPal.Me link</label><input type="url" id="paypal_payment_link" class="form-control" placeholder="https://paypal.me/YourPayPalName"><small style="color:var(--text-dim)">The selected service or deposit amount is added automatically when clients continue to PayPal.</small></div>
-
-            <div style="grid-column: 1 / -1;"><hr style="border: 0; border-top: 1px solid var(--border); margin: 0.5rem 0;"></div>
-
-            <h3 style="grid-column: 1 / -1; font-size: 15px; font-weight: 600; color: var(--text-dim);">Bank Transfer Instructions</h3>
-            <div class="form-group" style="grid-column: 1 / -1;">
-                <textarea id="bank_transfer_instructions" class="form-control" rows="4" placeholder="Enter instructions for customers paying via bank transfer..."></textarea>
+                <small class="gw-help">How long pending bookings are held before expiring.</small>
             </div>
 
             <div class="form-actions" style="grid-column: 1 / -1; margin-top: 0.5rem;">
@@ -926,6 +1027,7 @@
             document.getElementById('paypal_payments_enabled').checked = !!s.paypal_payments_enabled;
             document.getElementById('paypal_payment_link').value = s.paypal_payment_link || '';
             document.getElementById('manual_payment_enabled').checked = !!s.manual_payment_enabled;
+            fillGatewayFields((s.payment_settings && s.payment_settings.gateways) || {}, data.gateway_catalog || []);
             document.getElementById('hold_timeout_minutes').value = s.hold_timeout_minutes || 15;
             document.getElementById('bank_transfer_instructions').value = s.bank_transfer_instructions || '';
             document.getElementById('after_hours_requests_enabled').checked = !!s.after_hours_requests_enabled;
@@ -971,18 +1073,63 @@
             hold_timeout_minutes: parseInt(document.getElementById('hold_timeout_minutes').value),
             bank_transfer_instructions: document.getElementById('bank_transfer_instructions').value,
             payment_settings: {
-                provider: 'paypal_link'
+                provider: 'gateway_links',
+                gateways: collectGatewayFields()
             }
         };
         try {
             const slug = getTenantSlug();
             if (!slug) { alert('Error: Tenant not found'); return; }
             await apiFetch(`/api/v1/tenants/${slug}/payment-settings`, { method: 'PATCH', body: JSON.stringify(payload) });
-            alert('Payment settings saved!');
+            refreshGatewayBadges();
+            if (typeof showToast === 'function') showToast('Payment settings saved.', 'success');
+            else alert('Payment settings saved!');
         } catch (err) {
-            alert('Failed to save: ' + err.message);
+            if (typeof showToast === 'function') showToast('Failed to save: ' + err.message, 'error');
+            else alert('Failed to save: ' + err.message);
         }
     }
+
+    // ── Payment gateway cards ─────────────────────────────────────────────────
+    const GATEWAY_DEFAULTS = { fygaro: { amountParam: 'amount', referenceParam: 'client_note' }, easypay: { amountParam: 'amount', referenceParam: 'reference' }, fac: { amountParam: '', referenceParam: '' } };
+    function fillGatewayFields(gateways, catalog) {
+        catalog.forEach((entry) => {
+            if (!GATEWAY_DEFAULTS[entry.key]) return;
+            GATEWAY_DEFAULTS[entry.key] = { amountParam: entry.defaultAmountParam || '', referenceParam: entry.defaultReferenceParam || '' };
+        });
+        document.querySelectorAll('[data-gw][data-field]').forEach((input) => {
+            const config = { ...(GATEWAY_DEFAULTS[input.dataset.gw] || {}), ...(gateways[input.dataset.gw] || {}) };
+            const value = config[input.dataset.field];
+            if (input.type === 'checkbox') input.checked = Boolean(value);
+            else input.value = value ?? '';
+        });
+        refreshGatewayBadges();
+    }
+    function collectGatewayFields() {
+        const gateways = {};
+        document.querySelectorAll('[data-gw][data-field]').forEach((input) => {
+            gateways[input.dataset.gw] = gateways[input.dataset.gw] || {};
+            gateways[input.dataset.gw][input.dataset.field] = input.type === 'checkbox' ? input.checked : input.value.trim();
+        });
+        return gateways;
+    }
+    function refreshGatewayBadges() {
+        const field = (gw, name) => document.querySelector(`[data-gw="${gw}"][data-field="${name}"]`);
+        const state = {
+            paypal: [document.getElementById('paypal_payments_enabled').checked, document.getElementById('paypal_payment_link').value.trim()],
+            manual: [document.getElementById('manual_payment_enabled').checked, document.getElementById('bank_transfer_instructions').value.trim()],
+            lynk: [field('lynk', 'enabled').checked, field('lynk', 'handle').value.trim()]
+        };
+        ['fygaro', 'easypay', 'fac'].forEach((gw) => { state[gw] = [field(gw, 'enabled').checked, field(gw, 'link').value.trim()]; });
+        Object.entries(state).forEach(([gw, [enabled, configured]]) => {
+            const badge = document.querySelector(`[data-gw-badge="${gw}"]`);
+            if (!badge) return;
+            badge.dataset.state = enabled && configured ? 'active' : configured ? 'ready' : 'off';
+            badge.textContent = enabled && configured ? 'Active' : configured ? 'Ready — switched off' : 'Not set up';
+        });
+    }
+    document.getElementById('gatewayList').addEventListener('input', refreshGatewayBadges);
+    document.getElementById('gatewayList').addEventListener('change', refreshGatewayBadges);
 
     async function saveSchedule() {
         const business_hours = {};

@@ -25,7 +25,7 @@
     const RATIO_TARGETS = { heroImage: 16 / 9, heroMobileImage: 9 / 16, poster: 16 / 9, bannerImage: 21 / 9, featureImage: 4 / 5, teamPhoto: 1, heroVideo: 16 / 9 };
     const MIN_WIDTH = { heroImage: 1600, poster: 1280, bannerImage: 1800, featureImage: 900, galleryImage: 900, teamPhoto: 500, heroVideo: 1280 };
 
-    // ── Tiny DOM helper (no innerHTML with user content anywhere) ───────────
+    // ── Tiny DOM helper: every node is built with createElement + textContent ──
     function h(tag, attrs, ...children) {
         const el = document.createElement(tag);
         if (attrs) {

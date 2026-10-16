@@ -377,9 +377,8 @@ router.post('/tenants/:tenantId/reset-dashboard-tour', async (req, res) => {
         const tenant = tenantRes.rows[0];
         const branding = tenant.branding || {};
         const currentVersion = Number(branding.dashboard_tour_version);
-        const nextVersion = Number.isFinite(currentVersion) && currentVersion >= 0
-            ? currentVersion + 1
-            : 2;
+        // Never reset to a version at/below the current baseline (3), or the tour wouldn't reappear.
+        const nextVersion = Math.max(Number.isFinite(currentVersion) ? currentVersion : 0, 3) + 1;
         const nextBranding = {
             ...branding,
             dashboard_tour_version: nextVersion

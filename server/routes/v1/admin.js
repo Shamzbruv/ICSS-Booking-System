@@ -14,9 +14,12 @@ const { getSupportContactEmail, sendSupportRequestEmail } = require('../../servi
 router.use(authenticate);
 router.use(requireRole('staff', 'tenant_admin', 'super_admin'));
 
+// v3: tour covers the Website Builder and payment gateways, so every tenant sees it once more.
+const MIN_DASHBOARD_TOUR_VERSION = 3;
+
 function getDashboardTourVersion(tenant) {
     const rawVersion = Number(tenant?.branding?.dashboard_tour_version);
-    return Number.isFinite(rawVersion) && rawVersion >= 2 ? rawVersion : 2;
+    return Number.isFinite(rawVersion) && rawVersion >= MIN_DASHBOARD_TOUR_VERSION ? rawVersion : MIN_DASHBOARD_TOUR_VERSION;
 }
 
 function sanitizeSupportText(value, maxLength) {

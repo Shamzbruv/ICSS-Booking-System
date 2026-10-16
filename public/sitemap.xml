@@ -9,6 +9,14 @@
     <priority>1.0</priority>
   </url>
 
+  <!-- Website builder playground -->
+  <url>
+    <loc>https://icssbookings.com/playground</loc>
+    <lastmod>2026-10-16</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
   <!-- Pricing / Setup -->
   <url>
     <loc>https://icssbookings.com/platform-setup.html</loc>
