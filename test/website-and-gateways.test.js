@@ -160,6 +160,8 @@ test('media byte ranges support video seeking', () => {
 test('CSP allows tenant background video, music and map embeds', () => {
     const app = read('server/app.js');
     assert.match(app, /mediaSrc:\["'self'",'https:','blob:','data:'\]/);
+    // The builder decodes photos from blob: URLs to resize them before upload.
+    assert.match(app, /imgSrc:\["'self'",'data:','https:','blob:'\]/);
     assert.match(app, /https:\/\/www\.google\.com/);
     assert.match(app, /app\.get\('\/media\/:id', serveMedia\)/);
 });

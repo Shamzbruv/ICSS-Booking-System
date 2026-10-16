@@ -38,7 +38,7 @@ app.use(helmet({
             scriptSrcAttr:["'none'"],
             styleSrc:["'self'","'unsafe-inline'",'https://fonts.googleapis.com','https://cdnjs.cloudflare.com'],
             fontSrc:["'self'",'https://fonts.gstatic.com','https://cdnjs.cloudflare.com','data:'],
-            imgSrc:["'self'",'data:','https:'],
+            imgSrc:["'self'",'data:','https:','blob:'],
             connectSrc:["'self'",'https://api-m.paypal.com','https://api-m.sandbox.paypal.com','https://www.paypal.com','https://www.google-analytics.com'],
             frameSrc:["'self'",'https://www.paypal.com','https://www.google.com','https://maps.google.com','https://www.youtube-nocookie.com','https://www.youtube.com','https://player.vimeo.com'],
             // Tenant websites use background videos and theme music (uploaded or linked).
