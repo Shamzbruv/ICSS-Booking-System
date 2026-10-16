@@ -264,6 +264,11 @@ async function submitBooking(e) {
         return;
     }
 
+    if (!document.getElementById('fieldTermsAccepted').checked) {
+        errEl.textContent = 'Please accept the Terms & Conditions and booking policy to continue.';
+        return;
+    }
+
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
         errEl.textContent = 'Please enter a valid email address.';
         return;
@@ -277,7 +282,7 @@ async function submitBooking(e) {
             method:  'POST',
             headers: { 'Content-Type': 'application/json' },
             body:    JSON.stringify({
-                name, email, phone, notes, whatsapp_opt_in: whatsappOptIn,
+                name, email, phone, notes, whatsapp_opt_in: whatsappOptIn, terms_accepted: true,
                 date: state.selectedDate,
                 time: state.selectedTime
             })

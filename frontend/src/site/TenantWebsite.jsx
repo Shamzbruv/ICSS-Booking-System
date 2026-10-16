@@ -257,9 +257,10 @@ export default function TenantWebsite({ tenant, services, themeKey, savedSite, b
       ...tenant,
       embedInSite: true,
       preselectServiceId,
+      bookingPolicy: site.policies?.bookingTerms || '',
       branding: { ...tenant.branding, customPalette: { ...sync, ...(tenant.branding?.customPalette || {}) } }
     };
-  }, [tenant, site.style, preselectServiceId]);
+  }, [tenant, site.style, site.policies?.bookingTerms, preselectServiceId]);
   const renderBooking = useCallback(() => {
     const Widget = getBookingTheme(themeKey);
     return <Widget tenant={bookingTenant} services={services} />;
@@ -276,7 +277,7 @@ export default function TenantWebsite({ tenant, services, themeKey, savedSite, b
 
   // Legacy "booking page only" mode.
   if (site.enabled === false) {
-    return <BookingTheme tenant={{ ...tenant, preselectServiceId }} services={services} />;
+    return <BookingTheme tenant={{ ...tenant, preselectServiceId, bookingPolicy: site.policies?.bookingTerms || '' }} services={services} />;
   }
 
   const firstSection = sectionsToRender[0];

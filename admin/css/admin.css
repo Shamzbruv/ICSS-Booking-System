@@ -593,9 +593,9 @@ button.nav-item {
 }
 
 .tour-step-count {
-    color: #dbeafe;
-    background: rgba(59, 130, 246, 0.12);
-    border: 1px solid rgba(96, 165, 250, 0.2);
+    color: var(--info);
+    background: rgba(59, 130, 246, 0.1);
+    border: 1px solid rgba(96, 165, 250, 0.28);
 }
 
 .tour-step-hint {
@@ -637,12 +637,19 @@ button.nav-item {
     line-height: 1.3;
 }
 
+.tour-context-label[hidden],
+.tour-show-btn[hidden],
+.tour-skip-btn[hidden] {
+    display: none !important;
+}
+
 .tour-copy {
     display: grid;
     gap: 10px;
 }
 
 .tour-title {
+    color: var(--text);
     font-family: 'Clash Display', sans-serif;
     font-size: 1.45rem;
     font-weight: 600;
@@ -651,7 +658,7 @@ button.nav-item {
 }
 
 .tour-message {
-    color: #cbd5e1;
+    color: var(--text-dim);
     font-size: 0.96rem;
     line-height: 1.7;
 }

@@ -716,6 +716,7 @@
                 ['nav', 'Menu', 'How the top navigation looks and behaves.'],
                 ['announcement', 'Announcement bar', 'A slim banner above the menu for promotions or notices.'],
                 ['social', 'Social links', 'Paste the full link to each profile.'],
+                ['policies', 'Booking terms', 'Customers must tick a box accepting this policy (plus the ICSS Terms & Conditions) before they can book.'],
                 ['seo', 'Google & sharing', 'What appears in Google results and link previews.'],
                 ['footer', 'Footer', '']
             ];

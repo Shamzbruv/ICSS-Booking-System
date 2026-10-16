@@ -263,7 +263,10 @@ export const GLOBAL_FIELDS = {
   seo: [
     text('title', 'Browser tab / Google title'), area('description', 'Google description (150 characters)')
   ],
-  footer: [area('text', 'Footer text')]
+  footer: [area('text', 'Footer text')],
+  policies: [
+    area('bookingTerms', 'Booking & cancellation policy', { rows: 7 })
+  ]
 };
 
 export const STYLE_FIELDS = [
@@ -331,6 +334,9 @@ const BASE_SITE = {
   music: { enabled: false, url: '', title: '', volume: 0.35, autoplay: true },
   seo: { title: '', description: '' },
   footer: { text: '' },
+  policies: {
+    bookingTerms: 'Please arrive on time for your appointment. If you need to cancel or reschedule, let us know at least 24 hours in advance. Late arrivals may have a shortened appointment, and missed appointments or late cancellations may lose any deposit paid.'
+  },
   pages: []
 };
 

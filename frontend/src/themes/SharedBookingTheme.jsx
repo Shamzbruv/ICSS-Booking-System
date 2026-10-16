@@ -447,6 +447,7 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [receiptImage, setReceiptImage] = useState(null);
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const [hasDateInteraction, setHasDateInteraction] = useState(false);
   const [selectedOption, setSelectedOption] = useState(optionConfig?.options?.[0] || null);
   const [selectedAddons, setSelectedAddons] = useState(new Set());
@@ -615,6 +616,10 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
       showNotice(theme.selectTimeAlert || 'Please select a time.');
       return;
     }
+    if (!termsAccepted) {
+      showNotice('Please tick the box to accept the Terms & Conditions and the booking policy before booking.', 'Accept the terms to continue');
+      return;
+    }
     if (isDemo) {
       showNotice('This is a live demo, so no booking was created. Your customers will see their confirmation here.', 'Demo booking');
       return;
@@ -656,7 +661,8 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
         phone,
         notes,
         receipt_image: receiptBase64,
-        after_hours_request: isAfterHoursRequest
+        after_hours_request: isAfterHoursRequest,
+        terms_accepted: termsAccepted
       });
 
       if (res.checkoutUrl && res.paymentGateway && res.paymentGateway.key !== 'paypal') {
@@ -1002,7 +1008,33 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
                   </div>
                 </div>
 
-                <button type="submit" className={styles.primaryButton} disabled={!selectedService || paymentDetails.hasConfigurationIssue}>
+                <label className={styles.termsConsent}>
+                  <input
+                    type="checkbox"
+                    required
+                    checked={termsAccepted}
+                    onChange={(e) => setTermsAccepted(e.target.checked)}
+                  />
+                  <span>
+                    I agree to the <a href="/terms" target="_blank" rel="noreferrer">Terms &amp; Conditions</a> and{' '}
+                    <a href="/terms#privacy" target="_blank" rel="noreferrer">Privacy Policy</a>
+                    {tenant.bookingPolicy ? (
+                      <>
+                        {', and '}{tenant.name}{'’s '}
+                        <button
+                          type="button"
+                          className={styles.termsLink}
+                          onClick={() => setNoticeModal({ title: `${tenant.name} booking policy`, message: tenant.bookingPolicy })}
+                        >
+                          booking &amp; cancellation policy
+                        </button>
+                      </>
+                    ) : null}
+                    .
+                  </span>
+                </label>
+
+                <button type="submit" className={styles.primaryButton} disabled={!selectedService || paymentDetails.hasConfigurationIssue || !termsAccepted}>
                   {isAfterHoursRequest ? 'Submit time request' : (theme.bookButtonLabel || paymentDetails.buttonLabel)}
                 </button>
                 <div className={styles.footerNote}>
@@ -1019,7 +1051,7 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
           <div className={`${styles.modalCard} ${styles.noticeCard}`}>
             <div className={styles.modalIcon}><IconGlyph kind="calendar" className={styles.iconGlyph} /></div>
             <h2>{noticeModal.title}</h2>
-            <p className={styles.modalLead}>{noticeModal.message}</p>
+            <p className={styles.modalLead} style={{ whiteSpace: 'pre-line' }}>{noticeModal.message}</p>
             <button type="button" onClick={() => setNoticeModal(null)} className={styles.primaryButton}>
               OK
             </button>

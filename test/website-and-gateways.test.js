@@ -191,3 +191,31 @@ test('dashboard tutorial covers the website builder and payment gateways', () =>
     assert.match(dashboard, /title: 'Payment Gateways'/);
     assert.match(read('server/routes/v1/admin.js'), /MIN_DASHBOARD_TOUR_VERSION = 3/);
 });
+
+// ── Booking consent ──────────────────────────────────────────────────────────
+
+test('every booking requires accepting the terms, enforced by the API', () => {
+    const route = read('server/routes/v1/bookings.js');
+    assert.match(route, /if \(terms_accepted !== true\)/);
+    assert.match(route, /terms_accepted_at, terms_version/);
+    assert.match(read('server/db/connection.js'), /ADD COLUMN IF NOT EXISTS terms_accepted_at TIMESTAMPTZ/);
+    const ui = read('frontend/src/themes/SharedBookingTheme.jsx');
+    assert.match(ui, /type="checkbox"\s+required\s+checked=\{termsAccepted\}/);
+    assert.match(ui, /terms_accepted: termsAccepted/);
+    assert.match(ui, /href="\/terms"/);
+    assert.match(read('public/js/booking.js'), /terms_accepted: true/);
+    assert.match(read('public/book.html'), /id="fieldTermsAccepted" required/);
+    assert.match(read('frontend/src/site/siteSchema.js'), /bookingTerms:/);
+});
+
+// ── Guided tour robustness ───────────────────────────────────────────────────
+
+test('guided tour is readable in light themes and never strands the overlay', () => {
+    const css = read('admin/css/admin.css');
+    assert.match(css, /\.tour-message \{\s*color: var\(--text-dim\)/);
+    assert.match(css, /\.tour-step-count \{\s*color: var\(--info\)/);
+    assert.match(css, /\.tour-context-label\[hidden\]/);
+    const tour = read('admin/js/guidedTour.js');
+    assert.match(tour, /ensureCardOnScreen\(\)/);
+    assert.match(tour, /Watchdog/);
+});

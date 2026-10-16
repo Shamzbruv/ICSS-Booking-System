@@ -17,6 +17,8 @@ const { getGateway, isLinkGateway, isReceiptGateway, isGatewayEnabled, buildChec
 const { ACTIVE_BOOKING_STATUSES_SQL, serviceOverlapsBlockedSlot, timeTextToMinutes } = require('../../services/bookingAvailabilityRules');
 
 const MAX_BOOKINGS_PER_DAY = 14;
+// Bump when /terms or the booking-consent wording changes materially.
+const BOOKING_TERMS_VERSION = '2026-10-16';
 const MAX_DAYS_AHEAD       = 30;
 const MIN_BUFFER_MINS      = 15;
 
@@ -142,13 +144,17 @@ async function validateTenantAvailability(client, tenant, date, time, totalServi
 
 // POST /api/v1/bookings — Create a new booking
 router.post('/', enforceBookingLimit, async (req, res) => {
-    const { name, email, phone, date, time, notes, region, service_id, receipt_image, after_hours_request, whatsapp_opt_in } = req.body;
+    const { name, email, phone, date, time, notes, region, service_id, receipt_image, after_hours_request, whatsapp_opt_in, terms_accepted } = req.body;
     const tenant = req.tenant;
     const tenantId = tenant.id;
     const timezone = tenant.branding?.timezone || 'America/Jamaica';
 
     if (!name || !email || !phone || !date || !time || !service_id) {
         return res.status(400).json({ error: 'name, email, phone, date, time, and service_id are required.' });
+    }
+
+    if (terms_accepted !== true) {
+        return res.status(400).json({ error: 'Please accept the Terms & Conditions and the booking policy to continue.' });
     }
 
     const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
@@ -265,10 +271,10 @@ router.post('/', enforceBookingLimit, async (req, res) => {
 
             // 5. Insert Booking
             const bookingRes = await client.query(
-                `INSERT INTO bookings (tenant_id, service_id, name, email, phone, booking_date, booking_time, start_time, end_time, notes, region, status, payment_mode, expires_at, is_after_hours_request, after_hours_fee, service_price, service_currency, whatsapp_opt_in, whatsapp_status)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
+                `INSERT INTO bookings (tenant_id, service_id, name, email, phone, booking_date, booking_time, start_time, end_time, notes, region, status, payment_mode, expires_at, is_after_hours_request, after_hours_fee, service_price, service_currency, whatsapp_opt_in, whatsapp_status, terms_accepted_at, terms_version)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, NOW(), $21)
                  RETURNING *`,
-                [tenantId, service_id, name, email.toLowerCase().trim(), phone, date, time, startTime, endTime, sanitizedNotes, region || 'Jamaica', status, paymentMode, expiresAt, afterHoursRequested, afterHoursRequested ? Number(tenant.after_hours_fee || 0) : 0, Number(service.price || 0), service.currency || 'JMD', whatsapp_opt_in === true, whatsapp_opt_in === true ? 'pending' : 'not_requested']
+                [tenantId, service_id, name, email.toLowerCase().trim(), phone, date, time, startTime, endTime, sanitizedNotes, region || 'Jamaica', status, paymentMode, expiresAt, afterHoursRequested, afterHoursRequested ? Number(tenant.after_hours_fee || 0) : 0, Number(service.price || 0), service.currency || 'JMD', whatsapp_opt_in === true, whatsapp_opt_in === true ? 'pending' : 'not_requested', BOOKING_TERMS_VERSION]
             );
             const booking = bookingRes.rows[0];
 

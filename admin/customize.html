@@ -190,7 +190,7 @@ async function loadThemeLibrary(){
 const BUILDER_TOUR_KEY='icssWebsiteBuilderTour:'+slug+':v1';
 const builderTour=typeof GuidedTour==='function'?new GuidedTour({storageKey:BUILDER_TOUR_KEY,steps:[
     {title:'Welcome to your Website Builder',message:'Your booking page is now a full website with Home, About, Gallery and Book pages. This quick tour shows you how to make it yours.',placement:'center'},
-    {title:'Live preview',message:'This is exactly what customers will see. Click any section in the preview to edit it, and use the Desktop, Tablet and Phone buttons to check every screen size.',target:'[data-tour="builder-preview"]',placement:'left',mobileMessage:'Tap "Preview" at the bottom of the screen to see your site exactly as customers will.'},
+    {title:'Live preview',message:'The large area on the right is exactly what customers will see. Click any section in it to edit that section, and use these Desktop, Tablet and Phone buttons to check every screen size.',target:'[aria-label="Preview device"]',placement:'bottom',mobileMessage:'Tap "Preview" at the bottom of the screen to see your site exactly as customers will.'},
     {title:'Layers',message:'Each page is listed with its sections in order, like layers. Click a layer to edit its text, photos or video. Use the arrows to reorder, the eye to hide, and "+ Add section" for galleries, reviews, FAQs and more.',target:'[data-tour="builder-tab-layers"]',placement:'right'},
     {title:'Website mode & layout',message:'Choose between a full website and a booking-only page, and between separate pages or one long scrolling page.',target:'[data-tour="builder-site-mode"]',placement:'right'},
     {title:'Photos & background video',message:'Hero banners can use a photo, a looping video or a slideshow. Every upload field shows the ideal size and aspect ratio, and photos are automatically resized and compressed so your site stays fast.',target:'[data-tour="builder-tab-media"]',placement:'right'},
@@ -204,9 +204,11 @@ const builderTour=typeof GuidedTour==='function'?new GuidedTour({storageKey:BUIL
 function maybeStartBuilderTour(){
     if(!builderTour)return;
     const force=new URLSearchParams(location.search).get('tour')==='1';
-    setTimeout(()=>builderTour.start({force,stepIndex:0}),500);
+    if(!force&&builderTour.isCompleted())return;
+    window.scrollTo(0,0);
+    setTimeout(()=>{if(!builderTour.isOpen)builderTour.start({force,stepIndex:0})},700);
 }
-document.getElementById('builderTourBtn').addEventListener('click',()=>{setView('site');builderTour&&builderTour.start({force:true,stepIndex:0})});
+document.getElementById('builderTourBtn').addEventListener('click',()=>{setView('site');window.scrollTo(0,0);builderTour&&builderTour.start({force:true,stepIndex:0})});
 
 document.getElementById('savePaletteBtn').addEventListener('click',()=>savePalette(true));document.getElementById('resetPaletteBtn').addEventListener('click',resetPalette);document.getElementById('requestThemeBtn').addEventListener('click',requestTheme);previewFrame.addEventListener('load',()=>{if(activeColorKey)setTimeout(()=>highlightPreview(activeColorKey),100)});load();loadThemeLibrary();
 </script>

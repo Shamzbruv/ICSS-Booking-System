@@ -381,6 +381,9 @@ async function runMigrations(client) {
     await client.query(`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS service_price NUMERIC(12,2)`);
     await client.query(`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS service_currency TEXT`);
     await client.query(`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS whatsapp_opt_in BOOLEAN DEFAULT false`);
+    // Customers must accept the platform terms + business booking policy before booking.
+    await client.query(`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS terms_accepted_at TIMESTAMPTZ`);
+    await client.query(`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS terms_version TEXT`);
     await client.query(`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS whatsapp_status TEXT DEFAULT 'not_requested'`);
     await client.query(`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS whatsapp_message_sid TEXT`);
     await client.query(`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS whatsapp_sent_at TIMESTAMPTZ`);

@@ -814,3 +814,55 @@
 @media (max-width: 720px) {
   .embedded { padding: 0; }
 }
+
+/* Terms consent (required before every booking) */
+.termsConsent {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 4px 0 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--theme-input-border);
+  border-radius: 14px;
+  background: var(--theme-soft-bg);
+  color: var(--theme-text-subtle);
+  font-size: 0.88rem;
+  line-height: 1.5;
+  cursor: pointer;
+}
+.termsConsent input {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  margin: 2px 0 0;
+  accent-color: var(--theme-accent);
+  cursor: pointer;
+}
+.termsConsent a,
+.termsLink {
+  color: var(--theme-accent-strong);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.termsConsent .termsLink {
+  display: inline !important;
+  width: auto !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  box-shadow: none !important;
+  vertical-align: baseline;
+  white-space: normal;
+  line-height: inherit;
+  text-align: left;
+}
+.termsLink {
+  display: inline;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}

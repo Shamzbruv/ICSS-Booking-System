@@ -99,6 +99,15 @@
             document.body.classList.add('tour-open');
             this.attachEvents();
             this.renderCurrentStep();
+            // Watchdog: a step must never stay invisible behind the overlay.
+            clearTimeout(this.watchdog);
+            this.watchdog = setTimeout(() => {
+                if (this.isOpen && this.root.classList.contains('is-preparing')) {
+                    this.root.classList.remove('is-preparing');
+                    this.hideSpotlight();
+                    this.centerCard();
+                }
+            }, 2500);
             return true;
         }
 
@@ -244,10 +253,19 @@
                 this.updateCard(step);
                 this.clearHighlight();
 
-                const state = await this.prepareStep(step, token);
-                if (!this.isOpen || token !== this.renderToken) return;
-
-                this.applyLayout(state);
+                let state;
+                try {
+                    state = await this.prepareStep(step, token);
+                    if (!this.isOpen || token !== this.renderToken) return;
+                    this.applyLayout(state);
+                } catch (error) {
+                    // Never leave the visitor behind an overlay with no card: fall back to a centred step.
+                    console.warn('[GuidedTour] step layout failed, centring card', error);
+                    state = this.createFallbackState(step, global.innerWidth <= MOBILE_BREAKPOINT);
+                    this.hideSpotlight();
+                    this.centerCard();
+                }
+                this.ensureCardOnScreen();
                 this.currentState = state;
                 this.currentTarget = state.target || null;
                 this.card.focus({ preventScroll: true });
@@ -801,7 +819,30 @@
             };
         }
 
+        centerCard() {
+            const viewport = this.getViewportRect();
+            this.applyCardFrame('center', this.measureCardFrame('center', viewport, this.getSafeArea(viewport)));
+        }
+
+        // Safety net: if layout maths ever places the card outside the window
+        // (zoomed browsers, huge targets, late layout shifts), re-centre it.
+        ensureCardOnScreen() {
+            const rect = this.card.getBoundingClientRect();
+            const vw = global.innerWidth;
+            const vh = global.innerHeight;
+            const invalid = [rect.top, rect.left, rect.width, rect.height].some((value) => !Number.isFinite(value));
+            const offscreen = rect.width < 40 || rect.height < 40 || rect.top < -4 || rect.left < -4 || rect.bottom > vh + 4 || rect.right > vw + 4;
+            if (invalid || offscreen) {
+                this.hideSpotlight();
+                this.centerCard();
+            }
+        }
+
         applyCardFrame(layoutMode, frame) {
+            if (!frame || ![frame.left, frame.top, frame.width].every(Number.isFinite)) {
+                const viewport = this.getViewportRect();
+                frame = this.measureCardFrame('center', viewport, this.getSafeArea(viewport));
+            }
             this.card.dataset.layout = layoutMode;
             this.card.classList.toggle('tour-card--centered', layoutMode === 'center');
             this.card.style.left = `${frame.left}px`;
