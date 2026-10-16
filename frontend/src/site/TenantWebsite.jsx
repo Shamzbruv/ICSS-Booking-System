@@ -144,6 +144,11 @@ export default function TenantWebsite({ tenant, services, themeKey, savedSite, b
           send({ type: 'icss:site-defaults', defaults: resolveSite(t, p, null), requestId: data.requestId });
           break;
         }
+        case 'icss:site-resolve': {
+          const { tenant: t, preset: p } = latest.current;
+          send({ type: 'icss:site-resolved', resolved: resolveSite(t, p, data.site || null), requestId: data.requestId });
+          break;
+        }
         case 'icss:site-theme':
           if (onRequestTheme && data.themeKey) onRequestTheme(data.themeKey);
           break;

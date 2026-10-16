@@ -1,45 +1,172 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="robots" content="noindex,nofollow"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ICSS Admin — Customize</title><link rel="stylesheet" href="/css/global-theme.css"><link rel="stylesheet" href="css/admin.css"><link rel="icon" href="favicon.png"><style>.customizer{display:grid;grid-template-columns:360px 1fr;gap:22px}.controls,.preview{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px}.color-row{display:grid;grid-template-columns:1fr 52px;align-items:center;gap:12px;margin:12px 0;padding:7px 9px;border:2px solid transparent;border-radius:9px;transition:.18s ease}.color-row.active{border-color:var(--primary);background:rgba(124,110,247,.12);box-shadow:0 0 0 3px rgba(124,110,247,.1)}.color-row input{width:52px;height:38px;padding:2px;border-radius:7px}.preview iframe{width:100%;height:760px;border:0;border-radius:10px;background:#fff}.preview-hint{margin:0 0 10px;color:var(--text-dim);font-size:12px}.request-box{margin-top:20px;padding:18px;border:1px solid rgba(124,110,247,.35);border-radius:12px;background:rgba(124,110,247,.07)}@media(max-width:1000px){.customizer{grid-template-columns:1fr}.preview iframe{height:620px}}.theme-library{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:22px}.theme-library-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:4px}.theme-library-badge{padding:3px 10px;border-radius:999px;background:var(--primary-glow);color:var(--primary);font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase}.theme-library-hint{color:var(--text-dim);font-size:13px;margin:4px 0 16px}.theme-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px}.theme-card{border:1px solid var(--border);border-radius:12px;padding:14px;background:var(--surface-2);display:flex;flex-direction:column;gap:8px;transition:border-color .18s ease}.theme-card.is-current{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-glow)}.theme-card-cat{font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--text-dim)}.theme-card-name{font-size:15px;font-weight:600;color:var(--text)}.theme-card-actions{display:flex;gap:8px;margin-top:auto;flex-wrap:wrap}.theme-card-actions .btn{flex:1;text-align:center;white-space:nowrap}</style></head><body><button class="hamburger" id="hamburgerBtn" type="button" aria-label="Open menu"><span></span><span></span><span></span></button><div class="sidebar-backdrop" id="sidebarBackdrop"></div><aside class="sidebar" id="sidebar"><div class="sidebar-brand"><img src="favicon.png" width="36"><div class="brand-text"><span class="brand-name" id="tenantName">Booking System</span><span class="brand-plan">CUSTOMIZE</span></div></div><nav class="sidebar-nav"><a href="index.html" class="nav-item"><span class="nav-icon">⬛</span> Dashboard</a><a href="bookings.html" class="nav-item"><span class="nav-icon">📅</span> Bookings</a><a href="availability.html" class="nav-item"><span class="nav-icon">🗓️</span> Availability</a><a href="services.html" class="nav-item"><span class="nav-icon">📦</span> Services</a><a href="settings.html" class="nav-item"><span class="nav-icon">⚙️</span> Settings</a><a href="customize.html" class="nav-item active"><span class="nav-icon">🎨</span> Customize</a></nav><div class="sidebar-footer"><div class="user-info"><div class="user-avatar" id="userAvatar">?</div><div><div class="user-name" id="userName">—</div><div class="user-role" id="userRole">—</div></div></div><button class="logout-btn" type="button">Sign Out</button></div></aside><main class="main-content"><header class="page-header"><div><h1 class="page-title">Customize Booking Site</h1><p class="page-subtitle">Adjust every major surface and see your live booking page update.</p></div><button class="btn btn-primary" id="savePaletteBtn" type="button">Save Colors</button></header><section class="theme-library" id="themeLibrarySection" hidden><div class="theme-library-head"><h2 class="section-title">Theme Library</h2><span class="theme-library-badge">Test account</span></div><p class="theme-library-hint">Apply any of the 11 industry starter themes to this account's live booking page, whenever you like.</p><div class="theme-grid" id="themeLibraryGrid"></div></section><div class="customizer"><section class="controls"><h2 class="section-title">Colors</h2><div id="colors"></div><button class="btn btn-secondary" id="resetPaletteBtn" type="button" style="width:100%;margin-top:10px">Reset to theme defaults</button><div class="request-box"><h3>Want a fully custom theme?</h3><p style="color:var(--text-dim);font-size:13px;line-height:1.5">Request a professionally built custom theme for <strong>JMD $10,000</strong>. Your request goes directly into the developer job queue.</p><textarea id="themeNotes" class="form-control" rows="4" placeholder="Describe your preferred style, layout, references, and special requirements..."></textarea><button class="btn btn-primary" id="requestThemeBtn" type="button" style="width:100%;margin-top:10px">Request Custom Theme — JMD $10,000</button></div><p id="message" style="font-size:13px;color:var(--text-dim)"></p></section><section class="preview"><p class="preview-hint" id="previewHint">Select a color to highlight every area it controls.</p><iframe id="previewFrame" title="Live booking site preview"></iframe></section></div></main><script src="js/admin.js"></script><script>
-requireAuth();populateUserUI();const fields={pageBg:['Page background','#f8f4f6'],shellBg:['Main container','#ffffff'],panelBg:['Panel background','#ffffff'],cardBg:['Service card','#ffffff'],inputBg:['Input background','#ffffff'],textMain:['Main text','#24161d'],textSubtle:['Secondary text','#573745'],textMuted:['Muted text','#8d7280'],accent:['Accent color','#8b5268'],accentStrong:['Button/strong accent','#724356'],cardBorder:['Card borders','#e7d8de'],inputBorder:['Input borders','#e7d8de']};let palette={},timer,activeColorKey=null;
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex,nofollow">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>ICSS Admin — Website Builder</title>
+<link rel="stylesheet" href="/css/global-theme.css">
+<link rel="stylesheet" href="css/admin.css">
+<link rel="stylesheet" href="css/site-builder.css">
+<link rel="icon" href="favicon.png">
+<style>
+.builder-page .page-header{margin-bottom:16px}
+.builder-header-actions{display:flex;gap:8px;flex-wrap:wrap}
+.builder-tabs{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+.builder-tabs button{padding:9px 16px;border:1px solid var(--border);border-radius:999px;background:var(--surface);color:var(--text-dim);font-weight:600;cursor:pointer}
+.builder-tabs button.is-active{background:var(--primary);border-color:var(--primary);color:#fff}
+.builder-view[hidden]{display:none!important}
+.customizer{display:grid;grid-template-columns:360px 1fr;gap:22px}
+.controls,.preview{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px}
+.color-row{display:grid;grid-template-columns:1fr 52px;align-items:center;gap:12px;margin:12px 0;padding:7px 9px;border:2px solid transparent;border-radius:9px;transition:.18s ease}
+.color-row.active{border-color:var(--primary);background:rgba(124,110,247,.12);box-shadow:0 0 0 3px rgba(124,110,247,.1)}
+.color-row input{width:52px;height:38px;padding:2px;border-radius:7px}
+.preview iframe{width:100%;height:760px;border:0;border-radius:10px;background:#fff}
+.preview-hint{margin:0 0 10px;color:var(--text-dim);font-size:12px}
+.request-box{margin-top:20px;padding:18px;border:1px solid rgba(124,110,247,.35);border-radius:12px;background:rgba(124,110,247,.07)}
+@media(max-width:1000px){.customizer{grid-template-columns:1fr}.preview iframe{height:620px}}
+.theme-library{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:22px}
+.theme-library-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:4px}
+.theme-library-badge{padding:3px 10px;border-radius:999px;background:var(--primary-glow);color:var(--primary);font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase}
+.theme-library-hint{color:var(--text-dim);font-size:13px;margin:4px 0 16px}
+.theme-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px}
+.theme-card{border:1px solid var(--border);border-radius:12px;padding:14px;background:var(--surface-2);display:flex;flex-direction:column;gap:8px;transition:border-color .18s ease}
+.theme-card.is-current{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-glow)}
+.theme-card-cat{font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--text-dim)}
+.theme-card-name{font-size:15px;font-weight:600;color:var(--text)}
+.theme-card-actions{display:flex;gap:8px;margin-top:auto;flex-wrap:wrap}
+.theme-card-actions .btn{flex:1;text-align:center;white-space:nowrap}
+.template-info{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:22px}
+.template-info p{color:var(--text-dim);font-size:13px;line-height:1.6;margin:6px 0 0}
+</style>
+</head>
+<body>
+<button class="hamburger" id="hamburgerBtn" type="button" aria-label="Open menu"><span></span><span></span><span></span></button>
+<div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-brand"><img src="favicon.png" width="36" alt=""><div class="brand-text"><span class="brand-name" id="tenantName">Booking System</span><span class="brand-plan">WEBSITE</span></div></div>
+  <nav class="sidebar-nav">
+    <a href="index.html" class="nav-item"><span class="nav-icon">⬛</span> Dashboard</a>
+    <a href="bookings.html" class="nav-item"><span class="nav-icon">📅</span> Bookings</a>
+    <a href="availability.html" class="nav-item"><span class="nav-icon">🗓️</span> Availability</a>
+    <a href="services.html" class="nav-item"><span class="nav-icon">📦</span> Services</a>
+    <a href="settings.html" class="nav-item"><span class="nav-icon">⚙️</span> Settings</a>
+    <a href="customize.html" class="nav-item active"><span class="nav-icon">🎨</span> Website Builder</a>
+  </nav>
+  <div class="sidebar-footer"><div class="user-info"><div class="user-avatar" id="userAvatar">?</div><div><div class="user-name" id="userName">—</div><div class="user-role" id="userRole">—</div></div></div><button class="logout-btn" type="button">Sign Out</button></div>
+</aside>
+
+<main class="main-content builder-page">
+  <header class="page-header" data-tour="builder-header">
+    <div>
+      <h1 class="page-title">Website Builder</h1>
+      <p class="page-subtitle">Design your Home, About, Gallery and Booking pages. Every change shows in the live preview, and nothing goes live until you press Publish.</p>
+    </div>
+    <div class="builder-header-actions">
+      <button class="btn btn-secondary" id="builderTourBtn" type="button">? Builder tour</button>
+    </div>
+  </header>
+
+  <div class="builder-tabs" role="tablist" data-tour="builder-views">
+    <button type="button" class="is-active" data-view="site">🌐 Website</button>
+    <button type="button" data-view="booking">📅 Booking widget</button>
+    <button type="button" data-view="templates">🧩 Templates</button>
+  </div>
+
+  <section class="builder-view" data-view-panel="site">
+    <div id="siteBuilderRoot"></div>
+  </section>
+
+  <section class="builder-view" data-view-panel="booking" hidden>
+    <div class="customizer">
+      <section class="controls">
+        <h2 class="section-title">Booking widget colours</h2>
+        <p class="preview-hint">These colours style the booking calendar and checkout on your Book page. They save instantly.</p>
+        <div id="colors"></div>
+        <button class="btn btn-secondary" id="resetPaletteBtn" type="button" style="width:100%;margin-top:10px">Reset to theme defaults</button>
+        <button class="btn btn-primary" id="savePaletteBtn" type="button" style="width:100%;margin-top:10px">Save Colors</button>
+        <p id="message" style="font-size:13px;color:var(--text-dim)"></p>
+      </section>
+      <section class="preview"><p class="preview-hint" id="previewHint">Select a color to highlight every area it controls.</p><iframe id="previewFrame" title="Live booking widget preview"></iframe></section>
+    </div>
+  </section>
+
+  <section class="builder-view" data-view-panel="templates" hidden>
+    <div class="template-info">
+      <h2 class="section-title">Your template</h2>
+      <p>Your website started from an industry template with its own layout, fonts, colours and sample content. Everything can be changed in the Website tab. Want something completely bespoke? Request a custom theme below.</p>
+    </div>
+    <section class="theme-library" id="themeLibrarySection" hidden><div class="theme-library-head"><h2 class="section-title">Theme Library</h2><span class="theme-library-badge">Test account</span></div><p class="theme-library-hint">Apply any of the 11 industry starter themes to this account's live site, whenever you like.</p><div class="theme-grid" id="themeLibraryGrid"></div></section>
+    <div class="request-box"><h3>Want a fully custom theme?</h3><p style="color:var(--text-dim);font-size:13px;line-height:1.5">Request a professionally built custom theme for <strong>JMD $10,000</strong>. Your request goes directly into the developer job queue.</p><textarea id="themeNotes" class="form-control" rows="4" placeholder="Describe your preferred style, layout, references, and special requirements..."></textarea><button class="btn btn-primary" id="requestThemeBtn" type="button" style="width:100%;margin-top:10px">Request Custom Theme — JMD $10,000</button><p id="requestMessage" style="font-size:13px;color:var(--text-dim)"></p></div>
+  </section>
+</main>
+
+<script src="js/admin.js"></script>
+<script src="js/guidedTour.js"></script>
+<script src="js/siteBuilder.js"></script>
+<script>
+requireAuth();populateUserUI();
+const slug=getTenantSlug();
+
+// ── View tabs ────────────────────────────────────────────────────────────────
+let builder=null;
+function setView(view){
+    document.querySelectorAll('.builder-tabs button').forEach(b=>b.classList.toggle('is-active',b.dataset.view===view));
+    document.querySelectorAll('[data-view-panel]').forEach(p=>{p.hidden=p.dataset.viewPanel!==view});
+    if(view==='booking'&&!previewFrame.src)refresh();
+    if(view==='site'&&builder)builder.layoutFrame();
+}
+document.querySelectorAll('.builder-tabs button').forEach(b=>b.addEventListener('click',()=>setView(b.dataset.view)));
+
+// ── Website builder ──────────────────────────────────────────────────────────
+builder=new SiteBuilder({
+    root:document.getElementById('siteBuilderRoot'),
+    mode:'tenant',
+    slug,
+    previewBase:'/'+encodeURIComponent(slug),
+    api:SiteBuilder.tenantApi(slug,apiFetch,getToken),
+    onReady:()=>maybeStartBuilderTour()
+});
+
+// ── Booking widget colours (saved straight to branding.customPalette) ───────
+const fields={pageBg:['Page background','#f8f4f6'],shellBg:['Main container','#ffffff'],panelBg:['Panel background','#ffffff'],cardBg:['Service card','#ffffff'],inputBg:['Input background','#ffffff'],textMain:['Main text','#24161d'],textSubtle:['Secondary text','#573745'],textMuted:['Muted text','#8d7280'],accent:['Accent color','#8b5268'],accentStrong:['Button/strong accent','#724356'],cardBorder:['Card borders','#e7d8de'],inputBorder:['Input borders','#e7d8de']};let palette={},timer,activeColorKey=null;
 Object.assign(fields,{shellBorder:['Main container border','#e7d8de'],panelBorder:['Panel border','#e7d8de'],softBg:['Soft highlight background','#f6edf1'],strongBg:['Primary button background','#8b5268'],buttonText:['Button text','#ffffff'],cardHover:['Card hover color','#f8edf2'],cardSelected:['Selected card background','#fff8fa'],cardSelectedBorder:['Selected card border','#8b5268'],accentSoft:['Accent highlight','#f3e8ed'],accentBorder:['Accent border','#d8b8c5']});
 const targetSelectors={pageBg:'[class*="_wrapper_"]',shellBg:'[class*="_shell_"]',panelBg:'[class*="_panel_"]',cardBg:'[class*="_serviceCard_"],[class*="_addonCard_"]',inputBg:'[class*="_inputShell_"]',textMain:'h1,h2,h3,label,[class*="_summaryRow_"] strong',textSubtle:'[class*="_brandTagline_"],[class*="_serviceText_"] span,[class*="_serviceDescription_"],[class*="_summaryRow_"] span',textMuted:'[class*="_helperText_"],[class*="_footerNote_"],[class*="_bookingNote_"]',accent:'[class*="_brandIcon_"],[class*="_sectionHeaderMedia_"],[class*="_serviceGlyph_"],[class*="_servicePrice_"]',accentStrong:'[class*="_servicePrice_"],[class*="_totalRow_"] strong',cardBorder:'[class*="_serviceCard_"],[class*="_addonCard_"]',inputBorder:'[class*="_inputShell_"]',shellBorder:'[class*="_shell_"]',panelBorder:'[class*="_panel_"]',softBg:'[class*="_summary_"],[class*="_paymentNotice_"],[class*="_bookingNote_"]',strongBg:'[class*="_primaryButton_"]',buttonText:'[class*="_primaryButton_"]',cardHover:'[class*="_serviceCard_"],[class*="_addonCard_"]',cardSelected:'[class*="_serviceCard_"][class*="_selected_"],[class*="_addonCard_"][class*="_selected_"]',cardSelectedBorder:'[class*="_serviceCard_"][class*="_selected_"],[class*="_addonCard_"][class*="_selected_"]',accentSoft:'[class*="_sectionHeaderMedia_"],[class*="_serviceGlyph_"]',accentBorder:'[class*="_timeChip_"],[class*="_afterHoursRequest_"]'};
-function render(){colors.innerHTML='';Object.entries(fields).forEach(([key,[label,fallback]])=>{const row=document.createElement('label');row.className='color-row'+(activeColorKey===key?' active':'');const value=/^#[0-9a-f]{6}$/i.test(palette[key]||'')?palette[key]:fallback;row.innerHTML=`<span>${label}</span><input type="color" data-key="${key}" value="${value}" aria-label="${label}">`;const input=row.querySelector('input');input.onfocus=input.onclick=()=>highlightPreview(key);input.oninput=e=>{palette[key]=e.target.value;highlightPreview(key);clearTimeout(timer);timer=setTimeout(()=>savePalette(false),350)};colors.appendChild(row)})}
+function render(){colors.innerHTML='';Object.entries(fields).forEach(([key,[label,fallback]])=>{const row=document.createElement('label');row.className='color-row'+(activeColorKey===key?' active':'');const value=/^#[0-9a-f]{6}$/i.test(palette[key]||'')?palette[key]:fallback;const text=document.createElement('span');text.textContent=label;const input=document.createElement('input');input.type='color';input.dataset.key=key;input.value=value;input.setAttribute('aria-label',label);row.append(text,input);input.onfocus=input.onclick=()=>highlightPreview(key);input.oninput=e=>{palette[key]=e.target.value;highlightPreview(key);clearTimeout(timer);timer=setTimeout(()=>savePalette(false),350)};colors.appendChild(row)})}
 function rgbFor(hex){const value=hex.replace('#','');return `rgb(${parseInt(value.slice(0,2),16)}, ${parseInt(value.slice(2,4),16)}, ${parseInt(value.slice(4,6),16)})`}
 function ensurePreviewHighlightStyle(doc){let style=doc.getElementById('icss-customizer-highlight-style');if(style)return;style=doc.createElement('style');style.id='icss-customizer-highlight-style';style.textContent='@keyframes icssCustomizerPulse{0%,100%{outline-color:#00e5ff;box-shadow:0 0 0 7px rgba(0,229,255,.22),inset 0 0 0 3px rgba(0,229,255,.45)}50%{outline-color:#ffea00;box-shadow:0 0 0 11px rgba(255,234,0,.28),inset 0 0 0 3px rgba(255,234,0,.5)}}[data-icss-color-highlight="true"]{outline:5px solid #00e5ff!important;outline-offset:4px!important;box-shadow:0 0 0 7px rgba(0,229,255,.22),inset 0 0 0 3px rgba(0,229,255,.45)!important;animation:icssCustomizerPulse 1.4s ease-in-out infinite!important;position:relative!important;z-index:20!important}.icss-customizer-badge{position:fixed;z-index:2147483647;top:14px;left:50%;transform:translateX(-50%);padding:9px 15px;border:2px solid #00e5ff;border-radius:999px;background:#071018;color:#fff;font:800 13px/1.2 Arial,sans-serif;letter-spacing:.06em;text-transform:uppercase;box-shadow:0 8px 30px rgba(0,0,0,.45);pointer-events:none}';doc.head.appendChild(style)}
 function highlightPreview(key){activeColorKey=key;document.querySelectorAll('.color-row').forEach(row=>row.classList.toggle('active',row.querySelector('input')?.dataset.key===key));const label=fields[key][0];const doc=previewFrame.contentDocument;if(!doc||!doc.body){previewHint.textContent=`Waiting to highlight: ${label}`;return}ensurePreviewHighlightStyle(doc);doc.querySelectorAll('[data-icss-color-highlight]').forEach(el=>el.removeAttribute('data-icss-color-highlight'));doc.querySelector('.icss-customizer-badge')?.remove();const matches=new Set;const selector=targetSelectors[key];if(selector)doc.querySelectorAll(selector).forEach(el=>matches.add(el));const fallback=fields[key][1];const target=rgbFor(/^#[0-9a-f]{6}$/i.test(palette[key]||'')?palette[key]:fallback);const props=['color','backgroundColor','borderTopColor','borderRightColor','borderBottomColor','borderLeftColor'];doc.body.querySelectorAll('*').forEach(el=>{const style=doc.defaultView.getComputedStyle(el);if(props.some(prop=>style[prop]===target))matches.add(el)});if(matches.size===0)matches.add(doc.body);[...matches].slice(0,40).forEach(el=>el.dataset.icssColorHighlight='true');const badge=doc.createElement('div');badge.className='icss-customizer-badge';badge.textContent=`${label} · ${matches.size} area${matches.size===1?'':'s'}`;doc.body.appendChild(badge);previewHint.textContent=`Outlined in blue: ${label} (${matches.size} area${matches.size===1?'':'s'})`}
-function refresh(){previewFrame.src='/'+getTenantSlug()+'?preview='+Date.now()}
-async function savePalette(show){try{await apiFetch('/api/v1/tenants/'+getTenantSlug()+'/branding',{method:'PATCH',body:{customPalette:palette}});refresh();if(show)message.textContent='Colors saved.'}catch(e){message.textContent=e.message}}
-async function load(){const d=await fetch('/api/v1/public/tenant',{headers:{'X-Tenant-Slug':getTenantSlug()}}).then(r=>r.json());tenantName.textContent=d.name;palette=d.branding?.customPalette||{};render();refresh()}
+function refresh(){previewFrame.src='/'+encodeURIComponent(slug)+'/book?t='+Date.now()}
+async function savePalette(show){try{await apiFetch('/api/v1/tenants/'+slug+'/branding',{method:'PATCH',body:{customPalette:palette}});refresh();if(show)message.textContent='Colors saved.'}catch(e){message.textContent=e.message}}
+async function load(){const d=await fetch('/api/v1/public/tenant',{headers:{'X-Tenant-Slug':slug}}).then(r=>r.json());tenantName.textContent=d.name;palette=d.branding?.customPalette||{};render()}
 function resetPalette(){palette={};render();savePalette(true)}
-async function requestTheme(){const notes=themeNotes.value.trim();if(!notes)return message.textContent='Please describe the theme you want.';try{const d=await apiFetch('/api/v1/themes/custom-request',{method:'POST',body:{notes}});message.textContent=d.message;themeNotes.value=''}catch(e){message.textContent=e.message}}
+async function requestTheme(){const notes=themeNotes.value.trim();if(!notes)return requestMessage.textContent='Please describe the theme you want.';try{const d=await apiFetch('/api/v1/themes/custom-request',{method:'POST',body:{notes}});requestMessage.textContent=d.message;themeNotes.value=''}catch(e){requestMessage.textContent=e.message}}
 
 // ── Theme Library — testing account only. Every other tenant never sees this
 // section: it stays hidden unless the backend confirms is_test_account. ──────
 let libraryThemes=[],currentThemeId=null;
 function renderThemeLibrary(){
-    themeLibraryGrid.innerHTML=libraryThemes.map(th=>{
+    themeLibraryGrid.replaceChildren(...libraryThemes.map(th=>{
         const isCurrent=th.id===currentThemeId;
-        return `<div class="theme-card${isCurrent?' is-current':''}">
-            <div class="theme-card-cat">${th.category}</div>
-            <div class="theme-card-name">${th.name}</div>
-            <div class="theme-card-actions">
-                ${th.template_path?`<a href="${th.template_path}" target="_blank" rel="noreferrer" class="btn btn-secondary btn-sm">Preview</a>`:''}
-                <button type="button" class="btn ${isCurrent?'btn-secondary':'btn-primary'} btn-sm" data-theme-id="${th.id}" ${isCurrent?'disabled':''}>${isCurrent?'Current':'Apply'}</button>
-            </div>
-        </div>`;
-    }).join('');
-    themeLibraryGrid.querySelectorAll('button[data-theme-id]').forEach(btn=>{
-        btn.addEventListener('click',()=>applyLibraryTheme(btn.dataset.themeId,btn));
-    });
+        const card=document.createElement('div');card.className='theme-card'+(isCurrent?' is-current':'');
+        const cat=document.createElement('div');cat.className='theme-card-cat';cat.textContent=th.category;
+        const name=document.createElement('div');name.className='theme-card-name';name.textContent=th.name;
+        const actions=document.createElement('div');actions.className='theme-card-actions';
+        if(th.template_path){const a=document.createElement('a');a.href=th.template_path;a.target='_blank';a.rel='noreferrer';a.className='btn btn-secondary btn-sm';a.textContent='Preview';actions.appendChild(a)}
+        const btn=document.createElement('button');btn.type='button';btn.className='btn '+(isCurrent?'btn-secondary':'btn-primary')+' btn-sm';btn.textContent=isCurrent?'Current':'Apply';btn.disabled=isCurrent;btn.addEventListener('click',()=>applyLibraryTheme(th.id,btn));actions.appendChild(btn);
+        card.append(cat,name,actions);return card;
+    }));
 }
 async function applyLibraryTheme(themeId,btn){
     const original=btn.textContent;
     btn.disabled=true;btn.textContent='Applying…';
     try{
-        await apiFetch('/api/v1/tenants/'+getTenantSlug()+'/theme',{method:'POST',body:{theme_id:themeId}});
+        await apiFetch('/api/v1/tenants/'+slug+'/theme',{method:'POST',body:{theme_id:themeId}});
         currentThemeId=themeId;
         renderThemeLibrary();
         refresh();
-        showToast('Theme applied — the live booking page now uses this look.');
+        showToast('Theme applied. Reloading the builder with the new template…');
+        setTimeout(()=>window.location.reload(),900);
     }catch(e){
         btn.disabled=false;btn.textContent=original;
         showToast(e.message||'Could not apply that theme.','error');
@@ -49,7 +176,7 @@ async function loadThemeLibrary(){
     try{
         const [{themes},info]=await Promise.all([
             fetch('/api/v1/themes').then(r=>r.json()),
-            apiFetch('/api/v1/tenants/'+getTenantSlug()+'/theme')
+            apiFetch('/api/v1/tenants/'+slug+'/theme')
         ]);
         if(!info.is_test_account)return; // stays hidden for every other tenant
         libraryThemes=themes||[];
@@ -59,5 +186,29 @@ async function loadThemeLibrary(){
     }catch(e){ console.warn('Theme library skipped:',e.message); }
 }
 
+// ── Builder tutorial ────────────────────────────────────────────────────────
+const BUILDER_TOUR_KEY='icssWebsiteBuilderTour:'+slug+':v1';
+const builderTour=typeof GuidedTour==='function'?new GuidedTour({storageKey:BUILDER_TOUR_KEY,steps:[
+    {title:'Welcome to your Website Builder',message:'Your booking page is now a full website with Home, About, Gallery and Book pages. This quick tour shows you how to make it yours.',placement:'center'},
+    {title:'Live preview',message:'This is exactly what customers will see. Click any section in the preview to edit it, and use the Desktop, Tablet and Phone buttons to check every screen size.',target:'[data-tour="builder-preview"]',placement:'left',mobileMessage:'Tap "Preview" at the bottom of the screen to see your site exactly as customers will.'},
+    {title:'Layers',message:'Each page is listed with its sections in order, like layers. Click a layer to edit its text, photos or video. Use the arrows to reorder, the eye to hide, and "+ Add section" for galleries, reviews, FAQs and more.',target:'[data-tour="builder-tab-layers"]',placement:'right'},
+    {title:'Website mode & layout',message:'Choose between a full website and a booking-only page, and between separate pages or one long scrolling page.',target:'[data-tour="builder-site-mode"]',placement:'right'},
+    {title:'Photos & background video',message:'Hero banners can use a photo, a looping video or a slideshow. Every upload field shows the ideal size and aspect ratio, and photos are automatically resized and compressed so your site stays fast.',target:'[data-tour="builder-tab-media"]',placement:'right'},
+    {title:'Colours, fonts & theme',message:'The Style tab controls colours, fonts, button shapes and corner roundness across every page. Try a quick palette, or match your brand exactly.',target:'[data-tour="builder-tab-style"]',placement:'right'},
+    {title:'Theme music',message:'Add a short music loop in the Music tab. Visitors see a "Play music" button, and the music starts when they first tap the page.',target:'[data-tour="builder-tab-music"]',placement:'right'},
+    {title:'Site info',message:'Add your logo, phone, WhatsApp, address, social links and Google description in Site info.',target:'[data-tour="builder-tab-info"]',placement:'right'},
+    {title:'Save, preview, publish',message:'Your changes autosave as a draft. Nothing changes for customers until you press Publish. Discard returns to the live version, and Undo / Redo are always at the top left.',target:'.sb-actions',placement:'bottom'},
+    {title:'Booking widget & templates',message:'Use the Booking widget tab to fine-tune the calendar and checkout colours, and the Templates tab to request a fully custom theme.',target:'[data-tour="builder-views"]',placement:'bottom'},
+    {title:'You’re ready',message:'Make it yours, then press Publish. You can replay this tour any time with the "Builder tour" button.',placement:'center'}
+]}):null;
+function maybeStartBuilderTour(){
+    if(!builderTour)return;
+    const force=new URLSearchParams(location.search).get('tour')==='1';
+    setTimeout(()=>builderTour.start({force,stepIndex:0}),500);
+}
+document.getElementById('builderTourBtn').addEventListener('click',()=>{setView('site');builderTour&&builderTour.start({force:true,stepIndex:0})});
+
 document.getElementById('savePaletteBtn').addEventListener('click',()=>savePalette(true));document.getElementById('resetPaletteBtn').addEventListener('click',resetPalette);document.getElementById('requestThemeBtn').addEventListener('click',requestTheme);previewFrame.addEventListener('load',()=>{if(activeColorKey)setTimeout(()=>highlightPreview(activeColorKey),100)});load();loadThemeLibrary();
-</script></body></html>
+</script>
+</body>
+</html>

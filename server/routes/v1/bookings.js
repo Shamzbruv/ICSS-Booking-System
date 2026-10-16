@@ -504,7 +504,7 @@ router.patch('/:id/status', authenticate, requireRole('staff', 'tenant_admin'), 
                     await client.query(
                         `INSERT INTO audit_log (tenant_id, user_id, actor_user_id, action, entity, entity_id, old_status, new_status, note)
                          VALUES ($1, $2, $3, $4, 'booking', $5, $6, $7, $8)`,
-                        [req.tenant.id, req.user.id, req.user.id, `manual_transfer_${status}`, booking.id, booking.status, status, note]
+                        [req.tenant.id, req.user.id, req.user.id, booking.payment_mode === 'manual' ? `manual_transfer_${status}` : `${booking.payment_mode}_${status}`, booking.id, booking.status, status, note]
                     );
 
                     if (status === 'confirmed') {

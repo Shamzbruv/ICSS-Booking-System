@@ -110,7 +110,7 @@ export const SECTION_TYPES = {
       list('slides', 'Slideshow photos', 'Slide', [media('url', 'Photo', 'image', 'heroImage')], { showIf: { mediaType: ['slideshow'] } }),
       range('overlay', 'Darken background', 0, 0.9, 0.05),
       text('eyebrow', 'Small heading'),
-      text('headline', 'Headline'),
+      area('headline', 'Headline (press Enter for a new line)', { rows: 2 }),
       area('subheadline', 'Sub-headline'),
       text('ctaLabel', 'Main button text'),
       target('ctaTarget', 'Main button opens'),
@@ -422,6 +422,8 @@ export function isSafeMediaUrl(url) {
   const value = String(url || '').trim();
   if (!value) return false;
   if (/^\/media\/[0-9a-f-]{36}$/i.test(value)) return true;
+  // Playground uploads stay in the browser as same-origin blob: URLs (never saved).
+  if (value.startsWith(`blob:${window.location.origin}/`)) return true;
   return /^https?:\/\//i.test(value);
 }
 
