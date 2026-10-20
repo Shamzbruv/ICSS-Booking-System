@@ -13,12 +13,12 @@ function prefersLightMedia() {
  * Image that never shows a broken icon: the theme gradient sits behind it and
  * the <img> hides itself if the file can't load.
  */
-export function SmartImage({ src, alt = '', className = '', fallback, eager = false, style }) {
+export function SmartImage({ src, alt = '', className = '', fallback, eager = false, style, field }) {
   const [failed, setFailed] = useState(false);
   useEffect(() => { setFailed(false); }, [src]);
   const usable = isSafeMediaUrl(src) && !failed;
   return (
-    <div className={`${s.smartImage} ${className}`} style={{ background: fallback, ...style }}>
+    <div data-site-field={field} className={`${s.smartImage} ${className}`} style={{ background: fallback, ...style }}>
       {usable && (
         <img
           src={src}

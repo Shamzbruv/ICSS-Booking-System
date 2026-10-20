@@ -20,6 +20,13 @@ const MAX_STRING = 6000;
 
 // Theme name → website preset key (frontend/src/site/themePresets.js).
 const THEME_KEYS = {
+    'Island Sound Music': 'musicians',
+    'Island Occasion Rentals': 'party-rentals',
+    'Island Drive Rentals': 'car-rental',
+    'Yaad Table Catering': 'catering',
+    'Fresh Ride Detailing': 'detailing',
+    'YaadFix Home Services': 'home-repairs',
+    'BrightPath Tutoring': 'tutoring',
     'Iron & Blade': 'barber',
     'Botanica Spa': 'spa',
     'Pro Auto Care': 'mechanic',
@@ -31,11 +38,20 @@ const THEME_KEYS = {
     'Elegant Nails': 'nail-tech',
     'Polished & Pure': 'nail-tech',
     'Lumina Lens': 'photography',
+    'GreenScape Landscaping': 'landscaping',
+    'FreshStart Cleaning': 'cleaning',
     'Universal Services': 'universal'
 };
 
 // Legacy static template files → live demo of the same theme.
 const TEMPLATE_FILE_KEYS = {
+    'musicians.html': 'musicians',
+    'party-rentals.html': 'party-rentals',
+    'car-rental.html': 'car-rental',
+    'catering.html': 'catering',
+    'detailing.html': 'detailing',
+    'home-repairs.html': 'home-repairs',
+    'tutoring.html': 'tutoring',
     'barber.html': 'barber',
     'spa.html': 'spa',
     'mechanic.html': 'mechanic',
@@ -46,6 +62,8 @@ const TEMPLATE_FILE_KEYS = {
     'law.html': 'law',
     'nail_tech.html': 'nail-tech',
     'photography.html': 'photography',
+    'landscaping.html': 'landscaping',
+    'cleaning.html': 'cleaning',
     'universal_booking.html': 'universal'
 };
 

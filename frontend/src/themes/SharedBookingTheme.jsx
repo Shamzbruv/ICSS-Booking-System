@@ -505,7 +505,7 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
           ? availableSlots.some((slot) => slot.time === selectedTimeRef.current)
           : true);
 
-        setAvailability(availableSlots);
+        setAvailability(data.slots || []);
         setAvailabilityMessage(nextMessage);
         setSelectedTime((current) => isAfterHoursRequest || availableSlots.some((slot) => slot.time === current) ? current : null);
 
@@ -616,6 +616,8 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
       showNotice(theme.selectTimeAlert || 'Please select a time.');
       return;
     }
+    const fieldError = theme.validateFields?.(extraState);
+    if (fieldError) { showNotice(fieldError); return; }
     if (!termsAccepted) {
       showNotice('Please tick the box to accept the Terms & Conditions and the booking policy before booking.', 'Accept the terms to continue');
       return;
@@ -744,18 +746,18 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
         <div className={styles.shell}>
           <div className={styles.header} hidden={embedded}>
             <div className={styles.brand}>
-              <div className={styles.brandIcon}>
+              <div data-site-global="brand.logoUrl" className={styles.brandIcon}>
                 {tenant.branding?.logoUrl
                   ? <img src={tenant.branding.logoUrl} alt={tenant.name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 'inherit' }} />
                   : <IconGlyph kind="brand" className={styles.iconGlyph} />}
               </div>
               <div className={styles.brandText}>
-                <h1>{tenant.name}</h1>
+                <h1 data-site-global="brand.name">{tenant.name}</h1>
                 {tenant.branding?.bookingTagline && (
-                  <p className={styles.brandTagline}>{tenant.branding.bookingTagline}</p>
+                  <p data-site-global="brand.tagline" className={styles.brandTagline}>{tenant.branding.bookingTagline}</p>
                 )}
                 {tenant.branding?.location && (
-                  <div className={styles.brandLocation}>
+                  <div data-site-global="contact.address" className={styles.brandLocation}>
                     <IconGlyph kind="location" className={styles.inlineIcon} />
                     <span>{tenant.branding.location}</span>
                   </div>
@@ -764,15 +766,15 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
             </div>
 
             <div className={styles.headerActions}>
-              {tenant.branding?.badge1 && <div className={styles.badge}>{tenant.branding.badge1}</div>}
-              {tenant.branding?.badge2 && <div className={styles.badge}>{tenant.branding.badge2}</div>}
+              {tenant.branding?.badge1 && <div data-site-global="booking.badge1" className={styles.badge}>{tenant.branding.badge1}</div>}
+              {tenant.branding?.badge2 && <div data-site-global="booking.badge2" className={styles.badge}>{tenant.branding.badge2}</div>}
             </div>
           </div>
 
           <div className={styles.grid}>
             <section className={styles.panel}>
               <div className={styles.sectionHeader}>
-                <div className={styles.sectionHeaderMedia}>
+                <div data-site-global="booking.serviceSectionImageUrl" className={styles.sectionHeaderMedia}>
                   {tenant.branding?.serviceSectionImageUrl
                     ? <img src={tenant.branding.serviceSectionImageUrl} alt="" className={styles.sectionHeaderImage} />
                     : <IconGlyph kind="service" className={styles.iconGlyph} />}
@@ -868,12 +870,16 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
                         key={slot.time}
                         type="button"
                         className={`${styles.timeChip} ${selectedTime === slot.time ? styles.selected : ''}`}
+                        disabled={!slot.available}
+                        title={slot.message || undefined}
+                        aria-label={`${slot.label || slot.time}${slot.available ? '' : ` — ${slot.message || 'Unavailable'}`}`}
                         onClick={() => { setIsAfterHoursRequest(false); setSelectedTime(slot.time); }}
                       >
-                        {slot.label || slot.time}
+                        <span>{slot.label || slot.time}</span>
+                        {!slot.available && <small>{slot.message || slot.adminReason || 'Unavailable'}</small>}
                       </button>
                     ))}
-                    {availability.length === 0 && <p className={styles.helperText}>{availabilityMessage || theme.noSlotsText || 'No slots available for this date.'}</p>}
+                    {!availability.some(slot => slot.available) && <p className={styles.helperText}>{availabilityMessage || theme.noSlotsText || 'No slots available for this date.'}</p>}
                   </div>
                 )}
                 {afterHours.enabled && (
@@ -893,7 +899,7 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
               </div>
 
               {tenant.branding?.bookingFooterNote && (
-                <div className={styles.bookingNote}>{tenant.branding.bookingFooterNote}</div>
+                <div data-site-global="booking.footerNote" className={styles.bookingNote}>{tenant.branding.bookingFooterNote}</div>
               )}
             </section>
 

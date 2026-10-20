@@ -82,7 +82,7 @@
       <section class="controls">
         <h2 class="section-title">Booking widget colours</h2>
         <p class="preview-hint">These colours style the booking calendar and checkout on your Book page. They save instantly.</p>
-        <div id="colors"></div>
+        <p class="preview-hint">Logo, photos, badges and booking content are in Website → Site info → Booking form.</p><button class="btn btn-secondary" id="bookingAppearanceBtn" type="button">Edit booking content</button><div id="colors"></div>
         <button class="btn btn-secondary" id="resetPaletteBtn" type="button" style="width:100%;margin-top:10px">Reset to theme defaults</button>
         <button class="btn btn-primary" id="savePaletteBtn" type="button" style="width:100%;margin-top:10px">Save Colors</button>
         <p id="message" style="font-size:13px;color:var(--text-dim)"></p>
@@ -96,7 +96,7 @@
       <h2 class="section-title">Your template</h2>
       <p>Your website started from an industry template with its own layout, fonts, colours and sample content. Everything can be changed in the Website tab. Want something completely bespoke? Request a custom theme below.</p>
     </div>
-    <section class="theme-library" id="themeLibrarySection" hidden><div class="theme-library-head"><h2 class="section-title">Theme Library</h2><span class="theme-library-badge">Test account</span></div><p class="theme-library-hint">Apply any of the 11 industry starter themes to this account's live site, whenever you like.</p><div class="theme-grid" id="themeLibraryGrid"></div></section>
+    <section class="theme-library" id="themeLibrarySection" hidden><div class="theme-library-head"><h2 class="section-title">Theme Library</h2><span class="theme-library-badge">Test account</span></div><p class="theme-library-hint">Apply any industry starter theme to this account's live site, whenever you like.</p><div class="theme-grid" id="themeLibraryGrid"></div></section>
     <div class="request-box"><h3>Want a fully custom theme?</h3><p style="color:var(--text-dim);font-size:13px;line-height:1.5">Request a professionally built custom theme for <strong>JMD $10,000</strong>. Your request goes directly into the developer job queue.</p><textarea id="themeNotes" class="form-control" rows="4" placeholder="Describe your preferred style, layout, references, and special requirements..."></textarea><button class="btn btn-primary" id="requestThemeBtn" type="button" style="width:100%;margin-top:10px">Request Custom Theme — JMD $10,000</button><p id="requestMessage" style="font-size:13px;color:var(--text-dim)"></p></div>
   </section>
 </main>
@@ -127,6 +127,8 @@ builder=new SiteBuilder({
     api:SiteBuilder.tenantApi(slug,apiFetch,getToken),
     onReady:()=>maybeStartBuilderTour()
 });
+
+document.getElementById('bookingAppearanceBtn').addEventListener('click',()=>{setView('site');builder.focusedGlobal='booking.serviceSectionImageUrl';builder.setTab('info');builder.focusField(builder.focusedGlobal)});
 
 // ── Booking widget colours (saved straight to branding.customPalette) ───────
 const fields={pageBg:['Page background','#f8f4f6'],shellBg:['Main container','#ffffff'],panelBg:['Panel background','#ffffff'],cardBg:['Service card','#ffffff'],inputBg:['Input background','#ffffff'],textMain:['Main text','#24161d'],textSubtle:['Secondary text','#573745'],textMuted:['Muted text','#8d7280'],accent:['Accent color','#8b5268'],accentStrong:['Button/strong accent','#724356'],cardBorder:['Card borders','#e7d8de'],inputBorder:['Input borders','#e7d8de']};let palette={},timer,activeColorKey=null;
@@ -191,10 +193,10 @@ const BUILDER_TOUR_KEY='icssWebsiteBuilderTour:'+slug+':v1';
 const builderTour=typeof GuidedTour==='function'?new GuidedTour({storageKey:BUILDER_TOUR_KEY,steps:[
     {title:'Welcome to your Website Builder',message:'Your booking page is now a full website with Home, About, Gallery and Book pages. This quick tour shows you how to make it yours.',placement:'center'},
     {title:'Live preview',message:'The large area on the right is exactly what customers will see. Click any section in it to edit that section, and use these Desktop, Tablet and Phone buttons to check every screen size.',target:'[aria-label="Preview device"]',placement:'bottom',mobileMessage:'Tap "Preview" at the bottom of the screen to see your site exactly as customers will.'},
-    {title:'Layers',message:'Each page is listed with its sections in order, like layers. Click a layer to edit its text, photos or video. Use the arrows to reorder, the eye to hide, and "+ Add section" for galleries, reviews, FAQs and more.',target:'[data-tour="builder-tab-layers"]',placement:'right'},
+    {title:'Pages & sections',message:'Each page is listed with its sections in order. Click a photo or text in the live preview to open its exact editing control. Use the arrows to reorder, the eye to hide, and "+ Add section" for galleries, reviews, FAQs and more.',target:'[data-tour="builder-tab-layers"]',placement:'right'},
     {title:'Website mode & layout',message:'Choose between a full website and a booking-only page, and between separate pages or one long scrolling page.',target:'[data-tour="builder-site-mode"]',placement:'right'},
-    {title:'Photos & background video',message:'Hero banners can use a photo, a looping video or a slideshow. Every upload field shows the ideal size and aspect ratio, and photos are automatically resized and compressed so your site stays fast.',target:'[data-tour="builder-tab-media"]',placement:'right'},
-    {title:'Colours, fonts & theme',message:'The Style tab controls colours, fonts, button shapes and corner roundness across every page. Try a quick palette, or match your brand exactly.',target:'[data-tour="builder-tab-style"]',placement:'right'},
+    {title:'Photos & background video',message:'Hero banners can use a photo, a looping video or a slideshow. Click a photo in the preview and choose Replace photo. Use Add / change video in the hero controls. Size recommendations are under each upload field, and photos are automatically resized and compressed so your site stays fast.',target:'[data-tour="builder-tab-media"]',placement:'right'},
+    {title:'Colours, fonts & theme',message:'The Design tab controls colours, fonts, button shapes and corner roundness across every page. Try a quick palette, or match your brand exactly.',target:'[data-tour="builder-tab-style"]',placement:'right'},
     {title:'Theme music',message:'Add a short music loop in the Music tab. Visitors see a "Play music" button, and the music starts when they first tap the page.',target:'[data-tour="builder-tab-music"]',placement:'right'},
     {title:'Site info',message:'Add your logo, phone, WhatsApp, address, social links and Google description in Site info.',target:'[data-tour="builder-tab-info"]',placement:'right'},
     {title:'Save, preview, publish',message:'Your changes autosave as a draft. Nothing changes for customers until you press Publish. Discard returns to the live version, and Undo / Redo are always at the top left.',target:'.sb-actions',placement:'bottom'},

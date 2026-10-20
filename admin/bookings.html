@@ -19,6 +19,17 @@
     <link rel="stylesheet" href="/css/global-theme.css">
     <link rel="stylesheet" href="css/admin.css">
   <link rel="icon" type="image/png" href="./favicon.png">
+<style>
+.assisted-booking { margin-bottom:24px; padding:20px; }
+.assisted-booking > summary { cursor:pointer; font-weight:700; font-size:18px; margin-bottom:12px; }
+.assisted-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; margin-top:18px; }
+.assisted-grid input:not([type=checkbox]), .assisted-grid select, .assisted-grid textarea { width:100%; }
+.assisted-grid small { display:block; color:var(--text-dim); margin-top:6px; }
+.assisted-grid input[type=checkbox] { width:auto; margin-right:7px; }
+.assisted-wide { grid-column:1/-1; }
+#callerResult { overflow-wrap:anywhere; }
+@media(max-width:640px) { .assisted-grid { grid-template-columns:1fr; } }
+</style>
 </head>
 <body>
 
@@ -67,13 +78,33 @@
         </div>
     </header>
 
+    <details class="card assisted-booking" id="assistedBookingPanel">
+        <summary>☎ Book for a caller</summary>
+        <p class="page-subtitle">Create an appointment while speaking with a customer. It uses the same availability and payment rules as your website.</p>
+        <form id="assistedBookingForm" class="assisted-grid">
+            <div class="form-group"><label for="callerName">Customer name</label><input id="callerName" required maxlength="120" autocomplete="name"></div>
+            <div class="form-group"><label for="callerPhone">Phone number</label><input id="callerPhone" type="tel" required maxlength="40" autocomplete="tel" placeholder="e.g. +1 876 555 0123"></div>
+            <div class="form-group"><label for="callerEmail">Email (optional)</label><input id="callerEmail" type="email" maxlength="254" autocomplete="email"><small>No email is needed to record a phone booking.</small></div>
+            <div class="form-group"><label for="callerService">Service</label><select id="callerService" required><option value="">Loading services…</option></select></div>
+            <div class="form-group"><label for="callerDate">Appointment date</label><input id="callerDate" type="date" required></div>
+            <div class="form-group"><label for="callerTime">Appointment time</label><select id="callerTime" required><option value="">Choose a service and date</option></select><small id="callerAvailability" role="status"></small></div>
+            <div class="form-group"><label for="callerPayment">Payment handling</label><select id="callerPayment"><option value="normal">Use normal online payment rules</option><option value="in_person">Collect required payment offline</option></select><small id="callerPaymentHint">Offline collection stays pending until staff verify that payment was received.</small></div>
+            <div class="form-group"><label for="callerReceipt">Payment receipt (if required)</label><input id="callerReceipt" type="file" accept="image/jpeg,image/png,image/webp"><small>Attach proof for bank transfer or wallet payments when using normal payment rules.</small></div>
+            <div class="form-group assisted-wide"><label for="callerNotes">Customer requests / call notes</label><textarea id="callerNotes" rows="3" maxlength="500" placeholder="Service address, access instructions, rental dates, or anything agreed on the call…"></textarea></div>
+            <div class="assisted-wide"><p id="callerPolicy" class="page-subtitle"></p><label><input id="callerConsent" type="checkbox" required> I explained the booking and cancellation policy, and the caller agreed to the <a href="/terms" target="_blank" rel="noreferrer">terms</a>.</label></div>
+            <label class="assisted-wide"><input id="callerWhatsApp" type="checkbox"> The caller agreed to receive booking details on WhatsApp.</label>
+            <div class="assisted-wide"><button class="btn btn-primary" id="callerSubmit" type="submit" disabled>Create customer booking</button> <button class="btn btn-secondary" id="callerReset" type="button">New caller</button></div>
+            <div class="assisted-wide" id="callerResult" role="status" aria-live="polite"></div>
+        </form>
+    </details>
+
     <div class="table-wrap">
         <div class="table-toolbar">
             <div style="display:flex;gap:10px;flex-wrap:wrap;">
                 <input type="date" id="filterDate" style="max-width:170px;">
                 <select id="filterStatus">
                     <option value="">All Statuses</option>
-                    <option value="pending_payment">Pending PayPal</option>
+                    <option value="pending_payment">Awaiting payment</option>
                     <option value="pending_manual_confirmation">Pending Bank Transfer</option>
                     <option value="pending_after_hours_confirmation">After-hours Requests</option>
                     <option value="confirmed">Confirmed</option>
@@ -176,8 +207,8 @@
 
         const rows = bookings.map(b => `
             <tr>
-                <td data-label="Name"><strong>${escHtml(b.name)}</strong></td>
-                <td data-label="Email" style="color:var(--text-dim);">${escHtml(b.email)}</td>
+                <td data-label="Name"><strong>${escHtml(b.name)}</strong>${b.booking_source === 'phone' ? '<small style="display:block;color:var(--text-dim);">☎ Booked by staff</small>' : ''}</td>
+                <td data-label="Email" style="color:var(--text-dim);">${escHtml(b.email || '—')}</td>
                 <td data-label="Phone">${escHtml(b.phone || '—')}</td>
                 <td data-label="Date">${formatDate(b.booking_date)}</td>
                 <td data-label="Time">${formatTime(b.booking_time)}</td>
@@ -195,6 +226,10 @@
                     ${b.status === 'pending_manual_confirmation' && b.payment_mode !== 'lynk' ? `
                         <button class="btn btn-primary btn-sm" type="button" style="background:#10b981;" data-booking-action="status" data-booking-id="${b.id}" data-booking-status="confirmed" data-booking-note="Bank transfer approved.">✓ Approve Transfer</button>
                         <button class="btn btn-danger btn-sm" type="button" data-booking-action="status" data-booking-id="${b.id}" data-booking-status="rejected" data-booking-note="Bank transfer not received.">✕ Reject</button>
+                    ` : ''}
+                    ${b.status === 'pending_payment' && b.payment_mode === 'in_person' && b.booking_source === 'phone' ? `
+                        <button class="btn btn-primary btn-sm" type="button" data-booking-action="status" data-booking-id="${b.id}" data-booking-status="confirmed" data-booking-note="Offline payment received and verified by staff.">✓ Payment received</button>
+                        <button class="btn btn-danger btn-sm" type="button" data-booking-action="cancel" data-booking-id="${b.id}">Cancel</button>
                     ` : ''}
                     ${b.status === 'pending_payment' && LINK_GATEWAY_LABELS[b.payment_mode] ? `
                         <div style="font-size:11px;color:var(--text-dim);margin-bottom:6px;">Check ${LINK_GATEWAY_LABELS[b.payment_mode]} for reference BK-${escHtml(String(b.id).slice(0, 8).toUpperCase())}</div>
@@ -294,5 +329,6 @@
         return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     }
 </script>
+<script src="js/assistedBooking.js"></script>
 </body>
 </html>

@@ -12,10 +12,22 @@ import law from './law';
 import nailTech from './nail-tech';
 import photography from './photography';
 import universal from './universal';
+import landscaping from './landscaping';
+import cleaning from './cleaning';
+
+import partyRentals from './party-rentals';
+import carRental from './car-rental';
+import catering from './catering';
+import detailing from './detailing';
+import homeRepairs from './home-repairs';
+import tutoring from './tutoring';
+import musicians from './musicians';
 
 export const PRESETS = {
+  musicians,
+  'party-rentals': partyRentals, 'car-rental': carRental, catering, detailing, 'home-repairs': homeRepairs, tutoring,
   barber, spa, mechanic, events, fitness, hairdresser, health, law,
-  'nail-tech': nailTech, photography, universal
+  'nail-tech': nailTech, photography, universal, landscaping, cleaning
 };
 
 export function getPreset(key) {

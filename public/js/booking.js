@@ -197,18 +197,17 @@ async function loadSlots(dateStr) {
     try {
         const res  = await fetch(`/api/v1/availability?date=${dateStr}`);
         const data = await res.json();
-        renderSlots(data.slots || []);
+        renderSlots(data.slots || [], data.message);
     } catch (e) {
         grid.innerHTML = '<div class="slot-loading" style="color:#ef4444;">Failed to load times. Please try again.</div>';
     }
 }
 
-function renderSlots(slots) {
+function renderSlots(slots, message) {
     const grid = document.getElementById('slotGrid');
 
-    const available = slots.filter(s => s.available);
-    if (available.length === 0) {
-        grid.innerHTML = '<div class="slot-loading">No available times on this date. Please choose another day.</div>';
+    if (slots.length === 0) {
+        grid.replaceChildren(Object.assign(document.createElement('p'), { className: 'slot-loading', textContent: message || 'No available times on this date. Please choose another day.' }));
         return;
     }
 
@@ -217,6 +216,13 @@ function renderSlots(slots) {
         const pill = document.createElement('div');
         pill.className = `slot-pill${slot.available ? '' : ' slot-unavailable'}`;
         pill.textContent = slot.label;
+        if (!slot.available) {
+            pill.title = slot.message || slot.adminReason || 'Unavailable';
+            const reason = document.createElement('small');
+            reason.style.cssText = 'display:block;font-size:10px;white-space:normal;';
+            reason.textContent = pill.title;
+            pill.appendChild(reason);
+        }
 
         if (slot.available) {
             pill.dataset.time  = slot.time;

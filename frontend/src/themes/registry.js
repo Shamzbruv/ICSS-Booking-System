@@ -10,8 +10,19 @@ import ThemeLaw from './ThemeLaw';
 import ThemeNailTech from './ThemeNailTech';
 import ThemePhotography from './ThemePhotography';
 import ThemeUniversal from './ThemeUniversal';
+import ThemeLandscaping from './ThemeLandscaping';
+import ThemeCleaning from './ThemeCleaning';
+
+import { ThemePartyRentals, ThemeCarRental, ThemeCatering, ThemeDetailing, ThemeHomeRepairs, ThemeTutoring, ThemeMusicians } from './ThemeLocalServices';
 
 export const BOOKING_THEMES = {
+  musicians: ThemeMusicians,
+  'party-rentals': ThemePartyRentals,
+  'car-rental': ThemeCarRental,
+  catering: ThemeCatering,
+  detailing: ThemeDetailing,
+  'home-repairs': ThemeHomeRepairs,
+  tutoring: ThemeTutoring,
   barber: ThemeBarber,
   spa: ThemeSpa,
   mechanic: ThemeMechanic,
@@ -22,10 +33,19 @@ export const BOOKING_THEMES = {
   law: ThemeLaw,
   'nail-tech': ThemeNailTech,
   photography: ThemePhotography,
+  landscaping: ThemeLandscaping,
+  cleaning: ThemeCleaning,
   universal: ThemeUniversal
 };
 
 const LEGACY_NAMES = {
+  'Island Sound Music': 'musicians',
+  'Island Occasion Rentals': 'party-rentals',
+  'Island Drive Rentals': 'car-rental',
+  'Yaad Table Catering': 'catering',
+  'Fresh Ride Detailing': 'detailing',
+  'YaadFix Home Services': 'home-repairs',
+  'BrightPath Tutoring': 'tutoring',
   'Iron & Blade': 'barber',
   'Botanica Spa': 'spa',
   'Pro Auto Care': 'mechanic',
@@ -36,7 +56,9 @@ const LEGACY_NAMES = {
   'Meridian Law': 'law',
   'Elegant Nails': 'nail-tech',
   'Polished & Pure': 'nail-tech',
-  'Lumina Lens': 'photography'
+  'Lumina Lens': 'photography',
+  'GreenScape Landscaping': 'landscaping',
+  'FreshStart Cleaning': 'cleaning'
 };
 
 export function resolveThemeKey(tenant) {
