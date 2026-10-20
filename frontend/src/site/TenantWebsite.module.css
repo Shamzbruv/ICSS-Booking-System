@@ -328,3 +328,14 @@
 @media (prefers-reduced-motion: reduce) {
   .site *, .site *::before, .site *::after { animation: none !important; transition: none !important; }
 }
+
+/* Click selection exists only inside the editor preview. */
+.site[data-site-editing='true'] .sectionShell { cursor: crosshair; }
+.site[data-site-editing='true'] [data-site-field] { cursor: pointer; }
+.site[data-site-editing='true'] [data-site-field]:hover { outline: 2px dashed #22d3ee; outline-offset: 3px; }
+.site[data-site-editing='true'] .sectionShell:hover { box-shadow: inset 0 0 0 2px #22d3ee; }
+.site[data-site-editing='true'] .editTag { opacity: 1; transform: none; }
+.site[data-site-editing='true'] .sectionShell iframe { pointer-events: none; }
+
+.site[data-site-editing='true'] [data-site-global] { cursor: pointer; }
+.site[data-site-editing='true'] [data-site-global]:hover { outline: 2px dashed #22d3ee; outline-offset: 3px; }

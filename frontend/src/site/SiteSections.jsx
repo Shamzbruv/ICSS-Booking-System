@@ -15,9 +15,9 @@ function SectionHeading({ eyebrow, title, subtitle, align = 'center' }) {
   if (!eyebrow && !title && !subtitle) return null;
   return (
     <header className={`${s.sectionHeading} ${align === 'left' ? s.sectionHeadingLeft : ''}`}>
-      {eyebrow && <p className={s.eyebrow}>{eyebrow}</p>}
-      {title && <h2 className={s.sectionTitle}><Lines text={title} /></h2>}
-      {subtitle && <p className={s.sectionSubtitle}>{subtitle}</p>}
+      {eyebrow && <p data-site-field="eyebrow" className={s.eyebrow}>{eyebrow}</p>}
+      {title && <h2 data-site-field="title" className={s.sectionTitle}><Lines text={title} /></h2>}
+      {subtitle && <p data-site-field="subtitle" className={s.sectionSubtitle}>{subtitle}</p>}
     </header>
   );
 }
@@ -45,12 +45,12 @@ function Hero({ props, ctx }) {
       <HeroBackground props={props} fallback={ctx.fallback} />
       <div className={s.heroOverlay} style={{ background: `linear-gradient(180deg, rgba(0,0,0,${overlay * 0.75}) 0%, rgba(0,0,0,${overlay}) 100%)` }} />
       <div className={`${s.container} ${s.heroContent}`}>
-        {props.eyebrow && <p className={s.heroEyebrow}>{props.eyebrow}</p>}
-        {props.headline && <h1 className={s.heroTitle}><Lines text={props.headline} /></h1>}
-        {props.subheadline && <p className={s.heroSubtitle}>{props.subheadline}</p>}
+        {props.eyebrow && <p data-site-field="eyebrow" className={s.heroEyebrow}>{props.eyebrow}</p>}
+        {props.headline && <h1 data-site-field="headline" className={s.heroTitle}><Lines text={props.headline} /></h1>}
+        {props.subheadline && <p data-site-field="subheadline" className={s.heroSubtitle}>{props.subheadline}</p>}
         <div className={s.heroActions}>
-          {props.ctaLabel && <ctx.SiteLink target={props.ctaTarget || 'book'} className={s.btnPrimary}>{props.ctaLabel}</ctx.SiteLink>}
-          {props.secondaryLabel && <ctx.SiteLink target={props.secondaryTarget || 'about'} className={s.btnGhostLight}>{props.secondaryLabel}</ctx.SiteLink>}
+          {props.ctaLabel && <ctx.SiteLink field="ctaLabel" target={props.ctaTarget || 'book'} className={s.btnPrimary}>{props.ctaLabel}</ctx.SiteLink>}
+          {props.secondaryLabel && <ctx.SiteLink field="secondaryLabel" target={props.secondaryTarget || 'about'} className={s.btnGhostLight}>{props.secondaryLabel}</ctx.SiteLink>}
         </div>
       </div>
       {props.height === 'full' && <span className={s.scrollCue} aria-hidden="true" />}
@@ -65,8 +65,8 @@ function PageHeader({ props, ctx }) {
       <HeroBackground props={{ mediaType: isSafeMediaUrl(props.imageUrl) ? 'image' : 'color', imageUrl: props.imageUrl }} fallback={ctx.fallback} />
       <div className={s.heroOverlay} style={{ background: `rgba(0,0,0,${overlay})` }} />
       <div className={`${s.container} ${s.pageHeaderContent}`}>
-        {props.title && <h1 className={s.heroTitle}>{props.title}</h1>}
-        {props.subtitle && <p className={s.heroSubtitle}>{props.subtitle}</p>}
+        {props.title && <h1 data-site-field="title" className={s.heroTitle}>{props.title}</h1>}
+        {props.subtitle && <p data-site-field="subtitle" className={s.heroSubtitle}>{props.subtitle}</p>}
       </div>
     </section>
   );
@@ -78,10 +78,10 @@ function Intro({ props, ctx }) {
       <div className={`${s.container} ${s.split} ${props.imageSide === 'left' ? s.splitReverse : ''}`}>
         <div className={s.splitText}>
           <SectionHeading eyebrow={props.eyebrow} title={props.title} align="left" />
-          {props.body && <p className={s.bodyText}><Lines text={props.body} /></p>}
-          {props.ctaLabel && <ctx.SiteLink target={props.ctaTarget || 'book'} className={s.btnPrimary}>{props.ctaLabel}</ctx.SiteLink>}
+          {props.body && <p data-site-field="body" className={s.bodyText}><Lines text={props.body} /></p>}
+          {props.ctaLabel && <ctx.SiteLink field="ctaLabel" target={props.ctaTarget || 'book'} className={s.btnPrimary}>{props.ctaLabel}</ctx.SiteLink>}
         </div>
-        <SmartImage src={props.imageUrl} alt={props.title || ''} className={s.splitImage} fallback={ctx.fallback} />
+        <SmartImage field="imageUrl" src={props.imageUrl} alt={props.title || ''} className={s.splitImage} fallback={ctx.fallback} />
       </div>
     </section>
   );
@@ -95,7 +95,7 @@ function Highlights({ props }) {
         <SectionHeading title={props.title} subtitle={props.subtitle} />
         <div className={s.highlightGrid} data-count={Math.min(items.length, 4)}>
           {items.map((item, index) => (
-            <article key={index} className={s.card}>
+            <article key={index} data-site-field={`items.${index}.title`} className={s.card}>
               {item.icon && <div className={s.highlightIcon} aria-hidden="true">{item.icon}</div>}
               {item.title && <h3>{item.title}</h3>}
               {item.text && <p>{item.text}</p>}
@@ -141,7 +141,7 @@ function Services({ props, ctx }) {
 }
 
 function Gallery({ props, ctx }) {
-  const images = (props.images || []).filter((image) => isSafeMediaUrl(image?.url));
+  const images = (props.images || []).map((image, sourceIndex) => ({ ...image, sourceIndex })).filter((image) => isSafeMediaUrl(image?.url));
   const [open, setOpen] = useState(null);
   const layout = props.layout || 'grid';
   return (
@@ -153,7 +153,7 @@ function Gallery({ props, ctx }) {
         ) : (
           <div className={`${s.gallery} ${s[`gallery_${layout}`] || ''}`} style={{ '--tile-aspect': props.aspect || '4/5' }}>
             {images.map((image, index) => (
-              <button type="button" key={`${image.url}-${index}`} className={s.galleryTile} onClick={() => setOpen(index)} aria-label={image.caption || `Open photo ${index + 1}`}>
+              <button type="button" key={`${image.url}-${index}`} className={s.galleryTile} data-site-field={`images.${image.sourceIndex}.url`} onClick={() => setOpen(index)} aria-label={image.caption || `Open photo ${index + 1}`}>
                 <SmartImage src={image.url} alt={image.caption || ''} fallback={ctx.fallback} />
                 {image.caption && <span className={s.galleryCaption}>{image.caption}</span>}
               </button>
@@ -174,7 +174,7 @@ function Testimonials({ props }) {
         <SectionHeading title={props.title} />
         <div className={s.quoteGrid}>
           {items.map((item, index) => (
-            <figure key={index} className={s.quoteCard}>
+            <figure key={index} data-site-field={`items.${index}.quote`} className={s.quoteCard}>
               <div className={s.quoteMark} aria-hidden="true">“</div>
               <blockquote>{item.quote}</blockquote>
               <figcaption><strong>{item.name}</strong>{item.role && <span>{item.role}</span>}</figcaption>
@@ -194,10 +194,10 @@ function Team({ props, ctx }) {
         <div className={s.teamGrid}>
           {(props.members || []).map((member, index) => (
             <article key={index} className={s.teamCard}>
-              <SmartImage src={member.photoUrl} alt={member.name || ''} className={s.teamPhoto} fallback={ctx.fallback} />
-              <h3>{member.name}</h3>
-              {member.role && <p className={s.teamRole}>{member.role}</p>}
-              {member.bio && <p>{member.bio}</p>}
+              <SmartImage field={`members.${index}.photoUrl`} src={member.photoUrl} alt={member.name || ''} className={s.teamPhoto} fallback={ctx.fallback} />
+              <h3 data-site-field={`members.${index}.name`}>{member.name}</h3>
+              {member.role && <p data-site-field={`members.${index}.role`} className={s.teamRole}>{member.role}</p>}
+              {member.bio && <p data-site-field={`members.${index}.bio`}>{member.bio}</p>}
             </article>
           ))}
         </div>
@@ -211,7 +211,7 @@ function Stats({ props }) {
     <section className={s.statsBand}>
       <div className={`${s.container} ${s.statsGrid}`}>
         {(props.items || []).map((item, index) => (
-          <div key={index} className={s.stat}>
+          <div key={index} data-site-field={`items.${index}.value`} className={s.stat}>
             <strong>{item.value}</strong>
             <span>{item.label}</span>
           </div>
@@ -227,7 +227,7 @@ function VideoSection({ props, ctx }) {
     <section className={s.section}>
       <div className={s.container}>
         <SectionHeading title={props.title} subtitle={props.subtitle} />
-        <div className={s.videoFrame} style={{ background: ctx.fallback }}>
+        <div data-site-field="videoUrl" className={s.videoFrame} style={{ background: ctx.fallback }}>
           {embed ? (
             <iframe src={embed} title={props.title || 'Video'} loading="lazy" allow="accelerometer; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowFullScreen />
           ) : isSafeMediaUrl(props.videoUrl) ? (
@@ -248,7 +248,7 @@ function Faq({ props }) {
         <SectionHeading title={props.title} />
         <div className={s.faqList}>
           {(props.items || []).map((item, index) => (
-            <details key={index} className={s.faqItem}>
+            <details key={index} data-site-field={`items.${index}.q`} className={s.faqItem}>
               <summary>{item.q}</summary>
               <p>{item.a}</p>
             </details>
@@ -266,9 +266,9 @@ function Cta({ props, ctx }) {
       {hasImage && <HeroBackground props={{ mediaType: 'image', imageUrl: props.imageUrl }} fallback={ctx.fallback} />}
       {hasImage && <div className={s.heroOverlay} style={{ background: 'rgba(0,0,0,0.55)' }} />}
       <div className={`${s.container} ${s.ctaContent}`}>
-        {props.title && <h2>{props.title}</h2>}
-        {props.text && <p>{props.text}</p>}
-        {props.buttonLabel && <ctx.SiteLink target={props.target || 'book'} className={hasImage ? s.btnPrimary : s.btnInverse}>{props.buttonLabel}</ctx.SiteLink>}
+        {props.title && <h2 data-site-field="title">{props.title}</h2>}
+        {props.text && <p data-site-field="text">{props.text}</p>}
+        {props.buttonLabel && <ctx.SiteLink field="buttonLabel" target={props.target || 'book'} className={hasImage ? s.btnPrimary : s.btnInverse}>{props.buttonLabel}</ctx.SiteLink>}
       </div>
     </section>
   );
@@ -284,10 +284,10 @@ function Contact({ props, ctx }) {
         <SectionHeading title={props.title} subtitle={props.subtitle} />
         <div className={`${s.contactGrid} ${props.showMap && mapQuery ? '' : s.contactGridSingle}`}>
           <div className={s.contactInfo}>
-            {contact.address && <div className={s.contactRow}><span aria-hidden="true">📍</span><p><Lines text={contact.address} /></p></div>}
-            {contact.phone && <div className={s.contactRow}><span aria-hidden="true">📞</span><a href={`tel:${contact.phone.replace(/[^+0-9]/g, '')}`}>{contact.phone}</a></div>}
+            {contact.address && <div className={s.contactRow}><span aria-hidden="true">📍</span><p data-site-global="contact.address"><Lines text={contact.address} /></p></div>}
+            {contact.phone && <div className={s.contactRow}><span aria-hidden="true">📞</span><a data-site-global="contact.phone" href={`tel:${contact.phone.replace(/[^+0-9]/g, '')}`}>{contact.phone}</a></div>}
             {whatsapp && <div className={s.contactRow}><span aria-hidden="true">💬</span><a href={`https://wa.me/${whatsapp}`} target="_blank" rel="noreferrer">Chat on WhatsApp</a></div>}
-            {contact.email && <div className={s.contactRow}><span aria-hidden="true">✉️</span><a href={`mailto:${contact.email}`}>{contact.email}</a></div>}
+            {contact.email && <div className={s.contactRow}><span aria-hidden="true">✉️</span><a data-site-global="contact.email" href={`mailto:${contact.email}`}>{contact.email}</a></div>}
             {props.showHours !== false && (props.hours || []).length > 0 && (
               <dl className={s.hoursList}>
                 {props.hours.map((row, index) => (

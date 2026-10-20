@@ -140,10 +140,10 @@
             );
 
             this.tabsEl = h('div', { class: 'sb-tabs', role: 'tablist' });
-            const tabs = [['layers', '🗂️', 'Layers'], ['style', '🎨', 'Style'], ['info', '🏷️', 'Site info'], ['music', '🎵', 'Music'], ['media', '🖼️', 'Media']];
+            const tabs = [['layers', '🗂️', 'Pages'], ['style', '🎨', 'Design'], ['info', '🏷️', 'Site info'], ['music', '🎵', 'Music'], ['media', '🖼️', 'Media']];
             tabs.forEach(([key, icon, label]) => {
                 this.tabsEl.appendChild(h('button', {
-                    type: 'button', role: 'tab', class: key === this.tab ? 'is-active' : '', dataset: { tab: key, tour: `builder-tab-${key}` },
+                    type: 'button', role: 'tab', 'aria-selected': String(key === this.tab), class: key === this.tab ? 'is-active' : '', dataset: { tab: key, tour: `builder-tab-${key}` },
                     onClick: () => this.setTab(key)
                 }, h('span', { 'aria-hidden': 'true', text: icon }), label));
             });
@@ -152,8 +152,16 @@
 
             this.iframe = h('iframe', { class: 'sb-frame', title: 'Live website preview' });
             this.frameScaler = h('div', { class: 'sb-frame-scaler' }, this.iframe);
+            this.editMode = true;
+            this.editModeButton = h('button', { type: 'button', class: 'btn btn-secondary btn-sm', 'aria-pressed': 'true', onClick: () => {
+                this.editMode = !this.editMode;
+                this.editModeButton.textContent = this.editMode ? '✎ Click to edit: on' : '↗ Browse preview';
+                this.editModeButton.setAttribute('aria-pressed', String(this.editMode));
+                this.post({ type: 'icss:site-edit-mode', editing: this.editMode });
+            } }, '✎ Click to edit: on');
+            toolbar.querySelector('.sb-toolbar-mid').appendChild(this.editModeButton);
             this.stage = h('div', { class: 'sb-stage', 'data-tour': 'builder-preview' }, this.frameScaler,
-                h('div', { class: 'sb-stage-label' }, h('span', { class: 'sb-dot' }), 'Live preview — changes appear instantly'));
+                h('div', { class: 'sb-stage-label' }, h('span', { class: 'sb-dot' }), 'Click any photo, text or section to edit it'));
 
             this.mobileSwitch = h('div', { class: 'sb-mobile-switch', role: 'group', 'aria-label': 'Builder view' },
                 h('button', { type: 'button', class: 'is-active', dataset: { view: 'edit' }, onClick: () => this.setMobileView('edit') }, 'Edit'),
@@ -243,8 +251,18 @@
                         if (this.pageSelect.value !== data.page) this.pageSelect.value = data.page;
                         if (this.tab === 'layers' && !this.selected) this.renderPanel();
                         break;
+                    case 'icss:site-select-global': {
+                        if (typeof data.field !== 'string') break;
+                        const [group, key] = data.field.split('.');
+                        if (!(this.catalog?.globalFields[group] || []).some((field) => field.key === key)) break;
+                        this.focusedGlobal = data.field;
+                        this.setTab('info');
+                        this.setMobileView('edit');
+                        this.focusField(data.field);
+                        break;
+                    }
                     case 'icss:site-select':
-                        this.selectSection(data.page, data.sectionId, { fromPreview: true });
+                        this.selectSection(data.page, data.sectionId, { fromPreview: true, field: typeof data.field === 'string' ? data.field : null });
                         break;
                     default:
                 }
@@ -285,6 +303,7 @@
                 this.onReady(this);
             }
             // Every (re)load of the preview gets the current working copy.
+            this.post({ type: 'icss:site-edit-mode', editing: this.editMode });
             this.post({ type: 'icss:site-update', site: this.site });
             if (this.selected) this.post({ type: 'icss:site-highlight', sectionId: this.selected.id });
             this.layoutFrame();
@@ -455,13 +474,30 @@
             this.post({ type: 'icss:site-navigate', page: pageId });
         }
 
-        selectSection(pageId, sectionId, { fromPreview = false } = {}) {
+        selectSection(pageId, sectionId, { fromPreview = false, field = null } = {}) {
+            if (!this.findSection(pageId, sectionId).section) return;
+            this.focusedField = field;
             this.selected = { page: pageId, id: sectionId };
             if (this.tab !== 'layers') this.setTab('layers', false);
             if (pageId !== this.page) this.goToPage(pageId);
             this.post({ type: 'icss:site-highlight', sectionId });
             this.renderPanel();
             if (fromPreview) this.setMobileView('edit');
+            this.panelBody.scrollTop = 0;
+            if (field) this.focusField(field);
+        }
+
+        focusField(field) {
+            const target = this.panelBody.querySelector(`[data-field-path="${CSS.escape(field)}"]`);
+            if (!target) return;
+            for (let node = target.parentElement; node && node !== this.panelBody; node = node.parentElement) {
+                if (node.tagName === 'DETAILS') node.open = true;
+            }
+            target.classList.add('sb-field-selected');
+            requestAnimationFrame(() => {
+                target.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                target.querySelector('input:not([type="file"]), textarea, select, button')?.focus({ preventScroll: true });
+            });
         }
 
         clearSelection() {
@@ -472,7 +508,7 @@
 
         setTab(tab, render = true) {
             this.tab = tab;
-            this.tabsEl.querySelectorAll('button').forEach((b) => b.classList.toggle('is-active', b.dataset.tab === tab));
+            this.tabsEl.querySelectorAll('button').forEach((b) => { b.classList.toggle('is-active', b.dataset.tab === tab); b.setAttribute('aria-selected', String(b.dataset.tab === tab)); });
             if (tab !== 'layers' && this.selected) {
                 this.selected = null;
                 this.post({ type: 'icss:site-highlight', sectionId: null });
@@ -502,7 +538,9 @@
         }
 
         renderLayers() {
-            const wrap = h('div', { class: 'sb-layers' });
+            const wrap = h('div', { class: 'sb-layers' },
+                h('p', { class: 'sb-callout', text: 'Start in the preview: click a photo to replace it, or text to edit it. Use the pages below to add, reorder or hide sections.' }),
+                h('button', { type: 'button', class: 'sb-add', onClick: () => this.openAddSection(this.page) }, '+ Add a section (photos, video, text…)'));
 
             wrap.appendChild(h('div', { class: 'sb-card sb-switches', 'data-tour': 'builder-site-mode' },
                 this.choice('Website mode', this.site.enabled === false ? 'booking' : 'site', [
@@ -513,7 +551,7 @@
                 ], (value) => this.change((s) => { s.layoutMode = value; }))
             ));
 
-            wrap.appendChild(h('p', { class: 'sb-hint', text: 'Pages and their sections, top to bottom. Click a layer to edit it, use the arrows to reorder, and the eye to hide it.' }));
+            wrap.appendChild(h('p', { class: 'sb-hint', text: 'Pages and their sections, top to bottom. Click a section to edit it, use the arrows to reorder, and the eye to hide it.' }));
 
             const middle = this.site.pages.filter((p) => p.id !== 'home' && p.id !== 'book').map((p) => p.id);
             this.site.pages.forEach((page) => {
@@ -624,20 +662,38 @@
             const fixedBooking = page.id === 'book' && section.type === 'booking';
             const wrap = h('div', { class: 'sb-inspector' });
             wrap.appendChild(h('div', { class: 'sb-inspector-head' },
-                h('button', { type: 'button', class: 'sb-back', onClick: () => this.clearSelection() }, '← Layers'),
-                h('div', { class: 'sb-inspector-title' }, h('span', { 'aria-hidden': 'true', text: type.icon }), h('div', {}, h('strong', { text: type.label }), h('small', { text: `${page.label} page · layer ${index + 1} of ${page.sections.length}` })))
+                h('button', { type: 'button', class: 'sb-back', onClick: () => this.clearSelection() }, '← All pages & sections'),
+                h('div', { class: 'sb-inspector-title' }, h('span', { 'aria-hidden': 'true', text: type.icon }), h('div', {}, h('strong', { text: type.label }), h('small', { text: `${page.label} page · section ${index + 1} of ${page.sections.length}` })))
             ));
             if (type.description) wrap.appendChild(h('p', { class: 'sb-hint', text: type.description }));
             if (section.type === 'services') wrap.appendChild(h('p', { class: 'sb-callout', text: 'Service names, prices and durations come from your Services page, so they are always accurate.' }));
             if (section.type === 'booking') wrap.appendChild(h('p', { class: 'sb-callout', text: 'Booking colours, payment options and form fields are set in the Booking widget tab and in Settings.' }));
 
-            const fields = h('div', { class: 'sb-fields' });
+            if (section.type === 'hero') wrap.appendChild(h('div', { class: 'sb-inline-buttons sb-quick-media' },
+                ...[['image', 'Change photo', 'imageUrl'], ['video', 'Add / change video', 'videoUrl'], ['slideshow', 'Photo slideshow', 'slides']].map(([mode, label, field]) =>
+                    h('button', { type: 'button', class: 'btn btn-secondary btn-sm', onClick: () => {
+                        this.change((site) => { this.findSection.call({ site }, page.id, section.id).section.props.mediaType = mode; });
+                        this.selectSection(page.id, section.id, { field });
+                    } }, label))));
+            const fields = h('div', { class: 'sb-groups' });
+            const groups = new Map();
             type.fields.forEach((field) => {
                 const node = this.renderField(field, section.props, (key, value, opts) => this.change((site) => {
                     const target = this.findSection.call({ site }, page.id, section.id).section;
                     setPath(target.props, key, value);
                 }, opts), `sec-${section.id}`);
-                if (node) fields.appendChild(node);
+                if (!node) return;
+                const group = field.type === 'media' || field.key === 'mediaType' || field.type === 'list' && field.fields.some((f) => f.type === 'media') ? 'Photos & videos'
+                    : field.type === 'list' ? 'Items & details'
+                    : /cta|secondary|button|target/i.test(field.key) ? 'Buttons & links'
+                    : ['range', 'select', 'toggle', 'color'].includes(field.type) ? 'Layout & display' : 'Text & headings';
+                if (!groups.has(group)) {
+                    const body = h('div', { class: 'sb-fields' });
+                    groups.set(group, body);
+                    fields.appendChild(h('details', { class: 'sb-group', open: true }, h('summary', { text: group }), body));
+                }
+                node.dataset.fieldPath = field.key;
+                groups.get(group).appendChild(node);
             });
             wrap.appendChild(fields);
 
@@ -725,9 +781,9 @@
                 if (hint) body.appendChild(h('p', { class: 'sb-hint', text: hint }));
                 (this.catalog.globalFields[key] || []).forEach((field) => {
                     const node = this.renderField(field, this.site[key] || {}, (path, value, opts) => this.change((site) => { site[key] = site[key] || {}; setPath(site[key], path, value); }, opts), `g-${key}`);
-                    if (node) body.appendChild(node);
+                    if (node) { node.dataset.fieldPath = `${key}.${field.key}`; body.appendChild(node); }
                 });
-                wrap.appendChild(h('details', { class: 'sb-group', open: index === 0 ? true : undefined }, h('summary', { text: title }), body));
+                wrap.appendChild(h('details', { class: 'sb-group', open: index === 0 || this.focusedGlobal?.startsWith(`${key}.`) ? true : undefined }, h('summary', { text: title }), body));
             });
             return wrap;
         }
@@ -861,15 +917,15 @@
                 }
             } });
             const buttons = h('div', { class: 'sb-inline-buttons' },
-                h('button', { type: 'button', class: 'btn btn-secondary btn-sm', onClick: () => fileInput.click() }, '⬆ Upload'),
-                (this.media.some((m) => m.kind === field.accept)) && h('button', { type: 'button', class: 'btn btn-secondary btn-sm', onClick: () => this.openLibrary(field.accept, (url) => onChange(field.key, url)) }, '📁 Library'),
+                h('button', { type: 'button', class: 'btn btn-secondary btn-sm', onClick: () => fileInput.click() }, value ? `Replace ${field.accept === 'image' ? 'photo' : field.accept}` : `Upload ${field.accept === 'image' ? 'photo' : field.accept}`),
+                (this.media.some((m) => m.kind === field.accept)) && h('button', { type: 'button', class: 'btn btn-secondary btn-sm', onClick: () => this.openLibrary(field.accept, (url) => onChange(field.key, url)) }, 'Choose existing'),
                 value && h('button', { type: 'button', class: 'btn btn-secondary btn-sm', onClick: () => onChange(field.key, '') }, 'Remove'),
                 fileInput);
             const guideBox = guide && h('div', { class: 'sb-guide' },
                 h('div', {}, h('span', { 'aria-hidden': 'true', text: '📐 ' }), h('strong', { text: guide.ratio }), ` · ${guide.size}`),
                 h('div', { text: guide.format }),
                 guide.tip && h('div', { class: 'sb-guide-tip', text: guide.tip }));
-            return h('div', { class: 'sb-field sb-media-field' }, h('span', { class: 'sb-label', text: field.label }), preview, buttons, status, urlInput, guideBox);
+            return h('div', { class: 'sb-field sb-media-field' }, h('span', { class: 'sb-label', text: field.label }), preview, buttons, status, h('details', { class: 'sb-media-options' }, h('summary', { text: 'Use a link / size recommendations' }), urlInput, guideBox));
         }
 
         mediaThumb(url, kind) {
@@ -892,9 +948,10 @@
                     const node = this.renderField(sub, item, (key, value, opts) => {
                         const next = clone(items);
                         setPath(next[index], key, value);
+                        items = next;
                         onChange(field.key, next, opts);
                     }, `${id}-${index}`);
-                    if (node) body.appendChild(node);
+                    if (node) { node.dataset.fieldPath = `${field.key}.${index}.${sub.key}`; body.appendChild(node); }
                 });
                 const move = (delta) => {
                     const next = clone(items);
@@ -903,9 +960,9 @@
                     [next[index], next[target]] = [next[target], next[index]];
                     onChange(field.key, next);
                 };
-                wrap.appendChild(h('details', { class: 'sb-list-item' },
+                wrap.appendChild(h('details', { class: 'sb-list-item', open: this.focusedField?.startsWith(`${field.key}.${index}.`) || undefined },
                     h('summary', {},
-                        h('span', { class: 'sb-list-title', text: String(title).slice(0, 48) }),
+                        h('span', { class: 'sb-list-title' }, field.fields[0]?.type === 'media' && item[field.fields[0].key] ? this.mediaThumb(item[field.fields[0].key], field.fields[0].accept) : null, String(title).slice(0, 48)),
                         h('span', { class: 'sb-row-actions' },
                             h('button', { type: 'button', class: 'sb-mini', 'aria-label': 'Move up', disabled: index === 0 ? true : undefined, onClick: (e) => { e.preventDefault(); move(-1); } }, '↑'),
                             h('button', { type: 'button', class: 'sb-mini', 'aria-label': 'Move down', disabled: index === items.length - 1 ? true : undefined, onClick: (e) => { e.preventDefault(); move(1); } }, '↓'),

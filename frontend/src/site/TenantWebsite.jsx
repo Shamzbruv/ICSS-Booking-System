@@ -97,6 +97,7 @@ export default function TenantWebsite({ tenant, services, themeKey, savedSite, b
   const [draft, setDraft] = useState(null);
   const [highlightId, setHighlightId] = useState(null);
   const [musicCommand, setMusicCommand] = useState(null);
+  const [editMode, setEditMode] = useState(true);
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
@@ -127,6 +128,9 @@ export default function TenantWebsite({ tenant, services, themeKey, savedSite, b
       if (event.origin !== window.location.origin || event.source !== parentWindow) return;
       const data = event.data || {};
       switch (data.type) {
+        case 'icss:site-edit-mode':
+          setEditMode(data.editing !== false);
+          break;
         case 'icss:site-update':
           if (data.site && typeof data.site === 'object') setDraft(data.site);
           break;
@@ -212,11 +216,11 @@ export default function TenantWebsite({ tenant, services, themeKey, savedSite, b
     return { page: target === 'book' ? 'book' : 'home' };
   }, [site.pages, preview]);
 
-  const SiteLink = useMemo(() => function SiteLinkInner({ target, serviceId, className, children }) {
+  const SiteLink = useMemo(() => function SiteLinkInner({ target, serviceId, className, children, field, globalField }) {
     const { page, hash } = resolveTarget(target);
     const href = onePage ? `#${hash || `page-${page}`}` : `${page === 'home' ? basePath : `${basePath}/${page}`}${hash ? `#${hash}` : ''}`;
     return (
-      <a href={href} className={className} onClick={(event) => { event.preventDefault(); navigateTo(page, { serviceId, hash }); }}>
+      <a data-site-global={globalField} data-site-field={field} href={href} className={className} onClick={(event) => { event.preventDefault(); navigateTo(page, { serviceId, hash }); }}>
         {children}
       </a>
     );
@@ -270,7 +274,7 @@ export default function TenantWebsite({ tenant, services, themeKey, savedSite, b
     ? visiblePages.flatMap((page) => page.sections
       .filter((section) => section.visible || preview)
       .filter((section) => page.id === 'home' || section.type !== 'pageHeader')
-      .map((section, index) => ({ ...section, anchor: index === 0 ? `page-${page.id}` : undefined, hiddenSection: !section.visible })))
+      .map((section, index) => ({ ...section, ownerPage: page.id, anchor: index === 0 ? `page-${page.id}` : undefined, hiddenSection: !section.visible })))
     : currentPage.sections.filter((section) => section.visible || preview).map((section) => ({ ...section, hiddenSection: !section.visible }));
 
   useReveal(rootRef, site.style.animations !== false, [currentPage.id, sectionsToRender.length, onePage, site.style.animations]);
@@ -287,15 +291,22 @@ export default function TenantWebsite({ tenant, services, themeKey, savedSite, b
   const ctx = { tenant, services, site, preset, fallback: preset.fallback, SiteLink, renderBooking };
   const announcement = site.announcement?.enabled && site.announcement.text;
 
-  const postSelect = (section) => {
-    window.parent.postMessage({ type: 'icss:site-select', sectionId: section.id, page: currentPage.id }, window.location.origin);
+  const postSelect = (section, field) => {
+    window.parent.postMessage({ type: 'icss:site-select', sectionId: section.id, page: section.ownerPage || currentPage.id, field }, window.location.origin);
   };
 
   return (
-    <div ref={rootRef} className={`${s.site} ${site.style.mode === 'dark' ? s.siteDark : ''} ${site.style.buttonStyle === 'outline' ? s.btnOutline : ''}`} style={siteCssVars(site.style)}>
+    <div ref={rootRef} data-site-editing={preview && editMode ? 'true' : undefined}
+      onClickCapture={preview && editMode ? (event) => {
+        const global = event.target.closest('[data-site-global]')?.dataset.siteGlobal;
+        if (!global) return;
+        event.preventDefault();
+        event.stopPropagation();
+        window.parent.postMessage({ type: 'icss:site-select-global', field: global }, window.location.origin);
+      } : undefined} className={`${s.site} ${site.style.mode === 'dark' ? s.siteDark : ''} ${site.style.buttonStyle === 'outline' ? s.btnOutline : ''}`} style={siteCssVars(site.style)}>
       <a href="#main" className={s.skipLink}>Skip to content</a>
       {announcement && (
-        <div className={s.announcement}>
+        <div data-site-global="announcement.text" className={s.announcement}>
           <span>{site.announcement.text}</span>
           {site.announcement.linkLabel && <SiteLink target={site.announcement.target || 'book'} className={s.announcementLink}>{site.announcement.linkLabel} →</SiteLink>}
         </div>
@@ -303,8 +314,8 @@ export default function TenantWebsite({ tenant, services, themeKey, savedSite, b
 
       <header className={`${s.nav} ${navSolid ? s.navSolid : s.navClear} ${site.nav.sticky !== false ? s.navSticky : ''} ${navOverHero ? s.navOverlay : ''}`}>
         <div className={`${s.container} ${s.navInner}`}>
-          <SiteLink target="home" className={s.navBrand}>
-            {isSafeMediaUrl(site.brand.logoUrl) && <SmartImage src={site.brand.logoUrl} alt={brandName} className={s.navLogo} eager />}
+          <SiteLink globalField="brand.name" target="home" className={s.navBrand}>
+            {isSafeMediaUrl(site.brand.logoUrl) && <span data-site-global="brand.logoUrl"><SmartImage src={site.brand.logoUrl} alt={brandName} className={s.navLogo} eager /></span>}
             {(site.brand.showNameWithLogo !== false || !isSafeMediaUrl(site.brand.logoUrl)) && <span>{brandName}</span>}
           </SiteLink>
           <nav className={s.navLinks} aria-label="Main">
@@ -313,7 +324,7 @@ export default function TenantWebsite({ tenant, services, themeKey, savedSite, b
             ))}
           </nav>
           <div className={s.navActions}>
-            <SiteLink target="book" className={`${s.btnPrimary} ${s.navBook}`}>{site.nav.bookLabel || 'Book now'}</SiteLink>
+            <SiteLink globalField="nav.bookLabel" target="book" className={`${s.btnPrimary} ${s.navBook}`}>{site.nav.bookLabel || 'Book now'}</SiteLink>
             <button type="button" className={s.menuButton} aria-label={menuOpen ? 'Close menu' : 'Open menu'} aria-expanded={menuOpen} onClick={() => setMenuOpen((open) => !open)}>
               <span /><span /><span />
             </button>
@@ -333,19 +344,26 @@ export default function TenantWebsite({ tenant, services, themeKey, savedSite, b
 
       <main id="main" className={s.main}>
         {preview && !currentPage.visible && (
-          <div className={s.previewNotice}>This page is hidden. Visitors can't see it until you switch it on in Layers.</div>
+          <div className={s.previewNotice}>This page is hidden. Visitors can't see it until you switch it on in Pages.</div>
         )}
         {sectionsToRender.map((section) => (
           <div
             key={section.id}
             id={section.anchor}
             data-section-id={section.id}
+            onClickCapture={preview && editMode ? (event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              const field = event.target.closest('[data-site-field]')?.dataset.siteField;
+              const background = section.type === 'hero' ? (section.props.mediaType === 'video' ? 'videoUrl' : section.props.mediaType === 'slideshow' ? 'slides' : section.props.mediaType === 'color' ? 'mediaType' : 'imageUrl') : ['pageHeader', 'cta'].includes(section.type) ? 'imageUrl' : undefined;
+              postSelect(section, field || background);
+            } : undefined}
             data-reveal={HERO_TYPES.has(section.type) ? 'shown' : 'pending'}
             className={`${s.sectionShell} ${highlightId === section.id ? s.sectionHighlighted : ''} ${section.hiddenSection ? s.sectionHidden : ''}`}
           >
-            {preview && (
+            {preview && editMode && (
               <button type="button" className={s.editTag} style={HERO_TYPES.has(section.type) ? { top: 'calc(var(--nav-h) + 10px)' } : undefined} onClick={() => postSelect(section)}>
-                ✎ {SECTION_TYPES[section.type]?.label || section.type}{section.hiddenSection ? ' · hidden' : ''}
+                ✎ Edit {SECTION_TYPES[section.type]?.label || section.type}{section.hiddenSection ? ' · hidden' : ''}
               </button>
             )}
             <SiteSection section={section} ctx={ctx} />
@@ -353,7 +371,7 @@ export default function TenantWebsite({ tenant, services, themeKey, savedSite, b
         ))}
       </main>
 
-      <footer className={s.footer}>
+      <footer data-site-global="footer.text" className={s.footer}>
         <div className={`${s.container} ${s.footerGrid}`}>
           <div>
             <p className={s.footerBrand}>{brandName}</p>

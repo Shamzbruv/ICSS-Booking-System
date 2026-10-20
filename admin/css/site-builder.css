@@ -236,3 +236,13 @@ textarea.sb-input { resize: vertical; line-height: 1.5; }
     .sb-segment button { padding: 6px 8px; }
     .sb-palettes { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* Direct editing keeps the selected control visible and media easy to recognise. */
+.sb-field-selected { outline: 2px solid var(--sb-primary); outline-offset: 4px; border-radius: 8px; scroll-margin: 16px; }
+.sb-quick-media { margin-bottom: 16px; }
+.sb-media-options { font-size: 12px; color: var(--sb-dim); }
+.sb-media-options summary { padding: 8px 0; cursor: pointer; }
+.sb-media-options .sb-guide { margin-top: 8px; }
+.sb-list-title { display: flex; align-items: center; gap: 8px; }
+.sb-list-title .sb-thumb { width: 44px; height: 36px; flex-shrink: 0; border-radius: 5px; }
+.sb-upload-status[hidden] { display: none; }
