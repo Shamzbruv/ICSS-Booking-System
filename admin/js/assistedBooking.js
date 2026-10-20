@@ -68,7 +68,7 @@
                 const data = await apiFetch('/api/v1/bookings/assisted', { method: 'POST', body: {
                     name: el('callerName').value.trim(), phone: el('callerPhone').value.trim(), email: el('callerEmail').value.trim(),
                     service_id: serviceInput.value, date: dateInput.value, time: timeInput.value, notes: el('callerNotes').value.trim(),
-                    payment_handling: el('callerPayment').value, verbal_consent: el('callerConsent').checked,
+                    payment_handling: el('callerPayment').value, verbal_consent: el('callerConsent').checked, terms_accepted: el('callerConsent').checked,
                     whatsapp_opt_in: el('callerWhatsApp').checked, receipt_image: receipt
                 } });
                 completed = true;

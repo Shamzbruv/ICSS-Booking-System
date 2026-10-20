@@ -18,7 +18,7 @@ const { ACTIVE_BOOKING_STATUSES_SQL, serviceOverlapsBlockedSlot, timeTextToMinut
 
 const MAX_BOOKINGS_PER_DAY = 14;
 // Bump when /terms or the booking-consent wording changes materially.
-const BOOKING_TERMS_VERSION = '2026-10-16';
+const BOOKING_TERMS_VERSION = '2026-10-20';
 const MAX_DAYS_AHEAD       = 30;
 const MIN_BUFFER_MINS      = 15;
 
@@ -162,10 +162,8 @@ async function createBooking(req, res) {
     if (normalizedEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) return res.status(400).json({ error: 'Enter a valid customer email address.' });
     if (assisted && !['normal', 'in_person'].includes(req.body.payment_handling || 'normal')) return res.status(400).json({ error: 'Choose normal payment rules or offline collection.' });
     if (assisted && req.body.verbal_consent !== true) return res.status(400).json({ error: 'Confirm that the caller agreed to the booking terms and cancellation policy.' });
-    if (!assisted) {
-        if (terms_accepted !== true) {
-            return res.status(400).json({ error: 'Please accept the Terms & Conditions and the booking policy to continue.' });
-        }
+    if (terms_accepted !== true) {
+        return res.status(400).json({ error: 'Please accept the ICSS Bookings Terms & Conditions and the booking policy to continue.' });
     }
 
     const dateRegex = /^\d{4}-\d{2}-\d{2}$/;

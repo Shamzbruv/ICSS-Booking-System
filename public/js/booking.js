@@ -271,7 +271,7 @@ async function submitBooking(e) {
     }
 
     if (!document.getElementById('fieldTermsAccepted').checked) {
-        errEl.textContent = 'Please accept the Terms & Conditions and booking policy to continue.';
+        errEl.textContent = 'Please accept the ICSS Bookings Terms & Conditions and booking policy to continue.';
         return;
     }
 

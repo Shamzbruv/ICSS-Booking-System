@@ -619,7 +619,7 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
     const fieldError = theme.validateFields?.(extraState);
     if (fieldError) { showNotice(fieldError); return; }
     if (!termsAccepted) {
-      showNotice('Please tick the box to accept the Terms & Conditions and the booking policy before booking.', 'Accept the terms to continue');
+      showNotice('Please tick the box to accept the ICSS Bookings Terms & Conditions and the booking policy before booking.', 'Accept the terms to continue');
       return;
     }
     if (isDemo) {
@@ -666,6 +666,7 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
         after_hours_request: isAfterHoursRequest,
         terms_accepted: termsAccepted
       });
+      setTermsAccepted(false);
 
       if (res.checkoutUrl && res.paymentGateway && res.paymentGateway.key !== 'paypal') {
         const gatewayAmount = formatCurrency(res.paymentGateway.amount, res.paymentGateway.currency);
@@ -1022,7 +1023,7 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
                     onChange={(e) => setTermsAccepted(e.target.checked)}
                   />
                   <span>
-                    I agree to the <a href="/terms" target="_blank" rel="noreferrer">Terms &amp; Conditions</a> and{' '}
+                    I agree to the <a href="/terms" target="_blank" rel="noreferrer">ICSS Bookings Terms &amp; Conditions</a> and{' '}
                     <a href="/terms#privacy" target="_blank" rel="noreferrer">Privacy Policy</a>
                     {tenant.bookingPolicy ? (
                       <>

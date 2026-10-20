@@ -48,7 +48,7 @@ let server, base;
 test.before(async () => { server = http.createServer(app); await new Promise(resolve => server.listen(0, '127.0.0.1', resolve)); base = `http://127.0.0.1:${server.address().port}`; });
 test.after(() => new Promise(resolve => server.close(resolve)));
 test.beforeEach(reset);
-const payload = () => ({ name: 'Phone customer', phone: '+18765550123', service_id: serviceId, date, time: '10:00', verbal_consent: true, payment_handling: 'normal' });
+const payload = () => ({ name: 'Phone customer', phone: '+18765550123', service_id: serviceId, date, time: '10:00', verbal_consent: true, terms_accepted: true, payment_handling: 'normal' });
 const token = (claims = {}) => signToken({ id: userId, tenant_id: tenantId, role: 'staff', ...claims });
 async function post(body, auth = token(), url = '/bookings/assisted') {
     const response = await fetch(base + url, { method: 'POST', headers: { 'Content-Type': 'application/json', ...(auth ? { Authorization: `Bearer ${auth}` } : {}) }, body: JSON.stringify(body) });
@@ -78,8 +78,23 @@ test('caller consent is required and public callers cannot activate staff-only b
     assert.equal((await post({ ...payload(), verbal_consent: false })).status, 400);
     const result = await post({ ...payload(), email: 'client@example.com', assistedBooking: true, terms_accepted: false }, null, '/bookings');
     assert.equal(result.status, 400);
-    assert.match(result.data.error, /accept the Terms/);
+    assert.match(result.data.error, /accept the ICSS Bookings Terms/);
     assert.equal(state.records.length, 0);
+});
+
+test('public and assisted bookings reject missing or non-boolean platform terms acceptance', async () => {
+    for (const assisted of [false, true]) {
+        for (const consent of [undefined, false, null, 'true', 1]) {
+            const result = await post({ ...payload(), email: 'client@example.com', terms_accepted: consent },
+                assisted ? token() : null, assisted ? '/bookings/assisted' : '/bookings');
+            assert.equal(result.status, 400);
+            assert.match(result.data.error, /ICSS Bookings Terms/);
+        }
+    }
+    assert.equal(state.records.length, 0);
+    const accepted = await post({ ...payload(), email: 'client@example.com' }, null, '/bookings');
+    assert.equal(accepted.status, 201);
+    assert.equal(accepted.data.booking.terms_acceptance_method, 'online');
 });
 
 test('offline required payment remains pending, and normal transfers still require a receipt', async () => {
