@@ -20,6 +20,7 @@ const MAX_STRING = 6000;
 
 // Theme name → website preset key (frontend/src/site/themePresets.js).
 const THEME_KEYS = {
+    'Island Sound Music': 'musicians',
     'Island Occasion Rentals': 'party-rentals',
     'Island Drive Rentals': 'car-rental',
     'Yaad Table Catering': 'catering',
@@ -44,6 +45,7 @@ const THEME_KEYS = {
 
 // Legacy static template files → live demo of the same theme.
 const TEMPLATE_FILE_KEYS = {
+    'musicians.html': 'musicians',
     'party-rentals.html': 'party-rentals',
     'car-rental.html': 'car-rental',
     'catering.html': 'catering',

@@ -3,6 +3,12 @@ import SharedBookingTheme from './SharedBookingTheme';
 const field = (name, label, type = 'text', required = false) => ({ name, label, noteLabel: label, type, required });
 const rentalFields = [field('hireFrom', 'Requested rental start', 'date', true), field('hireUntil', 'Requested rental end', 'date', true)];
 const configurations = {
+  musicians: { name: 'musicians', color: '#956021', title: 'Performance & studio enquiries', fields: [
+    field('eventDate', 'Requested event or session date', 'date', true),
+    { ...field('eventType', 'Occasion / project', 'select', true), options: ['', 'Live show', 'Wedding / private event', 'Church / worship', 'Corporate event', 'Studio recording', 'Other'].map(value => ({ value, label: value || 'Choose an occasion' })) },
+    field('venue', 'Venue / location', 'text', true),
+    field('performance', 'Music style, set length & sound requirements', 'textarea', true)
+  ], note: 'This reserves a consultation time. The artist confirms event availability, performance fees, equipment and the final agreement separately.' },
   partyRentals: { name: 'party-rentals', color: '#773b83', title: 'Plan your hire', fields: [...rentalFields, field('items', 'Items, quantities & delivery address', 'textarea', true)], note: 'This reserves a consultation time. The company confirms equipment stock, hire dates, delivery and the final quote.' },
   carRental: { name: 'car-rental', color: '#a77525', title: 'Discuss your rental', fields: [...rentalFields, field('vehicle', 'Vehicle preference & pickup location', 'textarea', true)], note: 'This reserves a consultation time. Vehicle availability across your rental dates, documents, insurance and the rental agreement are confirmed separately.' },
   catering: { name: 'catering', color: '#8c432c', title: 'Plan your catering', fields: [field('eventDate', 'Requested event date', 'date', true), field('guests', 'Guest count', 'number', true), field('eventDetails', 'Venue, menu ideas & dietary needs', 'textarea', true)], note: 'Book a planning appointment. The business confirms the menu, event availability and final quote.' },
@@ -31,3 +37,5 @@ export function ThemeCatering(props) { return <LocalServiceBooking {...props} in
 export function ThemeDetailing(props) { return <LocalServiceBooking {...props} industry="detailing" />; }
 export function ThemeHomeRepairs(props) { return <LocalServiceBooking {...props} industry="homeRepairs" />; }
 export function ThemeTutoring(props) { return <LocalServiceBooking {...props} industry="tutoring" />; }
+
+export function ThemeMusicians(props) { return <LocalServiceBooking {...props} industry="musicians" />; }

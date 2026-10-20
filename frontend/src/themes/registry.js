@@ -13,9 +13,10 @@ import ThemeUniversal from './ThemeUniversal';
 import ThemeLandscaping from './ThemeLandscaping';
 import ThemeCleaning from './ThemeCleaning';
 
-import { ThemePartyRentals, ThemeCarRental, ThemeCatering, ThemeDetailing, ThemeHomeRepairs, ThemeTutoring } from './ThemeLocalServices';
+import { ThemePartyRentals, ThemeCarRental, ThemeCatering, ThemeDetailing, ThemeHomeRepairs, ThemeTutoring, ThemeMusicians } from './ThemeLocalServices';
 
 export const BOOKING_THEMES = {
+  musicians: ThemeMusicians,
   'party-rentals': ThemePartyRentals,
   'car-rental': ThemeCarRental,
   catering: ThemeCatering,
@@ -38,6 +39,7 @@ export const BOOKING_THEMES = {
 };
 
 const LEGACY_NAMES = {
+  'Island Sound Music': 'musicians',
   'Island Occasion Rentals': 'party-rentals',
   'Island Drive Rentals': 'car-rental',
   'Yaad Table Catering': 'catering',
