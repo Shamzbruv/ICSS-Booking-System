@@ -31,6 +31,8 @@ const THEME_KEYS = {
     'Elegant Nails': 'nail-tech',
     'Polished & Pure': 'nail-tech',
     'Lumina Lens': 'photography',
+    'GreenScape Landscaping': 'landscaping',
+    'FreshStart Cleaning': 'cleaning',
     'Universal Services': 'universal'
 };
 
@@ -46,6 +48,8 @@ const TEMPLATE_FILE_KEYS = {
     'law.html': 'law',
     'nail_tech.html': 'nail-tech',
     'photography.html': 'photography',
+    'landscaping.html': 'landscaping',
+    'cleaning.html': 'cleaning',
     'universal_booking.html': 'universal'
 };
 

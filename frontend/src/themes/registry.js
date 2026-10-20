@@ -10,6 +10,8 @@ import ThemeLaw from './ThemeLaw';
 import ThemeNailTech from './ThemeNailTech';
 import ThemePhotography from './ThemePhotography';
 import ThemeUniversal from './ThemeUniversal';
+import ThemeLandscaping from './ThemeLandscaping';
+import ThemeCleaning from './ThemeCleaning';
 
 export const BOOKING_THEMES = {
   barber: ThemeBarber,
@@ -22,6 +24,8 @@ export const BOOKING_THEMES = {
   law: ThemeLaw,
   'nail-tech': ThemeNailTech,
   photography: ThemePhotography,
+  landscaping: ThemeLandscaping,
+  cleaning: ThemeCleaning,
   universal: ThemeUniversal
 };
 
@@ -36,7 +40,9 @@ const LEGACY_NAMES = {
   'Meridian Law': 'law',
   'Elegant Nails': 'nail-tech',
   'Polished & Pure': 'nail-tech',
-  'Lumina Lens': 'photography'
+  'Lumina Lens': 'photography',
+  'GreenScape Landscaping': 'landscaping',
+  'FreshStart Cleaning': 'cleaning'
 };
 
 export function resolveThemeKey(tenant) {

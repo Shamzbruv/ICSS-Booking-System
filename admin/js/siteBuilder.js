@@ -667,7 +667,9 @@
             ));
             if (type.description) wrap.appendChild(h('p', { class: 'sb-hint', text: type.description }));
             if (section.type === 'services') wrap.appendChild(h('p', { class: 'sb-callout', text: 'Service names, prices and durations come from your Services page, so they are always accurate.' }));
-            if (section.type === 'booking') wrap.appendChild(h('p', { class: 'sb-callout', text: 'Booking colours, payment options and form fields are set in the Booking widget tab and in Settings.' }));
+            if (section.type === 'booking') wrap.appendChild(h('div', { class: 'sb-callout' },
+                'Edit the booking photo, badges, notes and team here in Website Builder. Payment methods and opening hours are in Settings.',
+                h('button', { type: 'button', class: 'sb-add', onClick: () => { this.focusedGlobal = 'booking.serviceSectionImageUrl'; this.setTab('info'); this.focusField(this.focusedGlobal); } }, 'Edit booking appearance')));
 
             if (section.type === 'hero') wrap.appendChild(h('div', { class: 'sb-inline-buttons sb-quick-media' },
                 ...[['image', 'Change photo', 'imageUrl'], ['video', 'Add / change video', 'videoUrl'], ['slideshow', 'Photo slideshow', 'slides']].map(([mode, label, field]) =>
@@ -772,6 +774,7 @@
                 ['nav', 'Menu', 'How the top navigation looks and behaves.'],
                 ['announcement', 'Announcement bar', 'A slim banner above the menu for promotions or notices.'],
                 ['social', 'Social links', 'Paste the full link to each profile.'],
+                ['booking', 'Booking form', 'The logo, business name and tagline come from Brand & logo; location comes from Contact details. Photos, badges, notes and staff here update the booking form. Save as a draft and Publish when ready.'],
                 ['policies', 'Booking terms', 'Customers must tick a box accepting this policy (plus the ICSS Terms & Conditions) before they can book.'],
                 ['seo', 'Google & sharing', 'What appears in Google results and link previews.'],
                 ['footer', 'Footer', '']

@@ -12,10 +12,12 @@ import law from './law';
 import nailTech from './nail-tech';
 import photography from './photography';
 import universal from './universal';
+import landscaping from './landscaping';
+import cleaning from './cleaning';
 
 export const PRESETS = {
   barber, spa, mechanic, events, fitness, hairdresser, health, law,
-  'nail-tech': nailTech, photography, universal
+  'nail-tech': nailTech, photography, universal, landscaping, cleaning
 };
 
 export function getPreset(key) {

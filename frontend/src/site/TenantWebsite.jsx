@@ -14,7 +14,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import s from './TenantWebsite.module.css';
 import { SiteSection } from './SiteSections';
 import { MusicPlayer, SmartImage } from './SiteMedia';
-import { builderCatalog, FONT_OPTIONS, hexToRgba, isSafeMediaUrl, PAGE_IDS, resolveSite, SECTION_TYPES, siteCssVars } from './siteSchema';
+import { bookingBranding, builderCatalog, FONT_OPTIONS, hexToRgba, isSafeMediaUrl, PAGE_IDS, resolveSite, SECTION_TYPES, siteCssVars } from './siteSchema';
 import { getPreset } from './presets';
 import { getBookingTheme } from '../themes/registry';
 
@@ -259,12 +259,13 @@ export default function TenantWebsite({ tenant, services, themeKey, savedSite, b
     } : {};
     return {
       ...tenant,
+      name: site.brand.name || tenant.name,
       embedInSite: true,
       preselectServiceId,
       bookingPolicy: site.policies?.bookingTerms || '',
-      branding: { ...tenant.branding, customPalette: { ...sync, ...(tenant.branding?.customPalette || {}) } }
+      branding: { ...tenant.branding, ...bookingBranding(site), customPalette: { ...sync, ...(tenant.branding?.customPalette || {}) } }
     };
-  }, [tenant, site.style, site.policies?.bookingTerms, preselectServiceId]);
+  }, [tenant, site, preselectServiceId]);
   const renderBooking = useCallback(() => {
     const Widget = getBookingTheme(themeKey);
     return <Widget tenant={bookingTenant} services={services} />;
@@ -279,9 +280,19 @@ export default function TenantWebsite({ tenant, services, themeKey, savedSite, b
 
   useReveal(rootRef, site.style.animations !== false, [currentPage.id, sectionsToRender.length, onePage, site.style.animations]);
 
+  const handleGlobalEdit = preview && editMode ? (event) => {
+    const global = event.target.closest('[data-site-global]')?.dataset.siteGlobal;
+    if (!global) return;
+    event.preventDefault();
+    event.stopPropagation();
+    window.parent.postMessage({ type: 'icss:site-select-global', field: global }, window.location.origin);
+  } : undefined;
+
   // Legacy "booking page only" mode.
   if (site.enabled === false) {
-    return <BookingTheme tenant={{ ...tenant, preselectServiceId, bookingPolicy: site.policies?.bookingTerms || '' }} services={services} />;
+    return <div ref={rootRef} className={s.site} data-site-editing={preview && editMode ? 'true' : undefined} onClickCapture={handleGlobalEdit}>
+      <BookingTheme tenant={{ ...bookingTenant, embedInSite: false }} services={services} />
+    </div>;
   }
 
   const firstSection = sectionsToRender[0];
@@ -297,13 +308,7 @@ export default function TenantWebsite({ tenant, services, themeKey, savedSite, b
 
   return (
     <div ref={rootRef} data-site-editing={preview && editMode ? 'true' : undefined}
-      onClickCapture={preview && editMode ? (event) => {
-        const global = event.target.closest('[data-site-global]')?.dataset.siteGlobal;
-        if (!global) return;
-        event.preventDefault();
-        event.stopPropagation();
-        window.parent.postMessage({ type: 'icss:site-select-global', field: global }, window.location.origin);
-      } : undefined} className={`${s.site} ${site.style.mode === 'dark' ? s.siteDark : ''} ${site.style.buttonStyle === 'outline' ? s.btnOutline : ''}`} style={siteCssVars(site.style)}>
+      onClickCapture={handleGlobalEdit} className={`${s.site} ${site.style.mode === 'dark' ? s.siteDark : ''} ${site.style.buttonStyle === 'outline' ? s.btnOutline : ''}`} style={siteCssVars(site.style)}>
       <a href="#main" className={s.skipLink}>Skip to content</a>
       {announcement && (
         <div data-site-global="announcement.text" className={s.announcement}>

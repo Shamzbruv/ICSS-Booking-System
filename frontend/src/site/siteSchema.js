@@ -264,6 +264,12 @@ export const GLOBAL_FIELDS = {
     text('title', 'Browser tab / Google title'), area('description', 'Google description (150 characters)')
   ],
   footer: [area('text', 'Footer text')],
+  booking: [
+    media('serviceSectionImageUrl', 'Service panel photo', 'image', 'featureImage'),
+    text('footerNote', 'Note below appointment times'),
+    text('badge1', 'Header badge 1 (optional)'), text('badge2', 'Header badge 2 (optional)'),
+    list('staff', 'Booking staff', 'Team member', [text('name', 'Name')])
+  ],
   policies: [
     area('bookingTerms', 'Booking & cancellation policy', { rows: 7 })
   ]
@@ -337,6 +343,7 @@ const BASE_SITE = {
   policies: {
     bookingTerms: 'Please arrive on time for your appointment. If you need to cancel or reschedule, let us know at least 24 hours in advance. Late arrivals may have a shortened appointment, and missed appointments or late cancellations may lose any deposit paid.'
   },
+  booking: { serviceSectionImageUrl: '', footerNote: '', badge1: '', badge2: '', staff: [] },
   pages: []
 };
 
@@ -362,7 +369,17 @@ function normalizeSections(sections, presetSections = []) {
  */
 export function resolveSite(tenant, preset, saved) {
   const presetSite = preset?.site || {};
-  const base = deepMerge(BASE_SITE, { ...presetSite, pages: undefined });
+  const legacy = tenant?.branding || {};
+  const inherited = deepMerge(BASE_SITE, {
+    brand: { logoUrl: legacy.logoUrl || '', tagline: legacy.bookingTagline || '' },
+    contact: { address: legacy.location || '' },
+    booking: {
+      serviceSectionImageUrl: legacy.serviceSectionImageUrl || '', footerNote: legacy.bookingFooterNote || '',
+      badge1: legacy.badge1 || '', badge2: legacy.badge2 || '',
+      staff: (Array.isArray(legacy.stylists) ? legacy.stylists : []).map((name) => ({ name }))
+    }
+  });
+  const base = deepMerge(inherited, { ...presetSite, pages: undefined });
   const merged = deepMerge(base, saved ? { ...saved, pages: undefined } : {});
 
   const presetPages = presetSite.pages || [];
@@ -398,9 +415,6 @@ export function resolveSite(tenant, preset, saved) {
 
   merged.pages = pages;
   merged.brand = { ...merged.brand, name: merged.brand.name || tenant?.name || '' };
-  if (!merged.contact.address && tenant?.branding?.location) merged.contact = { ...merged.contact, address: tenant.branding.location };
-  if (!merged.brand.logoUrl && tenant?.branding?.logoUrl) merged.brand = { ...merged.brand, logoUrl: tenant.branding.logoUrl };
-  if (!merged.brand.tagline && tenant?.branding?.bookingTagline) merged.brand = { ...merged.brand, tagline: tenant.branding.bookingTagline };
   return merged;
 }
 
@@ -462,5 +476,15 @@ export function siteCssVars(style) {
     '--site-body-font': `'${style.bodyFont}', system-ui, sans-serif`,
     '--site-heading-case': style.headingCase === 'uppercase' ? 'uppercase' : 'none',
     '--site-heading-spacing': style.headingCase === 'uppercase' ? '0.04em' : '-0.02em'
+  };
+}
+
+/** Share website identity with the booking form, including draft previews. */
+export function bookingBranding(site) {
+  return {
+    logoUrl: site.brand.logoUrl, bookingTagline: site.brand.tagline, location: site.contact.address,
+    serviceSectionImageUrl: site.booking.serviceSectionImageUrl, bookingFooterNote: site.booking.footerNote,
+    badge1: site.booking.badge1, badge2: site.booking.badge2,
+    stylists: (Array.isArray(site.booking.staff) ? site.booking.staff : []).map((member) => String(member?.name || '').trim()).filter(Boolean)
   };
 }

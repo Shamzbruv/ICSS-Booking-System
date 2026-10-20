@@ -82,7 +82,7 @@
       <section class="controls">
         <h2 class="section-title">Booking widget colours</h2>
         <p class="preview-hint">These colours style the booking calendar and checkout on your Book page. They save instantly.</p>
-        <div id="colors"></div>
+        <p class="preview-hint">Logo, photos, badges and booking content are in Website → Site info → Booking form.</p><button class="btn btn-secondary" id="bookingAppearanceBtn" type="button">Edit booking content</button><div id="colors"></div>
         <button class="btn btn-secondary" id="resetPaletteBtn" type="button" style="width:100%;margin-top:10px">Reset to theme defaults</button>
         <button class="btn btn-primary" id="savePaletteBtn" type="button" style="width:100%;margin-top:10px">Save Colors</button>
         <p id="message" style="font-size:13px;color:var(--text-dim)"></p>
@@ -96,7 +96,7 @@
       <h2 class="section-title">Your template</h2>
       <p>Your website started from an industry template with its own layout, fonts, colours and sample content. Everything can be changed in the Website tab. Want something completely bespoke? Request a custom theme below.</p>
     </div>
-    <section class="theme-library" id="themeLibrarySection" hidden><div class="theme-library-head"><h2 class="section-title">Theme Library</h2><span class="theme-library-badge">Test account</span></div><p class="theme-library-hint">Apply any of the 11 industry starter themes to this account's live site, whenever you like.</p><div class="theme-grid" id="themeLibraryGrid"></div></section>
+    <section class="theme-library" id="themeLibrarySection" hidden><div class="theme-library-head"><h2 class="section-title">Theme Library</h2><span class="theme-library-badge">Test account</span></div><p class="theme-library-hint">Apply any industry starter theme to this account's live site, whenever you like.</p><div class="theme-grid" id="themeLibraryGrid"></div></section>
     <div class="request-box"><h3>Want a fully custom theme?</h3><p style="color:var(--text-dim);font-size:13px;line-height:1.5">Request a professionally built custom theme for <strong>JMD $10,000</strong>. Your request goes directly into the developer job queue.</p><textarea id="themeNotes" class="form-control" rows="4" placeholder="Describe your preferred style, layout, references, and special requirements..."></textarea><button class="btn btn-primary" id="requestThemeBtn" type="button" style="width:100%;margin-top:10px">Request Custom Theme — JMD $10,000</button><p id="requestMessage" style="font-size:13px;color:var(--text-dim)"></p></div>
   </section>
 </main>
@@ -127,6 +127,8 @@ builder=new SiteBuilder({
     api:SiteBuilder.tenantApi(slug,apiFetch,getToken),
     onReady:()=>maybeStartBuilderTour()
 });
+
+document.getElementById('bookingAppearanceBtn').addEventListener('click',()=>{setView('site');builder.focusedGlobal='booking.serviceSectionImageUrl';builder.setTab('info');builder.focusField(builder.focusedGlobal)});
 
 // ── Booking widget colours (saved straight to branding.customPalette) ───────
 const fields={pageBg:['Page background','#f8f4f6'],shellBg:['Main container','#ffffff'],panelBg:['Panel background','#ffffff'],cardBg:['Service card','#ffffff'],inputBg:['Input background','#ffffff'],textMain:['Main text','#24161d'],textSubtle:['Secondary text','#573745'],textMuted:['Muted text','#8d7280'],accent:['Accent color','#8b5268'],accentStrong:['Button/strong accent','#724356'],cardBorder:['Card borders','#e7d8de'],inputBorder:['Input borders','#e7d8de']};let palette={},timer,activeColorKey=null;
