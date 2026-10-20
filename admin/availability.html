@@ -239,7 +239,7 @@
                        <div class="form-row" style="align-items:flex-end;">
                            <div class="form-group">
                                <label>Block Reason (optional)</label>
-                               <input type="text" id="blockDayReason" placeholder="e.g. Holiday, Team event">
+                               <input type="text" id="blockDayReason" maxlength="200" aria-label="Reason shown to customers" placeholder="Reason shown to customers: holiday, team event…">
                            </div>
                            <button class="btn btn-danger" type="button" data-availability-action="block-day" data-date="${dateStr}">🔒 Block Entire Day</button>
                        </div>
@@ -249,12 +249,13 @@
             ${!isDayBlocked ? `
             <div>
                 <p style="font-size:12px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:10px;">Time Slots</p>
-                <div class="slot-list" id="slotList">
+                <label for="blockSlotReason" style="display:block;margin-bottom:8px;">Reason shown to customers (optional)</label><input type="text" id="blockSlotReason" maxlength="200" class="form-control" placeholder="e.g. Staff meeting, maintenance" style="margin-bottom:12px;"><div class="slot-list" id="slotList">
                     ${SLOTS.map(s => {
                         const isSlotBlocked = blockedTimes.has(s.time);
+                        const blockedSlot = dayBlocks.find(b => b.block_type === 'slot' && b.block_time?.slice(0, 5) === s.time);
                         const blockId = dayBlocks.find(b => b.block_type === 'slot' && b.block_time?.slice(0, 5) === s.time)?.id;
                         return `<div class="slot-chip ${isSlotBlocked ? 'blocked' : ''}" role="button" tabindex="0" data-availability-action="${isSlotBlocked ? 'unblock-slot' : 'block-slot'}" data-block-id="${blockId || ''}" data-date="${dateStr}" data-time="${s.time}">
-                            ${s.label}${isSlotBlocked ? ' 🔒' : ''}
+                            ${s.label}${isSlotBlocked ? ' 🔒' : ''}${blockedSlot?.reason ? `<small style="display:block;font-size:11px;">${escapeHtml(blockedSlot.reason)}</small>` : ''}
                         </div>`;
                     }).join('')}
                 </div>
@@ -278,7 +279,7 @@
         try {
             await apiFetch('/api/v1/admin/unavailable', {
                 method: 'POST',
-                body: JSON.stringify({ block_type: 'slot', block_date: dateStr, block_time: time })
+                body: JSON.stringify({ block_type: 'slot', block_date: dateStr, block_time: time, reason: document.getElementById('blockSlotReason')?.value?.trim() || null })
             });
             showToast(`Slot blocked: ${time}`);
             const data = await apiFetch(`/api/v1/admin/unavailable?year=${currentYear}&month=${currentMonth + 1}`);

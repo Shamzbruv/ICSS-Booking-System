@@ -381,6 +381,9 @@ async function runMigrations(client) {
     await client.query(`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS service_price NUMERIC(12,2)`);
     await client.query(`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS service_currency TEXT`);
     await client.query(`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS whatsapp_opt_in BOOLEAN DEFAULT false`);
+    await client.query(`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS booking_source TEXT NOT NULL DEFAULT 'online'`);
+    await client.query(`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS created_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL`);
+    await client.query(`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS terms_acceptance_method TEXT NOT NULL DEFAULT 'online'`);
     // Customers must accept the platform terms + business booking policy before booking.
     await client.query(`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS terms_accepted_at TIMESTAMPTZ`);
     await client.query(`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS terms_version TEXT`);
@@ -745,6 +748,12 @@ async function runMigrations(client) {
         ('Pro Auto Care', 'Mechanic', '/Template/mechanic.html', '{"services": [{"name": "Oil Change & Inspection", "duration_minutes": 45, "price": 120}, {"name": "Brake Pad Replacement", "duration_minutes": 120, "price": 250}, {"name": "Full Diagnostics", "duration_minutes": 90, "price": 150}]}'::jsonb),
         ('GreenScape Landscaping', 'Landscaping', '/demo/landscaping', '{"services": [{"name": "Garden Consultation", "duration_minutes": 45, "price": 2500}, {"name": "Lawn Care Visit", "duration_minutes": 90, "price": 6000}]}'::jsonb),
         ('FreshStart Cleaning', 'Cleaning Services', '/demo/cleaning', '{"services": [{"name": "Standard Home Clean", "duration_minutes": 120, "price": 8000}, {"name": "Deep Cleaning", "duration_minutes": 240, "price": 16000}]}'::jsonb),
+        ('Island Occasion Rentals', 'Party & Equipment Rentals', '/demo/party-rentals', '{"services": [{"name": "Chairs & Tables Enquiry", "duration_minutes": 30, "price": 0}, {"name": "Tent & Canopy Consultation", "duration_minutes": 45, "price": 0}, {"name": "Party Package Consultation", "duration_minutes": 45, "price": 0}, {"name": "General Equipment Hire Enquiry", "duration_minutes": 30, "price": 0}]}'::jsonb),
+        ('Island Drive Rentals', 'Car Rentals', '/demo/car-rental', '{"services": [{"name": "Compact Car Enquiry", "duration_minutes": 30, "price": 0}, {"name": "SUV Rental Enquiry", "duration_minutes": 30, "price": 0}, {"name": "Van & Group Hire Enquiry", "duration_minutes": 45, "price": 0}, {"name": "Long-term Rental Consultation", "duration_minutes": 45, "price": 0}]}'::jsonb),
+        ('Yaad Table Catering', 'Catering', '/demo/catering', '{"services": [{"name": "Event Catering Consultation", "duration_minutes": 45, "price": 0}, {"name": "Corporate Lunch Enquiry", "duration_minutes": 30, "price": 0}, {"name": "Wedding Menu Consultation", "duration_minutes": 60, "price": 0}, {"name": "Small Gathering Enquiry", "duration_minutes": 30, "price": 0}]}'::jsonb),
+        ('Fresh Ride Detailing', 'Car Wash & Detailing', '/demo/detailing', '{"services": [{"name": "Exterior Wash", "duration_minutes": 45, "price": 2000}, {"name": "Interior Clean", "duration_minutes": 60, "price": 3500}, {"name": "Full Wash & Detail", "duration_minutes": 120, "price": 6000}, {"name": "Paint Care Consultation", "duration_minutes": 30, "price": 0}]}'::jsonb),
+        ('YaadFix Home Services', 'Home Repairs & Maintenance', '/demo/home-repairs', '{"services": [{"name": "Home Maintenance Assessment", "duration_minutes": 45, "price": 2500}, {"name": "Small Repair Visit", "duration_minutes": 60, "price": 4500}, {"name": "Plumbing Assessment", "duration_minutes": 45, "price": 2500}, {"name": "Painting & Refresh Consultation", "duration_minutes": 45, "price": 0}]}'::jsonb),
+        ('BrightPath Tutoring', 'Tutoring & Lessons', '/demo/tutoring', '{"services": [{"name": "Mathematics Lesson", "duration_minutes": 60, "price": 2500}, {"name": "English Language Lesson", "duration_minutes": 60, "price": 2500}, {"name": "PEP Preparation Session", "duration_minutes": 60, "price": 3000}, {"name": "CSEC Study Consultation", "duration_minutes": 30, "price": 0}]}'::jsonb),
         ('Universal Services', 'General / Universal', '/Template/universal_booking.html', '{"services": [{"name": "Consultation", "duration_minutes": 30, "price": 50}, {"name": "Professional Service", "duration_minutes": 60, "price": 120}]}'::jsonb)
         ON CONFLICT (name) DO NOTHING
     `);

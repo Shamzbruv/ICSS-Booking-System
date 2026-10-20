@@ -6,7 +6,7 @@
 const express = require('express');
 const router  = express.Router();
 const { query, transaction }    = require('../../db/connection');
-const { authenticate, requireRole } = require('../../middleware/auth');
+const { authenticate, requireRole, requireTenantOwnership } = require('../../middleware/auth');
 const { enforceBookingLimit }   = require('../../services/subscription');
 const { sendBookingCancellationEmail, sendBookingPendingReviewEmail, sendBookingCompletedEmail } = require('../../services/email');
 const { sendBookingConfirmationNotifications } = require('../../services/bookingNotifications');
@@ -143,24 +143,36 @@ async function validateTenantAvailability(client, tenant, date, time, totalServi
 }
 
 // POST /api/v1/bookings — Create a new booking
-router.post('/', enforceBookingLimit, async (req, res) => {
+async function createBooking(req, res) {
     const { name, email, phone, date, time, notes, region, service_id, receipt_image, after_hours_request, whatsapp_opt_in, terms_accepted } = req.body;
+    const assisted = req.assistedBooking === true;
     const tenant = req.tenant;
     const tenantId = tenant.id;
     const timezone = tenant.branding?.timezone || 'America/Jamaica';
 
-    if (!name || !email || !phone || !date || !time || !service_id) {
+    if (!name || (!assisted && !email) || !phone || !date || !time || !service_id) {
         return res.status(400).json({ error: 'name, email, phone, date, time, and service_id are required.' });
     }
 
-    if (terms_accepted !== true) {
-        return res.status(400).json({ error: 'Please accept the Terms & Conditions and the booking policy to continue.' });
+    if (![name, phone, date, time, service_id].every(value => typeof value === 'string') || (email != null && typeof email !== 'string') || (notes != null && typeof notes !== 'string')) return res.status(400).json({ error: 'Booking details must be text values.' });
+    if (!name.trim() || phone.replace(/\D/g, '').length < 7 || phone.length > 40 || String(email || '').length > 254) return res.status(400).json({ error: 'Check the customer name, phone and email.' });
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(service_id)) return res.status(400).json({ error: 'Choose a valid service.' });
+    const normalizedEmail = String(email || '').trim().toLowerCase();
+    if (!assisted && !normalizedEmail) return res.status(400).json({ error: 'Customer email is required.' });
+    if (normalizedEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) return res.status(400).json({ error: 'Enter a valid customer email address.' });
+    if (assisted && !['normal', 'in_person'].includes(req.body.payment_handling || 'normal')) return res.status(400).json({ error: 'Choose normal payment rules or offline collection.' });
+    if (assisted && req.body.verbal_consent !== true) return res.status(400).json({ error: 'Confirm that the caller agreed to the booking terms and cancellation policy.' });
+    if (!assisted) {
+        if (terms_accepted !== true) {
+            return res.status(400).json({ error: 'Please accept the Terms & Conditions and the booking policy to continue.' });
+        }
     }
 
     const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
     const timeRegex = /^([01]\d|2[0-3]):[0-5]\d$/;
 
     if (!dateRegex.test(date)) return res.status(400).json({ error: 'Invalid date format. Use YYYY-MM-DD.' });
+    if (!Number.isFinite(Date.parse(`${date}T12:00:00Z`)) || new Date(`${date}T12:00:00Z`).toISOString().slice(0, 10) !== date) return res.status(400).json({ error: 'Choose a valid calendar date.' });
     if (!timeRegex.test(time)) return res.status(400).json({ error: 'Invalid time format. Use HH:MM (24h).' });
 
     const todayStr   = getTzTimeStr(timezone).split('T')[0];
@@ -183,7 +195,7 @@ router.post('/', enforceBookingLimit, async (req, res) => {
 
             // 1. Fetch Service Details
             const svcRes = await client.query(`SELECT * FROM services WHERE id = $1 AND tenant_id = $2`, [service_id, tenantId]);
-            if (svcRes.rows.length === 0) {
+            if (svcRes.rows.length === 0 || svcRes.rows[0].active === false) {
                 const err = new Error('Service not found.'); err.status = 404; throw err;
             }
             const service = normalizeDepositConfig(svcRes.rows[0]);
@@ -206,7 +218,10 @@ router.post('/', enforceBookingLimit, async (req, res) => {
                 const err = new Error('After-hours requests are not enabled for this business.'); err.status = 400; throw err;
             }
 
-            if (paymentRequested && paymentMode === 'paypal' && tenant.paypal_payments_enabled && tenant.paypal_payment_link) {
+            if (paymentRequested && assisted && req.body.payment_handling === 'in_person') {
+                paymentMode = 'in_person';
+                status = 'pending_payment';
+            } else if (paymentRequested && paymentMode === 'paypal' && tenant.paypal_payments_enabled && tenant.paypal_payment_link) {
                 status = 'pending_payment';
                 expiresAt = null;
             } else if (paymentRequested && paymentMode === 'manual' && tenant.manual_payment_enabled) {
@@ -269,14 +284,23 @@ router.post('/', enforceBookingLimit, async (req, res) => {
                 const err = new Error('This time slot is no longer available. Please choose another.'); err.status = 409; throw err;
             }
 
+            const dailyCount = await client.query(`SELECT COUNT(*) AS count FROM bookings WHERE tenant_id=$1 AND booking_date=$2 AND status IN (${ACTIVE_BOOKING_STATUSES_SQL})`, [tenantId, date]);
+            if (Number(dailyCount.rows[0].count) >= MAX_BOOKINGS_PER_DAY) {
+                const err = new Error('This date is fully booked. Please choose another day.'); err.status = 409; throw err;
+            }
+
             // 5. Insert Booking
             const bookingRes = await client.query(
-                `INSERT INTO bookings (tenant_id, service_id, name, email, phone, booking_date, booking_time, start_time, end_time, notes, region, status, payment_mode, expires_at, is_after_hours_request, after_hours_fee, service_price, service_currency, whatsapp_opt_in, whatsapp_status, terms_accepted_at, terms_version)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, NOW(), $21)
+                `INSERT INTO bookings (tenant_id, service_id, name, email, phone, booking_date, booking_time, start_time, end_time, notes, region, status, payment_mode, expires_at, is_after_hours_request, after_hours_fee, service_price, service_currency, whatsapp_opt_in, whatsapp_status, terms_accepted_at, terms_version, booking_source, created_by_user_id, terms_acceptance_method)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, NOW(), $21, $22, $23, $24)
                  RETURNING *`,
-                [tenantId, service_id, name, email.toLowerCase().trim(), phone, date, time, startTime, endTime, sanitizedNotes, region || 'Jamaica', status, paymentMode, expiresAt, afterHoursRequested, afterHoursRequested ? Number(tenant.after_hours_fee || 0) : 0, Number(service.price || 0), service.currency || 'JMD', whatsapp_opt_in === true, whatsapp_opt_in === true ? 'pending' : 'not_requested', BOOKING_TERMS_VERSION]
+                [tenantId, service_id, name, normalizedEmail, phone, date, time, startTime, endTime, sanitizedNotes, String(region || 'Jamaica').slice(0, 100), status, paymentMode, expiresAt, afterHoursRequested, afterHoursRequested ? Number(tenant.after_hours_fee || 0) : 0, Number(service.price || 0), service.currency || 'JMD', whatsapp_opt_in === true, whatsapp_opt_in === true ? 'pending' : 'not_requested', BOOKING_TERMS_VERSION, assisted ? 'phone' : 'online', assisted ? req.user.id : null, assisted ? 'verbal' : 'online']
             );
             const booking = bookingRes.rows[0];
+            if (assisted) await client.query(
+                `INSERT INTO audit_log (tenant_id,user_id,actor_user_id,action,entity,entity_id,metadata) VALUES ($1,$2,$2,'assisted_booking_created','booking',$3,$4)`,
+                [tenantId, req.user.id, booking.id, JSON.stringify({ source: 'phone', verbalConsent: true, paymentHandling: req.body.payment_handling || 'normal' })]
+            );
 
             let checkoutUrl = null;
             let paypalConversion = null;
@@ -309,7 +333,7 @@ router.post('/', enforceBookingLimit, async (req, res) => {
                 }
             }
 
-            return { booking, checkoutUrl, paypalConversion, bankInstructions, paymentGateway, service_name: service.name };
+            return { amountDue, currency: service.currency || 'JMD', booking, checkoutUrl, paypalConversion, bankInstructions, paymentGateway, service_name: service.name };
         });
 
         // 7. Enqueue Expiration Job if there is a hold
@@ -335,9 +359,16 @@ router.post('/', enforceBookingLimit, async (req, res) => {
 
     } catch (err) {
         if (err.status) return res.status(err.status).json({ error: err.message });
+        if (err.code === '23505') return res.status(409).json({ error: 'This appointment time is already reserved. Refresh available times.' });
         console.error('[Bookings/Create]', err.message);
         res.status(500).json({ error: 'Failed to create booking. Please try again.' });
     }
+}
+
+router.post('/', enforceBookingLimit, createBooking);
+router.post('/assisted', authenticate, requireTenantOwnership('staff', 'tenant_admin'), enforceBookingLimit, (req, res) => {
+    req.assistedBooking = true;
+    return createBooking(req, res);
 });
 
 // POST /api/v1/bookings/:id/verify-payment — WiPay Callback / Polling
@@ -518,7 +549,7 @@ router.patch('/:id/status', authenticate, requireRole('staff', 'tenant_admin'), 
                     }
                 }
             }
-            if (isLinkGateway(booking.payment_mode) && booking.status === 'pending_payment' && (status === 'confirmed' || status === 'rejected')) {
+            if ((isLinkGateway(booking.payment_mode) || booking.payment_mode === 'in_person') && booking.status === 'pending_payment' && (status === 'confirmed' || status === 'rejected')) {
                 await client.query(`UPDATE booking_payments SET status=$1 WHERE booking_id=$2`, [status === 'confirmed' ? 'paid' : 'failed', booking.id]);
                 await client.query(`INSERT INTO audit_log (tenant_id,user_id,actor_user_id,action,entity,entity_id,old_status,new_status,note) VALUES ($1,$2,$2,$3,'booking',$4,$5,$6,$7)`, [req.tenant.id,req.user.id,`${booking.payment_mode}_${status}`,booking.id,booking.status,status,note]);
             }

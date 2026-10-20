@@ -49,7 +49,7 @@ test('new industry presets resolve all pages, real service examples and editable
     const { resolveSite, bookingBranding } = await schema;
     const helperSource = fs.readFileSync(path.join(__dirname, '../frontend/src/site/presets/helpers.js'), 'utf8');
     const helperUrl = `data:text/javascript;base64,${Buffer.from(helperSource).toString('base64')}`;
-    for (const key of ['landscaping', 'cleaning']) {
+    for (const key of ['landscaping', 'cleaning', 'party-rentals', 'car-rental', 'catering', 'detailing', 'home-repairs', 'tutoring']) {
         const source = fs.readFileSync(path.join(__dirname, `../frontend/src/site/presets/${key}.js`), 'utf8').replace("'./helpers'", JSON.stringify(helperUrl));
         const { default: preset } = await import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}`);
         const site = resolveSite({ name: 'My business' }, preset, null);

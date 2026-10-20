@@ -20,6 +20,12 @@ const MAX_STRING = 6000;
 
 // Theme name → website preset key (frontend/src/site/themePresets.js).
 const THEME_KEYS = {
+    'Island Occasion Rentals': 'party-rentals',
+    'Island Drive Rentals': 'car-rental',
+    'Yaad Table Catering': 'catering',
+    'Fresh Ride Detailing': 'detailing',
+    'YaadFix Home Services': 'home-repairs',
+    'BrightPath Tutoring': 'tutoring',
     'Iron & Blade': 'barber',
     'Botanica Spa': 'spa',
     'Pro Auto Care': 'mechanic',
@@ -38,6 +44,12 @@ const THEME_KEYS = {
 
 // Legacy static template files → live demo of the same theme.
 const TEMPLATE_FILE_KEYS = {
+    'party-rentals.html': 'party-rentals',
+    'car-rental.html': 'car-rental',
+    'catering.html': 'catering',
+    'detailing.html': 'detailing',
+    'home-repairs.html': 'home-repairs',
+    'tutoring.html': 'tutoring',
     'barber.html': 'barber',
     'spa.html': 'spa',
     'mechanic.html': 'mechanic',

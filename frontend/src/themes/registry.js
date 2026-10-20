@@ -13,7 +13,15 @@ import ThemeUniversal from './ThemeUniversal';
 import ThemeLandscaping from './ThemeLandscaping';
 import ThemeCleaning from './ThemeCleaning';
 
+import { ThemePartyRentals, ThemeCarRental, ThemeCatering, ThemeDetailing, ThemeHomeRepairs, ThemeTutoring } from './ThemeLocalServices';
+
 export const BOOKING_THEMES = {
+  'party-rentals': ThemePartyRentals,
+  'car-rental': ThemeCarRental,
+  catering: ThemeCatering,
+  detailing: ThemeDetailing,
+  'home-repairs': ThemeHomeRepairs,
+  tutoring: ThemeTutoring,
   barber: ThemeBarber,
   spa: ThemeSpa,
   mechanic: ThemeMechanic,
@@ -30,6 +38,12 @@ export const BOOKING_THEMES = {
 };
 
 const LEGACY_NAMES = {
+  'Island Occasion Rentals': 'party-rentals',
+  'Island Drive Rentals': 'car-rental',
+  'Yaad Table Catering': 'catering',
+  'Fresh Ride Detailing': 'detailing',
+  'YaadFix Home Services': 'home-repairs',
+  'BrightPath Tutoring': 'tutoring',
   'Iron & Blade': 'barber',
   'Botanica Spa': 'spa',
   'Pro Auto Care': 'mechanic',

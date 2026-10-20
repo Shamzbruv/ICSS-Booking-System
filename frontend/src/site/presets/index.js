@@ -15,7 +15,15 @@ import universal from './universal';
 import landscaping from './landscaping';
 import cleaning from './cleaning';
 
+import partyRentals from './party-rentals';
+import carRental from './car-rental';
+import catering from './catering';
+import detailing from './detailing';
+import homeRepairs from './home-repairs';
+import tutoring from './tutoring';
+
 export const PRESETS = {
+  'party-rentals': partyRentals, 'car-rental': carRental, catering, detailing, 'home-repairs': homeRepairs, tutoring,
   barber, spa, mechanic, events, fitness, hairdresser, health, law,
   'nail-tech': nailTech, photography, universal, landscaping, cleaning
 };

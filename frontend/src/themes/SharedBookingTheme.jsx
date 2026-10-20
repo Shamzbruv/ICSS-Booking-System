@@ -505,7 +505,7 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
           ? availableSlots.some((slot) => slot.time === selectedTimeRef.current)
           : true);
 
-        setAvailability(availableSlots);
+        setAvailability(data.slots || []);
         setAvailabilityMessage(nextMessage);
         setSelectedTime((current) => isAfterHoursRequest || availableSlots.some((slot) => slot.time === current) ? current : null);
 
@@ -616,6 +616,8 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
       showNotice(theme.selectTimeAlert || 'Please select a time.');
       return;
     }
+    const fieldError = theme.validateFields?.(extraState);
+    if (fieldError) { showNotice(fieldError); return; }
     if (!termsAccepted) {
       showNotice('Please tick the box to accept the Terms & Conditions and the booking policy before booking.', 'Accept the terms to continue');
       return;
@@ -868,12 +870,16 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
                         key={slot.time}
                         type="button"
                         className={`${styles.timeChip} ${selectedTime === slot.time ? styles.selected : ''}`}
+                        disabled={!slot.available}
+                        title={slot.message || undefined}
+                        aria-label={`${slot.label || slot.time}${slot.available ? '' : ` — ${slot.message || 'Unavailable'}`}`}
                         onClick={() => { setIsAfterHoursRequest(false); setSelectedTime(slot.time); }}
                       >
-                        {slot.label || slot.time}
+                        <span>{slot.label || slot.time}</span>
+                        {!slot.available && <small>{slot.message || slot.adminReason || 'Unavailable'}</small>}
                       </button>
                     ))}
-                    {availability.length === 0 && <p className={styles.helperText}>{availabilityMessage || theme.noSlotsText || 'No slots available for this date.'}</p>}
+                    {!availability.some(slot => slot.available) && <p className={styles.helperText}>{availabilityMessage || theme.noSlotsText || 'No slots available for this date.'}</p>}
                   </div>
                 )}
                 {afterHours.enabled && (

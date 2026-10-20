@@ -10,6 +10,7 @@
 const express = require('express');
 const router  = express.Router();
 const { query } = require('../../db/connection');
+const { publicAvailability } = require('../../services/publicAvailability');
 const {
     ACTIVE_BOOKING_STATUSES_SQL,
     SLOT_INTERVAL_MINS,
@@ -98,6 +99,7 @@ function generateSlots(businessHoursStr, requestedDateStr) {
 
 // GET /api/v1/availability?date=YYYY-MM-DD[&service_id=UUID]
 router.get('/', async (req, res) => {
+    const respond = payload => res.json(publicAvailability(payload));
     res.set({
         'Cache-Control': 'no-store, no-cache, must-revalidate, private',
         Pragma: 'no-cache',
@@ -117,7 +119,7 @@ router.get('/', async (req, res) => {
     const maxDateStr = getTzTimeStr(timezone, 0, MAX_DAYS_AHEAD).split('T')[0];
 
     if (date < todayStr || date > maxDateStr) {
-        return res.json({ date, slots: [], message: 'Date is out of bookable range.', afterHours: { enabled: false } });
+        return respond({ date, slots: [], message: 'Date is out of bookable range.', afterHours: { enabled: false } });
     }
 
     // ── Fetch service duration if service_id provided ──────────────────────────
@@ -142,10 +144,6 @@ router.get('/', async (req, res) => {
     const totalServiceMins = serviceDurationMins + serviceBufferMins;
 
     const { slots, isClosed, closeMins } = generateSlots(req.tenant.business_hours, date);
-
-    if (isClosed) {
-        return res.json({ date, slots: [], dayBlocked: true, message: 'Business is closed on this day.', afterHours: { enabled: Boolean(req.tenant.after_hours_requests_enabled), fee: Number(req.tenant.after_hours_fee || 0) } });
-    }
 
     // Mark past/too-close slots
     const bufferedNow = getTzTimeStr(timezone, MIN_BUFFER_MINS);
@@ -186,7 +184,11 @@ router.get('/', async (req, res) => {
                 if (!slot.reason) slot.reason = 'UNAVAILABLE';
                 if (dayBlock?.reason) slot.adminReason = dayBlock.reason;
             });
-            return res.json({ date, slots, dayBlocked: true, afterHours: { enabled: false } });
+            return respond({ date, slots, dayBlocked: true, message: dayBlock.reason || 'This date is unavailable. Please choose another day.', afterHours: { enabled: false } });
+        }
+
+        if (isClosed) {
+            return respond({ date, slots: [], dayBlocked: true, message: 'Business is closed on this day.', afterHours: { enabled: Boolean(req.tenant.after_hours_requests_enabled), fee: Number(req.tenant.after_hours_fee || 0) } });
         }
 
         const slotBlocks = adminBlocks
@@ -232,7 +234,7 @@ router.get('/', async (req, res) => {
                 slot.available = false;
                 if (!slot.reason) slot.reason = 'FULLY_BOOKED';
             });
-            return res.json({ date, slots, afterHours: { enabled: Boolean(req.tenant.after_hours_requests_enabled), fee: Number(req.tenant.after_hours_fee || 0) } });
+            return respond({ date, slots, afterHours: { enabled: Boolean(req.tenant.after_hours_requests_enabled), fee: Number(req.tenant.after_hours_fee || 0) } });
         }
 
         // For each available slot, check whether the service window overlaps any booking
@@ -267,7 +269,7 @@ router.get('/', async (req, res) => {
             }
         }
 
-        res.json({ date, slots, serviceDurationMins, totalServiceMins, afterHours: { enabled: Boolean(req.tenant.after_hours_requests_enabled), fee: Number(req.tenant.after_hours_fee || 0) } });
+        respond({ date, slots, serviceDurationMins, totalServiceMins, afterHours: { enabled: Boolean(req.tenant.after_hours_requests_enabled), fee: Number(req.tenant.after_hours_fee || 0) } });
 
     } catch (err) {
         console.error('[Availability]', err.message);

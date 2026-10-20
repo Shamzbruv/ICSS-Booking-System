@@ -427,10 +427,11 @@ async function sendBookingConfirmation(booking, tenant) {
         durationMinutes: serviceDetails.durationMinutes
     });
 
+    if (!customerEmail && tenantRecipients.length === 0) return;
     await resend.emails.send({
         from:    getSenderAddress('appointments', brand),
-        to:      [booking.email],
-        cc:      tenantRecipients.length > 0 ? tenantRecipients : undefined,
+        to:      customerEmail ? [customerEmail] : tenantRecipients,
+        cc:      customerEmail && tenantRecipients.length > 0 ? tenantRecipients : undefined,
         replyTo: brand.replyEmail,
         subject: `Appointment Confirmed — ${brand.name}`,
         html: `
@@ -496,10 +497,10 @@ async function sendBookingPendingReviewEmail(booking, tenant) {
     const isAfterHours = booking.status === 'pending_after_hours_confirmation' || booking.is_after_hours_request;
     const feeText = `${booking.currency || 'JMD'} ${Number(booking.after_hours_fee || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
 
-    await resend.emails.send({
+    if (customerEmail) await resend.emails.send({
         from:    getSenderAddress('appointments', brand),
-        to:      [booking.email],
-        cc:      tenantRecipients.length > 0 ? tenantRecipients : undefined,
+        to:      customerEmail ? [customerEmail] : tenantRecipients,
+        cc:      customerEmail && tenantRecipients.length > 0 ? tenantRecipients : undefined,
         replyTo: brand.replyEmail,
         subject: `${isAfterHours ? 'After-hours Request' : 'Booking Received'} — Pending Review · ${brand.name}`,
         html: `
@@ -578,10 +579,11 @@ async function sendBookingCancellationEmail(booking, reason, tenant) {
     const tenantRecipients = (await getTenantNotificationRecipients(tenant))
         .filter((recipient) => recipient !== customerEmail);
 
+    if (!customerEmail && tenantRecipients.length === 0) return;
     await resend.emails.send({
         from:    getSenderAddress('appointments', brand),
-        to:      [booking.email],
-        cc:      tenantRecipients.length > 0 ? tenantRecipients : undefined,
+        to:      customerEmail ? [customerEmail] : tenantRecipients,
+        cc:      customerEmail && tenantRecipients.length > 0 ? tenantRecipients : undefined,
         replyTo: brand.replyEmail,
         subject: `Appointment Update — ${brand.name}`,
         html: `
