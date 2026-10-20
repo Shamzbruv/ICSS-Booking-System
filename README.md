@@ -183,11 +183,13 @@ See [`.env.example`](.env.example) for the full list. Key variables:
 
 ## Deployment (Railway)
 
-1. Create a new project on [Railway](https://railway.app)
-2. Connect this GitHub repo
-3. Add a PostgreSQL plugin
-4. Set all environment variables from `.env.example`
-5. Deploy — the server auto-migrates the database on first boot
+Production uses Railway's native GitHub integration: `Shamzbruv/ICSS-Booking-System`, branch `main`, service `ICSS-Booking-System`, environment `production`.
+
+Push or merge changes into `main`; Railway automatically builds that commit and deploys it to https://icssbookings.com. Keep the source attached to the branch without a pinned commit so future pushes remain enabled. GitHub Actions validates the code and publishes the container image; its placeholder deployment job does not trigger Railway.
+
+Verify each release in Railway's deployment history: the commit hash must match GitHub `main`, and the deployment must reach `SUCCESS`. Then check `/health` and the updated feature on the live site. If a GitHub push produces no Railway deployment, inspect or reconnect the service's GitHub source before retrying.
+
+For a new environment, connect the repository, configure `DATABASE_URL` and the other variables from `.env.example`, and deploy. The server runs database migrations on startup.
 
 ---
 
