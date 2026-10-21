@@ -16,6 +16,8 @@ const { convertForPayPal } = require('../../services/currencyConversion');
 const { getGateway, isLinkGateway, isReceiptGateway, isGatewayEnabled, buildCheckoutUrl } = require('../../services/paymentGateways');
 const { ACTIVE_BOOKING_STATUSES_SQL, serviceOverlapsBlockedSlot, timeTextToMinutes } = require('../../services/bookingAvailabilityRules');
 
+const { ensureBookingInvoice } = require('../../services/bookingInvoices');
+
 const MAX_BOOKINGS_PER_DAY = 14;
 // Bump when /terms or the booking-consent wording changes materially.
 const BOOKING_TERMS_VERSION = '2026-10-20';
@@ -331,6 +333,7 @@ async function createBooking(req, res) {
                 }
             }
 
+            await ensureBookingInvoice(booking, tenant, service, client.query.bind(client));
             return { amountDue, currency: service.currency || 'JMD', booking, checkoutUrl, paypalConversion, bankInstructions, paymentGateway, service_name: service.name };
         });
 
@@ -348,7 +351,7 @@ async function createBooking(req, res) {
             const enrichedBooking = { ...result.booking, service_name: result.service_name };
             calendarSync.syncBookingWithExternal(req.tenant.id, enrichedBooking).catch(console.error);
             sendBookingConfirmationNotifications(enrichedBooking, req.tenant).catch(console.error);
-        } else if (result.booking.status === 'pending_manual_confirmation' || result.booking.status === 'pending_after_hours_confirmation') {
+        } else if (['pending_payment', 'pending_manual_confirmation', 'pending_after_hours_confirmation'].includes(result.booking.status)) {
             const enrichedBooking = { ...result.booking, service_name: result.service_name };
             sendBookingPendingReviewEmail(enrichedBooking, req.tenant).catch(console.error);
         }
@@ -439,8 +442,6 @@ router.post('/:id/verify-payment', async (req, res) => {
 
 // GET /api/v1/bookings — List bookings (admin)
 router.get('/', authenticate, requireRole('staff', 'tenant_admin', 'super_admin'), async (req, res) => {
-    // ... [Admin listing logic retained but omitted for brevity in this replace block, 
-    // Wait, since this is a full replacement, I must include it!]
     const { date, status, search, page = 1, limit = 50 } = req.query;
     const tenantId = req.tenant.id;
     const offset   = (parseInt(page) - 1) * parseInt(limit);
@@ -515,6 +516,13 @@ router.patch('/:id/status', authenticate, requireRole('staff', 'tenant_admin'), 
             }
             const booking = bRes.rows[0];
             previousStatus = booking.status;
+            if (status === previousStatus) return booking;
+            if (['cancelled', 'rejected', 'expired'].includes(previousStatus) ||
+                (['completed', 'no_show'].includes(status) && !['confirmed', 'completed', 'no_show'].includes(previousStatus)) ||
+                (status === 'confirmed' && ['completed', 'no_show'].includes(previousStatus))) {
+                const err = new Error('This booking cannot move to that status. Create a new booking to reserve a released time slot.');
+                err.status = 409; throw err;
+            }
 
             if (booking.status === 'pending_after_hours_confirmation' && status === 'confirmed') {
                 const conflicts = await client.query(
@@ -543,13 +551,17 @@ router.patch('/:id/status', authenticate, requireRole('staff', 'tenant_admin'), 
                     );
 
                     if (status === 'confirmed') {
-                        await client.query(`UPDATE booking_payments SET status = 'paid' WHERE booking_id = $1`, [booking.id]);
+                        await client.query(`UPDATE booking_payments SET status = 'paid' WHERE booking_id = $1 AND status = 'pending'`, [booking.id]);
                     }
                 }
             }
-            if ((isLinkGateway(booking.payment_mode) || booking.payment_mode === 'in_person') && booking.status === 'pending_payment' && (status === 'confirmed' || status === 'rejected')) {
-                await client.query(`UPDATE booking_payments SET status=$1 WHERE booking_id=$2`, [status === 'confirmed' ? 'paid' : 'failed', booking.id]);
+            if ((isLinkGateway(booking.payment_mode) || booking.payment_mode === 'in_person') && ['pending_payment', 'pending_after_hours_confirmation'].includes(booking.status) && (status === 'confirmed' || status === 'rejected')) {
+                await client.query(`UPDATE booking_payments SET status=$1 WHERE booking_id=$2 AND status = 'pending'`, [status === 'confirmed' ? 'paid' : 'failed', booking.id]);
                 await client.query(`INSERT INTO audit_log (tenant_id,user_id,actor_user_id,action,entity,entity_id,old_status,new_status,note) VALUES ($1,$2,$2,$3,'booking',$4,$5,$6,$7)`, [req.tenant.id,req.user.id,`${booking.payment_mode}_${status}`,booking.id,booking.status,status,note]);
+            }
+
+            if (status === 'cancelled' || status === 'rejected') {
+                await client.query(`UPDATE booking_payments SET status = 'failed' WHERE booking_id = $1 AND status = 'pending'`, [booking.id]);
             }
 
             const updRes = await client.query(
@@ -559,11 +571,15 @@ router.patch('/:id/status', authenticate, requireRole('staff', 'tenant_admin'), 
             return updRes.rows[0];
         });
 
+        // Repeated requests are idempotent, including their notifications.
+        if (status === previousStatus) return res.json({ success: true, booking: serializeBooking(result) });
+
         // Async tasks
         if (status === 'confirmed') {
             calendarSync.syncBookingWithExternal(req.tenant.id, result).catch(console.error);
             sendBookingConfirmationNotifications(result, req.tenant).catch(console.error);
         } else if (status === 'cancelled' || status === 'rejected') {
+            calendarSync.syncBookingWithExternal(req.tenant.id, result).catch(console.error);
             sendBookingCancellationEmail(result, note, req.tenant).catch(console.error);
         } else if (status === 'completed' && previousStatus !== 'completed') {
             sendBookingCompletedEmail(result, req.tenant).catch(console.error);
@@ -581,20 +597,22 @@ router.patch('/:id/status', authenticate, requireRole('staff', 'tenant_admin'), 
 router.post('/:id/cancel', authenticate, requireRole('staff', 'tenant_admin'), async (req, res) => {
     const { reason } = req.body;
     try {
-        const fetchResult = await query(`SELECT * FROM bookings WHERE id = $1 AND tenant_id = $2`, [req.params.id, req.tenant.id]);
-        if (fetchResult.rows.length === 0) return res.status(404).json({ error: 'Booking not found.' });
-
-        const booking = fetchResult.rows[0];
-        if (booking.status === 'cancelled') return res.status(400).json({ error: 'Booking is already cancelled.' });
-
-        await query(`UPDATE bookings SET status = 'cancelled', updated_at = NOW() WHERE id = $1`, [booking.id]);
-        booking.status = 'cancelled';
+        const booking = await transaction(async (client) => {
+            const fetched = await client.query(`SELECT * FROM bookings WHERE id = $1 AND tenant_id = $2 FOR UPDATE`, [req.params.id, req.tenant.id]);
+            if (!fetched.rows.length) { const err = new Error('Booking not found.'); err.status = 404; throw err; }
+            const current = fetched.rows[0];
+            if (current.status === 'cancelled') { const err = new Error('Booking is already cancelled.'); err.status = 400; throw err; }
+            await client.query(`UPDATE booking_payments SET status = 'failed' WHERE booking_id = $1 AND status = 'pending'`, [current.id]);
+            const updated = await client.query(`UPDATE bookings SET status = 'cancelled', updated_at = NOW() WHERE id = $1 RETURNING *`, [current.id]);
+            return updated.rows[0];
+        });
 
         sendBookingCancellationEmail(booking, reason || null, req.tenant).catch(console.error);
         calendarSync.syncBookingWithExternal(req.tenant.id, booking).catch(console.error);
 
         res.json({ success: true });
     } catch (err) {
+        if (err.status) return res.status(err.status).json({ error: err.message });
         res.status(500).json({ error: 'Failed to cancel booking.' });
     }
 });

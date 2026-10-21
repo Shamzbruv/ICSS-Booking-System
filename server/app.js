@@ -121,6 +121,8 @@ app.use('/api/v1/pricing',      pricingRoutes);
 app.use('/api/v1/calendar',     calendarRoutes);
 app.use('/api/v1/themes',       themesRoutes);
 app.use('/api/v1/services',     servicesRoutes);
+app.use('/api/v1/invoices', require('./routes/v1/invoices'));
+app.use('/api/v1/reviews', require('./routes/v1/reviews'));
 app.use('/api/v1/platform',     platformRoutes);
 app.use('/api/v1/partners',     partnerRoutes);
 

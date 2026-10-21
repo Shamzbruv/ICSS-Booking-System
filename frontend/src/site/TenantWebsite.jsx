@@ -17,6 +17,7 @@ import { MusicPlayer, SmartImage } from './SiteMedia';
 import { bookingBranding, builderCatalog, FONT_OPTIONS, hexToRgba, isSafeMediaUrl, PAGE_IDS, resolveSite, SECTION_TYPES, siteCssVars } from './siteSchema';
 import { getPreset } from './presets';
 import { getBookingTheme } from '../themes/registry';
+import CustomerReviews from './CustomerReviews';
 
 const HERO_TYPES = new Set(['hero', 'pageHeader']);
 
@@ -292,6 +293,7 @@ export default function TenantWebsite({ tenant, services, themeKey, savedSite, b
   if (site.enabled === false) {
     return <div ref={rootRef} className={s.site} data-site-editing={preview && editMode ? 'true' : undefined} onClickCapture={handleGlobalEdit}>
       <BookingTheme tenant={{ ...bookingTenant, embedInSite: false }} services={services} />
+      <CustomerReviews tenant={tenant} preview={preview} />
     </div>;
   }
 
@@ -374,6 +376,7 @@ export default function TenantWebsite({ tenant, services, themeKey, savedSite, b
             <SiteSection section={section} ctx={ctx} />
           </div>
         ))}
+        {(currentPage.id === 'book' || onePage) && <CustomerReviews tenant={tenant} preview={preview} />}
       </main>
 
       <footer data-site-global="footer.text" className={s.footer}>

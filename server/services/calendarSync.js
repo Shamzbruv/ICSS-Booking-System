@@ -548,6 +548,7 @@ async function refreshAccessToken(connection) {
  * Handle Bookings Sync after Create/Update/Cancel
  */
 async function syncBookingWithExternal(tenant_id, booking) {
+    const removed = ['cancelled', 'rejected', 'expired'].includes(booking.status);
     let result;
     if (booking.user_id) {
         result = await query(`SELECT * FROM calendar_connections WHERE tenant_id = $1 AND user_id = $2`, [tenant_id, booking.user_id]);
@@ -574,7 +575,7 @@ async function syncBookingWithExternal(tenant_id, booking) {
                 return;
             }
 
-            if (booking.status === 'cancelled' && !externalEventId) {
+            if (removed && !externalEventId) {
                 await query(`UPDATE bookings SET sync_status = 'synced', calendar_event_id = NULL WHERE id = $1`, [booking.id]);
                 return;
             }
@@ -594,7 +595,7 @@ async function syncBookingWithExternal(tenant_id, booking) {
                 };
 
                 let response;
-                if (booking.status === 'cancelled' && externalEventId) {
+                if (removed && externalEventId) {
                     response = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events/${externalEventId}`, {
                         method: 'DELETE',
                         headers: { Authorization: `Bearer ${accessToken}` }
@@ -613,14 +614,14 @@ async function syncBookingWithExternal(tenant_id, booking) {
                     });
                 }
 
-                if (!response.ok) {
+                if (!response.ok && !(removed && [404, 410].includes(response.status))) {
                     const errText = await response.text();
                     console.error('[Google Sync Error]', response.status, errText);
                     await query(`UPDATE bookings SET sync_status = 'failed' WHERE id = $1`, [booking.id]);
                     return;
                 }
 
-                if (booking.status !== 'cancelled') {
+                if (!removed) {
                     const data = await response.json();
                     externalEventId = data.id;
                 }
@@ -636,7 +637,7 @@ async function syncBookingWithExternal(tenant_id, booking) {
                 };
 
                 let response;
-                if (booking.status === 'cancelled' && externalEventId) {
+                if (removed && externalEventId) {
                     response = await fetch(`https://graph.microsoft.com/v1.0/me/events/${externalEventId}`, {
                         method: 'DELETE',
                         headers: { Authorization: `Bearer ${accessToken}` }
@@ -655,19 +656,20 @@ async function syncBookingWithExternal(tenant_id, booking) {
                     });
                 }
 
-                if (!response.ok) {
+                if (!response.ok && !(removed && [404, 410].includes(response.status))) {
                     const errText = await response.text();
                     console.error('[Microsoft Sync Error]', response.status, errText);
                     await query(`UPDATE bookings SET sync_status = 'failed' WHERE id = $1`, [booking.id]);
                     return;
                 }
 
-                if (booking.status !== 'cancelled') {
+                if (!removed) {
                     const data = await response.json();
                     externalEventId = data.id;
                 }
             }
 
+            if (removed) externalEventId = null;
             await query(`
                 UPDATE bookings 
                 SET sync_status = 'synced', calendar_event_id = $1

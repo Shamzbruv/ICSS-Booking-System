@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+  <meta name="robots" content="noindex, nofollow">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>ICSS Admin — Invoices</title>
+    <link rel="icon" type="image/png" href="./favicon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700,900&f[]=clash-display@400,500,600,700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/global-theme.css">
+    <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+
+
+
+<!-- Mobile hamburger -->
+<button class="hamburger" id="hamburgerBtn" aria-label="Open menu"><span></span><span></span><span></span></button>
+<div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
+
+<aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+        <div style="display: flex; align-items: center; gap: 10px;">
+              <img src="./favicon.png" alt="ICSS Icon" style="width: 36px; height: 36px; border-radius: 8px; object-fit: contain;">
+              <div style="display: flex; flex-direction: column; justify-content: center;">
+                <span style="font-family: 'Clash Display', sans-serif; font-weight: 700; font-size: 1.2rem; background: linear-gradient(135deg, var(--primary), var(--primary-dim)); -webkit-background-clip: text; background-clip: text; color: transparent; line-height: 1;">ICSS</span>
+                <span style="font-size: 0.45rem; letter-spacing: 1px; color: var(--text-dim); font-weight: 600; line-height: 1; margin-top: 2px;">BOOKING MANAGEMENT</span>
+              </div>
+            </div>
+        <div class="brand-text">
+            <span class="brand-name" id="tenantName">Booking System</span>
+            <span class="brand-plan" id="tenantPlan"></span>
+        </div>
+    </div>
+    <nav class="sidebar-nav">
+        <a href="index.html" class="nav-item"><span class="nav-icon">⬛</span> Dashboard</a>
+        <a href="bookings.html" class="nav-item"><span class="nav-icon">📅</span> Bookings</a>
+        <a href="availability.html" class="nav-item"><span class="nav-icon">🗓️</span> Availability</a>
+        <a href="settings.html" class="nav-item"><span class="nav-icon">⚙️</span> Settings</a>
+        <a href="customize.html" class="nav-item"><span class="nav-icon">🎨</span> Website Builder</a>
+        <a href="services.html" class="nav-item"><span class="nav-icon">📦</span> Services</a>
+    </nav>
+    <div class="sidebar-footer">
+        <div class="user-info">
+            <div class="user-avatar" id="userAvatar">?</div>
+            <div><div class="user-name" id="userName">—</div><div class="user-role" id="userRole">—</div></div>
+        </div>
+        <button class="logout-btn" type="button">Sign Out</button>
+    </div>
+</aside>
+
+<main class="main-content">
+<header class="page-header"><div><h1 class="page-title">Invoices</h1><p class="page-subtitle">Your branding. One consistent, professional invoice for every booking.</p></div></header>
+<div id="invoiceMessage" role="status" style="margin:16px 0"></div>
+<section class="card" style="padding:24px;margin-bottom:24px" id="invoiceDesign">
+<h2>Invoice appearance</h2><p>Invoices include the service, appointment, payment method, verified payments and balance. These fields change the appearance of new invoices; previously issued invoices keep their original details.</p>
+<form id="invoiceSettingsForm">
+<div class="invoice-grid">
+<div class="form-group"><label for="invBusinessName">Business name</label><input id="invBusinessName" name="businessName" maxlength="100" required></div>
+<div class="form-group"><label for="invRegistration">Business / tax registration (optional)</label><input id="invRegistration" name="registration" maxlength="100"></div>
+<div class="form-group"><label for="invPrimary">Primary colour</label><input id="invPrimary" name="primaryColor" type="color"></div>
+<div class="form-group"><label for="invAccent">Accent colour</label><input id="invAccent" name="accentColor" type="color"></div>
+<div class="form-group"><label for="invAddress">Business address</label><input id="invAddress" name="address" maxlength="220"></div>
+<div class="form-group"><label for="invEmail">Contact email</label><input id="invEmail" name="email" type="email" maxlength="120"></div>
+<div class="form-group"><label for="invPhone">Contact phone</label><input id="invPhone" name="phone" maxlength="50"></div>
+<div class="form-group"><label for="invLogo">Invoice logo (PNG or JPG, up to 1 MB)</label><input id="invLogo" type="file" accept="image/png,image/jpeg"><img id="invLogoPreview" alt="Invoice logo preview" style="display:none;max-width:140px;max-height:80px;object-fit:contain;margin:12px 0"><button type="button" class="btn btn-secondary btn-sm" id="invRemoveLogo">Remove logo</button><small>Upload your logo here to embed it in the PDF. The website logo is used automatically when it is a supported uploaded image.</small></div>
+</div>
+<div class="form-group"><label for="invPayment">Payment instructions</label><textarea id="invPayment" name="paymentInstructions" maxlength="500" rows="3" placeholder="Where and how the customer should pay any outstanding balance"></textarea></div>
+<div class="form-group"><label for="invFooter">Thank-you / footer message</label><textarea id="invFooter" name="footer" maxlength="300" rows="2"></textarea></div>
+<div style="display:flex;gap:12px;flex-wrap:wrap"><button class="btn btn-primary" id="invSave" type="submit">Save invoice style</button><button class="btn btn-secondary" id="invPreview" type="button">Download sample PDF</button></div>
+</form></section>
+<section class="card" style="padding:24px"><h2>Booking invoices</h2><p>Invoices are attached to booking emails when a customer email is supplied. Download a copy here for phone customers or your records.</p><div id="invoiceList" aria-live="polite"></div><div style="display:flex;gap:12px;margin-top:18px"><button class="btn btn-secondary" id="invPrevious" type="button">Previous</button><button class="btn btn-secondary" id="invNext" type="button">Next</button></div></section>
+</main>
+<style>.invoice-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 22px}.invoice-grid input{width:100%;min-width:0}.invoice-grid input[type=color]{height:44px}.invoice-row{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:16px 0;border-bottom:1px solid var(--border)}.invoice-row p{margin:4px 0;color:var(--text-dim)}@media(max-width:640px){.invoice-grid{grid-template-columns:1fr}.invoice-row{align-items:flex-start;flex-direction:column}}</style>
+<script src="js/admin.js"></script><script src="js/invoices.js"></script>
+</body></html>

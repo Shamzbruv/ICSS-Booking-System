@@ -14,17 +14,31 @@ while (future.getUTCDay() === 0) future.setUTCDate(future.getUTCDate() + 1);
 const date = future.toISOString().slice(0, 10);
 let state;
 function reset() {
-    state = { blocks: [], conflicts: [], dailyCount: 0, records: [], payments: [], audits: [],
+    state = { blocks: [], conflicts: [], dailyCount: 0, records: [], payments: [], invoices: [], audits: [], syncs: [], notices: [],
         service: { id: serviceId, name: 'Service', active: true, duration_minutes: 60, buffer_time_minutes: 0, price: 5000, currency: 'JMD', payment_mode: 'tenant_default', payment_requirement_type: 'none' } };
 }
 async function fakeQuery(sql, values = []) {
     if (sql.includes('FROM impersonation_sessions')) return { rows: [{ id: 'session', mode: 'read_only' }] };
+    if (sql.includes('FROM booking_invoices')) return { rows: state.invoices.filter(i => i.booking_id === values[0] && i.tenant_id === values[1]) };
+    if (sql.includes('INSERT INTO booking_invoices')) { const invoice = { id: '1', tenant_id: values[0], booking_id: values[1], snapshot: JSON.parse(values[2]), created_at: new Date() }; state.invoices.push(invoice); return { rows: [invoice] }; }
     if (sql.includes('FROM services')) return { rows: values[0] === serviceId ? [state.service] : [] };
     if (sql.includes('FROM unavailable_slots')) return { rows: state.blocks };
     if (sql.includes('FROM tenants')) return { rows: [{ id: tenantId }] };
     if (sql.includes('make_timestamptz')) return { rows: [{ st: `${date}T14:00:00Z`, et: `${date}T15:00:00Z` }] };
     if (sql.includes('COUNT(*)')) return { rows: [{ count: state.dailyCount }] };
+    if (sql.includes('FROM bookings') && sql.includes('WHERE id = $1')) return { rows: state.records.filter(b => b.id === values[0] && b.tenant_id === values[1]) };
     if (sql.includes('FROM bookings')) return { rows: state.conflicts };
+    if (sql.includes('UPDATE booking_payments')) {
+        const target = sql.includes("status = 'failed'") ? 'failed' : sql.includes("status = 'paid'") ? 'paid' : values[0];
+        for (const payment of state.payments) if (!sql.includes("status = 'pending'") || payment.status === 'pending') payment.status = target;
+        return { rows: [] };
+    }
+    if (sql.includes('UPDATE bookings')) {
+        const fixed = sql.includes("status = 'cancelled'");
+        const booking = state.records.find(b => b.id === values[fixed ? 0 : 1]);
+        booking.status = fixed ? 'cancelled' : values[0];
+        return { rows: [{ ...booking }] };
+    }
     if (sql.includes('INSERT INTO bookings')) {
         const booking = { id: bookingId, tenant_id: values[0], name: values[2], email: values[3], phone: values[4], booking_date: values[5], booking_time: values[6], status: values[11], payment_mode: values[12], booking_source: values[21], created_by_user_id: values[22], terms_acceptance_method: values[23] };
         state.records.push(booking); return { rows: [booking] };
@@ -36,9 +50,9 @@ async function fakeQuery(sql, values = []) {
 db.query = fakeQuery;
 db.transaction = async callback => callback({ query: fakeQuery });
 function stub(modulePath, exports) { const id = require.resolve(modulePath); require.cache[id] = { id, filename: id, loaded: true, exports }; }
-stub('../server/services/email', { sendBookingCancellationEmail: async () => {}, sendBookingPendingReviewEmail: async () => {}, sendBookingCompletedEmail: async () => {} });
-stub('../server/services/bookingNotifications', { sendBookingConfirmationNotifications: async () => {} });
-stub('../server/services/calendarSync', { syncBookingWithExternal: async () => {} });
+stub('../server/services/email', { sendBookingCancellationEmail: async () => { state.notices.push('cancelled'); }, sendBookingPendingReviewEmail: async () => {}, sendBookingCompletedEmail: async () => {} });
+stub('../server/services/bookingNotifications', { sendBookingConfirmationNotifications: async () => { state.notices.push('confirmed'); } });
+stub('../server/services/calendarSync', { syncBookingWithExternal: async (tenant, booking) => { state.syncs.push(booking.status); } });
 const { signToken } = require('../server/middleware/auth');
 const app = express(); app.use(express.json());
 app.use((req, res, next) => { req.tenant = { id: tenantId, slug: 'mine', branding: { timezone: 'America/Jamaica' }, default_payment_mode: 'none', manual_payment_enabled: true, business_hours: state.hours }; next(); });
@@ -64,6 +78,8 @@ test('staff can record a phone booking without inventing a customer email, with 
     assert.equal(result.data.booking.created_by_user_id, userId);
     assert.equal(result.data.booking.terms_acceptance_method, 'verbal');
     assert.equal(state.audits.length, 1);
+    assert.equal(state.invoices.length, 1);
+    assert.equal(state.invoices[0].snapshot.service, 'Service');
 });
 
 test('assisted booking rejects anonymous, customer, foreign-tenant and read-only callers', async () => {
@@ -140,4 +156,58 @@ test('availability returns customer-facing day and overlapping slot reasons with
     assert.equal(data.slots.find(slot => slot.time === '11:00').available, true);
     assert.equal(JSON.stringify(data).includes('Phone customer'), false);
     assert.equal(publicAvailability({ slots: [{ time: '09:00', available: false, reason: 'BOOKED' }] }).slots[0].message, 'Already booked.');
+});
+
+
+async function patchStatus(status, auth = token()) {
+    const response = await fetch(`${base}/bookings/${bookingId}/status`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${auth}` }, body: JSON.stringify({ status }) });
+    return { status: response.status, data: await response.json() };
+}
+function existingBooking(paymentMode = 'in_person', status = 'pending_payment') {
+    state.records = [{ id: bookingId, tenant_id: tenantId, status, payment_mode: paymentMode }];
+    state.payments = [{ status: 'pending' }, { status: 'paid' }];
+}
+test('cancellation and rejection settle pending payments while preserving paid records', async () => {
+    for (const mode of ['in_person', 'manual', 'paypal']) {
+        for (const action of ['cancel', 'cancelled', 'rejected']) {
+            reset(); existingBooking(mode, mode === 'manual' ? 'pending_manual_confirmation' : 'pending_payment');
+            const result = action === 'cancel' ? await post({}, token(), `/bookings/${bookingId}/cancel`) : await patchStatus(action);
+            assert.equal(result.status, 200, `${mode} ${action}`);
+            assert.deepEqual(state.payments.map(p => p.status), ['failed', 'paid']);
+            assert.deepEqual(state.syncs, [action === 'cancel' ? 'cancelled' : action]);
+        }
+    }
+});
+test('status changes cannot revive cancelled or rejected reservations, or complete unpaid bookings', async () => {
+    for (const status of ['cancelled', 'rejected']) {
+        existingBooking('in_person', status);
+        assert.equal((await patchStatus('confirmed')).status, 409);
+        assert.equal(state.records[0].status, status);
+    }
+    existingBooking();
+    assert.equal((await patchStatus('completed')).status, 409);
+    assert.equal((await patchStatus('no_show')).status, 409);
+});
+test('repeated status requests do not resend confirmation or cancellation notifications', async () => {
+    existingBooking('none', 'confirmed');
+    assert.equal((await patchStatus('confirmed')).status, 200);
+    assert.equal(state.notices.length, 0);
+    assert.equal(state.syncs.length, 0);
+});
+test('cancellation rejects foreign tenants and missing bookings without payment changes', async () => {
+    existingBooking();
+    assert.equal((await post({}, token({ tenant_id: serviceId }), `/bookings/${bookingId}/cancel`)).status, 403);
+    assert.equal((await post({}, token(), `/bookings/${serviceId}/cancel`)).status, 404);
+    assert.deepEqual(state.payments.map(p => p.status), ['pending', 'paid']);
+});
+
+test('after-hours payment approvals settle pending payments without rewriting historical outcomes', async () => {
+    for (const mode of ['in_person', 'paypal', 'manual']) {
+        reset(); existingBooking(mode, 'pending_after_hours_confirmation');
+        state.payments.push({ status: 'failed' });
+        assert.equal((await patchStatus('confirmed')).status, 200);
+        assert.deepEqual(state.payments.map(p => p.status), ['paid', 'paid', 'failed']);
+        assert.equal(state.records[0].status, 'confirmed');
+        assert.deepEqual(state.syncs, ['confirmed']);
+    }
 });

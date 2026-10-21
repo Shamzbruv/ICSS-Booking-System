@@ -12,6 +12,8 @@
 
 const { Resend } = require('resend');
 const { query } = require('../db/connection');
+const { bookingInvoiceAttachment } = require('./bookingInvoices');
+const { reviewUrl } = require('./bookingReviews');
 
 function getResend() {
     const key = process.env.RESEND_API_KEY;
@@ -415,7 +417,7 @@ async function sendBookingConfirmation(booking, tenant) {
     const displayTime = formatTime(typeof booking.booking_time === 'string'
         ? booking.booking_time.slice(0, 5)
         : String(booking.booking_time));
-    const firstName = (booking.name || '').split(' ')[0];
+    const firstName = escapeHtml((booking.name || '').split(' ')[0]);
     const customerEmail = (booking.email || '').toLowerCase().trim();
     const tenantRecipients = (await getTenantNotificationRecipients(tenant))
         .filter((recipient) => recipient !== customerEmail);
@@ -428,6 +430,7 @@ async function sendBookingConfirmation(booking, tenant) {
     });
 
     if (!customerEmail && tenantRecipients.length === 0) return;
+    const invoiceAttachment = await bookingInvoiceAttachment(booking, tenant);
     await resend.emails.send({
         from:    getSenderAddress('appointments', brand),
         to:      customerEmail ? [customerEmail] : tenantRecipients,
@@ -460,6 +463,7 @@ async function sendBookingConfirmation(booking, tenant) {
                         An <strong>.ics</strong> calendar file is attached to this email for Apple Calendar, Outlook, and other calendar apps.
                     </p>` : ''}
                 </div>` : ''}
+                <p style="font-size:14px;color:#555;line-height:1.7;">Your invoice is attached, with your service details, verified payments and remaining balance.</p>
                 <p style="font-size:14px;color:#555;line-height:1.7;">If you need to reschedule or cancel, please reply to this email or contact us directly.</p>
                 <div style="text-align:center;margin:32px 0;">
                     <a href="${brand.bookingUrl}" style="background:${brand.primaryColor};color:#050505;padding:13px 30px;text-decoration:none;font-weight:bold;font-size:13px;letter-spacing:1px;text-transform:uppercase;border-radius:3px;display:inline-block;">Visit Our Website</a>
@@ -468,7 +472,7 @@ async function sendBookingConfirmation(booking, tenant) {
             </div>
             ${footerHtml(brand)}
         </div>`,
-        attachments: icsAttachment ? [icsAttachment] : undefined
+        attachments: [invoiceAttachment, ...(icsAttachment ? [icsAttachment] : [])]
     });
 
     console.log(`[Email] Booking confirmation sent to ${booking.email}`);
@@ -489,11 +493,13 @@ async function sendBookingPendingReviewEmail(booking, tenant) {
     const displayTime = formatTime(typeof booking.booking_time === 'string'
         ? booking.booking_time.slice(0, 5)
         : String(booking.booking_time));
-    const firstName = (booking.name || '').split(' ')[0] || 'there';
+    const firstName = escapeHtml((booking.name || '').split(' ')[0] || 'there');
     const customerEmail = (booking.email || '').toLowerCase().trim();
     const tenantRecipients = (await getTenantNotificationRecipients(tenant))
         .filter((recipient) => recipient !== customerEmail);
     const receiptAttachment = await getBookingReceiptAttachment(booking);
+    const invoiceAttachment = await bookingInvoiceAttachment(booking, tenant);
+    const pendingPayment = booking.status === 'pending_payment';
     const isAfterHours = booking.status === 'pending_after_hours_confirmation' || booking.is_after_hours_request;
     const feeText = `${booking.currency || 'JMD'} ${Number(booking.after_hours_fee || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
 
@@ -502,13 +508,13 @@ async function sendBookingPendingReviewEmail(booking, tenant) {
         to:      customerEmail ? [customerEmail] : tenantRecipients,
         cc:      customerEmail && tenantRecipients.length > 0 ? tenantRecipients : undefined,
         replyTo: brand.replyEmail,
-        subject: `${isAfterHours ? 'After-hours Request' : 'Booking Received'} — Pending Review · ${brand.name}`,
+        subject: `${isAfterHours ? 'After-hours Request' : 'Booking Received'} — ${pendingPayment ? 'Awaiting Payment' : 'Pending Review'} · ${brand.name}`,
         html: `
         <div style="font-family:Arial,sans-serif;color:#1a1a1a;max-width:600px;margin:0 auto;border:1px solid #e8e8e8;">
             ${headerHtml(brand)}
             <div style="padding:40px 36px;background:#fff;">
                 <p style="font-size:15px;">Dear ${firstName},</p>
-                <p style="font-size:15px;line-height:1.7;">${isAfterHours ? 'We received your requested time. It is outside regular business hours and must be approved by the business before it becomes a confirmed booking.' : 'We received your booking request and your payment proof has been submitted for review.'}</p>
+                <p style="font-size:15px;line-height:1.7;">${isAfterHours ? 'We received your requested time. It is outside regular business hours and must be approved by the business before it becomes a confirmed booking.' : pendingPayment ? 'We received your booking. It is awaiting payment verification by the business. Please arrange payment using the method selected when booking.' : 'We received your booking request and your payment proof has been submitted for review.'}</p>
                 <div style="background:#f9f9f9;border-left:4px solid ${brand.primaryColor};padding:18px 22px;margin:24px 0;border-radius:2px;">
                     <p style="margin:0 0 4px;font-size:13px;text-transform:uppercase;letter-spacing:1.5px;color:#86868B;">Booking Details</p>
                     ${serviceName ? `<p style="margin:6px 0;font-size:15px;"><strong>Service:</strong> ${serviceName}</p>` : ''}
@@ -516,11 +522,12 @@ async function sendBookingPendingReviewEmail(booking, tenant) {
                     <p style="margin:6px 0;font-size:15px;"><strong>Time:</strong> ${displayTime}</p>
                     ${isAfterHours ? `<p style="margin:6px 0;font-size:15px;"><strong>Additional after-hours cost:</strong> ${feeText}</p>` : ''}
                 </div>
-                <p style="font-size:14px;color:#555;line-height:1.7;">${isAfterHours ? 'The business will confirm or decline the requested time. No appointment is confirmed yet.' : 'We will confirm the booking as soon as the receipt is approved.'} A copy of this email has also been sent to the business team.</p>
+                <p style="font-size:14px;color:#555;line-height:1.7;">${isAfterHours ? 'The business will confirm or decline the requested time. No appointment is confirmed yet.' : pendingPayment ? 'The business will confirm your appointment once payment has been verified.' : 'We will confirm the booking as soon as the receipt is approved.'} Your invoice is attached. It shows verified payments separately from the outstanding balance.</p>
                 <p style="font-size:14px;color:#333;margin-top:28px;">Warm regards,<br><strong>${brand.name} Team</strong></p>
             </div>
             ${footerHtml(brand)}
-        </div>`
+        </div>`,
+        attachments: [invoiceAttachment]
     });
 
     if (tenantRecipients.length > 0) {
@@ -528,17 +535,17 @@ async function sendBookingPendingReviewEmail(booking, tenant) {
             from:    getSenderAddress('appointments', brand),
             to:      tenantRecipients,
             replyTo: brand.replyEmail,
-            subject: `${isAfterHours ? 'After-hours Request Review Needed' : 'Receipt Review Needed'} — ${brand.name}`,
+            subject: `${isAfterHours ? 'After-hours Request Review Needed' : pendingPayment ? 'Booking Awaiting Payment' : 'Receipt Review Needed'} — ${brand.name}`,
             html: `
             <div style="font-family:Arial,sans-serif;color:#1a1a1a;max-width:600px;margin:0 auto;border:1px solid #e8e8e8;">
                 ${headerHtml(brand)}
                 <div style="padding:40px 36px;background:#fff;">
-                    <h3 style="margin-top:0;">${isAfterHours ? 'After-hours request review required' : 'Manual transfer review required'}</h3>
-                    <p style="font-size:15px;line-height:1.7;">${isAfterHours ? 'A client requested a time outside your regular business hours.' : 'A client submitted a bank transfer receipt for review.'}</p>
+                    <h3 style="margin-top:0;">${isAfterHours ? 'After-hours request review required' : pendingPayment ? 'Payment verification required' : 'Manual transfer review required'}</h3>
+                    <p style="font-size:15px;line-height:1.7;">${isAfterHours ? 'A client requested a time outside your regular business hours.' : pendingPayment ? 'A booking is awaiting payment. Verify funds received before confirming it.' : 'A client submitted a bank transfer receipt for review.'}</p>
                     <div style="background:#f9f9f9;border-left:4px solid ${brand.primaryColor};padding:18px 22px;margin:24px 0;border-radius:2px;">
-                        <p style="margin:6px 0;font-size:15px;"><strong>Client:</strong> ${booking.name || 'Unknown client'}</p>
-                        <p style="margin:6px 0;font-size:15px;"><strong>Email:</strong> ${booking.email || '—'}</p>
-                        <p style="margin:6px 0;font-size:15px;"><strong>Phone:</strong> ${booking.phone || '—'}</p>
+                        <p style="margin:6px 0;font-size:15px;"><strong>Client:</strong> ${escapeHtml(booking.name || 'Unknown client')}</p>
+                        <p style="margin:6px 0;font-size:15px;"><strong>Email:</strong> ${escapeHtml(booking.email || '—')}</p>
+                        <p style="margin:6px 0;font-size:15px;"><strong>Phone:</strong> ${escapeHtml(booking.phone || '—')}</p>
                         ${serviceName ? `<p style="margin:6px 0;font-size:15px;"><strong>Service:</strong> ${serviceName}</p>` : ''}
                         <p style="margin:6px 0;font-size:15px;"><strong>Date:</strong> ${displayDate}</p>
                         <p style="margin:6px 0;font-size:15px;"><strong>Time:</strong> ${displayTime}</p>
@@ -549,12 +556,12 @@ async function sendBookingPendingReviewEmail(booking, tenant) {
                             ? (['manual', 'lynk'].includes(booking.payment_mode)
                                 ? (receiptAttachment ? 'The uploaded transfer receipt is attached. Review the receipt and requested time before approving or declining.' : 'No receipt attachment could be recovered. Do not approve this request until payment proof is verified.')
                                 : 'Open the Bookings page to approve or decline this request.')
-                            : (receiptAttachment ? 'The uploaded transfer receipt is attached to this email for review.' : 'No receipt attachment could be recovered from the booking record.')}
+                            : pendingPayment ? 'Verify payment on the Bookings page when the funds are received.' : (receiptAttachment ? 'The uploaded transfer receipt is attached to this email for review.' : 'No receipt attachment could be recovered from the booking record.')}
                     </p>
                 </div>
                 ${footerHtml(brand)}
             </div>`,
-            attachments: receiptAttachment ? [receiptAttachment] : undefined
+            attachments: [invoiceAttachment, ...(receiptAttachment ? [receiptAttachment] : [])]
         });
     }
 
@@ -574,7 +581,7 @@ async function sendBookingCancellationEmail(booking, reason, tenant) {
     const displayTime = formatTime(typeof booking.booking_time === 'string'
         ? booking.booking_time.slice(0, 5)
         : String(booking.booking_time));
-    const firstName   = (booking.name || '').split(' ')[0] || 'Valued Client';
+    const firstName   = escapeHtml((booking.name || '').split(' ')[0] || 'Valued Client');
     const customerEmail = (booking.email || '').toLowerCase().trim();
     const tenantRecipients = (await getTenantNotificationRecipients(tenant))
         .filter((recipient) => recipient !== customerEmail);
@@ -623,6 +630,8 @@ async function sendBookingCompletedEmail(booking, tenant) {
     const displayDate = formatDate(booking.booking_date);
     const displayTime = formatTime(String(booking.booking_time || '').slice(0, 5));
 
+    const invoiceAttachment = await bookingInvoiceAttachment(booking, tenant);
+    const feedbackUrl = reviewUrl(booking, tenant);
     await resend.emails.send({
         from: getSenderAddress('appointments', brand),
         to: [booking.email],
@@ -639,9 +648,13 @@ async function sendBookingCompletedEmail(booking, tenant) {
                     <p style="margin:6px 0;"><strong>Date:</strong> ${escapeHtml(displayDate)}</p>
                     <p style="margin:6px 0;"><strong>Time:</strong> ${escapeHtml(displayTime)}</p>
                 </div>
+                <p>Your updated invoice is attached. How was your experience?</p>
+                <p><a href="${escapeHtml(feedbackUrl)}" style="display:inline-block;padding:12px 18px;background:${brand.primaryColor};color:#ffffff;text-decoration:none;border-radius:6px;">Rate your visit and leave a review</a></p>
+                <p style="font-size:12px;color:#555;">Your rating and comment will be public with your first name and last initial. Keep this personal review link private. It is valid for 180 days.</p>
                 <p style="font-size:14px;color:#555;line-height:1.7;">If anything about this booking needs attention, reply to this email and the business will assist you.</p>
             </div>${footerHtml(brand)}
-        </div>`
+        </div>`,
+        attachments: [invoiceAttachment]
     });
     console.log(`[Email] Booking completion sent to ${booking.email}`);
     return true;

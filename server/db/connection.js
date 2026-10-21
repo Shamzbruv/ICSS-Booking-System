@@ -819,6 +819,23 @@ async function runMigrations(client) {
     await client.query(`CREATE INDEX IF NOT EXISTS idx_prt_user ON password_reset_tokens(user_id)`);
     await client.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_prt_token_hash ON password_reset_tokens(token_hash)`);
 
+    // Tenant booking invoices retain the original service and business identity.
+    await client.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS invoice_settings JSONB NOT NULL DEFAULT '{}'`);
+    await client.query(`CREATE TABLE IF NOT EXISTS booking_invoices (
+        id BIGSERIAL PRIMARY KEY,tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+        booking_id UUID NOT NULL UNIQUE REFERENCES bookings(id) ON DELETE CASCADE,
+        snapshot JSONB NOT NULL,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_booking_invoices_tenant ON booking_invoices(tenant_id,id DESC)`);
+    await client.query(`CREATE TABLE IF NOT EXISTS booking_reviews (
+        id BIGSERIAL PRIMARY KEY,tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+        booking_id UUID NOT NULL UNIQUE REFERENCES bookings(id) ON DELETE CASCADE,
+        display_name TEXT NOT NULL,rating SMALLINT NOT NULL CHECK(rating BETWEEN 1 AND 5),
+        comment TEXT NOT NULL CHECK(char_length(comment) BETWEEN 1 AND 1200),
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_booking_reviews_tenant ON booking_reviews(tenant_id,id DESC)`);
+
     // ── Subscription Invoices ────────────────────────────────────────────────
     // Tracks every subscription invoice dispatched by the platform.
     // UNIQUE(provider, provider_event_id) acts as a hard DB-level idempotency guard.

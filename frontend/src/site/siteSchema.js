@@ -382,6 +382,15 @@ export function resolveSite(tenant, preset, saved) {
   const base = deepMerge(inherited, { ...presetSite, pages: undefined });
   const merged = deepMerge(base, saved ? { ...saved, pages: undefined } : {});
 
+  // Before booking appearance moved into the builder, empty fields were
+  // placeholders for tenant branding. A booking section marks the new format,
+  // where clearing a field is an intentional removal.
+  if (saved && !Object.prototype.hasOwnProperty.call(saved, 'booking')) {
+    if (!saved.brand?.logoUrl) merged.brand.logoUrl = legacy.logoUrl || merged.brand.logoUrl;
+    if (!saved.brand?.tagline) merged.brand.tagline = legacy.bookingTagline || merged.brand.tagline;
+    if (!saved.contact?.address) merged.contact.address = legacy.location || merged.contact.address;
+  }
+
   const presetPages = presetSite.pages || [];
   const sourcePages = saved?.pages?.length ? saved.pages : presetPages;
   const pages = PAGE_IDS.map((id) => {

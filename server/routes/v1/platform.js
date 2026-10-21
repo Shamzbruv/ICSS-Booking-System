@@ -601,8 +601,10 @@ router.get('/payments', async (req, res) => {
 // GET /api/v1/platform/build-info
 router.get('/build-info', async (req, res) => {
     const { execSync } = require('child_process');
-    let gitRef = 'unknown';
-    try { gitRef = execSync('git rev-parse --short HEAD', { timeout: 2000 }).toString().trim(); } catch {}
+    let gitRef = (process.env.RAILWAY_GIT_COMMIT_SHA || process.env.GITHUB_SHA || '').slice(0, 7) || 'unknown';
+    if (gitRef === 'unknown') {
+        try { gitRef = execSync('git rev-parse --short HEAD', { timeout: 2000, stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim(); } catch {}
+    }
 
     const dbHealthy = await query('SELECT 1').then(() => true).catch(() => false);
 

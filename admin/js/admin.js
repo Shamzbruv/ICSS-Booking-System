@@ -678,6 +678,14 @@ document.addEventListener('DOMContentLoaded', () => {
         button.addEventListener('click', logout);
     });
     setupMobileNav();
+    const invoiceNav = document.querySelector('.sidebar-nav');
+    if (invoiceNav && getToken() && ['tenant_admin', 'staff'].includes(getUser()?.role) && !invoiceNav.querySelector('[href="invoices.html"]')) {
+        const link = document.createElement('a');
+        link.href = 'invoices.html';
+        link.className = 'nav-item' + (location.pathname.endsWith('/invoices.html') ? ' active' : '');
+        link.textContent = 'Invoices';
+        invoiceNav.appendChild(link);
+    }
     ensureHelpMenuEntry();
     if (getToken() && document.querySelector('.sidebar-nav')) {
         ensureSupportModal();

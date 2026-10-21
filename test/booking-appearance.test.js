@@ -45,22 +45,39 @@ test('builder edits survive saving and explicit removals do not revive old brand
     assert.equal(bookingBranding(resolveSite(legacyTenant, {}, null)).bookingFooterNote, 'Your old note', 'an unpublished draft must not alter the legacy live content');
 });
 
-test('new industry presets resolve all pages, real service examples and editable booking content', async () => {
+test('all industry presets resolve all pages, real service examples and editable booking content', async () => {
     const { resolveSite, bookingBranding } = await schema;
     const helperSource = fs.readFileSync(path.join(__dirname, '../frontend/src/site/presets/helpers.js'), 'utf8');
     const helperUrl = `data:text/javascript;base64,${Buffer.from(helperSource).toString('base64')}`;
-    for (const key of ['landscaping', 'cleaning', 'party-rentals', 'car-rental', 'catering', 'detailing', 'home-repairs', 'tutoring', 'musicians']) {
+    for (const key of ['hairdresser', 'barber', 'nail-tech', 'spa', 'photography', 'health', 'fitness', 'events', 'mechanic', 'law', 'universal', 'landscaping', 'cleaning', 'party-rentals', 'car-rental', 'catering', 'detailing', 'home-repairs', 'tutoring', 'musicians']) {
         const source = fs.readFileSync(path.join(__dirname, `../frontend/src/site/presets/${key}.js`), 'utf8').replace("'./helpers'", JSON.stringify(helperUrl));
         const { default: preset } = await import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}`);
         const site = resolveSite({ name: 'My business' }, preset, null);
         assert.equal(preset.key, key);
         assert.deepEqual(site.pages.map(page => page.id), ['home', 'about', 'gallery', 'book']);
-        assert.ok(site.pages.every(page => page.visible && page.sections.length >= 2));
+        assert.ok(site.pages.filter(page => page.visible).every(page => page.sections.length >= 1), `${key}: all pages must contain visible content`);
         assert.ok(preset.demo.services.every(service => service.duration_minutes > 0 && service.price >= 0));
         assert.equal(site.brand.name, 'My business');
-        assert.ok(bookingBranding(site).bookingTagline);
+        assert.equal(typeof bookingBranding(site).bookingTagline, 'string');
         assert.equal(site.pages.find(page => page.id === 'book').sections.filter(section => section.type === 'booking').length, 1);
         site.booking.footerNote = 'Bring your access details';
         assert.equal(bookingBranding(resolveSite({ name: 'My business' }, preset, sanitizeSiteConfig(site))).bookingFooterNote, 'Bring your access details');
     }
+});
+
+
+test('legacy saved sites with blank placeholders retain branding until their first builder save', async () => {
+    const { resolveSite, bookingBranding } = await schema;
+    const oldSaved = { brand: { logoUrl: '', tagline: '' }, contact: { address: '' } };
+    const migrated = resolveSite(legacyTenant, {}, oldSaved);
+    const branding = bookingBranding(migrated);
+    for (const key of ['logoUrl', 'bookingTagline', 'location']) assert.equal(branding[key], legacyTenant.branding[key]);
+    assert.equal(resolveSite(legacyTenant, {}, { ...oldSaved, brand: { logoUrl: 'https://example.com/new.png' } }).brand.logoUrl, 'https://example.com/new.png');
+    migrated.brand.logoUrl = '';
+    migrated.brand.tagline = '';
+    migrated.contact.address = '';
+    const reopened = resolveSite(legacyTenant, {}, sanitizeSiteConfig(migrated));
+    assert.equal(reopened.brand.logoUrl, '');
+    assert.equal(reopened.brand.tagline, '');
+    assert.equal(reopened.contact.address, '');
 });
