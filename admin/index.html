@@ -104,7 +104,6 @@
                 <input type="date" id="filterEndDate" class="date-input" aria-label="End Date" style="background: transparent; color: var(--text); border: none; font-family: inherit; font-size: 14px; outline: none; color-scheme: light;">
                 <button class="btn btn-primary" id="applyDateFilterBtn" type="button" style="padding: 6px 12px; font-size: 13px; min-height: unset; height: auto;">Apply</button>
             </div>
-            <button class="btn btn-secondary" type="button" id="startTourBtn">✦ Start Tutorial</button>
             <button class="btn btn-secondary" type="button" id="refreshDashboardBtn" data-tour="refresh-button">↻ Refresh</button>
         </div>
     </header>
@@ -161,7 +160,7 @@
     <section class="quick-actions" data-tour="quick-actions">
         <h2 class="section-title" data-tour="quick-actions-title">Quick Actions</h2>
         <div class="action-grid">
-            <button type="button" class="action-card" id="reportIssueBtn" style="text-align:left;border:1px solid var(--border);cursor:pointer;">
+            <button type="button" class="action-card" id="reportIssueBtn" style="text-align:center;border:1px solid var(--border);cursor:pointer;">
                 <div class="action-icon">🧰</div><div class="action-label">Report an Issue</div>
             </button>
             <a href="bookings.html" class="action-card" data-tour="view-all-bookings">
@@ -193,7 +192,6 @@
 </main>
 
 <script src="js/admin.js"></script>
-<script src="js/guidedTour.js"></script>
 <script>
     const DASHBOARD_TOUR_STORAGE_PREFIX = 'icssBookingDashboardTourCompleted';
     let dashboardTour = null;
@@ -331,7 +329,7 @@
     }
 
     function initializeDashboardTour() {
-        if (typeof GuidedTour !== 'function') return;
+        if (!ADMIN_TUTORIAL_ENABLED || typeof GuidedTour !== 'function') return;
 
         const steps = [
             {

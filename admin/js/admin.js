@@ -4,6 +4,8 @@
  */
 
 // ── Config ────────────────────────────────────────────────────────────────────
+// Temporarily paused; retain tutorial code and completion history for later.
+const ADMIN_TUTORIAL_ENABLED = false;
 const API_BASE = '';  // Same-origin; update if API is on a separate domain
 
 // ── Impersonation Token Persistence ──────────────────────────────────────────
@@ -357,10 +359,10 @@ function ensureSupportModal() {
             </div>
 
             <div class="support-callout">
-                <p class="support-callout__title">Reach the developer team or restart the tutorial.</p>
+                <p class="support-callout__title">Reach the developer team for help with your dashboard.</p>
                 <p class="support-callout__copy">Use this space to send a real support request, explain a bug, or ask for help with anything in your booking system.</p>
                 <div class="support-callout__actions">
-                    <button class="btn btn-secondary" type="button" id="supportRestartTourBtn">↺ Start Tutorial Again</button>
+                    ${ADMIN_TUTORIAL_ENABLED ? '<button class="btn btn-secondary" type="button" id="supportRestartTourBtn">↺ Start Tutorial Again</button>' : ''}
                     <a class="btn btn-secondary" id="supportEmailLink" href="${buildSupportMailto(SUPPORT_META_FALLBACK.supportEmail)}">✉ Email Developer</a>
                 </div>
             </div>
@@ -374,7 +376,6 @@ function ensureSupportModal() {
                         <select id="supportCategory" required>
                             <option value="general">General Help</option>
                             <option value="bug">Bug / Something Broken</option>
-                            <option value="tutorial">Tutorial / Onboarding</option>
                             <option value="billing">Billing / Account</option>
                             <option value="feature">Feature Request</option>
                         </select>
@@ -470,6 +471,7 @@ function closeSupportModal() {
 }
 
 function restartDashboardTutorial() {
+    if (!ADMIN_TUTORIAL_ENABLED) return;
     closeSupportModal();
 
     if (window.dashboardTour && typeof window.dashboardTour.start === 'function' && /index\.html$/i.test(window.location.pathname)) {
