@@ -7,20 +7,26 @@
   "start_url": "/admin/index.html",
   "scope": "/admin/",
   "display": "standalone",
-  "background_color": "#f8fafc",
+  "background_color": "#10172d",
   "theme_color": "#7e22ce",
   "icons": [
     {
-      "src": "/admin/icons/app-192.png",
+      "src": "/admin/icons/app-192-v2.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/admin/icons/app-512.png",
+      "src": "/admin/icons/app-512-v2.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/admin/icons/app-maskable-512-v2.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ],
   "shortcuts": [
