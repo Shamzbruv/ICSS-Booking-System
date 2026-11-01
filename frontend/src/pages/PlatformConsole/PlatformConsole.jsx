@@ -18,6 +18,10 @@ import InstallPlatformApp from './InstallPlatformApp';
 import { api } from '../../api';
 import { useNoIndex } from '../../hooks/useNoIndex';
 import s from './PlatformConsole.module.css';
+import '../../../../public/js/mobile-navigation.js';
+import '../../../../public/js/page-help.js';
+import '../../../../public/css/mobile-navigation.css';
+import '../../../../public/css/page-help.css';
 
 
 // ── Login screen ──────────────────────────────────────────────────────────────
@@ -577,6 +581,12 @@ function ConsoleShell() {
   const { platformUser, logout, loading, authError, isImpersonating } = useConsole();
   const [activeView, setActiveView] = useState('dashboard');
   const [navOpen, setNavOpen] = useState(false);
+  const navTriggerRef = useRef(null);
+  const sidebarRef = useRef(null);
+  useEffect(() => {
+    if (!platformUser || loading) return;
+    return window.ICSSMobileNavigation?.({ trigger: navTriggerRef.current, drawer: sidebarRef.current, onOpen: () => setNavOpen(true), onClose: () => setNavOpen(false), breakpoint: 760 });
+  }, [platformUser, loading]);
   const activeLabel = NAV.find(item => item.id === activeView)?.label || 'Platform Console';
 
   if (loading) return <div className={s.fullscreen}><div className={s.spinner} /></div>;
@@ -587,13 +597,13 @@ function ConsoleShell() {
       <ImpersonationBanner />
 
       <header className={s.mobileHeader}>
-        <button type="button" onClick={() => setNavOpen(true)} aria-label="Open navigation" aria-expanded={navOpen}><svg aria-hidden="true" width="20" height="20"><use href="/icons/ui.svg#menu" /></svg></button>
+        <button ref={navTriggerRef} type="button" onClick={() => setNavOpen(true)} aria-label="Open navigation" aria-expanded={navOpen}><svg aria-hidden="true" width="20" height="20"><use href="/icons/ui.svg#menu" /></svg></button>
         <strong>{activeLabel}</strong>
       </header>
       {navOpen && <button type="button" className={s.navBackdrop} aria-label="Close navigation" onClick={() => setNavOpen(false)} />}
 
       {/* Sidebar */}
-      <aside className={`${s.sidebar} ${navOpen ? s.sidebarOpen : ''}`}>
+      <aside ref={sidebarRef} className={`${s.sidebar} ${navOpen ? s.sidebarOpen : ''}`}>
         <div className={s.sidebar__brand}>
           <img className={s.consoleLogo} src="/admin/icons/app-192-v2.png" alt="" />
           <span>Platform Console</span>
@@ -629,6 +639,7 @@ function ConsoleShell() {
 
       {/* Main */}
       <main className={s.main}>
+        <div className={s.pageHelpBar}><button type="button" className="page-help-button" aria-label={`About this page: ${activeLabel}`} title="About this page" onClick={event => window.ICSSPageHelp?.open(`platform:${activeView}`, event.currentTarget)}>?</button></div>
         {VIEW_MAP[activeView]}
       </main>
     </div>

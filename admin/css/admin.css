@@ -2212,3 +2212,15 @@ input:not([type=checkbox]):not([type=radio]):not([type=color]):not([type=file]),
 @media (max-width: 720px) {
     .tour-root.tour-manual .tour-card { inset: auto 12px calc(12px + env(safe-area-inset-bottom)) !important; width: calc(100vw - 24px); max-height: 40dvh; }
 }
+
+/* Appearance belongs to Settings, never to a floating screen control. */
+.appearance-options { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 12px; margin-top: 20px; }
+.appearance-option { display: flex; align-items: center; justify-content: center; gap: 9px; min-height: 48px; padding: 10px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); color: var(--text); font-family: inherit; font-weight: 600; font-size: 12px; line-height: 1.4; }
+.appearance-option[aria-pressed=true] { border-color: var(--primary); background: var(--primary-glow); color: var(--primary); }
+.appearance-swatch { width: 22px; height: 22px; border-radius: 7px; flex-shrink: 0; }
+.appearance-option:disabled { opacity: .6; cursor: wait; }
+.page-header { position: relative; }
+.page-header.has-page-help { padding-right: 46px; }
+.page-header > .page-help-button { position: absolute; right: 0; top: 0; }
+@media (max-width: 900px) { .main-content { padding-bottom: calc(76px + env(safe-area-inset-bottom)); } .hamburger { z-index: 180; } }
+@media (max-width: 540px) { .appearance-options { grid-template-columns: repeat(2,minmax(0,1fr)); } }

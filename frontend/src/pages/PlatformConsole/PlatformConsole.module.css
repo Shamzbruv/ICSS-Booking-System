@@ -751,3 +751,7 @@
 .chartGrid .table td:nth-child(n+2) { white-space: nowrap; font-variant-numeric: tabular-nums; }
 .chartGrid .table td:first-child { min-width: 150px; }
 .mobileHeader button, .logoutBtn { display: inline-flex; align-items: center; justify-content: center; }
+
+.pageHelpBar { display: flex; justify-content: flex-end; padding: 22px 32px 0; }
+.pageHelpBar + .view { padding-top: 8px; }
+@media (max-width:760px) { .pageHelpBar { padding: 14px 16px 0; } .main { padding-bottom: calc(58px + env(safe-area-inset-bottom)); } }

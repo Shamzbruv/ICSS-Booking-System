@@ -25,6 +25,8 @@
     <meta name="apple-mobile-web-app-title" content="ICSS Bookings">
     <link rel="apple-touch-icon" href="/admin/icons/apple-touch-icon-v2.png">
     <script src="/admin/js/pwa.js" defer></script>
+<link rel="stylesheet" href="/css/mobile-navigation.css">
+<link rel="stylesheet" href="/css/page-help.css">
 </head>
 <body class="login-page">
 
@@ -72,7 +74,9 @@
         <p class="login-footer">New to ICSS Bookings? <a href="/onboarding">Start your free trial</a><br /><a href="https://wa.me/18765857469">Need help? Chat with us</a></p>
     </div>
 
-    <script src="js/admin.js"></script>
+    <script src="/js/mobile-navigation.js"></script>
+<script src="/js/page-help.js"></script>
+<script src="js/admin.js"></script>
     <script>
         // If already logged in, redirect to dashboard
         if (getToken()) window.location.href = 'index.html';

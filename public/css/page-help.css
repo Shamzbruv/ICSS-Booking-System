@@ -1,0 +1,14 @@
+.page-help-button { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; min-height: 32px; flex: 0 0 32px; padding: 0; border: 1px solid var(--border,var(--pc-border,#dce1ea)); border-radius: 50%; background: var(--surface,var(--pc-surface,#fff)); color: var(--text-dim,var(--pc-muted,#64748b)); font: 600 14px/1 system-ui,sans-serif; cursor: pointer; }
+.page-help-button:hover, .page-help-button:focus-visible { color: var(--primary,#8b5cf6); border-color: var(--primary,#8b5cf6); outline-offset: 3px; }
+.page-help-dialog { box-sizing: border-box; width: min(620px,calc(100% - 32px)); max-height: min(82dvh,800px); margin: auto; padding: 0 24px 24px; overflow: auto; overscroll-behavior: contain; border: 1px solid var(--border,#343044); border-radius: 20px; background: var(--surface,#111218); color: var(--text,#e4e4f0); font: 14px/1.7 system-ui,sans-serif; box-shadow: 0 24px 80px #0003; }
+.page-help-dialog::backdrop { background: #0f172a66; }
+.page-help-heading { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 20px 0 14px; margin: 0; background: inherit; }
+.page-help-heading h2 { margin: 0; font-size: 22px; line-height: 1.35; }
+.page-help-close { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 40px; min-height: 40px; border: 0; border-radius: 10px; background: transparent; color: inherit; font-size: 26px; cursor: pointer; }
+.page-help-intro { margin: 0 0 20px; color: var(--text-dim,#aaaabd); }
+.page-help-section { border-top: 1px solid var(--border,#343044); padding: 14px 0; }
+.page-help-section summary { font-weight: 650; cursor: pointer; line-height: 1.5; padding: 4px 0; }
+.page-help-section p { margin: 12px 0 0; color: var(--text-dim,#b9b9ca); }
+.page-help-show { min-height: 36px; margin-top: 14px; padding: 6px 12px; border: 1px solid var(--border,#514773); border-radius: 8px; background: transparent; color: var(--primary,#b9adff); font: inherit; font-size: 12px; cursor: pointer; }
+.page-help-highlight { outline: 3px solid var(--primary,#a89cff) !important; outline-offset: 5px; }
+@media (max-width: 640px) { .page-help-dialog { padding-inline: 18px; } .page-help-heading h2 { font-size: 20px; } .page-help-button { min-height: 36px; width: 36px; flex-basis: 36px; } }

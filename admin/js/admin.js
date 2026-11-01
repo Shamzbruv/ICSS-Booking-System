@@ -547,66 +547,33 @@ function applyAdminTheme(theme) {
 }
 
 function renderAdminThemeWidget(activeTheme) {
-    if (document.getElementById('adminThemeFab')) return; // already mounted on this page
-
-    const fab = document.createElement('button');
-    fab.type = 'button';
-    fab.id = 'adminThemeFab';
-    fab.className = 'admin-theme-fab';
-    fab.innerHTML = '<span class="admin-theme-fab-icon">🎨</span> Theme <span class="admin-theme-fab-badge">Test account</span>';
-    fab.setAttribute('aria-haspopup', 'true');
-    fab.setAttribute('aria-expanded', 'false');
-
-    const panel = document.createElement('div');
-    panel.id = 'adminThemePanel';
-    panel.className = 'admin-theme-panel';
-    panel.setAttribute('role', 'menu');
-    panel.innerHTML = `
-        <p class="admin-theme-panel-title">Dashboard theme</p>
-        <div class="admin-theme-options">
-            ${ADMIN_THEMES.map(t => `
-                <button type="button" class="admin-theme-option${t.id === activeTheme ? ' is-active' : ''}" data-theme="${t.id}" role="menuitemradio" aria-checked="${t.id === activeTheme}">
-                    <span class="admin-theme-swatch" style="background:linear-gradient(135deg, ${t.bg}, ${t.accent})"></span>
-                    ${t.label}
-                    <span class="admin-theme-option-check">✓</span>
-                </button>
-            `).join('')}
-        </div>
-    `;
-
-    document.body.appendChild(fab);
-    document.body.appendChild(panel);
-
-    const closePanel = () => { panel.classList.remove('is-open'); fab.setAttribute('aria-expanded', 'false'); };
-    const togglePanel = () => {
-        const willOpen = !panel.classList.contains('is-open');
-        panel.classList.toggle('is-open', willOpen);
-        fab.setAttribute('aria-expanded', String(willOpen));
-    };
-
-    fab.addEventListener('click', (event) => { event.stopPropagation(); togglePanel(); });
-    document.addEventListener('click', (event) => {
-        if (!panel.contains(event.target) && event.target !== fab) closePanel();
+    const host = document.getElementById('adminThemeOptions');
+    const section = document.getElementById('adminAppearanceSection');
+    if (!host || !section || host.children.length) return;
+    section.hidden = false;
+    let savedTheme = activeTheme;
+    const status = document.getElementById('adminAppearanceStatus');
+    const update = theme => host.querySelectorAll('button').forEach(button => {
+        button.setAttribute('aria-pressed', String(button.dataset.theme === theme));
     });
-    document.addEventListener('keydown', (event) => { if (event.key === 'Escape') closePanel(); });
-
-    panel.querySelectorAll('.admin-theme-option').forEach((btn) => {
-        btn.addEventListener('click', async () => {
-            const theme = btn.dataset.theme;
-            applyAdminTheme(theme); // fluid — flips instantly, before the save round-trip
-            panel.querySelectorAll('.admin-theme-option').forEach((opt) => {
-                const isActive = opt === btn;
-                opt.classList.toggle('is-active', isActive);
-                opt.setAttribute('aria-checked', String(isActive));
-            });
-            closePanel();
+    ADMIN_THEMES.forEach(theme => {
+        const button = document.createElement('button');
+        button.type = 'button'; button.className = 'appearance-option'; button.dataset.theme = theme.id;
+        button.innerHTML = `<span class="appearance-swatch" style="background:linear-gradient(135deg, ${theme.bg}, ${theme.accent})" aria-hidden="true"></span><span>${theme.label}</span>`;
+        button.addEventListener('click', async () => {
+            const previous = savedTheme;
+            host.querySelectorAll('button').forEach(item => { item.disabled = true; });
+            applyAdminTheme(theme.id); update(theme.id); status.textContent = 'Saving theme…';
             try {
-                await apiFetch(`/api/v1/tenants/${getTenantSlug()}/admin-theme`, { method: 'PATCH', body: { theme } });
+                await apiFetch(`/api/v1/tenants/${getTenantSlug()}/admin-theme`, { method: 'PATCH', body: { theme: theme.id } });
+                savedTheme = theme.id; status.textContent = 'Theme saved.';
             } catch (error) {
-                showToast(error.message || 'Could not save your theme choice.', 'error');
-            }
+                applyAdminTheme(previous); update(previous); status.textContent = error.message || 'Theme could not be saved. Please try again.';
+            } finally { host.querySelectorAll('button').forEach(item => { item.disabled = false; }); }
         });
+        host.appendChild(button);
     });
+    update(activeTheme);
 }
 
 async function initAdminThemeSwitcher() {
@@ -660,6 +627,7 @@ function setupMobileNav() {
     if (backdrop) {
         backdrop.addEventListener('click', () => closeSidebar());
     }
+    window.ICSSMobileNavigation?.({ trigger: hamburger, drawer: sidebar, onOpen: openSidebar, onClose: closeSidebar, breakpoint: 900 });
 }
 
 window.openSidebar = openSidebar;
@@ -687,6 +655,7 @@ document.addEventListener('DOMContentLoaded', () => {
         ensureSupportModal();
     }
     initAdminThemeSwitcher();
+    window.ICSSPageHelp?.mount(document.querySelector('.page-header'), location.pathname.split('/').pop() || 'index.html');
     document.addEventListener('keydown', (event) => {
         if (event.key === 'Escape' && document.getElementById('supportModal')?.classList.contains('open')) {
             closeSupportModal();

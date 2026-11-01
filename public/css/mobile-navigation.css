@@ -1,0 +1,12 @@
+/* Small, persistent alternative to a floating hamburger; tap or pull up. */
+.nav-menu-grip { position: fixed; bottom: max(6px,env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); z-index: 190; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; width: 72px; min-height: 36px; padding: 6px 12px; border: 1px solid #94a3b833; border-radius: 18px; background: var(--surface,#171923); color: var(--text,#e4e4f0); box-shadow: 0 2px 12px #0000000a; font: 500 10px/1 system-ui,sans-serif; touch-action: none; }
+.nav-menu-grip > span:first-child { width: 24px; height: 3px; border-radius: 3px; background: currentColor; opacity: .45; }
+.nav-drawer-close { display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; margin: 10px 16px 0; min-height: 40px; padding: 8px 10px; border: 0; border-radius: 10px; background: transparent; color: var(--text,var(--pc-text,#e4e4f0)); font: 600 12px/1.4 system-ui,sans-serif; }
+.nav-menu-grip[hidden], .nav-drawer-close[hidden] { display: none !important; }
+.nav-trigger-hidden { transform: translateY(-110px) !important; opacity: 0 !important; pointer-events: none !important; }
+.hamburger, [aria-label="Open navigation"] { transition: transform .18s ease, opacity .18s ease; }
+.nav-menu-grip:focus-visible, .nav-drawer-close:focus-visible { outline: 2px solid #8b5cf6; outline-offset: 3px; }
+@media (prefers-reduced-motion:reduce) { .hamburger, [aria-label="Open navigation"] { transition: none; } }
+
+.nav-menu-grip--builder { left: max(12px,env(safe-area-inset-left)); transform: none; width: 54px; }
+@media (max-width:900px) { body .sb-mobile-switch { left: auto; right: max(12px,env(safe-area-inset-right)); transform: none; } }

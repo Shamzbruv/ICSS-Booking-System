@@ -17,6 +17,8 @@
     <meta name="apple-mobile-web-app-title" content="ICSS Bookings">
     <link rel="apple-touch-icon" href="/admin/icons/apple-touch-icon-v2.png">
     <script src="/admin/js/pwa.js" defer></script>
+<link rel="stylesheet" href="/css/mobile-navigation.css">
+<link rel="stylesheet" href="/css/page-help.css">
 </head>
 <body>
 
@@ -81,5 +83,7 @@
 <section class="card" style="padding:24px"><h2>Booking invoices</h2><p>Invoices are attached to booking emails when a customer email is supplied. Download a copy here for phone customers or your records.</p><div id="invoiceList" aria-live="polite"></div><div style="display:flex;gap:12px;margin-top:18px"><button class="btn btn-secondary" id="invPrevious" type="button">Previous</button><button class="btn btn-secondary" id="invNext" type="button">Next</button></div></section>
 </main>
 <style>.invoice-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 22px}.invoice-grid input{width:100%;min-width:0}.invoice-grid input[type=color]{height:44px}.invoice-row{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:16px 0;border-bottom:1px solid var(--border)}.invoice-row p{margin:4px 0;color:var(--text-dim)}@media(max-width:640px){.invoice-grid{grid-template-columns:1fr}.invoice-row{align-items:flex-start;flex-direction:column}}</style>
+<script src="/js/mobile-navigation.js"></script>
+<script src="/js/page-help.js"></script>
 <script src="js/admin.js"></script><script src="js/invoices.js"></script>
 </body></html>
