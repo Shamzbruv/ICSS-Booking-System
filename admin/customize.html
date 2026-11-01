@@ -70,7 +70,6 @@
       <p class="page-subtitle">Design your Home, About, Gallery and Booking pages. Every change shows in the live preview, and nothing goes live until you press Publish.</p>
     </div>
     <div class="builder-header-actions">
-      <button class="btn btn-secondary" id="builderTourBtn" type="button">? Builder tour</button>
     </div>
   </header>
 
@@ -197,7 +196,13 @@ async function loadThemeLibrary(){
 
 // ── Builder tutorial ────────────────────────────────────────────────────────
 const BUILDER_TOUR_KEY='icssWebsiteBuilderTour:'+slug+':v1';
-const builderTour=typeof GuidedTour==='function'?new GuidedTour({storageKey:BUILDER_TOUR_KEY,steps:[
+const builderTour=typeof GuidedTour==='function'?new GuidedTour({storageKey:BUILDER_TOUR_KEY,beforeStep: (step) => {
+    setView('site');
+    const tabs = {'builder-tab-media':'media','builder-tab-style':'style','builder-tab-music':'music','builder-tab-info':'info','builder-site-mode':'layers','builder-tab-layers':'layers'};
+    const key = Object.keys(tabs).find(key => (step.target || '').includes(key));
+    if (key) { builder.setMobileView('edit'); builder.setTab(tabs[key]); }
+    if ((step.target || '').includes('Preview device')) builder.setMobileView('preview');
+},steps:[
     {title:'Welcome to your Website Builder',message:'Your booking page is now a full website with Home, About, Gallery and Book pages. This quick tour shows you how to make it yours.',placement:'center'},
     {title:'Live preview',message:'The large area on the right is exactly what customers will see. Click any section in it to edit that section, and use these Desktop, Tablet and Phone buttons to check every screen size.',target:'[aria-label="Preview device"]',placement:'bottom',mobileMessage:'Tap "Preview" at the bottom of the screen to see your site exactly as customers will.'},
     {title:'Pages & sections',message:'Each page is listed with its sections in order. Click a photo or text in the live preview to open its exact editing control. Use the arrows to reorder, the eye to hide, and "+ Add section" for galleries, reviews, FAQs and more.',target:'[data-tour="builder-tab-layers"]',placement:'right'},
@@ -208,16 +213,13 @@ const builderTour=typeof GuidedTour==='function'?new GuidedTour({storageKey:BUIL
     {title:'Site info',message:'Add your logo, phone, WhatsApp, address, social links and Google description in Site info.',target:'[data-tour="builder-tab-info"]',placement:'right'},
     {title:'Save, preview, publish',message:'Your changes autosave as a draft. Nothing changes for customers until you press Publish. Discard returns to the live version, and Undo / Redo are always at the top left.',target:'.sb-actions',placement:'bottom'},
     {title:'Booking widget & templates',message:'Use the Booking widget tab to fine-tune the calendar and checkout colours, and the Templates tab to request a fully custom theme.',target:'[data-tour="builder-views"]',placement:'bottom'},
-    {title:'You’re ready',message:'Make it yours, then press Publish. You can replay this tour any time with the "Builder tour" button.',placement:'center'}
+    {title:'You’re ready',message:'Make it yours, then press Publish. You can replay this walkthrough from Settings whenever you need it.',placement:'center'}
 ]}):null;
 function maybeStartBuilderTour(){
-    if(!builderTour)return;
-    const force=new URLSearchParams(location.search).get('tour')==='1';
-    if(!force&&builderTour.isCompleted())return;
-    window.scrollTo(0,0);
-    setTimeout(()=>{if(!builderTour.isOpen)builderTour.start({force,stepIndex:0})},700);
+    if(builderTour && consumeAdminTutorial('builder')) {
+        builderTour.start({manual:true,force:true,stepIndex:0});
+    }
 }
-document.getElementById('builderTourBtn').addEventListener('click',()=>{setView('site');window.scrollTo(0,0);builderTour&&builderTour.start({force:true,stepIndex:0})});
 
 document.getElementById('savePaletteBtn').addEventListener('click',()=>savePalette(true));document.getElementById('resetPaletteBtn').addEventListener('click',resetPalette);document.getElementById('requestThemeBtn').addEventListener('click',requestTheme);previewFrame.addEventListener('load',()=>{if(activeColorKey)setTimeout(()=>highlightPreview(activeColorKey),100)});load();loadThemeLibrary();
 </script>

@@ -74,7 +74,7 @@ export default function TenantDrawer({ tenant, onClose }) {
   };
 
   const handleResetDashboardTour = async () => {
-    if (!confirm('Reset the dashboard tutorial for this tenant? The guided walkthrough will show again on their next dashboard visit.')) return;
+    if (!confirm('Reset the dashboard tutorial for this tenant? This clears completion history. Walkthroughs still start only when selected in Settings.')) return;
     try {
       const res = await api.platform.resetTenantDashboardTour(tenant.id);
       alert(res.message || 'Dashboard tutorial reset.');

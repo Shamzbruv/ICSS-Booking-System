@@ -4,8 +4,8 @@
  */
 
 // ── Config ────────────────────────────────────────────────────────────────────
-// Temporarily paused; retain tutorial code and completion history for later.
-const ADMIN_TUTORIAL_ENABLED = false;
+// Walkthroughs are available only through an explicit action in Settings.
+const ADMIN_TUTORIAL_ENABLED = true;
 const API_BASE = '';  // Same-origin; update if API is on a separate domain
 
 // ── Impersonation Token Persistence ──────────────────────────────────────────
@@ -362,7 +362,7 @@ function ensureSupportModal() {
                 <p class="support-callout__title">Reach the developer team for help with your dashboard.</p>
                 <p class="support-callout__copy">Use this space to send a real support request, explain a bug, or ask for help with anything in your booking system.</p>
                 <div class="support-callout__actions">
-                    ${ADMIN_TUTORIAL_ENABLED ? '<button class="btn btn-secondary" type="button" id="supportRestartTourBtn">↺ Start Tutorial Again</button>' : ''}
+
                     <a class="btn btn-secondary" id="supportEmailLink" href="${buildSupportMailto(SUPPORT_META_FALLBACK.supportEmail)}">✉ Email Developer</a>
                 </div>
             </div>
@@ -470,17 +470,7 @@ function closeSupportModal() {
     modal.setAttribute('aria-hidden', 'true');
 }
 
-function restartDashboardTutorial() {
-    if (!ADMIN_TUTORIAL_ENABLED) return;
-    closeSupportModal();
-
-    if (window.dashboardTour && typeof window.dashboardTour.start === 'function' && /index\.html$/i.test(window.location.pathname)) {
-        window.dashboardTour.start({ force: true, stepIndex: 0 });
-        return;
-    }
-
-    window.location.href = getAdminDashboardHref();
-}
+function restartDashboardTutorial() { requestAdminTutorial('dashboard'); }
 
 async function submitSupportRequest(event) {
     event.preventDefault();
@@ -732,3 +722,26 @@ function polishAdminNavigation() {
     const button = document.getElementById('hamburgerBtn');
     if (button) { button.setAttribute('aria-controls', 'sidebar'); button.setAttribute('aria-expanded', 'false'); }
 }
+
+function requestAdminTutorial(kind) {
+    if (!['dashboard', 'builder'].includes(kind)) return;
+    // Short-lived, one-use intent created only by an explicit Settings action.
+    try { sessionStorage.setItem('icss_manual_tour', JSON.stringify({ kind, at: Date.now() })); }
+    catch { showToast('Please allow session storage to start a walkthrough.', 'error'); return; }
+    const tenant = getTenantSlug();
+    const query = tenant ? '?tenant=' + encodeURIComponent(tenant) : '';
+    location.href = (kind === 'builder' ? 'customize.html' : 'index.html') + query;
+}
+function consumeAdminTutorial(kind) {
+    try {
+        const intent = JSON.parse(sessionStorage.getItem('icss_manual_tour') || 'null');
+        if (!intent || intent.kind !== kind) return false;
+        sessionStorage.removeItem('icss_manual_tour');
+        return Date.now() >= intent.at && Date.now() - intent.at < 60000;
+    } catch { return false; }
+}
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('[data-start-tutorial]').forEach(button => {
+        button.addEventListener('click', () => requestAdminTutorial(button.dataset.startTutorial));
+    });
+});

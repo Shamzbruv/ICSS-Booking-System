@@ -10,6 +10,7 @@
         constructor(options = {}) {
             this.steps = Array.isArray(options.steps) ? options.steps : [];
             this.storageKey = options.storageKey || 'guidedTourCompleted';
+            this.beforeStep = options.beforeStep;
             this.currentStep = 0;
             this.currentTarget = null;
             this.currentState = null;
@@ -86,6 +87,12 @@
         }
 
         start(options = {}) {
+            // Completion resets, first visits and URL flags never grant permission.
+            if (options.manual !== true) return false;
+            this.manualMode = true;
+            this.root.classList.add('tour-manual');
+            this.card.setAttribute('aria-modal', 'false');
+            this.previousPadding = document.body.style.paddingBottom;
             const force = options.force === true;
             const requestedStep = Number.isInteger(options.stepIndex) ? options.stepIndex : 0;
             if (!this.steps.length) return false;
@@ -96,7 +103,7 @@
             this.isOpen = true;
             this.root.hidden = false;
             this.root.classList.add('is-open');
-            document.body.classList.add('tour-open');
+            // Manual guidance leaves the page scrollable and interactive.
             this.attachEvents();
             this.renderCurrentStep();
             // Watchdog: a step must never stay invisible behind the overlay.
@@ -139,6 +146,8 @@
 
         close() {
             this.isOpen = false;
+            document.body.style.paddingBottom = this.previousPadding || '';
+            document.querySelectorAll('.tour-manual-target').forEach(el => el.classList.remove('tour-manual-target'));
             this.isPreparingStep = false;
             this.pendingViewportRefresh = false;
             this.renderToken += 1;
@@ -200,6 +209,7 @@
 
         handleKeydown(event) {
             if (!this.isOpen) return;
+            if (event.key !== 'Escape' && event.target.closest('input,textarea,select,[contenteditable=true]')) return;
             if (event.key === 'Escape') {
                 event.preventDefault();
                 this.skip();
@@ -212,8 +222,12 @@
             }
         }
 
-        handleViewportChange() {
+        handleViewportChange(event) {
             if (!this.isOpen) return;
+            if (this.manualMode) {
+                if (event?.type === 'resize') this.renderManualStep();
+                return;
+            }
 
             // Don't reposition while we are in a mobile peek (Show me) sequence.
             if (this.root.classList.contains('tour-peek-mode')) return;
@@ -234,8 +248,36 @@
             });
         }
 
+        async renderManualStep() {
+            const step = this.steps[this.currentStep];
+            if (!step) { this.finish(); return; }
+            const token = ++this.renderToken;
+            document.querySelectorAll('.tour-manual-target').forEach(el => el.classList.remove('tour-manual-target'));
+            if (typeof this.beforeStep === 'function') await this.beforeStep(step);
+            if (!this.isOpen || token !== this.renderToken) return;
+            this.updateCard(step);
+            this.showButton.hidden = true;
+            this.contextLabelEl.hidden = true;
+            const target = document.querySelector((global.innerWidth <= MOBILE_BREAKPOINT && step.mobileTarget) || step.target || ':not(*)');
+            this.currentTarget = target;
+            this.root.classList.remove('is-preparing');
+            document.body.style.paddingBottom = (this.card.offsetHeight + 48) + 'px';
+            if (target && target.getClientRects().length) {
+                target.classList.add('tour-manual-target');
+                target.scrollIntoView({ behavior: 'instant', block: 'center', inline: 'nearest' });
+                await new Promise(resolve => global.requestAnimationFrame(resolve));
+                if (!this.isOpen || token !== this.renderToken) return;
+                const rect = target.getBoundingClientRect();
+                const cardTop = this.card.getBoundingClientRect().top;
+                const availableCenter = Math.max(90, (cardTop - 24) / 2);
+                global.scrollBy({ top: rect.top + Math.min(rect.height, 120) / 2 - availableCenter, behavior: 'instant' });
+            }
+            this.card.focus({ preventScroll: true });
+        }
+
         async renderCurrentStep() {
             if (!this.isOpen) return;
+            if (this.manualMode) return this.renderManualStep();
 
             const step = this.steps[this.currentStep];
             if (!step) {

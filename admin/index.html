@@ -192,6 +192,7 @@
 </main>
 
 <script src="js/admin.js"></script>
+<script src="js/guidedTour.js"></script>
 <script>
     const DASHBOARD_TOUR_STORAGE_PREFIX = 'icssBookingDashboardTourCompleted';
     let dashboardTour = null;
@@ -458,29 +459,15 @@
         ];
 
         dashboardTour = new GuidedTour({
-            steps,
+            steps: steps.filter(step => !step.target || document.querySelector(step.target)),
             storageKey: buildDashboardTourStorageKey()
         });
 
         window.dashboardTour = dashboardTour;
 
-        const startTourBtn = document.getElementById('startTourBtn');
-        if (startTourBtn) {
-            startTourBtn.addEventListener('click', () => dashboardTour.start({ force: true, stepIndex: 0 }));
+        if (consumeAdminTutorial('dashboard')) {
+            dashboardTour.start({ manual: true, force: true, stepIndex: 0 });
         }
-
-        const params = new URLSearchParams(window.location.search);
-        const forceTour = params.get('tour') === '1';
-        if (forceTour) {
-            params.delete('tour');
-            const nextSearch = params.toString();
-            const nextUrl = `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ''}${window.location.hash}`;
-            window.history.replaceState({}, document.title, nextUrl);
-        }
-
-        window.setTimeout(() => {
-            dashboardTour.start({ force: forceTour, stepIndex: 0 });
-        }, 320);
     }
 </script>
 </body>

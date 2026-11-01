@@ -186,7 +186,7 @@ function TenantsView() {
   };
 
   const quickResetTour = async (tenant) => {
-    if (!window.confirm(`Reset the dashboard tutorial for ${tenant.name}? The walkthrough will show again the next time they open their dashboard.`)) return;
+    if (!window.confirm(`Reset the dashboard tutorial for ${tenant.name}? This clears completion history. Walkthroughs still start only when selected in Settings.`)) return;
     try {
       const res = await api.platform.resetTenantDashboardTour(tenant.id);
       alert(res.message || 'Dashboard tutorial reset.');
