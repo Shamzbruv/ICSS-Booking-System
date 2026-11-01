@@ -650,3 +650,104 @@
   .shell { height: 100dvh; }
   .sidebar__footer { padding-bottom: max(16px, env(safe-area-inset-bottom)); }
 }
+
+/* Responsive console workspace. These rules follow the desktop foundations. */
+.shell, .shell *, .loginPage, .loginPage * { box-sizing: border-box; }
+.shell { height: 100dvh; }
+.main, .view, .section, .chartGrid, .metricGrid { min-width: 0; }
+.main { height: 100dvh; }
+.view { width: 100%; max-width: 1640px; margin-inline: auto; padding: 32px; }
+.view__header { flex-wrap: wrap; }
+.view__title { line-height: 1.35; letter-spacing: -.025em; }
+.chartHint { color: #aaaabd; line-height: 1.6; }
+.consoleLogo { width: 34px; height: 34px; border-radius: 10px; }
+.sidebar { height: 100dvh; }
+.sidebar__brand, .sidebar__footer { flex-shrink: 0; }
+.sidebar__nav { min-height: 0; }
+.navItem { min-height: 44px; padding-block: 10px; flex-shrink: 0; }
+.navItem__icon { display: inline-flex; width: 22px; flex: 0 0 22px; align-items: center; justify-content: center; }
+.navItem { color: #a4a4b5; }
+.sidebar__user > div:last-child { min-width: 0; }
+.logoutBtn { min-width: 40px; min-height: 40px; text-align: center; }
+.searchInput { max-width: 100%; }
+.tableWrap { max-width: 100%; overscroll-behavior-x: contain; }
+.tableWrap .table { display: table; min-width: 480px; }
+.chartGrid .table { min-width: 360px; }
+.chartGrid > .section { border: 1px solid var(--pc-border); background: var(--pc-surface); border-radius: 18px; padding: 22px; margin: 0; }
+.chartGrid .section__title { text-transform: none; letter-spacing: -.01em; color: var(--pc-text); font-size: 15px; line-height: 1.5; margin-bottom: 12px; }
+.chartGrid { align-items: stretch; gap: 20px; }
+.metricCard { min-width: 0; min-height: 132px; border-color: var(--pc-border); border-radius: 16px; padding: 20px; gap: 12px; }
+.metricCard span { font-size: 11px; line-height: 1.6; color: #aaaabd; }
+.metricCard strong { font-size: clamp(20px, 2vw, 28px); line-height: 1.2; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.metricCard small { display: none; }
+.metricCard:hover, .metricCard:focus-visible { transform: none; box-shadow: none; }
+.metricCard:focus-visible, .navItem:focus-visible, .chartScroller:focus-visible, .legend:focus-visible, .tableWrap:focus-visible { outline: 2px solid #a89cff; outline-offset: 3px; }
+.chartSelection { margin: 16px 0 0; align-items: flex-start; padding: 14px; gap: 10px; }
+.metricGrid + .chartSelection { margin: 0 0 20px; }
+.chartSelection div { min-width: 0; display: grid; gap: 5px; }
+.chartSelection strong { font-size: 13px; line-height: 1.5; text-transform: capitalize; }
+.chartSelection span { line-height: 1.6; overflow-wrap: anywhere; }
+.chartSelection button { flex: 0 0 36px; min-height: 36px; }
+.chartScroller { max-width: 100%; overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; scrollbar-width: thin; scrollbar-color: #514773 transparent; border-radius: 8px; }
+.barChart { height: 240px; min-width: 552px; gap: 0; padding: 24px 6px 8px; }
+.barItem { min-width: 44px; flex: 1 0 44px; padding: 0 2px; gap: 10px; }
+.barTrack { height: 168px; width: 100%; display: flex; justify-content: center; align-items: flex-end; border-bottom: 1px solid var(--pc-border); background: repeating-linear-gradient(to top, transparent 0, transparent 41px, #ffffff06 41px, #ffffff06 42px); }
+.bar { display: block; width: 24px; min-height: 3px; border-radius: 5px 5px 0 0; box-shadow: none; }
+.barItem > .monthLabel { font-size: 10px; line-height: 1.4; color: #b2b2c3; white-space: nowrap; }
+.chartTooltip { bottom: 48px; max-width: 180px; white-space: normal; }
+.barItem:first-child .chartTooltip { left: 0; transform: none; }
+.barItem:last-child .chartTooltip { left: auto; right: 0; transform: none; }
+.pieWrap { display: grid; grid-template-columns: 160px minmax(0,1fr); gap: 20px; padding: 18px 0; align-items: center; }
+.pie { width: 160px; height: 160px; }
+.legendList { min-width: 0; display: grid; gap: 2px; }
+.legend { width: 100%; min-height: 44px; margin: 0; padding: 8px; text-align: left; line-height: 1.4; }
+.legend i { flex: 0 0 9px; }
+.legend span { min-width: 0; overflow-wrap: anywhere; }
+.legend strong { margin-left: auto; font-variant-numeric: tabular-nums; }
+.lineChartWrap { min-width: 552px; padding: 8px 0; }
+.lineChart { display: block; height: auto; width: 100%; background: none; overflow: visible; }
+.chartGridline { stroke: #ffffff14; stroke-width: 1; stroke-dasharray: 3 5; }
+.axisLabel, .linePoint .axisLabel { fill: #b2b2c3; font-size: 10px; opacity: 1; }
+.linePoint .lineHitArea { fill: transparent; stroke: none; pointer-events: all; }
+.linePoint:hover .lineHitArea, .linePoint:focus-visible .lineHitArea { r: 21; fill: transparent; stroke: none; }
+.scrollHint { display: none; margin: 10px 0 0; font-size: 11px; line-height: 1.5; color: #aaaabd; }
+.loginPage { padding: 24px 16px; }
+.loginCard { padding: 32px; }
+@media (max-width: 1200px) { .chartGrid { grid-template-columns: minmax(0,1fr); } }
+@media (max-width: 760px) {
+  .shell { height: auto; min-height: 100dvh; }
+  .main { height: auto; width: 100%; overflow: visible; }
+  .view { padding: 22px max(16px, env(safe-area-inset-right)) calc(28px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
+  .view__header { align-items: stretch; gap: 14px; margin-bottom: 22px; }
+  .view__title { font-size: 21px; }
+  .view__header input, .view__header select { margin-left: 0; width: 100%; min-width: 0; font-size: 16px; min-height: 44px; }
+  .sidebar { width: min(86vw, 300px); padding-bottom: env(safe-area-inset-bottom); }
+  .navItem { min-height: 46px; padding: 10px 12px; }
+  .mobileHeader button { border: 1px solid var(--pc-border); border-radius: 10px; background: var(--pc-surface2); }
+  .metricGrid { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; margin-bottom: 20px; }
+  .metricCard { padding: 16px; min-height: 124px; gap: 12px; }
+  .metricCard strong { font-size: 22px; }
+  .metricCard span { font-size: 10px; letter-spacing: .04em; }
+  .chartGrid { gap: 16px; }
+  .chartGrid > .section { padding: 18px; border-radius: 16px; }
+  .chartScroller { touch-action: pan-x pan-y; }
+  .scrollHint { display: block; }
+  .chartTooltip { display: none; }
+  .rowActions { flex-wrap: wrap; gap: 6px; }
+  .rowBtn, .logoutBtn { min-height: 44px; }
+  .pieWrap { grid-template-columns: minmax(0,1fr); justify-items: center; gap: 16px; }
+  .legendList { width: 100%; }
+  .chartSelection button { min-height: 44px; }
+  .contractGrid, .ownerFields, .contractFacts { min-width: 0; }
+}
+@media (max-width: 359px) { .metricGrid { grid-template-columns: minmax(0,1fr); } }
+@media (prefers-reduced-motion: reduce) { .shell *, .shell *::before, .shell *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
+
+@media (max-width: 760px) {
+  .metricCard:nth-child(-n+2) { grid-column: 1 / -1; min-height: 108px; }
+  .metricCard:nth-child(-n+2) strong { font-size: 26px; }
+}
+
+.chartGrid .table td:nth-child(n+2) { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.chartGrid .table td:first-child { min-width: 150px; }
+.mobileHeader button, .logoutBtn { display: inline-flex; align-items: center; justify-content: center; }

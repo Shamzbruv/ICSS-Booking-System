@@ -635,6 +635,7 @@ function openSidebar() {
     const backdrop = document.getElementById('sidebarBackdrop');
     if (!sidebar) return;
     sidebar.classList.add('open');
+    document.getElementById('hamburgerBtn')?.setAttribute('aria-expanded', 'true');
     if (backdrop) backdrop.classList.add('show');
 }
 
@@ -643,6 +644,7 @@ function closeSidebar() {
     const backdrop = document.getElementById('sidebarBackdrop');
     if (!sidebar) return;
     sidebar.classList.remove('open');
+    document.getElementById('hamburgerBtn')?.setAttribute('aria-expanded', 'false');
     if (backdrop) backdrop.classList.remove('show');
 }
 
@@ -688,6 +690,7 @@ document.addEventListener('DOMContentLoaded', () => {
         invoiceNav.appendChild(link);
     }
     ensureHelpMenuEntry();
+    polishAdminNavigation();
     if (getToken() && document.querySelector('.sidebar-nav')) {
         ensureSupportModal();
     }
@@ -698,3 +701,32 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
+
+// One visual language across every existing admin navigation entry.
+function polishAdminNavigation() {
+    const icons = { 'index.html': 'dashboard', 'bookings.html': 'calendar', 'availability.html': 'calendar', 'settings.html': 'settings', 'customize.html': 'layout', 'services.html': 'box', 'tenants.html': 'building', 'contracts.html': 'pen', 'invoices.html': 'receipt' };
+    document.querySelectorAll('.sidebar-nav .nav-item').forEach(item => {
+        const key = (item.getAttribute('href') || '').split('?')[0].split('/').pop();
+        const icon = icons[key] || (item.id === 'helpNavBtn' ? 'help' : null);
+        if (!icon) return;
+        const holder = item.querySelector('.nav-icon');
+        if (holder) {
+            holder.setAttribute('aria-hidden', 'true');
+            holder.innerHTML = `<svg width="20" height="20"><use href="/icons/ui.svg#${icon}"></use></svg>`;
+        }
+        if (item.classList.contains('active')) item.setAttribute('aria-current', 'page');
+    });
+    const paintIcon = (element, icon, size = 22) => {
+        if (element) { element.setAttribute('aria-hidden', 'true'); element.innerHTML = `<svg width="${size}" height="${size}"><use href="/icons/ui.svg#${icon}"></use></svg>`; }
+    };
+    document.querySelectorAll('.stat-icon').forEach(element => {
+        paintIcon(element, element.classList.contains('cancelled-icon') ? 'close' : 'calendar');
+    });
+    document.querySelectorAll('.action-card').forEach(item => {
+        const key = (item.getAttribute('href') || '').split('?')[0].split('/').pop();
+        paintIcon(item.querySelector('.action-icon'), item.id === 'bookingPageLink' ? 'monitor' : item.id === 'reportIssueBtn' ? 'help' : icons[key] || 'settings', 24);
+    });
+    document.querySelectorAll('.sidebar-brand img').forEach(img => { img.src = '/admin/icons/app-192-v2.png'; });
+    const button = document.getElementById('hamburgerBtn');
+    if (button) { button.setAttribute('aria-controls', 'sidebar'); button.setAttribute('aria-expanded', 'false'); }
+}

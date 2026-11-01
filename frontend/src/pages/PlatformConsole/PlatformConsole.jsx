@@ -59,15 +59,15 @@ function ConsoleLogin() {
 
 // ── Sidebar nav ────────────────────────────────────────────────────────────────
 const NAV = [
-  { id: 'dashboard',  icon: '📊', label: 'Dashboard' },
-  { id: 'tenants',    icon: '🏢', label: 'Tenants' },
-  { id: 'themes',     icon: '🎨', label: 'Themes' },
-  { id: 'jobs',       icon: '⚙️', label: 'Jobs & Queue' },
-  { id: 'payments',   icon: '💳', label: 'Payments' },
-  { id: 'audit',      icon: '📋', label: 'Audit Log' },
-  { id: 'team',       icon: '👥', label: 'Developer Admins', ownerOnly: true },
-  { id: 'contracts',  icon: '✍️', label: 'Contracts', ownerOnly: true },
-  { id: 'system',     icon: '🖥', label: 'System' },
+  { id: 'dashboard',  icon: 'dashboard', label: 'Dashboard' },
+  { id: 'tenants',    icon: 'building', label: 'Tenants' },
+  { id: 'themes',     icon: 'layout', label: 'Themes' },
+  { id: 'jobs',       icon: 'activity', label: 'Jobs & Queue' },
+  { id: 'payments',   icon: 'payment', label: 'Payments' },
+  { id: 'audit',      icon: 'receipt', label: 'Audit Log' },
+  { id: 'team',       icon: 'users', label: 'Developer Admins', ownerOnly: true },
+  { id: 'contracts',  icon: 'pen', label: 'Contracts', ownerOnly: true },
+  { id: 'system',     icon: 'monitor', label: 'System' },
 ];
 
 const money = value => `JMD ${Number(value || 0).toLocaleString(undefined,{maximumFractionDigits:2})}`;
@@ -75,49 +75,69 @@ const money = value => `JMD ${Number(value || 0).toLocaleString(undefined,{maxim
 function DashboardView() {
   const [d, setD] = useState(null);
   const [selected, setSelected] = useState(null);
-  useEffect(() => { api.platform.getDashboardAnalytics().then(setD); }, []);
+  const [error, setError] = useState('');
+  const load = useCallback(() => {
+    setError('');
+    api.platform.getDashboardAnalytics().then(setD).catch(() => setError('Analytics could not load. Please try again.'));
+  }, []);
+  useEffect(load, [load]);
+  if (error) return <div className={s.view}><p role="alert">{error}</p><button className={s.btnPrimary} onClick={load}>Try again</button></div>;
   if (!d) return <div className={s.loading}>Loading platform analytics…</div>;
 
-  const colors = ['#7c6ef7','#4ade80','#facc15','#fb923c','#f87171','#38bdf8','#a78bfa'];
+  const colors = ['#a89cff','#4ade80','#facc15','#fb923c','#f87171','#38bdf8','#d8b4fe'];
   const maxPayment = Math.max(1, ...d.monthly.map(x => Number(x.payments)));
   const maxBookings = Math.max(1, ...d.monthly.map(x => Number(x.bookings)));
-  const totalStatus = Math.max(1, d.statuses.reduce((n, x) => n + x.count, 0));
-  const linePoints = d.monthly.map((x, i) => ({
-    ...x,
-    x: i * (520 / Math.max(1, d.monthly.length - 1)),
-    y: 150 - (Number(x.bookings) / maxBookings) * 130
+  const statusCount = d.statuses.reduce((n, x) => n + Number(x.count), 0);
+  const linePoints = d.monthly.map((x, i) => ({ ...x,
+    x: 36 + i * (480 / Math.max(1, d.monthly.length - 1)),
+    y: 168 - (Number(x.bookings) / maxBookings) * 128
   }));
   let pieOffset = 0;
   const pieSegments = d.statuses.map((item, i) => {
-    const fraction = item.count / totalStatus;
+    const fraction = Number(item.count) / Math.max(1, statusCount);
     const segment = { ...item, color: colors[i % colors.length], fraction, offset: pieOffset };
     pieOffset += fraction;
     return segment;
   });
-  const choose = (title, detail) => setSelected({ title, detail });
+  const monthLabel = month => new Date(`${month}-01T00:00:00Z`).toLocaleDateString('en', { month: 'short', year: '2-digit', timeZone: 'UTC' });
+  const choose = (source, title, detail) => setSelected({ source, title, detail });
+  const detail = source => selected?.source === source && <div className={s.chartSelection} role="status"><div><strong>{selected.title}</strong><span>{selected.detail}</span></div><button onClick={() => setSelected(null)} aria-label="Close selected chart detail">×</button></div>;
+  const activate = (event, action) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); action(); } };
 
   return <div className={s.view}>
-    <div className={s.view__header}><div><h2 className={s.view__title}>Platform Health Dashboard</h2><p className={s.chartHint}>Hover or focus any chart item for its value. Click it to keep the explanation open.</p></div></div>
+    <div className={s.view__header}><div><h2 className={s.view__title}>Platform Health Dashboard</h2><p className={s.chartHint}>Tap a card or chart point to see its details. Charts scroll sideways on smaller screens.</p></div></div>
     <div className={s.metricGrid}>
       {[
         ['Confirmed booking value', money(d.summary.total_paid), 'Full JMD service value of every confirmed or completed booking across all tenants, including after-hours fees.'],
         ['Confirmed value — last 30 days', money(d.summary.paid_30d), 'Full JMD service value of bookings created in the last 30 days that are now confirmed or completed.'],
-        ['Total bookings', d.summary.total_bookings, 'All booking records created across the platform.'],
-        ['Active tenants', d.summary.active_tenants, 'Tenant accounts currently enabled and available.']
-      ].map(([label,value,help]) => <button key={label} className={s.metricCard} onClick={() => choose(label, `${value} — ${help}`)}><span>{label}</span><strong>{value}</strong><small>{help}</small></button>)}
+        ['Total bookings', Number(d.summary.total_bookings).toLocaleString(), 'All booking records created across the platform.'],
+        ['Active tenants', Number(d.summary.active_tenants).toLocaleString(), 'Tenant accounts currently enabled and available.']
+      ].map(([label,value,help]) => <button key={label} className={s.metricCard} onClick={() => choose('metrics', label, `${value} — ${help}`)} aria-pressed={selected?.title === label}><span>{label}</span><strong>{value}</strong><small>{help}</small></button>)}
     </div>
-    {selected && <div className={s.chartSelection} role="status"><div><strong>{selected.title}</strong><span>{selected.detail}</span></div><button onClick={() => setSelected(null)} aria-label="Close selected chart detail">×</button></div>}
+    {detail('metrics')}
     <div className={s.chartGrid}>
       <Section title="Monthly confirmed booking value">
-        <div className={s.barChart}>{d.monthly.map(x => <button className={s.barItem} key={x.month} onClick={() => choose(`Confirmed value in ${x.month}`, `${money(x.payments)} from ${x.bookings} confirmed or completed bookings.`)} aria-label={`${x.month}: ${money(x.payments)}, ${x.bookings} confirmed bookings`}><span className={s.chartTooltip}>{x.month}<br/><strong>{money(x.payments)}</strong><br/>{x.bookings} confirmed</span><div className={s.bar} style={{height:`${Math.max(3,Number(x.payments)/maxPayment*170)}px`}}/><span>{x.month.slice(5)}</span></button>)}</div>
+        <p className={s.chartHint}>JMD · {d.monthly.length} months</p>
+        <div className={s.chartScroller} tabIndex="0" role="region" aria-label="Monthly confirmed value. Scroll horizontally to see every month.">
+          <div className={s.barChart}>{d.monthly.map(x => <button className={s.barItem} key={x.month} onClick={() => choose('value', `Confirmed value in ${monthLabel(x.month)}`, `${money(x.payments)} from ${x.bookings} confirmed or completed bookings.`)} aria-label={`${x.month}: ${money(x.payments)}, ${x.bookings} confirmed bookings`}><span className={s.chartTooltip}>{monthLabel(x.month)}<br/><strong>{money(x.payments)}</strong></span><span className={s.barTrack}><span className={s.bar} style={{height:`${Math.max(2,Number(x.payments)/maxPayment*100)}%`}}/></span><span className={s.monthLabel}>{monthLabel(x.month)}</span></button>)}</div>
+        </div>
+        <p className={s.scrollHint}>Swipe to see all months · tap a bar for its value</p>
+        {detail('value')}
       </Section>
       <Section title="Booking status mix">
-        <div className={s.pieWrap}><svg className={s.pie} viewBox="0 0 42 42" aria-label="Booking status pie chart">{pieSegments.map(segment => <circle key={segment.status} className={s.pieSegment} cx="21" cy="21" r="15.915" fill="transparent" stroke={segment.color} strokeWidth="8" strokeDasharray={`${segment.fraction*100} ${100-segment.fraction*100}`} strokeDashoffset={25-segment.offset*100} tabIndex="0" role="button" aria-label={`${segment.status}: ${segment.count} bookings`} onClick={() => choose(segment.status.replaceAll('_',' '), `${segment.count} bookings — ${(segment.fraction*100).toFixed(1)}% of all bookings.`)} onKeyDown={e => (e.key==='Enter'||e.key===' ') && choose(segment.status.replaceAll('_',' '), `${segment.count} bookings — ${(segment.fraction*100).toFixed(1)}% of all bookings.`)}/>)}</svg><div>{pieSegments.map(segment => <button key={segment.status} className={s.legend} onClick={() => choose(segment.status.replaceAll('_',' '), `${segment.count} bookings — ${(segment.fraction*100).toFixed(1)}% of all bookings.`)}><i style={{background:segment.color}}/>{segment.status.replaceAll('_',' ')} ({segment.count})</button>)}</div></div>
+        <div className={s.pieWrap}><svg className={s.pie} viewBox="0 0 42 42" aria-label="Booking status pie chart">{pieSegments.map(segment => <circle key={segment.status} className={s.pieSegment} cx="21" cy="21" r="15.915" fill="transparent" stroke={segment.color} strokeWidth="8" strokeDasharray={`${segment.fraction*100} ${100-segment.fraction*100}`} strokeDashoffset={25-segment.offset*100} tabIndex="0" role="button" aria-label={`${segment.status}: ${segment.count} bookings`} onClick={() => choose('status', segment.status.replaceAll('_',' '), `${segment.count} bookings — ${(segment.fraction*100).toFixed(1)}% of all bookings.`)} onKeyDown={e => activate(e, () => choose('status', segment.status.replaceAll('_',' '), `${segment.count} bookings — ${(segment.fraction*100).toFixed(1)}% of all bookings.`))}/>)}</svg><div className={s.legendList}>{pieSegments.map(segment => <button key={segment.status} className={s.legend} onClick={() => choose('status', segment.status.replaceAll('_',' '), `${segment.count} bookings — ${(segment.fraction*100).toFixed(1)}% of all bookings.`)}><i style={{background:segment.color}}/><span>{segment.status.replaceAll('_',' ')}</span><strong>{segment.count}</strong></button>)}</div></div>
+        {statusCount === 0 && <p className={s.empty}>No bookings yet. Status totals will appear here.</p>}
+        {detail('status')}
       </Section>
       <Section title="Booking activity — 12 months">
-        <div className={s.lineChartWrap}><svg className={s.lineChart} viewBox="-8 0 536 180" role="img" aria-label="Monthly confirmed bookings line graph"><polyline points={linePoints.map(p=>`${p.x},${p.y}`).join(' ')} fill="none" stroke="#7c6ef7" strokeWidth="4" strokeLinejoin="round"/>{linePoints.map(p=><g key={p.month} className={s.linePoint} tabIndex="0" role="button" aria-label={`${p.month}: ${p.bookings} confirmed bookings`} onClick={() => choose(`Confirmed bookings in ${p.month}`, `${p.bookings} confirmed or completed bookings worth ${money(p.payments)}.`)} onKeyDown={e => (e.key==='Enter'||e.key===' ') && choose(`Confirmed bookings in ${p.month}`, `${p.bookings} confirmed or completed bookings worth ${money(p.payments)}.`)}><circle cx={p.x} cy={p.y} r="7"/><text x={p.x} y={Math.max(12,p.y-13)} textAnchor="middle">{p.bookings}</text></g>)}</svg></div>
+        <div className={s.chartScroller} tabIndex="0" role="region" aria-label="Confirmed bookings line chart. Scroll horizontally to see every month."><div className={s.lineChartWrap}><svg className={s.lineChart} viewBox="0 0 552 210" aria-label="Monthly confirmed bookings line graph">
+          {[0, .5, 1].map(fraction => <g key={fraction}><line x1="36" x2="516" y1={168-fraction*128} y2={168-fraction*128} className={s.chartGridline}/><text x="27" y={172-fraction*128} textAnchor="end" className={s.axisLabel}>{Math.round(maxBookings*fraction)}</text></g>)}
+          <polyline points={linePoints.map(p=>`${p.x},${p.y}`).join(' ')} fill="none" stroke="#a89cff" strokeWidth="3" strokeLinejoin="round"/>{linePoints.map(p=><g key={p.month} className={s.linePoint} tabIndex="0" role="button" aria-label={`${p.month}: ${p.bookings} confirmed bookings`} onClick={() => choose('activity', `Confirmed bookings in ${monthLabel(p.month)}`, `${p.bookings} confirmed or completed bookings worth ${money(p.payments)}.`)} onKeyDown={e => activate(e, () => choose('activity', `Confirmed bookings in ${monthLabel(p.month)}`, `${p.bookings} confirmed or completed bookings worth ${money(p.payments)}.`))}><circle className={s.lineHitArea} cx={p.x} cy={p.y} r="21"/><circle cx={p.x} cy={p.y} r="5"/><text x={p.x} y={Math.max(12,p.y-13)} textAnchor="middle">{p.bookings}</text><text className={s.axisLabel} x={p.x} y="198" textAnchor="middle">{monthLabel(p.month)}</text></g>)}
+        </svg></div></div>
+        <p className={s.scrollHint}>Swipe to see all months · tap a point for its value</p>
+        {detail('activity')}
       </Section>
-      <Section title="Top tenants by confirmed booking value"><table className={s.table}><thead><tr><th>Tenant</th><th>Confirmed</th><th>Value</th></tr></thead><tbody>{d.tenants.map(t=><tr key={t.slug} className={s.interactiveRow} tabIndex="0" onClick={() => choose(t.name, `${t.bookings} confirmed or completed bookings worth ${money(t.payments)}.`)} onKeyDown={e => e.key==='Enter' && choose(t.name, `${t.bookings} confirmed or completed bookings worth ${money(t.payments)}.`)}><td>{t.name}<div className={s.muted}>{t.slug}</div></td><td>{t.bookings}</td><td>{money(t.payments)}</td></tr>)}</tbody></table></Section>
+      <Section title="Top tenants by confirmed booking value"><div className={s.tableWrap} tabIndex="0" role="region" aria-label="Top tenants. Scroll horizontally if needed."><table className={s.table}><thead><tr><th>Tenant</th><th>Confirmed</th><th>Value</th></tr></thead><tbody>{d.tenants.map(t=><tr key={t.slug} className={s.interactiveRow} tabIndex="0" onClick={() => choose('tenants', t.name, `${t.bookings} confirmed or completed bookings worth ${money(t.payments)}.`)} onKeyDown={e => activate(e, () => choose('tenants', t.name, `${t.bookings} confirmed or completed bookings worth ${money(t.payments)}.`))}><td>{t.name}<div className={s.muted}>{t.slug}</div></td><td>{t.bookings}</td><td>{money(t.payments)}</td></tr>)}</tbody></table></div>{d.tenants.length === 0 && <p className={s.empty}>Tenant booking values will appear here.</p>}{detail('tenants')}</Section>
     </div>
   </div>;
 }
@@ -567,7 +587,7 @@ function ConsoleShell() {
       <ImpersonationBanner />
 
       <header className={s.mobileHeader}>
-        <button type="button" onClick={() => setNavOpen(true)} aria-label="Open navigation">☰</button>
+        <button type="button" onClick={() => setNavOpen(true)} aria-label="Open navigation" aria-expanded={navOpen}><svg aria-hidden="true" width="20" height="20"><use href="/icons/ui.svg#menu" /></svg></button>
         <strong>{activeLabel}</strong>
       </header>
       {navOpen && <button type="button" className={s.navBackdrop} aria-label="Close navigation" onClick={() => setNavOpen(false)} />}
@@ -575,7 +595,7 @@ function ConsoleShell() {
       {/* Sidebar */}
       <aside className={`${s.sidebar} ${navOpen ? s.sidebarOpen : ''}`}>
         <div className={s.sidebar__brand}>
-          <span className={s.sidebar__brandIcon}>⚙️</span>
+          <img className={s.consoleLogo} src="/admin/icons/app-192-v2.png" alt="" />
           <span>Platform Console</span>
         </div>
 
@@ -586,7 +606,7 @@ function ConsoleShell() {
               className={`${s.navItem} ${activeView === item.id ? s['navItem--active'] : ''}`}
               onClick={() => { setActiveView(item.id); setNavOpen(false); }}
             >
-              <span className={s.navItem__icon}>{item.icon}</span>
+              <span className={s.navItem__icon}><svg aria-hidden="true" width="20" height="20"><use href={`/icons/ui.svg#${item.icon}`} /></svg></span>
               <span>{item.label}</span>
             </button>
           ))}
@@ -603,7 +623,7 @@ function ConsoleShell() {
               <div className={s.sidebar__userRole}>{platformUser.role}</div>
             </div>
           </div>
-          <button className={s.logoutBtn} onClick={logout} title="Sign Out">↩</button>
+          <button className={s.logoutBtn} onClick={logout} title="Sign Out" aria-label="Sign Out"><svg aria-hidden="true" width="20" height="20"><use href="/icons/ui.svg#logout" /></svg></button>
         </div>
       </aside>
 
