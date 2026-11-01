@@ -10,6 +10,13 @@
     <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700,900&f[]=clash-display@400,500,600,700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/global-theme.css">
     <link rel="stylesheet" href="css/admin.css">
+    <link rel="manifest" href="/admin/manifest.webmanifest">
+    <meta name="theme-color" content="#7e22ce">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="ICSS Bookings">
+    <link rel="apple-touch-icon" href="/admin/icons/apple-touch-icon.png">
+    <script src="/admin/js/pwa.js" defer></script>
 </head>
 <body>
 
@@ -52,7 +59,7 @@
 </aside>
 
 <main class="main-content">
-<header class="page-header"><div><h1 class="page-title">Invoices</h1><p class="page-subtitle">Your branding. One consistent, professional invoice for every booking.</p></div></header>
+<header class="page-header"><div><h1 class="page-title invoice-title"><svg aria-hidden="true" viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 12h8M8 16h8M8 8h2"/></svg> Invoices</h1><p class="page-subtitle">Your branding. One consistent, professional invoice for every booking.</p></div></header>
 <div id="invoiceMessage" role="status" style="margin:16px 0"></div>
 <section class="card" style="padding:24px;margin-bottom:24px" id="invoiceDesign">
 <h2>Invoice appearance</h2><p>Invoices include the service, appointment, payment method, verified payments and balance. These fields change the appearance of new invoices; previously issued invoices keep their original details.</p>

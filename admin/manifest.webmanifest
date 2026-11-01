@@ -1,0 +1,36 @@
+{
+  "id": "/admin/",
+  "name": "ICSS Bookings Admin",
+  "short_name": "ICSS Bookings",
+  "description": "Manage your bookings, availability, services and invoices.",
+  "lang": "en",
+  "start_url": "/admin/index.html",
+  "scope": "/admin/",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#7e22ce",
+  "icons": [
+    {
+      "src": "/admin/icons/app-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/admin/icons/app-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Bookings",
+      "url": "/admin/bookings.html"
+    },
+    {
+      "name": "Invoices",
+      "url": "/admin/invoices.html"
+    }
+  ]
+}

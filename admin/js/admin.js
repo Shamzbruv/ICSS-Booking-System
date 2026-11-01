@@ -683,7 +683,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const link = document.createElement('a');
         link.href = 'invoices.html';
         link.className = 'nav-item' + (location.pathname.endsWith('/invoices.html') ? ' active' : '');
-        link.textContent = 'Invoices';
+        link.innerHTML = '<span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 12h8M8 16h8M8 8h2"/></svg></span> <span>Invoices</span>';
+        if (location.pathname.endsWith('/invoices.html')) link.setAttribute('aria-current', 'page');
         invoiceNav.appendChild(link);
     }
     ensureHelpMenuEntry();
