@@ -14,6 +14,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { ConsoleProvider, useConsole } from './ConsoleContext';
 import ImpersonationBanner from './ImpersonationBanner';
 import TenantDrawer from './TenantDrawer';
+import InstallPlatformApp from './InstallPlatformApp';
 import { api } from '../../api';
 import { useNoIndex } from '../../hooks/useNoIndex';
 import s from './PlatformConsole.module.css';
@@ -50,6 +51,7 @@ function ConsoleLogin() {
           </div>
           <button className={s.btnPrimary} type="submit" disabled={busy}>{busy ? 'Signing in…' : 'Sign In'}</button>
         </form>
+        <InstallPlatformApp />
       </div>
     </div>
   );
@@ -590,6 +592,7 @@ function ConsoleShell() {
           ))}
         </nav>
 
+        <div className={s.installWrap}><InstallPlatformApp /></div>
         <div className={s.sidebar__footer}>
           <div className={s.sidebar__user}>
             <div className={s.sidebar__userAvatar}>
