@@ -6,7 +6,7 @@
       ['Booking totals', 'Successful Bookings, This Month and Cancelled summarize booking activity. Use Bookings to see individual customers, appointment details and statuses.', '.stats-grid'],
       ['Financial overview', 'The overview shows estimated confirmed booking value for the selected period, grouped by currency. Confirmed booking value is different from verified payments received; check the booking and its invoice before settling a balance.', '#financialOverview'],
       ['Quick actions', 'Use these shortcuts to report a problem, view bookings, block availability, manage services, edit the website or change payment gateways. View My Website opens your public site.', '.quick-actions'],
-      ['Menu, help and installation', 'Open the menu to move between pages. On a phone, tap or pull up the small Menu handle, or swipe right from just inside the left edge. Swipe left across the open menu to close it. Install app adds a shortcut to this admin area. These guides open only when requested.']
+      ['Menu, help and installation', 'Open the menu to move between pages. On a phone, tap the menu button or swipe right from just inside the left edge. The menu button returns when you scroll up. Swipe left across the open menu to close it. Install app adds a shortcut to this admin area. These guides open only when requested.']
     ]],
     'bookings.html': ['Bookings', 'Find appointments, create bookings for callers and follow payment and appointment progress.', [
       ['Find a booking', 'Filter by date or status, or search a customer name or email. Refresh the list after receiving an update. A filtered list does not delete or alter other appointments.', '.table-toolbar'],

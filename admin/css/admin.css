@@ -2222,5 +2222,5 @@ input:not([type=checkbox]):not([type=radio]):not([type=color]):not([type=file]),
 .page-header { position: relative; }
 .page-header.has-page-help { padding-right: 46px; }
 .page-header > .page-help-button { position: absolute; right: 0; top: 0; }
-@media (max-width: 900px) { .main-content { padding-bottom: calc(76px + env(safe-area-inset-bottom)); } .hamburger { z-index: 180; } }
+@media (max-width: 900px) { .main-content { padding-bottom: calc(28px + env(safe-area-inset-bottom)); } .hamburger { z-index: 180; } }
 @media (max-width: 540px) { .appearance-options { grid-template-columns: repeat(2,minmax(0,1fr)); } }

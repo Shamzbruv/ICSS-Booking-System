@@ -754,4 +754,4 @@
 
 .pageHelpBar { display: flex; justify-content: flex-end; padding: 22px 32px 0; }
 .pageHelpBar + .view { padding-top: 8px; }
-@media (max-width:760px) { .pageHelpBar { padding: 14px 16px 0; } .main { padding-bottom: calc(58px + env(safe-area-inset-bottom)); } }
+@media (max-width:760px) { .pageHelpBar { padding: 14px 16px 0; } .main { padding-bottom: calc(28px + env(safe-area-inset-bottom)); } }
