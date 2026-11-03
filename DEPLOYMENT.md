@@ -69,10 +69,12 @@ Push production changes to that branch. Railway builds the root Dockerfile, whic
 the server image. `railway.json` explicitly selects that Dockerfile and checks `/health`
 before replacing the previous deployment.
 
-The GitHub Actions deploy job currently prints instructions only; it does **not** deploy.
-The native Railway GitHub integration is the deployment path. Confirm the Railway commit
-status for the exact new SHA and check the live site after every push. If a push produces
-no Railway status, inspect the service's source branch, auto-deploy toggle and watch paths.
+GitHub Actions audits dependencies, verifies the database migrations twice against a fresh
+PostgreSQL test service, runs tests and the frontend lint/build, and publishes the Docker
+image to GHCR. Its final job verifies Railway's deployment status for that exact commit.
+The native Railway GitHub integration remains the deployment path; CI does not deploy
+through the Railway CLI. If a push produces no Railway status, inspect the service's
+source branch, auto-deploy toggle and watch paths. Check the live site after every push.
 
 The Express server auto-initialises tables, serves the built frontend and starts queue workers.
 Production environment values stay in Railway; do not put secrets in this repository.

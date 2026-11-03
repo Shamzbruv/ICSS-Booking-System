@@ -22,7 +22,7 @@ jobs:
         ports:
           - 5432:5432
         options: >-
-          --health-cmd pg_isready
+          --health-cmd "pg_isready -U icss -d icss_test"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
@@ -35,6 +35,9 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
+          cache-dependency-path: |
+            package-lock.json
+            frontend/package-lock.json
 
       - name: Install dependencies
         run: npm ci
@@ -44,6 +47,14 @@ jobs:
 
       - name: License check
         run: npx license-checker --onlyAllow "MIT;Apache-2.0;BSD-2-Clause;BSD-3-Clause;ISC;CC0-1.0;Unlicense;0BSD" 2>/dev/null || echo "License check skipped (tool not installed)"
+
+      - name: Verify database migrations are repeatable
+        env:
+          DATABASE_URL: postgresql://icss:test_pass@localhost:5432/icss_test
+          NODE_ENV: test
+        run: |
+          npm run migrate
+          npm run migrate
 
       - name: Run tests
         env:
@@ -114,27 +125,27 @@ jobs:
           cache-from: type=gha
           cache-to:   type=gha,mode=max
 
-  # ── Job 3: Deploy ────────────────────────────────────────────────────────────
-  deploy:
-    name: Deploy to Production
+  # Railway deploys the source pushed to main through its GitHub integration.
+  # Verify that exact commit instead of printing setup instructions as success.
+  verify-deployment:
+    name: Verify Railway Deployment
     runs-on: ubuntu-latest
+    timeout-minutes: 7
     needs: build-docker
     if: github.ref == 'refs/heads/main'
-    # To enable the protected environment gate:
-    #   1. Go to GitHub → Settings → Environments → New environment → "production"
-    #   2. Add RAILWAY_TOKEN as an environment secret
-    #   3. Uncomment the line below
-    # environment: production
+    permissions:
+      contents: read
+      statuses: read
 
     steps:
-      - name: Deploy via Railway
-        run: |
-          echo "✅ Docker image pushed to GHCR."
-          echo "   To enable auto-deploy to Railway:"
-          echo "   1. Create a 'production' environment in GitHub Settings → Environments"
-          echo "   2. Add RAILWAY_TOKEN as a secret there"
-          echo "   3. Uncomment 'environment: production' in ci.yml"
-          echo "   4. Uncomment the railway CLI command below"
-          # Uncomment once Railway is configured:
-          # npm install -g @railway/cli
-          # railway up --service icss-booking-system
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Verify production deployment for this commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/verify-railway-deployment.js
