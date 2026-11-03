@@ -23,15 +23,28 @@ export default function PublicBookingPage() {
   const [pageError, setPageError] = useState(null);
 
   useEffect(() => {
+    let active = true;
     setLoading(true);
+    setPageError(null);
     Promise.all([api.publicTenant(slug), api.publicServices(slug)])
       .then(([t, svc]) => {
+        if (!active) return;
         setTenant(t);
         setServices(svc.services || []);
       })
-      .catch(() => setPageError('This page is not available. Please check the link and try again.'))
-      .finally(() => setLoading(false));
-  }, [slug]);
+      .catch((error) => {
+        if (!active) return;
+        const message = error.status === 429
+          ? 'Too many requests. Please wait a few minutes before trying again.'
+          : 'This page could not load. Please try again.';
+        setPageError(message);
+        if (preview && window.parent !== window) {
+          window.parent.postMessage({ type: 'icss:site-error', message }, window.location.origin);
+        }
+      })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [slug, preview]);
 
   if (loading) return (
     <div className={s.fullscreen}>

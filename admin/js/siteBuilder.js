@@ -216,7 +216,28 @@
         }
 
         loadPreview(page = this.page) {
+            clearTimeout(this.previewTimer);
+            this.previewTimer = setTimeout(() => this.showLoadError('Your website preview could not load. Please try again.'), 25000);
             this.iframe.src = this.previewUrl(page);
+        }
+
+        showLoadError(message) {
+            clearTimeout(this.previewTimer);
+            if (this.site) { this.toast(message, 'error'); return; }
+            this.statusEl.dataset.state = 'error';
+            this.statusEl.textContent = 'Could not load';
+            if (this.publishBtn) this.publishBtn.disabled = true;
+            if (this.discardBtn) this.discardBtn.disabled = true;
+            this.panelBody.replaceChildren(
+                h('p', { class: 'sb-muted', text: message }),
+                h('button', { type: 'button', class: 'btn btn-secondary', onClick: () => {
+                    this.statusEl.textContent = 'Loading…';
+                    this.statusEl.dataset.state = 'loading';
+                    this.panelBody.replaceChildren(h('p', { class: 'sb-muted', text: 'Loading your website…' }));
+                    this.loadPreview();
+                    if (this.mode === 'tenant') this.loadMedia();
+                } }, 'Try again')
+            );
         }
 
         post(message) {
@@ -246,6 +267,7 @@
                 }
                 switch (data.type) {
                     case 'icss:site-ready': this.handleReady(data); break;
+                    case 'icss:site-error': this.showLoadError(data.message || 'Your website preview could not load.'); break;
                     case 'icss:site-page':
                         this.page = data.page;
                         if (this.pageSelect.value !== data.page) this.pageSelect.value = data.page;
@@ -270,6 +292,7 @@
         }
 
         async handleReady(data) {
+            clearTimeout(this.previewTimer);
             this.catalog = data.catalog;
             this.defaults = data.defaults;
             if (data.themeKey && data.themeKey !== this.themeKey) {
@@ -289,7 +312,9 @@
                             start = resolved.resolved;
                         }
                     } catch (err) {
-                        this.toast(err.message || 'Could not load your saved website.', 'error');
+                        this.initialised = false;
+                        this.showLoadError(err.message || 'Could not load your saved website.');
+                        return;
                     }
                 }
                 this.site = clone(start);
@@ -362,15 +387,19 @@
             this.saving = true;
             this.updateStatus();
             const json = JSON.stringify(this.site);
+            let saved = false;
             try {
                 await this.api.saveDraft(this.site);
                 this.savedJson = json;
+                saved = true;
             } catch (err) {
                 this.toast(err.message || 'Draft could not be saved.', 'error');
             } finally {
                 this.saving = false;
                 this.updateStatus();
-                if (this.isDirty()) this.scheduleSave();
+                // Only follow up edits made during a successful save. A failed
+                // request must not start an endless 1.2-second retry loop.
+                if (saved && this.isDirty()) this.scheduleSave();
             }
         }
 
