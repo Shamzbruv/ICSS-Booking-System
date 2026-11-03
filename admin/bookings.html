@@ -15,7 +15,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>ICSS Admin — Bookings</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700,900&f[]=clash-display@400,500,600,700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/global-theme.css">
     <link rel="stylesheet" href="css/admin.css">
   <link rel="icon" type="image/png" href="./favicon.png">
@@ -162,6 +161,60 @@
 <script src="js/admin.js"></script>
 <script>
     const LINK_GATEWAY_LABELS = { paypal: 'PayPal', fygaro: 'Fygaro', easypay: 'EasyPay', fac: 'FAC / PowerTranz' };
+    const ICON_CHECK = '<svg class="btn-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 10.5l3.5 3.5 7.5-8"/></svg>';
+    const ICON_X = '<svg class="btn-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M5.5 5.5l9 9M14.5 5.5l-9 9"/></svg>';
+
+    function actionButton({ variant, icon, label, title, id, action = 'status', status, note }) {
+        return `<button class="btn btn-${variant} btn-sm" type="button" title="${escHtml(title || label)}" ${action === 'cancel' ? 'data-booking-action="cancel"' : 'data-booking-action="status"'} data-booking-id="${id}"${status ? ` data-booking-status="${status}"` : ''}${note ? ` data-booking-note="${escHtml(note)}"` : ''}>${icon || ''}<span>${escHtml(label)}</span></button>`;
+    }
+
+    // One tidy row of actions per booking state. Long explanations live in the tooltip / note line.
+    function renderBookingActions(b) {
+        const id = b.id;
+        const approve = (title, note) => actionButton({ variant: 'success', icon: ICON_CHECK, label: 'Approve', title, id, status: 'confirmed', note });
+        const reject = (title, note, label = 'Reject') => actionButton({ variant: 'danger', icon: ICON_X, label, title, id, status: 'rejected', note });
+        const row = (...buttons) => `<div class="row-actions">${buttons.join('')}</div>`;
+        const note = (html) => `<div class="row-actions-note">${html}</div>`;
+
+        if (b.status === 'confirmed') {
+            return row(
+                actionButton({ variant: 'secondary', icon: ICON_CHECK, label: 'Complete', title: 'Mark this appointment as completed', id, status: 'completed' }),
+                actionButton({ variant: 'danger', icon: ICON_X, label: 'Cancel', title: 'Cancel this booking', id, action: 'cancel' })
+            );
+        }
+        if (b.status === 'pending_manual_confirmation' && b.payment_mode === 'lynk') {
+            return note('Lynk payment screenshot received') + row(
+                approve('Approve the Lynk payment and confirm the booking', 'Lynk payment approved.'),
+                reject('Lynk payment not received', 'Lynk payment not received.')
+            );
+        }
+        if (b.status === 'pending_manual_confirmation') {
+            return note('Bank transfer receipt received') + row(
+                approve('Approve the bank transfer and confirm the booking', 'Bank transfer approved.'),
+                reject('Bank transfer not received', 'Bank transfer not received.')
+            );
+        }
+        if (b.status === 'pending_payment' && b.payment_mode === 'in_person' && b.booking_source === 'phone') {
+            return row(
+                actionButton({ variant: 'success', icon: ICON_CHECK, label: 'Paid', title: 'Offline payment received and verified', id, status: 'confirmed', note: 'Offline payment received and verified by staff.' }),
+                actionButton({ variant: 'danger', icon: ICON_X, label: 'Cancel', title: 'Cancel this booking', id, action: 'cancel' })
+            );
+        }
+        if (b.status === 'pending_payment' && LINK_GATEWAY_LABELS[b.payment_mode]) {
+            const gateway = LINK_GATEWAY_LABELS[b.payment_mode];
+            return note(`Check ${escHtml(gateway)} for <code>BK-${escHtml(String(id).slice(0, 8).toUpperCase())}</code>`) + row(
+                actionButton({ variant: 'success', icon: ICON_CHECK, label: 'Verify', title: `${gateway} payment verified — confirm the booking`, id, status: 'confirmed', note: `${gateway} payment verified.` }),
+                reject(`${gateway} payment not received`, `${gateway} payment not received.`)
+            );
+        }
+        if (b.status === 'pending_after_hours_confirmation') {
+            return note(`After-hours fee: <strong>${escHtml(b.after_hours_fee || '0')}</strong>`) + row(
+                approve('Approve the after-hours request', 'After-hours request approved.'),
+                reject('After-hours time unavailable', 'After-hours request unavailable.', 'Decline')
+            );
+        }
+        return '<span class="cell-muted">—</span>';
+    }
     let cancelTargetId = null;
     let searchTimer    = null;
     const bookingStatusBusy = new Set();
@@ -218,40 +271,12 @@
 
         const rows = bookings.map(b => `
             <tr>
-                <td data-label="Name"><strong>${escHtml(b.name)}</strong>${b.booking_source === 'phone' ? '<small style="display:block;color:var(--text-dim);">☎ Booked by staff</small>' : ''}</td>
-                <td data-label="Email" style="color:var(--text-dim);">${escHtml(b.email || '—')}</td>
-                <td data-label="Phone">${escHtml(b.phone || '—')}</td>
-                <td data-label="Date">${formatDate(b.booking_date)}</td>
-                <td data-label="Time">${formatTime(b.booking_time)}</td>
-                <td data-label="Region">${escHtml(b.region || '—')}</td>
+                <td data-label="Name"><strong>${escHtml(b.name)}</strong>${b.booking_source === 'phone' ? '<small class="cell-sub">☎ Booked by staff</small>' : ''}</td>
+                <td data-label="Contact" class="cell-truncate"><span class="cell-contact">${escHtml(b.email || '—')}</span><small class="cell-sub">${escHtml(b.phone || '—')}</small></td>
+                <td data-label="When"><span class="cell-strong">${formatDate(b.booking_date)}</span><small class="cell-sub">${formatTime(b.booking_time)}</small></td>
+                <td data-label="Region" class="col-region">${escHtml(b.region || '—')}</td>
                 <td data-label="Status">${statusBadge(b.status)}</td>
-                <td data-label="Actions">
-                    ${b.status === 'confirmed' ? `
-                        <button class="btn btn-secondary btn-sm" type="button" data-booking-action="status" data-booking-id="${b.id}" data-booking-status="completed">✓ Complete</button>
-                        <button class="btn btn-danger btn-sm" type="button" data-booking-action="cancel" data-booking-id="${b.id}">✕ Cancel</button>
-                    ` : ''}
-                    ${b.status === 'pending_manual_confirmation' && b.payment_mode === 'lynk' ? `
-                        <button class="btn btn-primary btn-sm" type="button" style="background:#10b981;" data-booking-action="status" data-booking-id="${b.id}" data-booking-status="confirmed" data-booking-note="Lynk payment approved.">✓ Approve Lynk Payment</button>
-                        <button class="btn btn-danger btn-sm" type="button" data-booking-action="status" data-booking-id="${b.id}" data-booking-status="rejected" data-booking-note="Lynk payment not received.">✕ Reject</button>
-                    ` : ''}
-                    ${b.status === 'pending_manual_confirmation' && b.payment_mode !== 'lynk' ? `
-                        <button class="btn btn-primary btn-sm" type="button" style="background:#10b981;" data-booking-action="status" data-booking-id="${b.id}" data-booking-status="confirmed" data-booking-note="Bank transfer approved.">✓ Approve Transfer</button>
-                        <button class="btn btn-danger btn-sm" type="button" data-booking-action="status" data-booking-id="${b.id}" data-booking-status="rejected" data-booking-note="Bank transfer not received.">✕ Reject</button>
-                    ` : ''}
-                    ${b.status === 'pending_payment' && b.payment_mode === 'in_person' && b.booking_source === 'phone' ? `
-                        <button class="btn btn-primary btn-sm" type="button" data-booking-action="status" data-booking-id="${b.id}" data-booking-status="confirmed" data-booking-note="Offline payment received and verified by staff.">✓ Payment received</button>
-                        <button class="btn btn-danger btn-sm" type="button" data-booking-action="cancel" data-booking-id="${b.id}">Cancel</button>
-                    ` : ''}
-                    ${b.status === 'pending_payment' && LINK_GATEWAY_LABELS[b.payment_mode] ? `
-                        <div style="font-size:11px;color:var(--text-dim);margin-bottom:6px;">Check ${LINK_GATEWAY_LABELS[b.payment_mode]} for reference BK-${escHtml(String(b.id).slice(0, 8).toUpperCase())}</div>
-                        <button class="btn btn-primary btn-sm" type="button" style="background:#10b981;" data-booking-action="status" data-booking-id="${b.id}" data-booking-status="confirmed" data-booking-note="${LINK_GATEWAY_LABELS[b.payment_mode]} payment verified.">✓ Verify ${LINK_GATEWAY_LABELS[b.payment_mode]} Payment</button>
-                        <button class="btn btn-danger btn-sm" type="button" data-booking-action="status" data-booking-id="${b.id}" data-booking-status="rejected" data-booking-note="${LINK_GATEWAY_LABELS[b.payment_mode]} payment not received.">✕ Reject</button>
-                    ` : ''}
-                    ${b.status === 'pending_after_hours_confirmation' ? `
-                        <div style="font-size:11px;color:var(--text-dim);margin-bottom:6px;">After-hours fee: ${escHtml(b.after_hours_fee || '0')}</div>
-                        <button class="btn btn-primary btn-sm" type="button" style="background:#10b981;" data-booking-action="status" data-booking-id="${b.id}" data-booking-status="confirmed" data-booking-note="After-hours request approved.">✓ Approve Request</button>
-                        <button class="btn btn-danger btn-sm" type="button" data-booking-action="status" data-booking-id="${b.id}" data-booking-status="rejected" data-booking-note="After-hours request unavailable.">✕ Decline</button>
-                    ` : ''}
+                <td data-label="Actions">${renderBookingActions(b)}
                 </td>
             </tr>
         `).join('');
@@ -260,8 +285,8 @@
             <table>
                 <thead>
                     <tr>
-                        <th>Name</th><th>Email</th><th>Phone</th>
-                        <th>Date</th><th>Time</th><th>Region</th><th>Status</th><th>Actions</th>
+                        <th>Name</th><th>Contact</th>
+                        <th>When</th><th class="col-region">Region</th><th>Status</th><th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>${rows}</tbody>
@@ -285,20 +310,20 @@
         if (newStatus === 'confirmed' && !confirmDialog('Approve this request and confirm the booking?')) return;
 
         bookingStatusBusy.add(id);
-        const originalText = triggerButton?.textContent;
+        const originalHtml = triggerButton?.innerHTML;
         document.querySelectorAll(`[data-booking-id="${id}"]`).forEach(button => { button.disabled = true; });
-        if (triggerButton) triggerButton.textContent = 'Updating…';
+        if (triggerButton) { triggerButton.classList.add('is-loading'); triggerButton.innerHTML = '<span class="btn-spinner" aria-hidden="true"></span><span>Saving…</span>'; }
         try {
             await apiFetch(`/api/v1/bookings/${id}/status`, {
                 method: 'PATCH',
                 body: { status: newStatus, note }
             });
-            showToast('Booking status updated to ' + newStatus);
+            showToast(`Booking ${String(newStatus).replace(/_/g, ' ')}.`);
             await loadBookings();
         } catch (e) {
             showToast(e.message, 'error');
             document.querySelectorAll(`[data-booking-id="${id}"]`).forEach(button => { button.disabled = false; });
-            if (triggerButton && originalText) triggerButton.textContent = originalText;
+            if (triggerButton && originalHtml) { triggerButton.classList.remove('is-loading'); triggerButton.innerHTML = originalHtml; }
         } finally {
             bookingStatusBusy.delete(id);
         }

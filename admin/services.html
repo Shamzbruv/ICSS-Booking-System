@@ -7,7 +7,6 @@
     <title>ICSS Admin — Services</title>
     <link rel="icon" type="image/png" href="./favicon.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700,900&f[]=clash-display@400,500,600,700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/global-theme.css">
     <link rel="stylesheet" href="css/admin.css">
     <link rel="manifest" href="/admin/manifest.webmanifest">
@@ -206,6 +205,7 @@
 <script src="/js/page-help.js"></script>
 <script src="js/admin.js"></script>
 <script>
+    const PAYMENT_MODE_LABELS = { tenant_default: 'Business default', none: 'No payment', paypal: 'PayPal', fygaro: 'Fygaro', easypay: 'EasyPay', fac: 'FAC / PowerTranz', lynk: 'Lynk', manual: 'Bank transfer', in_person: 'In person' };
     document.addEventListener('DOMContentLoaded', async () => {
         if (!requireAuth()) return;
         populateUserUI();
@@ -445,11 +445,13 @@
                     </td>
                     <td data-label="Duration" style="padding: 1rem;">${formatDuration(svc.duration_minutes)}${svc.buffer_time_minutes > 0 ? ` + ${formatDuration(svc.buffer_time_minutes)} buffer` : ''}</td>
                     <td data-label="Price" style="padding: 1rem;">${escHtml(svc.currency || 'JMD')} ${Number(svc.price).toLocaleString()}</td>
-                    <td data-label="Payment" style="padding: 1rem;"><span style="background:var(--primary-glow);color:var(--primary);padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;">${escHtml(svc.payment_mode || 'default')}</span></td>
+                    <td data-label="Payment" style="padding: 1rem;"><span class="badge ${svc.payment_mode && svc.payment_mode !== 'tenant_default' ? 'badge-reviewed' : 'badge-default'}">${escHtml(PAYMENT_MODE_LABELS[svc.payment_mode || 'tenant_default'] || svc.payment_mode)}</span></td>
                     <td data-label="Deposit" style="padding: 1rem;">${formatDepositRule(svc)}</td>
                     <td style="padding: 1rem;">
-                        <button class="btn btn-secondary btn-sm" type="button" data-service-action="edit" data-service-id="${svc.id}">✏️ Edit</button>
-                        <button class="btn btn-danger btn-sm" type="button" data-service-action="delete" data-service-id="${svc.id}" style="margin-left:6px;">🗑️ Delete</button>
+                        <div class="row-actions">
+                            <button class="btn btn-secondary btn-sm" type="button" data-service-action="edit" data-service-id="${svc.id}"><svg class="btn-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13.5 3.5l3 3L7 16H4v-3z"/></svg><span>Edit</span></button>
+                            <button class="btn btn-danger btn-sm" type="button" data-service-action="delete" data-service-id="${svc.id}"><svg class="btn-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h12M8 6V4h4v2M6 6l1 10h6l1-10"/></svg><span>Delete</span></button>
+                        </div>
                     </td>
                 `;
                 tbody.appendChild(tr);

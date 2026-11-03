@@ -243,9 +243,9 @@ function statusBadge(status) {
         in_progress: { label: 'In Progress', cls: 'badge-progress'  },
         paid:        { label: 'Paid',        cls: 'badge-confirmed' },
         pending:     { label: 'Pending',     cls: 'badge-pending'   },
-        pending_payment: { label: 'Pending Payment', cls: 'badge-pending' },
-        pending_manual_confirmation: { label: 'Awaiting Bank Transfer', cls: 'badge-new' },
-        pending_after_hours_confirmation: { label: 'After-hours Request', cls: 'badge-new' },
+        pending_payment: { label: 'Awaiting Payment', cls: 'badge-awaiting' },
+        pending_manual_confirmation: { label: 'Payment Review', cls: 'badge-awaiting' },
+        pending_after_hours_confirmation: { label: 'After-hours Request', cls: 'badge-reviewed' },
         rejected:    { label: 'Rejected',    cls: 'badge-cancelled' },
         expired:     { label: 'Expired',     cls: 'badge-cancelled' }
     };
