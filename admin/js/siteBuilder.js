@@ -389,8 +389,16 @@
             const json = JSON.stringify(this.site);
             let saved = false;
             try {
-                await this.api.saveDraft(this.site);
-                this.savedJson = json;
+                const result = await this.api.saveDraft(JSON.parse(json));
+                // The server can replace legacy embedded images with media URLs.
+                // Apply its canonical copy only if no newer edits arrived in flight.
+                if (result?.draft && JSON.stringify(this.site) === json) {
+                    this.site = clone(result.draft);
+                    this.savedJson = JSON.stringify(this.site);
+                    this.post({ type: 'icss:site-update', site: this.site });
+                } else {
+                    this.savedJson = json;
+                }
                 saved = true;
             } catch (err) {
                 this.toast(err.message || 'Draft could not be saved.', 'error');
@@ -436,10 +444,17 @@
             clearTimeout(this.saveTimer);
             this.publishBtn.disabled = true;
             this.publishBtn.textContent = 'Publishing…';
+            const json = JSON.stringify(this.site);
             try {
-                await this.api.publish(this.site);
-                this.savedJson = JSON.stringify(this.site);
-                this.publishedJson = this.savedJson;
+                const result = await this.api.publish(JSON.parse(json));
+                const published = result?.published || JSON.parse(json);
+                this.publishedJson = JSON.stringify(published);
+                this.savedJson = this.publishedJson;
+                if (JSON.stringify(this.site) === json) {
+                    this.site = clone(published);
+                    this.post({ type: 'icss:site-update', site: this.site });
+                }
+                if (this.isDirty()) this.scheduleSave();
                 this.toast('Your website is live! 🎉');
             } catch (err) {
                 this.toast(err.message || 'Publishing failed.', 'error');

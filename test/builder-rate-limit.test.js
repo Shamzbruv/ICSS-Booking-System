@@ -109,3 +109,28 @@ test('failed saved-site loading cannot initialise defaults in place of the real 
     assert.equal(builder.initialised, false);
     assert.equal(builder.loadError, 'Too many requests');
 });
+
+test('the editor adopts canonical saved media URLs after a successful save', async () => {
+    const builder = builderInstance();
+    builder.post = () => {};
+    builder.site = { title: 'My heading', brand: { logoUrl: 'data:image/png;base64,old' } };
+    const draft = { title: 'My heading', brand: { logoUrl: '/media/93fcb692-3c96-4c7e-8a7c-a926cf2782d0' }, version: 1 };
+    builder.api.saveDraft = async () => ({ draft });
+    await builder.saveDraft();
+    assert.equal(builder.site.brand.logoUrl, draft.brand.logoUrl);
+    assert.equal(builder.isDirty(), false);
+    assert.equal(builder.scheduled, undefined);
+});
+
+test('canonical save responses cannot overwrite a newer edit made during the request', async () => {
+    const builder = builderInstance();
+    builder.site = { title: 'First heading' };
+    builder.api.saveDraft = async () => {
+        builder.site.title = 'Newer heading';
+        return { draft: { title: 'First heading', version: 1 } };
+    };
+    await builder.saveDraft();
+    assert.equal(builder.site.title, 'Newer heading');
+    assert.equal(builder.isDirty(), true);
+    assert.equal(builder.scheduled, true);
+});

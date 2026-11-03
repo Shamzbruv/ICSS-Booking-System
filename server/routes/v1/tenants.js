@@ -469,19 +469,30 @@ router.patch('/:slug/branding', authenticate, requireTenantOwnership('tenant_adm
 
     const safeUrl = value => {
         if (value === undefined || value === null || value === '') return value;
+        if (/^\/media\/[0-9a-f-]{36}$/i.test(value) || /^data:image\//i.test(value)) return value;
         try {
             const parsed = new URL(String(value));
             return ['https:','http:'].includes(parsed.protocol) ? parsed.toString() : null;
         } catch { return null; }
     };
-    const normalizedLogoUrl = safeUrl(logoUrl);
-    const normalizedServiceImageUrl = safeUrl(serviceSectionImageUrl);
+    let normalizedLogoUrl = safeUrl(logoUrl);
+    let normalizedServiceImageUrl = safeUrl(serviceSectionImageUrl);
     if (logoUrl && !normalizedLogoUrl) return res.status(400).json({ error: 'Logo URL must use http or https.' });
     if (serviceSectionImageUrl && !normalizedServiceImageUrl) return res.status(400).json({ error: 'Service image URL must use http or https.' });
     if (timezone !== undefined) {
         try { new Intl.DateTimeFormat('en', { timeZone: timezone }).format(); }
         catch { return res.status(400).json({ error: 'Timezone must be a valid IANA timezone, such as America/Jamaica.' }); }
     }
+
+    try {
+        const { prepareSiteConfig } = require('../../services/siteMedia');
+        const media = await prepareSiteConfig({
+            brand: { logoUrl: normalizedLogoUrl },
+            booking: { serviceSectionImageUrl: normalizedServiceImageUrl }
+        }, req.tenant.id);
+        normalizedLogoUrl = media.brand?.logoUrl;
+        normalizedServiceImageUrl = media.booking?.serviceSectionImageUrl;
+    } catch (err) { return res.status(400).json({ error: err.message }); }
 
     try {
         // Fetch existing branding to deep-merge
@@ -520,7 +531,7 @@ router.patch('/:slug/branding', authenticate, requireTenantOwnership('tenant_adm
 
 // ── Website Builder ───────────────────────────────────────────────────────────
 // The builder autosaves to `site_draft`; customers only ever see `site_config`.
-const { sanitizeSiteConfig } = require('../../services/siteConfig');
+const { prepareSiteConfig } = require('../../services/siteMedia');
 const { storeMedia, listMedia, deleteMedia, MAX_UPLOAD_BYTES } = require('../../services/media');
 
 function siteState(row) {
@@ -549,7 +560,7 @@ router.get('/:slug/site', authenticate, requireTenantOwnership('tenant_admin'), 
 // PUT /api/v1/tenants/:slug/site/draft — Autosave the work-in-progress website
 router.put('/:slug/site/draft', authenticate, requireTenantOwnership('tenant_admin'), async (req, res) => {
     let site;
-    try { site = sanitizeSiteConfig(req.body?.site); }
+    try { site = await prepareSiteConfig(req.body?.site, req.tenant.id); }
     catch (err) { return res.status(400).json({ error: err.message }); }
     try {
         const result = await query(
@@ -570,7 +581,7 @@ router.post('/:slug/site/publish', authenticate, requireTenantOwnership('tenant_
     try {
         let site = null;
         if (req.body?.site) {
-            try { site = sanitizeSiteConfig(req.body.site); }
+            try { site = await prepareSiteConfig(req.body.site, req.tenant.id); }
             catch (err) { return res.status(400).json({ error: err.message }); }
         } else {
             const current = await query(`SELECT site_draft FROM tenants WHERE id = $1`, [req.tenant.id]);

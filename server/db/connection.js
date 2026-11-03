@@ -108,6 +108,7 @@ async function initDatabase() {
         client = await getPool().connect();
         console.log('🔗 Connected to PostgreSQL database.');
         await runMigrations(client);
+        await require('./maintenance').runDatabaseMaintenance(client);
         console.log('✅ Database schema up to date.');
     } catch (err) {
         // Classify the error so Railway logs are actually readable.
@@ -338,11 +339,11 @@ async function runMigrations(client) {
 
     // Ensure columns exist if table was already created
     try { await client.query(`ALTER TABLE pending_signups ALTER COLUMN tenant_slug DROP NOT NULL`); } catch(e){}
-    try { await client.query(`ALTER TABLE pending_signups ADD COLUMN admin_owner_name TEXT`); } catch(e){}
-    try { await client.query(`ALTER TABLE pending_signups ADD COLUMN terms_version TEXT`); } catch(e){}
-    try { await client.query(`ALTER TABLE pending_signups ADD COLUMN terms_accepted_at TIMESTAMPTZ`); } catch(e){}
-    try { await client.query(`ALTER TABLE pending_signups ADD COLUMN terms_acceptance_ip TEXT`); } catch(e){}
-    try { await client.query(`ALTER TABLE pending_signups ADD COLUMN terms_acceptance_user_agent TEXT`); } catch(e){}
+    await client.query(`ALTER TABLE pending_signups ADD COLUMN IF NOT EXISTS admin_owner_name TEXT`);
+    await client.query(`ALTER TABLE pending_signups ADD COLUMN IF NOT EXISTS terms_version TEXT`);
+    await client.query(`ALTER TABLE pending_signups ADD COLUMN IF NOT EXISTS terms_accepted_at TIMESTAMPTZ`);
+    await client.query(`ALTER TABLE pending_signups ADD COLUMN IF NOT EXISTS terms_acceptance_ip TEXT`);
+    await client.query(`ALTER TABLE pending_signups ADD COLUMN IF NOT EXISTS terms_acceptance_user_agent TEXT`);
     await client.query(`ALTER TABLE pending_signups ADD COLUMN IF NOT EXISTS paypal_subscription_id TEXT`);
     await client.query(`ALTER TABLE pending_signups ADD COLUMN IF NOT EXISTS payment_verified_at TIMESTAMPTZ`);
     await client.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_pending_signups_paypal_subscription ON pending_signups(paypal_subscription_id) WHERE paypal_subscription_id IS NOT NULL`);
@@ -359,23 +360,23 @@ async function runMigrations(client) {
         last_error TEXT,sent_at TIMESTAMPTZ,created_at TIMESTAMPTZ DEFAULT NOW(),updated_at TIMESTAMPTZ DEFAULT NOW()
     )`);
     try { await client.query(`ALTER TABLE provisioning_jobs ALTER COLUMN tenant_slug DROP NOT NULL`); } catch(e){}
-    try { await client.query(`ALTER TABLE tenants ADD COLUMN subscription_status TEXT DEFAULT 'trial'`); } catch(e){}
-    try { await client.query(`ALTER TABLE tenants ADD COLUMN stripe_customer_id TEXT`); } catch(e){}
-    try { await client.query(`ALTER TABLE tenants ADD COLUMN stripe_subscription_id TEXT`); } catch(e){}
-    try { await client.query(`ALTER TABLE tenants ADD COLUMN theme_id UUID REFERENCES themes(id) ON DELETE SET NULL`); } catch(e){}
-    try { await client.query(`ALTER TABLE tenants ADD COLUMN paypal_subscription_id TEXT`); } catch(e){}
-    try { await client.query(`ALTER TABLE tenants ADD COLUMN paypal_plan_id TEXT`); } catch(e){}
-    try { await client.query(`ALTER TABLE tenants ADD COLUMN feed_token UUID DEFAULT gen_random_uuid()`); } catch(e){}
-    try { await client.query(`ALTER TABLE users ADD COLUMN provider TEXT`); } catch(e){}
-    try { await client.query(`ALTER TABLE users ADD COLUMN provider_user_id TEXT`); } catch(e){}
-    try { await client.query(`ALTER TABLE users ADD COLUMN feed_token UUID DEFAULT gen_random_uuid()`); } catch(e){}
-    try { await client.query(`ALTER TABLE bookings ADD COLUMN calendar_event_id TEXT`); } catch(e){}
-    try { await client.query(`ALTER TABLE bookings ADD COLUMN sync_status TEXT DEFAULT 'pending'`); } catch(e){}
-    try { await client.query(`ALTER TABLE bookings ADD COLUMN updated_at TIMESTAMPTZ DEFAULT NOW()`); } catch(e){}
-    try { await client.query(`ALTER TABLE bookings ADD COLUMN start_time TIMESTAMPTZ`); } catch(e){}
-    try { await client.query(`ALTER TABLE bookings ADD COLUMN end_time TIMESTAMPTZ`); } catch(e){}
-    try { await client.query(`ALTER TABLE bookings ADD COLUMN expires_at TIMESTAMPTZ`); } catch(e){}
-    try { await client.query(`ALTER TABLE bookings ADD COLUMN payment_mode TEXT DEFAULT 'none'`); } catch(e){}
+    await client.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS subscription_status TEXT DEFAULT 'trial'`);
+    await client.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS stripe_customer_id TEXT`);
+    await client.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS stripe_subscription_id TEXT`);
+    await client.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS theme_id UUID REFERENCES themes(id) ON DELETE SET NULL`);
+    await client.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS paypal_subscription_id TEXT`);
+    await client.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS paypal_plan_id TEXT`);
+    await client.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS feed_token UUID DEFAULT gen_random_uuid()`);
+    await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS provider TEXT`);
+    await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS provider_user_id TEXT`);
+    await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS feed_token UUID DEFAULT gen_random_uuid()`);
+    await client.query(`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS calendar_event_id TEXT`);
+    await client.query(`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS sync_status TEXT DEFAULT 'pending'`);
+    await client.query(`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()`);
+    await client.query(`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS start_time TIMESTAMPTZ`);
+    await client.query(`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS end_time TIMESTAMPTZ`);
+    await client.query(`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ`);
+    await client.query(`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS payment_mode TEXT DEFAULT 'none'`);
     await client.query(`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS is_after_hours_request BOOLEAN DEFAULT false`);
     await client.query(`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS after_hours_fee NUMERIC(12,2) DEFAULT 0`);
     await client.query(`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS service_price NUMERIC(12,2)`);
@@ -407,6 +408,7 @@ async function runMigrations(client) {
     // preventing an exact timeslot from ever being booked again. Active overlap
     // safety is enforced transactionally while inactive slots remain reusable.
     await client.query(`ALTER TABLE bookings DROP CONSTRAINT IF EXISTS bookings_tenant_id_start_time_end_time_key`);
+    await client.query(`ALTER TABLE bookings DROP CONSTRAINT IF EXISTS bookings_tenant_id_booking_date_booking_time_key`);
     // Replace the old partial index once; the versioned index is idempotent on boot.
     await client.query(`DROP INDEX IF EXISTS idx_bookings_active_states`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_bookings_active_states_v2 ON bookings (tenant_id, start_time, end_time) WHERE status IN ('confirmed', 'pending_payment', 'pending_manual_confirmation', 'pending_after_hours_confirmation')`);
@@ -448,15 +450,15 @@ async function runMigrations(client) {
     await client.query(`ALTER TABLE partner_agreements ADD COLUMN IF NOT EXISTS access_role TEXT NOT NULL DEFAULT 'platform_partner'`);
     await client.query(`ALTER TABLE partner_agreements ADD COLUMN IF NOT EXISTS pending_password_hash TEXT`);
     
-    try { await client.query(`ALTER TABLE services ADD COLUMN buffer_time_minutes INT DEFAULT 0`); } catch(e){}
-    try { await client.query(`ALTER TABLE services ADD COLUMN payment_mode TEXT DEFAULT 'tenant_default'`); } catch(e){}
-    try { await client.query(`ALTER TABLE services ADD COLUMN payment_requirement_type TEXT DEFAULT 'none'`); } catch(e){}
-    try { await client.query(`ALTER TABLE services ADD COLUMN deposit_type TEXT DEFAULT 'percentage'`); } catch(e){}
-    try { await client.query(`ALTER TABLE services ADD COLUMN deposit_amount NUMERIC DEFAULT 0`); } catch(e){}
-    try { await client.query(`ALTER TABLE services ADD COLUMN image_url TEXT`); } catch(e){}
+    await client.query(`ALTER TABLE services ADD COLUMN IF NOT EXISTS buffer_time_minutes INT DEFAULT 0`);
+    await client.query(`ALTER TABLE services ADD COLUMN IF NOT EXISTS payment_mode TEXT DEFAULT 'tenant_default'`);
+    await client.query(`ALTER TABLE services ADD COLUMN IF NOT EXISTS payment_requirement_type TEXT DEFAULT 'none'`);
+    await client.query(`ALTER TABLE services ADD COLUMN IF NOT EXISTS deposit_type TEXT DEFAULT 'percentage'`);
+    await client.query(`ALTER TABLE services ADD COLUMN IF NOT EXISTS deposit_amount NUMERIC DEFAULT 0`);
+    await client.query(`ALTER TABLE services ADD COLUMN IF NOT EXISTS image_url TEXT`);
     await client.query(`UPDATE services SET payment_mode='paypal' WHERE payment_mode='wipay'`);
     await client.query(`UPDATE tenants SET default_payment_mode='paypal', wipay_enabled=false WHERE default_payment_mode='wipay'`);
-    try { await client.query(`ALTER TABLE tenants ADD COLUMN business_hours JSONB DEFAULT NULL`); } catch(e){}
+    await client.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS business_hours JSONB DEFAULT NULL`);
 
     // ── Booking Payments ──────────────────────────────────────────────────────
     await client.query(`
@@ -657,10 +659,10 @@ async function runMigrations(client) {
         )
     `);
 
-    try { await client.query(`ALTER TABLE audit_log ADD COLUMN actor_user_id UUID REFERENCES users(id) ON DELETE SET NULL`); } catch(e){}
-    try { await client.query(`ALTER TABLE audit_log ADD COLUMN old_status TEXT`); } catch(e){}
-    try { await client.query(`ALTER TABLE audit_log ADD COLUMN new_status TEXT`); } catch(e){}
-    try { await client.query(`ALTER TABLE audit_log ADD COLUMN note TEXT`); } catch(e){}
+    await client.query(`ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS actor_user_id UUID REFERENCES users(id) ON DELETE SET NULL`);
+    await client.query(`ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS old_status TEXT`);
+    await client.query(`ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS new_status TEXT`);
+    await client.query(`ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS note TEXT`);
 
     await client.query(`CREATE INDEX IF NOT EXISTS idx_audit_tenant ON audit_log(tenant_id, created_at DESC)`);
 
