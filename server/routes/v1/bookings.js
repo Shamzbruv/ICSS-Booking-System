@@ -17,6 +17,7 @@ const { getGateway, isLinkGateway, isReceiptGateway, isGatewayEnabled, buildChec
 const { ACTIVE_BOOKING_STATUSES_SQL, serviceOverlapsBlockedSlot, timeTextToMinutes } = require('../../services/bookingAvailabilityRules');
 
 const { ensureBookingInvoice } = require('../../services/bookingInvoices');
+const { notifyNewBooking, notifyBookingStatusChange } = require('../../services/notifications');
 
 const MAX_BOOKINGS_PER_DAY = 14;
 // Bump when /terms or the booking-consent wording changes materially.
@@ -356,6 +357,9 @@ async function createBooking(req, res) {
             sendBookingPendingReviewEmail(enrichedBooking, req.tenant).catch(console.error);
         }
 
+        // 9. Alert the business team on their phones / dashboard (not the staff member who booked it).
+        notifyNewBooking(req.tenant, result.booking, result.service_name, { actorUserId: assisted ? req.user?.id : null });
+
         res.status(201).json({ success: true, ...result, booking: serializeBooking(result.booking) });
 
     } catch (err) {
@@ -584,6 +588,7 @@ router.patch('/:id/status', authenticate, requireRole('staff', 'tenant_admin'), 
         } else if (status === 'completed' && previousStatus !== 'completed') {
             sendBookingCompletedEmail(result, req.tenant).catch(console.error);
         }
+        notifyBookingStatusChange(req.tenant, result, status, { actorUserId: req.user?.id, actorName: req.user?.name || req.user?.email });
 
         res.json({ success: true, booking: serializeBooking(result) });
     } catch (err) {
@@ -609,6 +614,7 @@ router.post('/:id/cancel', authenticate, requireRole('staff', 'tenant_admin'), a
 
         sendBookingCancellationEmail(booking, reason || null, req.tenant).catch(console.error);
         calendarSync.syncBookingWithExternal(req.tenant.id, booking).catch(console.error);
+        notifyBookingStatusChange(req.tenant, booking, 'cancelled', { actorUserId: req.user?.id, actorName: req.user?.name || req.user?.email });
 
         res.json({ success: true });
     } catch (err) {

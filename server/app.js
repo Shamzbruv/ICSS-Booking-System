@@ -24,6 +24,7 @@ const themesRoutes      = require('./routes/v1/themes');
 const servicesRoutes    = require('./routes/v1/services');
 const platformRoutes    = require('./routes/v1/platform');
 const partnerRoutes     = require('./routes/v1/partners');
+const notificationRoutes = require('./routes/v1/notifications');
 
 const app = express();
 app.set('trust proxy', 1); // Trust first proxy for reverse proxy rate limiting
@@ -125,6 +126,7 @@ app.use('/api/v1/invoices', require('./routes/v1/invoices'));
 app.use('/api/v1/reviews', require('./routes/v1/reviews'));
 app.use('/api/v1/platform',     platformRoutes);
 app.use('/api/v1/partners',     partnerRoutes);
+app.use('/api/v1/notifications', notificationRoutes);
 
 // ─── Health Check ─────────────────────────────────────────────────────────────
 app.get('/health', (req, res) => {
@@ -174,6 +176,9 @@ async function start() {
             console.log(`   API:     http://localhost:${PORT}/api/v1/`);
             console.log(`   Mode:    ${process.env.NODE_ENV || 'development'}\n`);
             startCronJobs();
+            const { initPush, startNotificationJobs } = require('./services/notifications');
+            initPush().then((ready) => console.log(ready ? '   Push:    enabled' : '   Push:    unavailable'));
+            startNotificationJobs();
         });
     } catch (err) {
         console.error('❌ Failed to start server:', err.message);

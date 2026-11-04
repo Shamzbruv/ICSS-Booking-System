@@ -180,6 +180,16 @@ async function handlePayPalWebhookEvent(event) {
         if (result.rows.length > 0) {
             const tenantId = result.rows[0].id;
             console.log(`[PayPal Sync] Updated tenant ${tenantId} for subscription ${subId} to ${internalStatus}`);
+            const billingMessages = {
+                paid: ['Subscription active', 'Your ICSS Bookings subscription payment went through. Thank you!'],
+                expired: ['Subscription payment problem', 'We could not collect your subscription payment. Update your PayPal billing to keep taking bookings.'],
+                canceled: ['Subscription cancelled', 'Your ICSS Bookings subscription was cancelled. Contact support if this was a mistake.'],
+                suspended: ['Subscription suspended', 'Your subscription is suspended. Update your billing to restore your booking page.']
+            };
+            const billing = billingMessages[internalStatus];
+            if (billing) {
+                require('./notifications').notifySafe(tenantId, { type: 'billing', title: billing[0], body: billing[1], url: '/admin/index.html', tag: 'billing' });
+            }
             // Audit the subscription state change
             await logAudit({
                 tenantId,

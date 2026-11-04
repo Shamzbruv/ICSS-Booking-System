@@ -159,6 +159,7 @@
 <script src="/js/mobile-navigation.js"></script>
 <script src="/js/page-help.js"></script>
 <script src="js/admin.js"></script>
+<script src="js/notifications.js" defer></script>
 <script>
     const LINK_GATEWAY_LABELS = { paypal: 'PayPal', fygaro: 'Fygaro', easypay: 'EasyPay', fac: 'FAC / PowerTranz' };
     const ICON_CHECK = '<svg class="btn-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 10.5l3.5 3.5 7.5-8"/></svg>';
@@ -270,7 +271,7 @@
         }
 
         const rows = bookings.map(b => `
-            <tr>
+            <tr data-booking-row="${b.id}">
                 <td data-label="Name"><strong>${escHtml(b.name)}</strong>${b.booking_source === 'phone' ? '<small class="cell-sub">☎ Booked by staff</small>' : ''}</td>
                 <td data-label="Contact" class="cell-truncate"><span class="cell-contact">${escHtml(b.email || '—')}</span><small class="cell-sub">${escHtml(b.phone || '—')}</small></td>
                 <td data-label="When"><span class="cell-strong">${formatDate(b.booking_date)}</span><small class="cell-sub">${formatTime(b.booking_time)}</small></td>

@@ -137,6 +137,17 @@ Defined in `server/services/paymentGateways.js`. *Link* gateways (PayPal, Fygaro
 
 ---
 
+## Notifications
+
+Business owners and staff get alerts in the admin app (bell inbox on every page) and as push notifications on their phones and computers:
+
+- **Events:** new bookings, payments to review/verify, after-hours requests, cancellations, changes made by teammates, expired unpaid holds, a 30-minute heads-up before each appointment, a 7:00 am agenda, and subscription/billing changes.
+- **Push:** Web Push through the admin service worker (`admin/sw.js`). Works on Android, desktop browsers, and iPhone/iPad (iOS 16.4+) once the admin app is added to the Home Screen. VAPID keys are generated on first boot and stored encrypted in `app_secrets`, so there's nothing to configure.
+- **Per person:** each user chooses which alerts they want, turns push on per device, sets quiet hours, and can send a test (Settings → Notifications).
+- Code: `server/services/notifications.js`, `server/routes/v1/notifications.js`, `admin/js/notifications.js`.
+
+---
+
 ## API Reference
 
 All endpoints are versioned under `/api/v1/`.

@@ -78,6 +78,13 @@
         </div>
     </section>
 
+    <section class="card settings-card" id="notifications" style="max-width: 800px; margin: 0 auto;" data-tour="notification-settings">
+        <p class="settings-section-kicker">Alerts</p>
+        <h2 class="settings-section-title">Notifications</h2>
+        <p class="page-subtitle settings-section-copy">Get instant alerts on your phone and computer when customers book, pay, cancel or need approval. These settings are personal to your login.</p>
+        <div id="notificationSettings" class="notif-settings"></div>
+    </section>
+
     <section id="adminAppearanceSection" class="card settings-card" hidden>
         <p class="settings-section-kicker">Appearance</p><h2 class="settings-section-title">Dashboard theme</h2>
         <p class="page-subtitle">Choose how your admin workspace looks. Your customer website has its own design settings in Website Builder.</p>
@@ -364,6 +371,7 @@
 <script src="/js/mobile-navigation.js"></script>
 <script src="/js/page-help.js"></script>
 <script src="js/admin.js"></script>
+<script src="js/notifications.js" defer></script>
 <script>
     const DAYS = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
     const DAY_LABELS = { monday:'Monday', tuesday:'Tuesday', wednesday:'Wednesday', thursday:'Thursday', friday:'Friday', saturday:'Saturday', sunday:'Sunday' };

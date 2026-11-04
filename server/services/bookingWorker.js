@@ -16,7 +16,7 @@ async function processExpireBookingHold(job) {
         console.log(`[Queue] Checking expiration for booking: ${bookingId}`);
 
         // Fetch the booking
-        const result = await query(`SELECT status, payment_mode FROM bookings WHERE id = $1`, [bookingId]);
+        const result = await query(`SELECT status, payment_mode, tenant_id, name, start_time, booking_date, booking_time FROM bookings WHERE id = $1`, [bookingId]);
         if (result.rows.length === 0) return; // Booking was deleted
 
         const booking = result.rows[0];
@@ -34,6 +34,16 @@ async function processExpireBookingHold(job) {
         await query(`UPDATE booking_payments SET status = 'failed' WHERE booking_id = $1 AND status = 'pending'`, [bookingId]);
 
         console.log(`[Queue] ⚠️ Booking ${bookingId} has been automatically EXPIRED.`);
+
+        const { notifySafe, describeWhen } = require('./notifications');
+        notifySafe(booking.tenant_id, {
+            type: 'booking_expired',
+            title: `Hold expired: ${booking.name || 'Customer'}`,
+            body: `${describeWhen(booking)} — no payment received, the time slot is free again.`,
+            url: `/admin/bookings.html?focus=${bookingId}`,
+            bookingId,
+            tag: `booking-${bookingId}`
+        });
 
     } catch (err) {
         console.error(`[Queue] Error processing expire-booking-hold for ${bookingId}:`, err.message);

@@ -863,6 +863,45 @@ async function runMigrations(client) {
     `);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_sub_inv_tenant ON subscription_invoices(tenant_id)`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_sub_inv_event ON subscription_invoices(provider_event_id)`);
+
+    // ── Notifications (in-app inbox + Web Push) ───────────────────────────────
+    await client.query(`CREATE TABLE IF NOT EXISTS app_secrets (key TEXT PRIMARY KEY, value TEXT NOT NULL, created_at TIMESTAMPTZ DEFAULT NOW())`);
+    await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS notification_prefs JSONB DEFAULT '{}'::jsonb`);
+    await client.query(`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS staff_reminder_sent_at TIMESTAMPTZ`);
+    await client.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS daily_summary_sent_on DATE`);
+    await client.query(`
+        CREATE TABLE IF NOT EXISTS notifications (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+            user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            type TEXT NOT NULL,
+            title TEXT NOT NULL,
+            body TEXT,
+            url TEXT,
+            booking_id UUID,
+            tag TEXT,
+            read_at TIMESTAMPTZ,
+            created_at TIMESTAMPTZ DEFAULT NOW()
+        )
+    `);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_notifications_user_created ON notifications(user_id, created_at DESC)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_notifications_user_unread ON notifications(user_id) WHERE read_at IS NULL`);
+    await client.query(`
+        CREATE TABLE IF NOT EXISTS push_subscriptions (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+            user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            endpoint TEXT NOT NULL UNIQUE,
+            p256dh TEXT NOT NULL,
+            auth TEXT NOT NULL,
+            device_label TEXT,
+            user_agent TEXT,
+            failure_count INTEGER NOT NULL DEFAULT 0,
+            last_used_at TIMESTAMPTZ,
+            created_at TIMESTAMPTZ DEFAULT NOW()
+        )
+    `);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_push_subscriptions_user ON push_subscriptions(user_id)`);
 }
 
 module.exports = { query, transaction, initDatabase, getPool };
