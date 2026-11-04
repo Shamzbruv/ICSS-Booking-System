@@ -87,13 +87,17 @@
     }
 
     async function pollUnread({ announce = true } = {}) {
-        if (document.visibilityState === 'hidden' || !token()) return;
+        if (!token()) return;
         try {
             const data = await call('/unread-count');
             const latest = data.latest;
             const isNew = latest && state.latestId && latest.id !== state.latestId && !latest.read_at;
             if (latest) state.latestId = latest.id;
-            if (announce && isNew && data.unread > state.unread) showLiveAlert(latest);
+            if (announce && isNew && data.unread > state.unread) {
+                const inView = document.visibilityState === 'visible' && document.hasFocus();
+                if (inView) showLiveAlert(latest);
+                else showSystemNotification(latest);
+            }
             setUnread(data.unread);
             if (state.open && isNew) loadList();
         } catch { /* offline or signed out: try again next tick */ }
@@ -109,6 +113,32 @@
                 if (event.data && event.data.type === 'icss:push') pollUnread();
             });
         }
+    }
+
+    // ── Browser system notification (works without push while a tab is open) ─
+    const shownLocally = new Set();
+    async function showSystemNotification(item) {
+        if (!('Notification' in global) || Notification.permission !== 'granted' || shownLocally.has(item.id)) return;
+        shownLocally.add(item.id);
+        // This device already receives pushes for the same alert — avoid a duplicate.
+        if (await currentSubscription().catch(() => null)) return;
+        const options = {
+            body: item.body || '',
+            icon: '/admin/icons/app-192-v2.png',
+            badge: '/admin/icons/app-192-v2.png',
+            tag: `icss-${item.id}`,
+            renotify: true,
+            vibrate: [120, 60, 120],
+            timestamp: new Date(item.created_at || Date.now()).getTime(),
+            data: { url: item.url || '/admin/index.html', id: item.id }
+        };
+        try {
+            // Service-worker notifications work on phones (where `new Notification` is not allowed).
+            const reg = 'serviceWorker' in navigator ? await navigator.serviceWorker.getRegistration('/admin/') : null;
+            if (reg) { await reg.showNotification(item.title, options); return; }
+            const note = new Notification(item.title, options);
+            note.onclick = () => { global.focus(); openItem(item); note.close(); };
+        } catch { /* notifications unavailable */ }
     }
 
     // ── Live alert (in-page toast) ─────────────────────────────────────────
@@ -331,17 +361,23 @@
         if (permission !== 'granted') throw new Error('Notifications are blocked for this site. Allow them in your browser or phone settings, then try again.');
         const reg = await navigator.serviceWorker.register('/admin/sw.js', { scope: '/admin/', updateViaCache: 'none' });
         await navigator.serviceWorker.ready;
-        const prefs = await call('/preferences');
-        if (!prefs.push_available || !prefs.vapid_public_key) throw new Error('Push is not available on the server right now.');
-        const key = urlBase64ToUint8Array(prefs.vapid_public_key);
-        let sub = await reg.pushManager.getSubscription();
-        if (sub) {
-            const existingKey = sub.options && sub.options.applicationServerKey ? new Uint8Array(sub.options.applicationServerKey) : null;
-            if (existingKey && existingKey.join(',') !== key.join(',')) { await sub.unsubscribe(); sub = null; }
+        try {
+            const prefs = await call('/preferences');
+            if (!prefs.push_available || !prefs.vapid_public_key) return null;
+            const key = urlBase64ToUint8Array(prefs.vapid_public_key);
+            let sub = await reg.pushManager.getSubscription();
+            if (sub) {
+                const existingKey = sub.options && sub.options.applicationServerKey ? new Uint8Array(sub.options.applicationServerKey) : null;
+                if (existingKey && existingKey.join(',') !== key.join(',')) { await sub.unsubscribe(); sub = null; }
+            }
+            if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key });
+            await call('/subscriptions', { method: 'POST', body: { subscription: sub.toJSON() } });
+            return sub;
+        } catch (err) {
+            // Permission is granted, so browser alerts still work whenever ICSS is open in a tab.
+            console.warn('Background push unavailable, using in-browser alerts:', err.message);
+            return null;
         }
-        if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key });
-        await call('/subscriptions', { method: 'POST', body: { subscription: sub.toJSON() } });
-        return sub;
     }
 
     async function disablePush() {
@@ -376,7 +412,7 @@
             on.type = 'button';
             on.addEventListener('click', async () => {
                 on.disabled = true; on.textContent = 'Turning on…';
-                try { await enablePush(); pushBanner.hidden = true; if (global.showToast) global.showToast('Alerts are on for this device.'); }
+                try { const sub = await enablePush(); pushBanner.hidden = true; if (global.showToast) global.showToast(sub ? 'Alerts are on for this device.' : 'Browser alerts are on while ICSS is open.'); }
                 catch (err) { on.disabled = false; on.textContent = 'Turn on'; if (global.showToast) global.showToast(err.message, 'error'); }
             });
             actions.append(on);
@@ -449,9 +485,12 @@
                 deviceCopy.textContent = 'Allow notifications for this site in your browser or phone settings, then reload.';
                 return;
             }
-            deviceTitle.textContent = sub ? 'Alerts are on for this device' : 'Alerts are off for this device';
-            deviceCopy.textContent = sub ? 'Bookings, payments and changes arrive even when the app is closed.' : 'Turn on to get alerts on this phone or computer.';
-            const toggle = el('button', `btn btn-sm ${sub ? 'btn-secondary' : 'btn-primary'}`, sub ? 'Turn off' : 'Turn on alerts');
+            const granted = Notification.permission === 'granted';
+            deviceTitle.textContent = sub ? 'Alerts are on for this device' : granted ? 'Browser alerts are on' : 'Alerts are off for this device';
+            deviceCopy.textContent = sub ? 'Bookings, payments and changes arrive even when the app is closed.'
+                : granted ? 'You\u2019ll get pop-up alerts while ICSS is open in a tab. Turn on background alerts to get them when it\u2019s closed too.'
+                : 'Turn on to get alerts on this phone or computer.';
+            const toggle = el('button', `btn btn-sm ${sub ? 'btn-secondary' : 'btn-primary'}`, sub ? 'Turn off' : Notification.permission === 'granted' ? 'Turn on background alerts' : 'Turn on alerts');
             toggle.type = 'button';
             toggle.addEventListener('click', async () => {
                 toggle.disabled = true;

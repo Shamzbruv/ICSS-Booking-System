@@ -33,6 +33,7 @@ self.addEventListener('push', (event) => {
         badge: '/admin/icons/app-192-v2.png',
         tag: data.tag || data.type || 'icss',
         renotify: true,
+        vibrate: [120, 60, 120],
         requireInteraction: Boolean(data.requireInteraction),
         silent: Boolean(data.silent),
         timestamp: data.timestamp || Date.now(),

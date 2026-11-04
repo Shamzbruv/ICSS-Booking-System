@@ -165,3 +165,11 @@ test('admin app shows the bell everywhere and the service worker handles pushes'
     const routes = read('server/routes/v1/notifications.js');
     assert.match(routes, /impersonation_session_id/, 'support impersonation never receives alerts');
 });
+
+test('browser shows system notifications on its own while the admin is open in another tab', () => {
+    const ui = read('admin/js/notifications.js');
+    assert.match(ui, /async function showSystemNotification\(item\)/);
+    assert.match(ui, /reg\.showNotification\(item\.title, options\)/);
+    assert.match(ui, /if \(inView\) showLiveAlert\(latest\);\s*else showSystemNotification\(latest\);/);
+    assert.match(ui, /vibrate: \[120, 60, 120\]/);
+});
