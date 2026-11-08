@@ -137,6 +137,16 @@ Defined in `server/services/paymentGateways.js`. *Link* gateways (PayPal, Fygaro
 
 ---
 
+## Rescheduling & cancellations
+
+- **Clients:** every confirmation email has a *Manage my booking* link (`/manage#t=…`, a signed, booking-scoped token kept in the URL fragment). Clients pick a new open time from the live calendar and give a reason, or cancel with a reason.
+- **Policy per business** (Settings → Rescheduling & cancellations): allow client reschedule/cancel, cut-off hours before the appointment, max online reschedules, require staff approval, require a reason.
+- **Staff:** *Reschedule* on any upcoming booking (live open slots, optional outside-hours time, reason, email the client), approve or keep-time for client requests, and a full change history per booking.
+- Every move re-checks business hours, blocked dates, overlaps and daily limits; emails both sides (with an updated calendar invite), syncs connected calendars and sends team alerts.
+- Code: `server/services/bookingReschedule.js`, `server/routes/v1/manage.js`, reschedule routes in `server/routes/v1/bookings.js`, `frontend/src/pages/ManageBooking/`.
+
+---
+
 ## Notifications
 
 Business owners and staff get alerts in the admin app (bell inbox on every page) and as push notifications on their phones and computers:

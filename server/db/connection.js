@@ -864,6 +864,33 @@ async function runMigrations(client) {
     await client.query(`CREATE INDEX IF NOT EXISTS idx_sub_inv_tenant ON subscription_invoices(tenant_id)`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_sub_inv_event ON subscription_invoices(provider_event_id)`);
 
+    // ── Rescheduling & self-service manage links ──────────────────────────────
+    await client.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS reschedule_policy JSONB DEFAULT '{}'::jsonb`);
+    await client.query(`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS reschedule_count INTEGER NOT NULL DEFAULT 0`);
+    await client.query(`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS last_rescheduled_at TIMESTAMPTZ`);
+    await client.query(`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS cancelled_by TEXT`);
+    await client.query(`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS cancellation_reason TEXT`);
+    await client.query(`
+        CREATE TABLE IF NOT EXISTS booking_reschedules (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            booking_id UUID NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
+            tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+            requested_by TEXT NOT NULL CHECK (requested_by IN ('client', 'staff')),
+            actor_user_id UUID,
+            status TEXT NOT NULL DEFAULT 'applied' CHECK (status IN ('applied', 'pending', 'declined', 'superseded')),
+            old_date DATE, old_time TIME, old_start TIMESTAMPTZ,
+            new_date DATE NOT NULL, new_time TIME NOT NULL, new_start TIMESTAMPTZ, new_end TIMESTAMPTZ,
+            reason_code TEXT,
+            reason TEXT,
+            staff_note TEXT,
+            client_notified BOOLEAN NOT NULL DEFAULT false,
+            decided_at TIMESTAMPTZ,
+            created_at TIMESTAMPTZ DEFAULT NOW()
+        )
+    `);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_booking_reschedules_booking ON booking_reschedules(booking_id, created_at DESC)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_booking_reschedules_pending ON booking_reschedules(tenant_id) WHERE status = 'pending'`);
+
     // ── Notifications (in-app inbox + Web Push) ───────────────────────────────
     await client.query(`CREATE TABLE IF NOT EXISTS app_secrets (key TEXT PRIMARY KEY, value TEXT NOT NULL, created_at TIMESTAMPTZ DEFAULT NOW())`);
     await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS notification_prefs JSONB DEFAULT '{}'::jsonb`);

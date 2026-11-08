@@ -25,6 +25,7 @@ const servicesRoutes    = require('./routes/v1/services');
 const platformRoutes    = require('./routes/v1/platform');
 const partnerRoutes     = require('./routes/v1/partners');
 const notificationRoutes = require('./routes/v1/notifications');
+const manageRoutes       = require('./routes/v1/manage');
 
 const app = express();
 app.set('trust proxy', 1); // Trust first proxy for reverse proxy rate limiting
@@ -56,7 +57,7 @@ app.use(cors({
         ? [/\.icssbookings\.com$/, /^https:\/\/(www\.)?icssbookings\.com$/]
         : '*',           // Open in dev
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Tenant-ID', 'X-Tenant-Slug', 'X-Platform-Admin-Key', 'X-Impersonation-Session'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Tenant-ID', 'X-Tenant-Slug', 'X-Platform-Admin-Key', 'X-Impersonation-Session', 'X-Manage-Token'],
     credentials: true
 }));
 
@@ -77,7 +78,8 @@ app.use('/api/', rateLimiter);
 // Injects req.tenant on every /api/v1/ request
 // Platform routes bypass tenant resolution — they operate cross-tenant
 app.use('/api/v1', (req, res, next) => {
-    if (req.path.startsWith('/platform') || req.path.startsWith('/partners')) return next();
+    // /manage resolves its business from the signed manage link itself.
+    if (req.path.startsWith('/platform') || req.path.startsWith('/partners') || req.path === '/manage' || req.path.startsWith('/manage/')) return next();
     tenantResolver(req, res, next);
 });
 
@@ -127,6 +129,7 @@ app.use('/api/v1/reviews', require('./routes/v1/reviews'));
 app.use('/api/v1/platform',     platformRoutes);
 app.use('/api/v1/partners',     partnerRoutes);
 app.use('/api/v1/notifications', notificationRoutes);
+app.use('/api/v1/manage',        manageRoutes);
 
 // ─── Health Check ─────────────────────────────────────────────────────────────
 app.get('/health', (req, res) => {

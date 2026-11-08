@@ -15,6 +15,8 @@ const { query } = require('../db/connection');
 const { bookingInvoiceAttachment } = require('./bookingInvoices');
 const { reviewUrl } = require('./bookingReviews');
 
+const { manageUrl } = require('./bookingReschedule');
+
 function getResend() {
     const key = process.env.RESEND_API_KEY;
     if (!key) return null;
@@ -464,7 +466,11 @@ async function sendBookingConfirmation(booking, tenant) {
                     </p>` : ''}
                 </div>` : ''}
                 <p style="font-size:14px;color:#555;line-height:1.7;">Your invoice is attached, with your service details, verified payments and remaining balance.</p>
-                <p style="font-size:14px;color:#555;line-height:1.7;">If you need to reschedule or cancel, please reply to this email or contact us directly.</p>
+                <div style="background:#f6f4fb;border:1px solid #e4dcf3;padding:18px 22px;margin:24px 0;border-radius:6px;">
+                    <p style="margin:0 0 6px;font-size:13px;text-transform:uppercase;letter-spacing:1.5px;color:#86868B;">Need to change something?</p>
+                    <p style="margin:0 0 14px;font-size:14px;color:#555;line-height:1.7;">You can reschedule or cancel online in a few taps, any time before the cut-off.</p>
+                    <a href="${manageUrl(booking)}" style="background:#1a1a1a;color:#ffffff;padding:12px 22px;text-decoration:none;font-weight:bold;font-size:13px;letter-spacing:1px;text-transform:uppercase;border-radius:4px;display:inline-block;">Manage my booking</a>
+                </div>
                 <div style="text-align:center;margin:32px 0;">
                     <a href="${brand.bookingUrl}" style="background:${brand.primaryColor};color:#050505;padding:13px 30px;text-decoration:none;font-weight:bold;font-size:13px;letter-spacing:1px;text-transform:uppercase;border-radius:3px;display:inline-block;">Visit Our Website</a>
                 </div>
@@ -1075,8 +1081,177 @@ async function sendSupportJobStatusEmail({ to, tenantName, subject, status, note
     return true;
 }
 
+
+// ── Rescheduling & client self-service ────────────────────────────────────────
+function bookingTimeText(booking) {
+    return formatTime(typeof booking.booking_time === 'string' ? booking.booking_time.slice(0, 5) : String(booking.booking_time));
+}
+
+function emailShell(brand, inner) {
+    return `
+        <div style="font-family:Arial,sans-serif;color:#1a1a1a;max-width:600px;margin:0 auto;border:1px solid #e8e8e8;">
+            ${headerHtml(brand)}
+            <div style="padding:40px 36px;background:#fff;">${inner}
+                <p style="font-size:14px;color:#333;margin-top:28px;">Warm regards,<br><strong>${escapeHtml(brand.name)} Team</strong></p>
+            </div>
+            ${footerHtml(brand)}
+        </div>`;
+}
+
+function reasonBox(label, reason) {
+    if (!reason) return '';
+    return `<div style="background:#fffcf0;border:1px solid #f0e08a;padding:14px 18px;border-radius:4px;margin:0 0 24px;">
+        <p style="margin:0;font-size:14px;color:#7a6500;"><strong>${escapeHtml(label)}:</strong> ${escapeHtml(reason)}</p>
+    </div>`;
+}
+
+function manageButton(booking, label = 'Manage my booking') {
+    return `<div style="text-align:center;margin:28px 0 8px;">
+        <a href="${manageUrl(booking)}" style="background:#1a1a1a;color:#ffffff;padding:12px 24px;text-decoration:none;font-weight:bold;font-size:13px;letter-spacing:1px;text-transform:uppercase;border-radius:4px;display:inline-block;">${escapeHtml(label)}</a>
+    </div>`;
+}
+
+/**
+ * Appointment moved (by the client or by the business). change = { oldDate, oldTime, reason, by: 'client'|'staff' }
+ */
+async function sendBookingRescheduledEmail(booking, change, tenant) {
+    const resend = getResend();
+    if (!resend) { console.warn('[Email] No RESEND_API_KEY — skipping reschedule email to:', booking.email); return; }
+    const brand = getBrand(tenant);
+    const details = await getBookingServiceDetails(booking);
+    const customerEmail = (booking.email || '').toLowerCase().trim();
+    const tenantRecipients = (await getTenantNotificationRecipients(tenant)).filter((r) => r !== customerEmail);
+    const notifyClient = change.notifyClient !== false && customerEmail;
+    const to = notifyClient ? [customerEmail] : tenantRecipients;
+    if (!to.length) return;
+    const firstName = escapeHtml((booking.name || '').split(' ')[0] || 'there');
+    const { googleCalendarUrl, icsAttachment } = buildBookingCalendarAssets({ booking, tenant, brand, serviceName: details.name, durationMinutes: details.durationMinutes });
+    const byBusiness = change.by === 'staff';
+    const intro = byBusiness
+        ? `We’re sorry for the change — <strong>${escapeHtml(brand.name)}</strong> has moved your appointment to a new time.`
+        : `Your appointment with <strong>${escapeHtml(brand.name)}</strong> has been <strong>rescheduled</strong> as requested.`;
+    await resend.emails.send({
+        from: getSenderAddress('appointments', brand),
+        to,
+        cc: notifyClient && tenantRecipients.length ? tenantRecipients : undefined,
+        replyTo: brand.replyEmail,
+        subject: `Appointment Rescheduled — ${brand.name}`,
+        html: emailShell(brand, `
+                <p style="font-size:15px;">Hi ${firstName},</p>
+                <p style="font-size:15px;line-height:1.7;">${intro}</p>
+                <div style="background:#f9f9f9;border-left:4px solid ${brand.primaryColor};padding:18px 22px;margin:24px 0;border-radius:2px;">
+                    <p style="margin:0 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:1.5px;color:#86868B;">New time</p>
+                    ${details.name ? `<p style="margin:6px 0;font-size:15px;"><strong>Service:</strong> ${escapeHtml(details.name)}</p>` : ''}
+                    <p style="margin:6px 0;font-size:16px;"><strong>${formatDate(booking.booking_date)} at ${bookingTimeText(booking)}</strong></p>
+                    <p style="margin:10px 0 0;font-size:13px;color:#999;"><span style="text-decoration:line-through;">Was ${formatDate(change.oldDate)} at ${formatTime(String(change.oldTime || '').slice(0, 5))}</span></p>
+                </div>
+                ${reasonBox(byBusiness ? 'Reason' : 'Your reason', change.reason)}
+                ${googleCalendarUrl ? `<p style="margin:0 0 10px;"><a href="${googleCalendarUrl}" style="color:#1a1a1a;font-weight:bold;">Add the new time to Google Calendar</a></p>` : ''}
+                ${icsAttachment ? '<p style="font-size:13px;color:#777;margin:0;">An updated .ics calendar file is attached for Apple Calendar and Outlook.</p>' : ''}
+                ${manageButton(booking, byBusiness ? 'This time doesn’t work? Choose another' : 'Manage my booking')}`),
+        attachments: icsAttachment ? [icsAttachment] : undefined
+    });
+    console.log(`[Email] Reschedule notice sent for booking ${booking.id}`);
+}
+
+/** Client asked for a new time and the business must approve it. */
+async function sendRescheduleRequestEmails(booking, request, tenant) {
+    const resend = getResend();
+    if (!resend) return;
+    const brand = getBrand(tenant);
+    const customerEmail = (booking.email || '').toLowerCase().trim();
+    const tenantRecipients = (await getTenantNotificationRecipients(tenant)).filter((r) => r !== customerEmail);
+    const requested = `${formatDate(request.new_date)} at ${formatTime(String(request.new_time).slice(0, 5))}`;
+    const current = `${formatDate(booking.booking_date)} at ${bookingTimeText(booking)}`;
+    if (tenantRecipients.length) {
+        await resend.emails.send({
+            from: getSenderAddress('appointments', brand),
+            to: tenantRecipients,
+            replyTo: customerEmail || undefined,
+            subject: `Reschedule request from ${booking.name} — ${brand.name}`,
+            html: emailShell(brand, `
+                <p style="font-size:15px;line-height:1.7;"><strong>${escapeHtml(booking.name)}</strong> would like to move their appointment.</p>
+                <div style="background:#f9f9f9;border-left:4px solid ${brand.primaryColor};padding:18px 22px;margin:24px 0;">
+                    <p style="margin:4px 0;font-size:15px;"><strong>Current:</strong> ${current}</p>
+                    <p style="margin:4px 0;font-size:15px;"><strong>Requested:</strong> ${requested}</p>
+                </div>
+                ${reasonBox('Reason', request.reasonDisplay)}
+                <p style="font-size:14px;color:#555;">Open <strong>Bookings</strong> in your dashboard to approve or decline.</p>`)
+        });
+    }
+    if (customerEmail) {
+        await resend.emails.send({
+            from: getSenderAddress('appointments', brand),
+            to: [customerEmail],
+            replyTo: brand.replyEmail,
+            subject: `We received your reschedule request — ${brand.name}`,
+            html: emailShell(brand, `
+                <p style="font-size:15px;">Hi ${escapeHtml((booking.name || '').split(' ')[0] || 'there')},</p>
+                <p style="font-size:15px;line-height:1.7;">Thanks! We’ve asked <strong>${escapeHtml(brand.name)}</strong> to move your appointment to <strong>${requested}</strong>. You’ll get an email as soon as they confirm. Until then your original time (${current}) stays booked.</p>
+                ${manageButton(booking)}`)
+        });
+    }
+}
+
+async function sendRescheduleDeclinedEmail(booking, request, note, tenant) {
+    const resend = getResend();
+    const customerEmail = (booking.email || '').toLowerCase().trim();
+    if (!resend || !customerEmail) return;
+    const brand = getBrand(tenant);
+    await resend.emails.send({
+        from: getSenderAddress('appointments', brand),
+        to: [customerEmail],
+        replyTo: brand.replyEmail,
+        subject: `About your reschedule request — ${brand.name}`,
+        html: emailShell(brand, `
+                <p style="font-size:15px;">Hi ${escapeHtml((booking.name || '').split(' ')[0] || 'there')},</p>
+                <p style="font-size:15px;line-height:1.7;">Unfortunately <strong>${formatDate(request.new_date)} at ${formatTime(String(request.new_time).slice(0, 5))}</strong> isn’t available. Your appointment stays on <strong>${formatDate(booking.booking_date)} at ${bookingTimeText(booking)}</strong>.</p>
+                ${reasonBox('Note from the team', note)}
+                ${manageButton(booking, 'Pick a different time')}`)
+    });
+}
+
+/** Customer cancelled from their manage link. */
+async function sendClientCancellationEmails(booking, reason, tenant) {
+    const resend = getResend();
+    if (!resend) return;
+    const brand = getBrand(tenant);
+    const customerEmail = (booking.email || '').toLowerCase().trim();
+    const tenantRecipients = (await getTenantNotificationRecipients(tenant)).filter((r) => r !== customerEmail);
+    const when = `${formatDate(booking.booking_date)} at ${bookingTimeText(booking)}`;
+    if (customerEmail) {
+        await resend.emails.send({
+            from: getSenderAddress('appointments', brand),
+            to: [customerEmail],
+            replyTo: brand.replyEmail,
+            subject: `Appointment Cancelled — ${brand.name}`,
+            html: emailShell(brand, `
+                <p style="font-size:15px;">Hi ${escapeHtml((booking.name || '').split(' ')[0] || 'there')},</p>
+                <p style="font-size:15px;line-height:1.7;">Your appointment on <strong>${when}</strong> has been cancelled. We hope to see you again soon.</p>
+                <div style="text-align:center;margin:28px 0 8px;">
+                    <a href="${brand.bookingUrl}" style="background:${brand.primaryColor};color:#050505;padding:12px 24px;text-decoration:none;font-weight:bold;font-size:13px;letter-spacing:1px;text-transform:uppercase;border-radius:4px;display:inline-block;">Book again</a>
+                </div>`)
+        });
+    }
+    if (tenantRecipients.length) {
+        await resend.emails.send({
+            from: getSenderAddress('appointments', brand),
+            to: tenantRecipients,
+            replyTo: customerEmail || undefined,
+            subject: `${booking.name} cancelled — ${when}`,
+            html: emailShell(brand, `
+                <p style="font-size:15px;line-height:1.7;"><strong>${escapeHtml(booking.name)}</strong> cancelled their appointment on <strong>${when}</strong>. The time slot is open again.</p>
+                ${reasonBox('Reason', reason)}`)
+        });
+    }
+}
+
 module.exports = {
     getSupportContactEmail,
+    sendBookingRescheduledEmail,
+    sendRescheduleRequestEmails,
+    sendRescheduleDeclinedEmail,
+    sendClientCancellationEmails,
     sendBookingConfirmation,
     sendBookingPendingReviewEmail,
     sendBookingCancellationEmail,

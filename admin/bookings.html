@@ -156,6 +156,48 @@
     </div>
 </div>
 
+<div class="modal-overlay" id="rescheduleModal">
+    <div class="modal reschedule-modal" role="dialog" aria-modal="true" aria-labelledby="rescheduleTitle">
+        <div class="modal-header">
+            <div>
+                <h2 class="modal-title" id="rescheduleTitle">Reschedule booking</h2>
+                <p class="reschedule-current" id="rescheduleCurrent"></p>
+            </div>
+            <button class="modal-close" id="rescheduleCloseBtn" type="button" aria-label="Close reschedule dialog">✕</button>
+        </div>
+        <div class="reschedule-grid">
+            <div class="form-group">
+                <label for="rescheduleDate">New date</label>
+                <input type="date" id="rescheduleDate">
+            </div>
+            <div class="form-group">
+                <label>Open times</label>
+                <div class="reschedule-slots" id="rescheduleSlots"><span class="cell-muted">Choose a date to see open times.</span></div>
+                <label class="reschedule-custom"><input type="checkbox" id="rescheduleCustomToggle"> Use a different time (outside normal hours)</label>
+                <input type="time" id="rescheduleCustomTime" hidden>
+            </div>
+            <div class="form-group">
+                <label for="rescheduleReason">Reason</label>
+                <select id="rescheduleReason"></select>
+            </div>
+            <div class="form-group">
+                <label for="rescheduleNote">Note for the client (optional)</label>
+                <textarea id="rescheduleNote" rows="2" maxlength="500" placeholder="e.g. Our stylist is out sick — sorry for the change!"></textarea>
+            </div>
+            <label class="reschedule-notify"><input type="checkbox" id="rescheduleNotify" checked> Email the client the new time, reason and calendar invite</label>
+        </div>
+        <p class="reschedule-error" id="rescheduleError" role="alert" hidden></p>
+        <details class="reschedule-history" id="rescheduleHistoryWrap" hidden>
+            <summary>Change history</summary>
+            <ol id="rescheduleHistory"></ol>
+        </details>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" id="rescheduleBackBtn" type="button">Close</button>
+            <button class="btn btn-primary" id="rescheduleConfirmBtn" type="button" disabled>Move booking</button>
+        </div>
+    </div>
+</div>
+
 <script src="/js/mobile-navigation.js"></script>
 <script src="/js/page-help.js"></script>
 <script src="js/admin.js"></script>
@@ -166,7 +208,7 @@
     const ICON_X = '<svg class="btn-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M5.5 5.5l9 9M14.5 5.5l-9 9"/></svg>';
 
     function actionButton({ variant, icon, label, title, id, action = 'status', status, note }) {
-        return `<button class="btn btn-${variant} btn-sm" type="button" title="${escHtml(title || label)}" ${action === 'cancel' ? 'data-booking-action="cancel"' : 'data-booking-action="status"'} data-booking-id="${id}"${status ? ` data-booking-status="${status}"` : ''}${note ? ` data-booking-note="${escHtml(note)}"` : ''}>${icon || ''}<span>${escHtml(label)}</span></button>`;
+        return `<button class="btn btn-${variant} btn-sm" type="button" title="${escHtml(title || label)}" ${action === 'status' ? 'data-booking-action="status"' : `data-booking-action="${action}"`} data-booking-id="${id}"${status ? ` data-booking-status="${status}"` : ''}${note ? ` data-booking-note="${escHtml(note)}"` : ''}>${icon || ''}<span>${escHtml(label)}</span></button>`;
     }
 
     // One tidy row of actions per booking state. Long explanations live in the tooltip / note line.
@@ -231,6 +273,7 @@
         document.getElementById('cancelModalBackBtn').addEventListener('click', () => closeModal('cancelModal'));
         document.getElementById('confirmCancelBtn').addEventListener('click', confirmCancel);
         document.getElementById('tableBody').addEventListener('click', handleBookingAction);
+        setupRescheduleModal();
         loadBookings();
     });
 
@@ -261,7 +304,24 @@
         }
     }
 
+    const RESCHEDULABLE = ['confirmed', 'pending_payment', 'pending_manual_confirmation', 'pending_after_hours_confirmation'];
+    const bookingIndex = new Map();
+
+    function renderRescheduleRequest(b) {
+        if (!b.pending_request_id) return '';
+        const reason = [b.pending_reason_label && b.pending_reason_label !== 'Other' ? b.pending_reason_label : '', b.pending_reason || ''].filter(Boolean).join(' — ');
+        return `<div class="reschedule-request">
+            <div><strong>Client wants to move to ${escHtml(formatDate(b.pending_new_date))} · ${escHtml(formatTime(b.pending_new_time))}</strong>${reason ? `<span>${escHtml(reason)}</span>` : ''}</div>
+            <div class="row-actions">
+                <button class="btn btn-success btn-sm" type="button" data-booking-action="reschedule-approve" data-booking-id="${b.id}" data-request-id="${b.pending_request_id}">${ICON_CHECK}<span>Accept move</span></button>
+                <button class="btn btn-secondary btn-sm" type="button" data-booking-action="reschedule-decline" data-booking-id="${b.id}" data-request-id="${b.pending_request_id}">Keep time</button>
+            </div>
+        </div>`;
+    }
+
     function renderTable(bookings, total) {
+        bookingIndex.clear();
+        bookings.forEach((b) => bookingIndex.set(String(b.id), b));
         document.getElementById('bookingCount').textContent = `${total} result${total !== 1 ? 's' : ''}`;
 
         if (bookings.length === 0) {
@@ -274,10 +334,10 @@
             <tr data-booking-row="${b.id}">
                 <td data-label="Name"><strong>${escHtml(b.name)}</strong>${b.booking_source === 'phone' ? '<small class="cell-sub">☎ Booked by staff</small>' : ''}</td>
                 <td data-label="Contact" class="cell-truncate"><span class="cell-contact">${escHtml(b.email || '—')}</span><small class="cell-sub">${escHtml(b.phone || '—')}</small></td>
-                <td data-label="When"><span class="cell-strong">${formatDate(b.booking_date)}</span><small class="cell-sub">${formatTime(b.booking_time)}</small></td>
+                <td data-label="When"><span class="cell-strong">${formatDate(b.booking_date)}</span><small class="cell-sub">${formatTime(b.booking_time)}${Number(b.reschedule_count) > 0 ? ` <span class="moved-pill" title="Rescheduled ${b.reschedule_count} time${b.reschedule_count === 1 ? '' : 's'}">↻ Moved ×${escHtml(b.reschedule_count)}</span>` : ''}</small>${RESCHEDULABLE.includes(b.status) ? `<button type="button" class="link-action" data-booking-action="reschedule" data-booking-id="${b.id}">Reschedule</button>` : ''}</td>
                 <td data-label="Region" class="col-region">${escHtml(b.region || '—')}</td>
                 <td data-label="Status">${statusBadge(b.status)}</td>
-                <td data-label="Actions">${renderBookingActions(b)}
+                <td data-label="Actions">${renderRescheduleRequest(b)}${renderBookingActions(b)}
                 </td>
             </tr>
         `).join('');
@@ -300,6 +360,11 @@
         const id = button.dataset.bookingId;
         if (button.dataset.bookingAction === 'cancel') {
             openCancelModal(id);
+            return;
+        }
+        if (button.dataset.bookingAction === 'reschedule') { openRescheduleModal(id); return; }
+        if (button.dataset.bookingAction === 'reschedule-approve' || button.dataset.bookingAction === 'reschedule-decline') {
+            decideRescheduleRequest(id, button.dataset.requestId, button.dataset.bookingAction === 'reschedule-approve' ? 'approve' : 'decline', button);
             return;
         }
         updateStatus(id, button.dataset.bookingStatus, button.dataset.bookingNote || '', button);
@@ -327,6 +392,159 @@
             if (triggerButton && originalHtml) { triggerButton.classList.remove('is-loading'); triggerButton.innerHTML = originalHtml; }
         } finally {
             bookingStatusBusy.delete(id);
+        }
+    }
+
+    // ── Rescheduling ──────────────────────────────────────────────────────────
+    const reschedule = { id: null, time: null, options: null };
+
+    async function rescheduleOptions() {
+        if (!reschedule.options) reschedule.options = await apiFetch('/api/v1/bookings/reschedule-options');
+        return reschedule.options;
+    }
+
+    function setupRescheduleModal() {
+        const close = () => document.getElementById('rescheduleModal').classList.remove('open');
+        document.getElementById('rescheduleCloseBtn').addEventListener('click', close);
+        document.getElementById('rescheduleBackBtn').addEventListener('click', close);
+        document.getElementById('rescheduleDate').addEventListener('change', loadRescheduleSlots);
+        document.getElementById('rescheduleCustomToggle').addEventListener('change', (e) => {
+            const custom = document.getElementById('rescheduleCustomTime');
+            custom.hidden = !e.target.checked;
+            reschedule.time = e.target.checked ? (custom.value || null) : null;
+            document.querySelectorAll('#rescheduleSlots .slot-chip').forEach((chip) => chip.classList.remove('is-selected'));
+            updateRescheduleButton();
+        });
+        document.getElementById('rescheduleCustomTime').addEventListener('input', (e) => { reschedule.time = e.target.value || null; updateRescheduleButton(); });
+        document.getElementById('rescheduleSlots').addEventListener('click', (e) => {
+            const chip = e.target.closest('.slot-chip');
+            if (!chip) return;
+            document.getElementById('rescheduleCustomToggle').checked = false;
+            document.getElementById('rescheduleCustomTime').hidden = true;
+            document.querySelectorAll('#rescheduleSlots .slot-chip').forEach((c) => c.classList.toggle('is-selected', c === chip));
+            reschedule.time = chip.dataset.time;
+            updateRescheduleButton();
+        });
+        document.getElementById('rescheduleReason').addEventListener('change', updateRescheduleButton);
+        document.getElementById('rescheduleConfirmBtn').addEventListener('click', submitReschedule);
+    }
+
+    function updateRescheduleButton() {
+        const ready = document.getElementById('rescheduleDate').value && reschedule.time && document.getElementById('rescheduleReason').value;
+        document.getElementById('rescheduleConfirmBtn').disabled = !ready;
+    }
+
+    async function openRescheduleModal(id) {
+        const b = bookingIndex.get(String(id));
+        if (!b) return;
+        reschedule.id = id; reschedule.time = null;
+        document.getElementById('rescheduleCurrent').textContent = `${b.name} · currently ${formatDate(b.booking_date)} at ${formatTime(b.booking_time)}`;
+        const dateInput = document.getElementById('rescheduleDate');
+        dateInput.min = new Date().toISOString().slice(0, 10);
+        dateInput.value = '';
+        document.getElementById('rescheduleSlots').innerHTML = '<span class="cell-muted">Choose a date to see open times.</span>';
+        document.getElementById('rescheduleCustomToggle').checked = false;
+        document.getElementById('rescheduleCustomTime').hidden = true;
+        document.getElementById('rescheduleCustomTime').value = '';
+        document.getElementById('rescheduleNote').value = '';
+        document.getElementById('rescheduleNotify').checked = true;
+        document.getElementById('rescheduleError').hidden = true;
+        document.getElementById('rescheduleConfirmBtn').disabled = true;
+        document.getElementById('rescheduleModal').classList.add('open');
+        try {
+            const options = await rescheduleOptions();
+            const select = document.getElementById('rescheduleReason');
+            select.innerHTML = '<option value="">Choose a reason…</option>' + Object.entries(options.staff_reasons)
+                .map(([key, label]) => `<option value="${escHtml(key)}">${escHtml(label)}</option>`).join('');
+        } catch (e) { showToast(e.message, 'error'); }
+        loadRescheduleHistory(id);
+        dateInput.focus();
+    }
+
+    async function loadRescheduleSlots() {
+        const b = bookingIndex.get(String(reschedule.id));
+        const date = document.getElementById('rescheduleDate').value;
+        const box = document.getElementById('rescheduleSlots');
+        reschedule.time = document.getElementById('rescheduleCustomToggle').checked ? (document.getElementById('rescheduleCustomTime').value || null) : null;
+        updateRescheduleButton();
+        if (!date || !b) return;
+        box.innerHTML = '<span class="cell-muted">Checking open times…</span>';
+        try {
+            const params = new URLSearchParams({ date });
+            if (b.service_id) params.set('service_id', b.service_id);
+            const data = await apiFetch(`/api/v1/availability?${params}`);
+            const open = (data.slots || []).filter((slot) => slot.available);
+            box.innerHTML = open.length
+                ? open.map((slot) => `<button type="button" class="slot-chip" data-time="${escHtml(slot.time)}">${escHtml(slot.label || formatTime(slot.time))}</button>`).join('')
+                : `<span class="cell-muted">${escHtml(data.message || 'No open times that day. Pick another date or use a different time.')}</span>`;
+        } catch (e) {
+            box.innerHTML = `<span class="cell-muted">${escHtml(e.message)}</span>`;
+        }
+    }
+
+    async function loadRescheduleHistory(id) {
+        const wrap = document.getElementById('rescheduleHistoryWrap');
+        const list = document.getElementById('rescheduleHistory');
+        try {
+            const { history } = await apiFetch(`/api/v1/bookings/${id}/history`);
+            if (!history.length) { wrap.hidden = true; return; }
+            const status = { applied: 'Moved', pending: 'Requested', declined: 'Declined', superseded: 'Replaced' };
+            list.innerHTML = history.map((h) => `<li>
+                <strong>${escHtml(status[h.status] || h.status)}</strong> by ${h.requested_by === 'client' ? 'client' : escHtml(h.actor_name || h.actor_email || 'staff')}
+                · ${escHtml(formatDate(h.old_date))} ${escHtml(formatTime(h.old_time))} → ${escHtml(formatDate(h.new_date))} ${escHtml(formatTime(h.new_time))}
+                ${h.reason_label || h.reason ? `<span>${escHtml([h.reason_label && h.reason_label !== 'Other' ? h.reason_label : '', h.reason || ''].filter(Boolean).join(' — '))}</span>` : ''}
+                <time>${escHtml(new Date(h.created_at).toLocaleString())}</time>
+            </li>`).join('');
+            wrap.hidden = false;
+        } catch { wrap.hidden = true; }
+    }
+
+    async function submitReschedule() {
+        const button = document.getElementById('rescheduleConfirmBtn');
+        const errorBox = document.getElementById('rescheduleError');
+        const custom = document.getElementById('rescheduleCustomToggle').checked;
+        button.disabled = true;
+        const original = button.innerHTML;
+        button.innerHTML = '<span class="btn-spinner" aria-hidden="true"></span><span>Moving…</span>';
+        errorBox.hidden = true;
+        try {
+            await apiFetch(`/api/v1/bookings/${reschedule.id}/reschedule`, {
+                method: 'POST',
+                body: {
+                    date: document.getElementById('rescheduleDate').value,
+                    time: reschedule.time,
+                    reason_code: document.getElementById('rescheduleReason').value,
+                    reason: document.getElementById('rescheduleNote').value.trim(),
+                    notify_client: document.getElementById('rescheduleNotify').checked,
+                    allow_outside_hours: custom
+                }
+            });
+            document.getElementById('rescheduleModal').classList.remove('open');
+            showToast(document.getElementById('rescheduleNotify').checked ? 'Booking moved and the client was emailed.' : 'Booking moved.');
+            await loadBookings();
+        } catch (e) {
+            errorBox.textContent = e.message;
+            errorBox.hidden = false;
+            button.disabled = false;
+        } finally {
+            button.innerHTML = original;
+        }
+    }
+
+    async function decideRescheduleRequest(id, requestId, decision, button) {
+        let note = '';
+        if (decision === 'decline') {
+            note = window.prompt('Optional note to the client (why the new time doesn’t work):', '') ;
+            if (note === null) return;
+        } else if (!confirmDialog('Move this booking to the time the client requested? They will be emailed the confirmation.')) return;
+        button.disabled = true;
+        try {
+            await apiFetch(`/api/v1/bookings/${id}/reschedule-requests/${requestId}/${decision}`, { method: 'POST', body: { note } });
+            showToast(decision === 'approve' ? 'Booking moved to the requested time.' : 'Request declined. The client keeps their original time.');
+            await loadBookings();
+        } catch (e) {
+            button.disabled = false;
+            showToast(e.message, 'error');
         }
     }
 

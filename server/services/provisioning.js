@@ -9,7 +9,7 @@ const { normalizeInternalSignupPlanId, isConfiguredTrialPlan } = require('./payp
 const RESERVED_SLUGS = new Set([
     'admin', 'api', 'login', 'signup', 'dashboard', 'settings', 'www', 'app',
     'auth', 'billing', 'support', 'help', 'docs', 'blog', 'static', 'assets',
-    'demo', 'media', 'playground', 'platform', 'onboarding', 'themes', 'editor',
+    'demo', 'media', 'playground', 'platform', 'onboarding', 'themes', 'editor', 'manage',
     'provisioning', 'custom-theme', 'forgot-password', 'reset-password', 'template'
 ]);
 

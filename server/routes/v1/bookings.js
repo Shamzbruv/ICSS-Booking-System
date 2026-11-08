@@ -17,7 +17,9 @@ const { getGateway, isLinkGateway, isReceiptGateway, isGatewayEnabled, buildChec
 const { ACTIVE_BOOKING_STATUSES_SQL, serviceOverlapsBlockedSlot, timeTextToMinutes } = require('../../services/bookingAvailabilityRules');
 
 const { ensureBookingInvoice } = require('../../services/bookingInvoices');
-const { notifyNewBooking, notifyBookingStatusChange } = require('../../services/notifications');
+const { notifyNewBooking, notifyBookingStatusChange, notifyReschedule } = require('../../services/notifications');
+const { RESCHEDULABLE_STATUSES, normalizePolicy, normalizeReason, STAFF_REASONS, CLIENT_REASONS } = require('../../services/bookingReschedule');
+const { sendBookingRescheduledEmail, sendRescheduleDeclinedEmail } = require('../../services/email');
 
 const MAX_BOOKINGS_PER_DAY = 14;
 // Bump when /terms or the booking-consent wording changes materially.
@@ -466,9 +468,15 @@ router.get('/', authenticate, requireRole('staff', 'tenant_admin', 'super_admin'
     try {
         const [rows, total] = await Promise.all([
             query(
-                `SELECT b.*, s.name AS service_name
+                `SELECT b.*, s.name AS service_name,
+                        pr.id AS pending_request_id, pr.new_date AS pending_new_date, pr.new_time AS pending_new_time,
+                        pr.reason_code AS pending_reason_code, pr.reason AS pending_reason
                  FROM bookings b
                  LEFT JOIN services s ON s.id = b.service_id
+                 LEFT JOIN LATERAL (
+                     SELECT id, new_date, new_time, reason_code, reason FROM booking_reschedules
+                     WHERE booking_id = b.id AND status = 'pending' ORDER BY created_at DESC LIMIT 1
+                 ) pr ON true
                  WHERE ${where}
                  ORDER BY b.booking_date DESC, b.booking_time DESC
                  LIMIT $${p} OFFSET $${p + 1}`,
@@ -478,7 +486,12 @@ router.get('/', authenticate, requireRole('staff', 'tenant_admin', 'super_admin'
         ]);
 
         res.json({
-            bookings: rows.rows.map(serializeBooking),
+            bookings: rows.rows.map((row) => ({
+                ...serializeBooking(row),
+                pending_new_date: formatDateOnlyValue(row.pending_new_date),
+                pending_new_time: formatTimeOnlyValue(row.pending_new_time),
+                pending_reason_label: CLIENT_REASONS[row.pending_reason_code] || null
+            })),
             total:    parseInt(total.rows[0].cnt),
             page:     parseInt(page),
             limit:    parseInt(limit)
@@ -490,6 +503,11 @@ router.get('/', authenticate, requireRole('staff', 'tenant_admin', 'super_admin'
 });
 
 // GET /api/v1/bookings/:id
+// GET /api/v1/bookings/reschedule-options — reasons + policy for the admin UI
+router.get('/reschedule-options', authenticate, requireRole('staff', 'tenant_admin'), async (req, res) => {
+    res.json({ staff_reasons: STAFF_REASONS, client_reasons: CLIENT_REASONS, policy: normalizePolicy(req.tenant.reschedule_policy || {}) });
+});
+
 router.get('/:id', authenticate, requireRole('staff', 'tenant_admin'), async (req, res) => {
     try {
         const result = await query(
@@ -622,5 +640,190 @@ router.post('/:id/cancel', authenticate, requireRole('staff', 'tenant_admin'), a
         res.status(500).json({ error: 'Failed to cancel booking.' });
     }
 });
+
+
+// ── Rescheduling ──────────────────────────────────────────────────────────────
+const STAFF_MAX_DAYS_AHEAD = 365;
+
+/**
+ * Validate a new date/time for an existing booking and either move it
+ * (mode 'apply') or record a pending request (mode 'request').
+ * Uses the same schedule, block, overlap and daily-limit rules as new bookings.
+ */
+async function performReschedule({ tenant, bookingId, date, time, reason, actor, mode = 'apply', allowOutsideHours = false, notifyClient = true }) {
+    const timezone = tenant.branding?.timezone || 'America/Jamaica';
+    if (typeof date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(date) || new Date(`${date}T12:00:00Z`).toISOString().slice(0, 10) !== date) {
+        const err = new Error('Choose a valid date.'); err.status = 400; throw err;
+    }
+    if (typeof time !== 'string' || !/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) {
+        const err = new Error('Choose a valid time.'); err.status = 400; throw err;
+    }
+    const maxDays = actor.type === 'staff' ? STAFF_MAX_DAYS_AHEAD : MAX_DAYS_AHEAD;
+    if (`${date}T${time}` < getTzTimeStr(timezone, MIN_BUFFER_MINS)) {
+        const err = new Error('That time has already passed or is too soon. Choose a later time.'); err.status = 400; throw err;
+    }
+    if (date > getTzTimeStr(timezone, 0, maxDays).split('T')[0]) {
+        const err = new Error(`Choose a date within the next ${maxDays} days.`); err.status = 400; throw err;
+    }
+
+    return transaction(async (client) => {
+        await client.query(`SELECT id FROM tenants WHERE id = $1 FOR UPDATE`, [tenant.id]);
+        const current = await client.query(`SELECT * FROM bookings WHERE id = $1 AND tenant_id = $2 FOR UPDATE`, [bookingId, tenant.id]);
+        if (!current.rows.length) { const err = new Error('Booking not found.'); err.status = 404; throw err; }
+        const booking = current.rows[0];
+        if (!RESCHEDULABLE_STATUSES.includes(booking.status)) {
+            const err = new Error('Only upcoming bookings can be rescheduled.'); err.status = 400; throw err;
+        }
+        if (formatDateOnlyValue(booking.booking_date) === date && String(booking.booking_time).slice(0, 5) === time) {
+            const err = new Error('That is already the booked time. Choose a different time.'); err.status = 400; throw err;
+        }
+
+        const svc = booking.service_id ? await client.query(`SELECT duration_minutes, buffer_time_minutes FROM services WHERE id = $1`, [booking.service_id]) : { rows: [] };
+        const duration = (Number(svc.rows[0]?.duration_minutes) || 30) + (Number(svc.rows[0]?.buffer_time_minutes) || 0);
+        await validateTenantAvailability(client, tenant, date, time, duration, allowOutsideHours);
+
+        const [year, month, day] = date.split('-').map(Number);
+        const [hour, minute] = time.split(':').map(Number);
+        const times = await client.query(
+            `SELECT make_timestamptz($1,$2,$3,$4,$5,0,$6) AS st, make_timestamptz($1,$2,$3,$4,$5,0,$6) + ($7 * interval '1 minute') AS et`,
+            [year, month, day, hour, minute, timezone, duration]
+        );
+        const { st: startTime, et: endTime } = times.rows[0];
+        const overlap = await client.query(
+            `SELECT id FROM bookings WHERE tenant_id = $1 AND id <> $4 AND status IN (${ACTIVE_BOOKING_STATUSES_SQL})
+             AND start_time < $3 AND end_time > $2`,
+            [tenant.id, startTime, endTime, booking.id]
+        );
+        if (overlap.rows.length) { const err = new Error('That time is already taken. Please choose another.'); err.status = 409; throw err; }
+        const daily = await client.query(
+            `SELECT COUNT(*)::int AS n FROM bookings WHERE tenant_id = $1 AND booking_date = $2 AND id <> $3 AND status IN (${ACTIVE_BOOKING_STATUSES_SQL})`,
+            [tenant.id, date, booking.id]
+        );
+        if (daily.rows[0].n >= MAX_BOOKINGS_PER_DAY) { const err = new Error('That day is fully booked. Please choose another day.'); err.status = 409; throw err; }
+
+        // Only one open request per booking.
+        await client.query(`UPDATE booking_reschedules SET status = 'superseded', decided_at = NOW() WHERE booking_id = $1 AND status = 'pending'`, [booking.id]);
+
+        const history = await client.query(
+            `INSERT INTO booking_reschedules (booking_id, tenant_id, requested_by, actor_user_id, status, old_date, old_time, old_start,
+                new_date, new_time, new_start, new_end, reason_code, reason, client_notified)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING *`,
+            [booking.id, tenant.id, actor.type, actor.userId || null, mode === 'request' ? 'pending' : 'applied',
+             booking.booking_date, booking.booking_time, booking.start_time, date, time, startTime, endTime,
+             reason.code, reason.text || null, mode === 'apply' && notifyClient]
+        );
+
+        if (mode === 'request') return { booking, previous: booking, request: history.rows[0] };
+
+        const updated = await client.query(
+            `UPDATE bookings SET booking_date = $1, booking_time = $2, start_time = $3, end_time = $4,
+                reschedule_count = reschedule_count + 1, last_rescheduled_at = NOW(), staff_reminder_sent_at = NULL, updated_at = NOW()
+             WHERE id = $5 RETURNING *`,
+            [date, time, startTime, endTime, booking.id]
+        );
+        await client.query(
+            `INSERT INTO audit_log (tenant_id, user_id, actor_user_id, action, entity, entity_id, old_status, new_status, note)
+             VALUES ($1, $2, $2, $3, 'booking', $4, $5, $5, $6)`,
+            [tenant.id, actor.userId || null, `rescheduled_by_${actor.type}`, booking.id, booking.status,
+             `${formatDateOnlyValue(booking.booking_date)} ${String(booking.booking_time).slice(0, 5)} → ${date} ${time}${reason.display ? ` · ${reason.display}` : ''}`.slice(0, 500)]
+        ).catch(() => {});
+        return { booking: updated.rows[0], previous: booking, request: history.rows[0] };
+    });
+}
+
+/** After a booking moved: calendar, emails, alerts. Never throws. */
+function afterReschedule(tenant, result, reason, actor, { notifyClient = true } = {}) {
+    const service = result.booking.service_id ? query(`SELECT name FROM services WHERE id = $1`, [result.booking.service_id]).then((r) => r.rows[0]?.name).catch(() => null) : Promise.resolve(null);
+    service.then((serviceName) => {
+        const enriched = { ...result.booking, service_name: serviceName };
+        calendarSync.syncBookingWithExternal(tenant.id, enriched).catch(console.error);
+        sendBookingRescheduledEmail(enriched, {
+            oldDate: result.previous.booking_date, oldTime: result.previous.booking_time,
+            reason: reason.display, by: actor.type, notifyClient
+        }, tenant).catch(console.error);
+        notifyReschedule(tenant, enriched, result.previous, { reason: reason.display, actor, kind: 'applied' });
+    });
+}
+
+// POST /api/v1/bookings/:id/reschedule — business moves a booking
+router.post('/:id/reschedule', authenticate, requireRole('staff', 'tenant_admin'), async (req, res) => {
+    const { date, time, reason_code, reason, notify_client = true, allow_outside_hours = false } = req.body || {};
+    try {
+        const normalized = normalizeReason({ reasonCode: reason_code, reason }, 'staff', { required: true });
+        const actor = { type: 'staff', userId: req.user.id, name: req.user.name || req.user.email };
+        const result = await performReschedule({
+            tenant: req.tenant, bookingId: req.params.id, date, time, reason: normalized, actor,
+            allowOutsideHours: allow_outside_hours === true, notifyClient: notify_client !== false
+        });
+        afterReschedule(req.tenant, result, normalized, actor, { notifyClient: notify_client !== false });
+        res.json({ success: true, booking: serializeBooking(result.booking), change: result.request });
+    } catch (err) {
+        if (err.status) return res.status(err.status).json({ error: err.message });
+        console.error('[Bookings/Reschedule]', err.message);
+        res.status(500).json({ error: 'Failed to reschedule the booking.' });
+    }
+});
+
+// GET /api/v1/bookings/:id/history — reschedules, requests and who made them
+router.get('/:id/history', authenticate, requireRole('staff', 'tenant_admin'), async (req, res) => {
+    try {
+        const rows = await query(
+            `SELECT r.*, u.name AS actor_name, u.email AS actor_email
+             FROM booking_reschedules r LEFT JOIN users u ON u.id = r.actor_user_id
+             WHERE r.booking_id = $1 AND r.tenant_id = $2 ORDER BY r.created_at DESC LIMIT 50`,
+            [req.params.id, req.tenant.id]
+        );
+        res.json({
+            history: rows.rows.map((r) => ({
+                ...r,
+                old_date: formatDateOnlyValue(r.old_date), new_date: formatDateOnlyValue(r.new_date),
+                old_time: formatTimeOnlyValue(r.old_time), new_time: formatTimeOnlyValue(r.new_time),
+                reason_label: (r.requested_by === 'staff' ? STAFF_REASONS : CLIENT_REASONS)[r.reason_code] || null
+            }))
+        });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to load the booking history.' });
+    }
+});
+
+// POST /api/v1/bookings/:id/reschedule-requests/:requestId/(approve|decline)
+router.post('/:id/reschedule-requests/:requestId/:decision', authenticate, requireRole('staff', 'tenant_admin'), async (req, res) => {
+    const { decision, requestId } = req.params;
+    if (!['approve', 'decline'].includes(decision) || !/^[0-9a-f-]{36}$/i.test(requestId)) return res.status(400).json({ error: 'Unknown action.' });
+    const note = String(req.body?.note || '').replace(/[<>]/g, '').slice(0, 500);
+    try {
+        const found = await query(`SELECT * FROM booking_reschedules WHERE id = $1 AND booking_id = $2 AND tenant_id = $3`, [requestId, req.params.id, req.tenant.id]);
+        const request = found.rows[0];
+        if (!request) return res.status(404).json({ error: 'Request not found.' });
+        if (request.status !== 'pending') return res.status(409).json({ error: 'This request was already handled.' });
+        const actor = { type: 'staff', userId: req.user.id, name: req.user.name || req.user.email };
+
+        if (decision === 'decline') {
+            await query(`UPDATE booking_reschedules SET status = 'declined', staff_note = $2, decided_at = NOW(), actor_user_id = COALESCE(actor_user_id, $3) WHERE id = $1`, [requestId, note || null, req.user.id]);
+            const booking = (await query(`SELECT * FROM bookings WHERE id = $1`, [req.params.id])).rows[0];
+            sendRescheduleDeclinedEmail(booking, request, note, req.tenant).catch(console.error);
+            return res.json({ success: true, booking: serializeBooking(booking) });
+        }
+
+        const reason = normalizeReason({ reasonCode: request.reason_code, reason: request.reason }, 'client');
+        const result = await performReschedule({
+            tenant: req.tenant, bookingId: req.params.id,
+            date: formatDateOnlyValue(request.new_date), time: String(request.new_time).slice(0, 5),
+            reason, actor: { type: 'client', userId: null }
+        });
+        // performReschedule wrote a fresh 'applied' row; mark the original request handled.
+        await query(`UPDATE booking_reschedules SET status = 'applied', staff_note = $2, decided_at = NOW(), actor_user_id = $3 WHERE id = $1`, [requestId, note || null, req.user.id]);
+        await query(`DELETE FROM booking_reschedules WHERE id = $1`, [result.request.id]);
+        afterReschedule(req.tenant, result, reason, { type: 'client', approvedBy: actor }, { notifyClient: true });
+        res.json({ success: true, booking: serializeBooking(result.booking) });
+    } catch (err) {
+        if (err.status) return res.status(err.status).json({ error: err.message });
+        console.error('[Bookings/RescheduleDecision]', err.message);
+        res.status(500).json({ error: 'Failed to update the request.' });
+    }
+});
+
+// Shared with the customer self-service routes (/api/v1/manage).
+router.scheduling = { performReschedule, afterReschedule, serializeBooking, formatDateOnlyValue };
 
 module.exports = router;

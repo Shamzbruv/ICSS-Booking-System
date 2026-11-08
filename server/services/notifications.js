@@ -25,6 +25,7 @@ const NOTIFICATION_TYPES = {
     booking_payment:      { label: 'Payments to review or verify', group: 'Payments', default: true, urgency: 'high' },
     booking_after_hours:  { label: 'After-hours requests', group: 'Bookings', default: true, urgency: 'high' },
     booking_cancelled:    { label: 'Cancellations & rejections', group: 'Bookings', default: true, urgency: 'normal' },
+    booking_rescheduled:  { label: 'Reschedules & reschedule requests', group: 'Bookings', default: true, urgency: 'high' },
     booking_updated:      { label: 'Changes made by your team', group: 'Team activity', default: true, urgency: 'low' },
     booking_expired:      { label: 'Unpaid holds that expired', group: 'Payments', default: true, urgency: 'normal' },
     appointment_reminder: { label: 'Appointment starting soon (30 min)', group: 'Schedule', default: true, urgency: 'high' },
@@ -265,6 +266,31 @@ function notifyBookingStatusChange(tenant, booking, status, { actorUserId, actor
     });
 }
 
+/** Reschedules: applied (by client or staff), requested (needs approval), or client cancellation. */
+function notifyReschedule(tenant, booking, previous, { reason, actor = {}, kind = 'applied' } = {}) {
+    const tz = tenant?.branding?.timezone || 'America/Jamaica';
+    const who = booking.name || 'Customer';
+    const from = describeWhen(previous, tz);
+    const why = reason ? ` · ${reason}` : '';
+    let event;
+    if (kind === 'requested') {
+        event = { type: 'booking_rescheduled', title: `Reschedule request: ${who}`, body: `Wants to move from ${from}${why} — approve or decline.` };
+    } else if (kind === 'client_cancelled') {
+        event = { type: 'booking_cancelled', title: `${who} cancelled`, body: `${from}${why} — the slot is open again.` };
+    } else {
+        const to = describeWhen(booking, tz);
+        const by = actor.type === 'client' ? (actor.approvedBy ? ` (approved by ${actor.approvedBy.name || 'your team'})` : ' by the client') : actor.name ? ` by ${actor.name}` : '';
+        event = { type: 'booking_rescheduled', title: `Rescheduled: ${who}`, body: `${from} → ${to}${by}${why}` };
+    }
+    notifySafe(tenant.id, {
+        ...event,
+        url: bookingUrl(booking),
+        bookingId: booking.id,
+        tag: `booking-${booking.id}`,
+        excludeUserId: actor.userId || actor.approvedBy?.userId || null
+    });
+}
+
 // ── Scheduled: reminders & morning agenda ────────────────────────────────────
 async function runAppointmentReminders() {
     const due = await query(
@@ -348,6 +374,7 @@ module.exports = {
     notifySafe,
     notifyNewBooking,
     notifyBookingStatusChange,
+    notifyReschedule,
     describeWhen,
     runAppointmentReminders,
     runDailySummaries,

@@ -85,6 +85,24 @@
         <div id="notificationSettings" class="notif-settings"></div>
     </section>
 
+    <section class="card settings-card" id="rescheduling" style="max-width: 800px; margin: 0 auto;" data-tour="reschedule-policy">
+        <p class="settings-section-kicker">Bookings</p>
+        <h2 class="settings-section-title">Rescheduling &amp; cancellations</h2>
+        <p class="page-subtitle settings-section-copy">Every confirmation email includes a <strong>Manage my booking</strong> link. Choose what clients can change themselves. Your team can always reschedule from the Bookings page.</p>
+        <form id="reschedulePolicyForm" class="reschedule-policy">
+            <label class="notif-switch"><span class="notif-switch-text"><span>Clients can reschedule online</span><small>They pick a new open time from your live calendar.</small></span><input type="checkbox" id="rp_allowClientReschedule"><span class="notif-switch-ui"></span></label>
+            <label class="notif-switch"><span class="notif-switch-text"><span>Clients can cancel online</span><small>The time slot opens up again automatically.</small></span><input type="checkbox" id="rp_allowClientCancel"><span class="notif-switch-ui"></span></label>
+            <label class="notif-switch"><span class="notif-switch-text"><span>I approve each new time first</span><small>Client requests wait in Bookings until you accept or keep the original time.</small></span><input type="checkbox" id="rp_requireApproval"><span class="notif-switch-ui"></span></label>
+            <label class="notif-switch"><span class="notif-switch-text"><span>Ask clients for a reason</span><small>Shown to you in the alert, email and booking history.</small></span><input type="checkbox" id="rp_reasonRequired"><span class="notif-switch-ui"></span></label>
+            <div class="reschedule-policy-grid">
+                <div class="form-group"><label for="rp_cutoffHours">Online changes close (hours before)</label><input type="number" id="rp_cutoffHours" min="0" max="336" step="1"></div>
+                <div class="form-group"><label for="rp_maxReschedules">Max online reschedules per booking</label><input type="number" id="rp_maxReschedules" min="0" max="10" step="1"></div>
+            </div>
+            <p class="gw-help" id="rp_summary"></p>
+            <button type="submit" class="btn btn-primary btn-block">Save rescheduling rules</button>
+        </form>
+    </section>
+
     <section id="adminAppearanceSection" class="card settings-card" hidden>
         <p class="settings-section-kicker">Appearance</p><h2 class="settings-section-title">Dashboard theme</h2>
         <p class="page-subtitle">Choose how your admin workspace looks. Your customer website has its own design settings in Website Builder.</p>
@@ -372,6 +390,7 @@
 <script src="/js/page-help.js"></script>
 <script src="js/admin.js"></script>
 <script src="js/notifications.js" defer></script>
+<script src="js/reschedulePolicy.js" defer></script>
 <script>
     const DAYS = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
     const DAY_LABELS = { monday:'Monday', tuesday:'Tuesday', wednesday:'Wednesday', thursday:'Thursday', friday:'Friday', saturday:'Saturday', sunday:'Sunday' };

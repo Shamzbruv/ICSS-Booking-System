@@ -15,7 +15,7 @@ const { seedStarterServices } = require('../../services/provisioning');
 const RESERVED_SLUGS = new Set([
     'admin', 'api', 'login', 'signup', 'dashboard', 'settings', 'www', 'app',
     'auth', 'billing', 'support', 'help', 'docs', 'blog', 'static', 'assets',
-    'demo', 'media', 'playground', 'platform', 'onboarding', 'themes', 'editor',
+    'demo', 'media', 'playground', 'platform', 'onboarding', 'themes', 'editor', 'manage',
     'provisioning', 'custom-theme', 'forgot-password', 'reset-password', 'template'
 ]);
 
@@ -664,6 +664,25 @@ router.delete('/:slug/media/:mediaId', authenticate, requireTenantOwnership('ten
     } catch (err) {
         console.error('[Tenants/Media Delete]', err.message);
         res.status(500).json({ error: 'Failed to delete the file.' });
+    }
+});
+
+// ── Rescheduling policy ───────────────────────────────────────────────────────
+const { normalizePolicy: normalizeReschedulePolicy } = require('../../services/bookingReschedule');
+
+router.get('/:slug/reschedule-policy', authenticate, requireTenantOwnership('tenant_admin', 'staff'), async (req, res) => {
+    res.json({ policy: normalizeReschedulePolicy(req.tenant.reschedule_policy || {}) });
+});
+
+router.put('/:slug/reschedule-policy', authenticate, requireTenantOwnership('tenant_admin'), async (req, res) => {
+    const policy = normalizeReschedulePolicy(req.body?.policy || {});
+    try {
+        await query(`UPDATE tenants SET reschedule_policy = $1, updated_at = NOW() WHERE id = $2`, [JSON.stringify(policy), req.tenant.id]);
+        invalidateTenantCache(req.tenant.slug);
+        res.json({ success: true, policy });
+    } catch (err) {
+        console.error('[Tenants/Reschedule Policy]', err.message);
+        res.status(500).json({ error: 'Failed to save the rescheduling policy.' });
     }
 });
 
