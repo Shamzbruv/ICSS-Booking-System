@@ -75,3 +75,48 @@ document.getElementById('year').textContent = new Date().getFullYear();
   new ResizeObserver(layout).observe(scaler);
   layout();
 })();
+
+// ── "Everything included" tabs (keyboard accessible) ─────────────────────────
+(function initFeatureTour() {
+  const root = document.querySelector('[data-tour-tabs]');
+  if (!root) return;
+  const tabs = [...root.querySelectorAll('[role="tab"]')];
+  const select = (tab, focus) => {
+    tabs.forEach((t) => {
+      const active = t === tab;
+      t.classList.toggle('is-active', active);
+      t.setAttribute('aria-selected', String(active));
+      t.tabIndex = active ? 0 : -1;
+      document.getElementById(t.getAttribute('aria-controls')).hidden = !active;
+    });
+    if (focus) tab.focus();
+    tab.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' });
+  };
+  tabs.forEach((tab, i) => {
+    tab.addEventListener('click', () => select(tab));
+    tab.addEventListener('keydown', (e) => {
+      const next = { ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: tabs.length - 1 }[e.key];
+      if (next === undefined) return;
+      e.preventDefault();
+      select(tabs[(next + tabs.length) % tabs.length], true);
+    });
+  });
+})();
+
+// ── Phone call-to-action bar appears once the hero is out of view ────────────
+(function initMobileCta() {
+  const bar = document.getElementById('mobileCta');
+  const hero = document.querySelector('.hero');
+  const closing = document.querySelector('.closing');
+  if (!bar || !hero || !('IntersectionObserver' in window)) return;
+  let heroVisible = true;
+  let closingVisible = false;
+  const update = () => {
+    const show = !heroVisible && !closingVisible;
+    bar.classList.toggle('is-visible', show);
+    bar.setAttribute('aria-hidden', String(!show));
+    bar.querySelector('a').tabIndex = show ? 0 : -1;
+  };
+  new IntersectionObserver(([entry]) => { heroVisible = entry.isIntersecting; update(); }).observe(hero);
+  if (closing) new IntersectionObserver(([entry]) => { closingVisible = entry.isIntersecting; update(); }).observe(closing);
+})();

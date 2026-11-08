@@ -11,3 +11,101 @@
 @media(max-width:480px){.space-frame-scaler{height:520px}.space-controls{padding:18px}}
 
 .industry-grid small{display:block;margin-top:8px;color:var(--purple);font-size:11px;font-weight:650}.industry-grid>a>div{min-width:0}.industry-grid>a>span,.industry-grid b{flex-shrink:0}
+
+/* ── Jamaica pride ───────────────────────────────────────────────────────── */
+.ja-flag{display:inline-block;width:22px;height:14px;border-radius:3px;flex-shrink:0;background:
+  linear-gradient(33.7deg,transparent 43%,#FED100 43%,#FED100 57%,transparent 57%),
+  linear-gradient(-33.7deg,transparent 43%,#FED100 43%,#FED100 57%,transparent 57%),
+  linear-gradient(90deg,#000 0 30%,transparent 30% 70%,#000 70%),
+  #009B3A;box-shadow:0 0 0 1px rgba(0,0,0,.08)}
+.ja-badge{padding:6px 12px 6px 8px;border:1px solid #cfe9d8;border-radius:999px;background:linear-gradient(90deg,#effaf3,#fffbe6);color:#0b6b33;letter-spacing:.6px}
+.proof-strip{border-bottom:1px solid var(--line);background:#fff}
+.proof-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:20px;padding-block:28px}
+.proof-grid div{display:flex;flex-direction:column;gap:4px}
+.proof-grid strong{font-size:30px;font-weight:800;letter-spacing:-1px;color:var(--purple)}
+.proof-grid span{font-size:13px;color:var(--muted);line-height:1.45}
+
+/* ── Everything included (tabs) ──────────────────────────────────────────── */
+.tour{display:grid;gap:22px}
+.tour-tabs{display:flex;gap:8px;overflow-x:auto;padding:4px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.tour-tabs::-webkit-scrollbar{display:none}
+.tour-tabs button{flex:0 0 auto;min-height:44px;padding:10px 18px;border:1px solid var(--line);border-radius:999px;background:#fff;color:var(--ink);font-size:14px;font-weight:650;white-space:nowrap;transition:background .15s,border-color .15s,color .15s}
+.tour-tabs button:hover{border-color:#cdbff0}
+.tour-tabs button.is-active{background:var(--purple);border-color:var(--purple);color:#fff;box-shadow:0 10px 24px -12px rgba(109,40,217,.7)}
+.tour-panel{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;animation:tourIn .35s ease}
+.tour-panel[hidden]{display:none}
+@keyframes tourIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.tour-card{position:relative;padding:24px;border:1px solid var(--line);border-radius:16px;background:#fff;transition:transform .2s,box-shadow .2s,border-color .2s}
+.tour-card:hover{transform:translateY(-3px);border-color:#d7ccef;box-shadow:0 18px 40px -22px rgba(70,40,120,.35)}
+.tour-card h3{font-size:16.5px;letter-spacing:-.3px;margin:14px 0 8px}
+.tour-card p{font-size:14px;color:var(--muted)}
+.tour-card .text-link{margin-top:6px;padding-block:6px}
+.tour-ico{display:grid;place-items:center;width:44px;height:44px;border-radius:12px;background:#f3eefc;font-size:22px}
+.tour-card.is-new::after{content:'NEW';position:absolute;top:18px;right:18px;padding:3px 8px;border-radius:999px;background:#e8f7ee;color:#0b6b33;font-size:10px;font-weight:800;letter-spacing:.8px}
+
+/* ── A day with ICSS ─────────────────────────────────────────────────────── */
+.day-section{border-top:1px solid var(--line)}
+.day-timeline{list-style:none;margin:0;padding:0;display:grid;gap:0;max-width:820px;position:relative}
+.day-timeline::before{content:'';position:absolute;left:92px;top:8px;bottom:8px;width:2px;background:linear-gradient(#e9e2f7,#d9cdf1)}
+.day-timeline li{display:grid;grid-template-columns:80px 1fr;gap:28px;padding:14px 0;position:relative}
+.day-timeline li::before{content:'';position:absolute;left:86px;top:22px;width:14px;height:14px;border-radius:50%;background:#fff;border:3px solid var(--purple)}
+.day-timeline time{font-size:13px;font-weight:750;color:var(--purple);padding-top:3px;text-align:right}
+.day-timeline strong{display:block;font-size:16px;margin-bottom:4px}
+.day-timeline p{font-size:14.5px;color:var(--muted);max-width:560px}
+
+/* ── Made in Jamaica ─────────────────────────────────────────────────────── */
+.ja-section{position:relative;overflow:hidden;background:#0c1410;color:#fff}
+.ja-section::before{content:'';position:absolute;inset:0;background:
+  radial-gradient(600px 300px at 0% 0%,rgba(0,155,58,.45),transparent 70%),
+  radial-gradient(500px 260px at 100% 100%,rgba(254,209,0,.28),transparent 70%);pointer-events:none}
+.ja-inner{position:relative;display:grid;grid-template-columns:1.1fr 1fr;gap:56px;align-items:center}
+.ja-eyebrow{color:#FED100}
+.ja-copy h2{font-size:clamp(30px,3.6vw,46px);letter-spacing:-1.6px;line-height:1.1;margin-top:14px}
+.ja-copy p{color:#c9d6cd;font-size:16px;margin:20px 0 28px;max-width:540px}
+.ja-copy p a{color:#FED100;text-decoration:underline;text-underline-offset:3px}
+.ja-points{list-style:none;margin:0;padding:0;display:grid;gap:12px}
+.ja-points li{display:flex;gap:14px;align-items:flex-start;padding:16px 18px;border:1px solid rgba(255,255,255,.1);border-radius:14px;background:rgba(255,255,255,.04);backdrop-filter:blur(4px)}
+.ja-points li>span{font-size:22px;line-height:1}
+.ja-points strong{display:block;font-size:15px;margin-bottom:3px}
+.ja-points p{font-size:13.5px;color:#b8c7bd}
+
+/* ── Before / after ──────────────────────────────────────────────────────── */
+.compare-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.compare-col{padding:28px;border-radius:18px;border:1px solid var(--line)}
+.compare-col h3{font-size:18px;margin-bottom:16px}
+.compare-col ul{list-style:none;margin:0;padding:0;display:grid;gap:12px}
+.compare-col li{position:relative;padding-left:30px;font-size:14.5px;line-height:1.5}
+.compare-before{background:#fbf9fc;color:var(--muted)}
+.compare-before li::before{content:'✕';position:absolute;left:0;top:0;width:20px;height:20px;border-radius:50%;background:#fdecec;color:#c0392b;font-size:11px;font-weight:800;display:grid;place-items:center}
+.compare-after{background:linear-gradient(160deg,#f6f1ff,#fff);border-color:#d8c9ef}
+.compare-after li::before{content:'✓';position:absolute;left:0;top:0;width:20px;height:20px;border-radius:50%;background:var(--purple);color:#fff;font-size:11px;font-weight:800;display:grid;place-items:center}
+
+.closing-note{color:var(--muted);font-size:14px;margin-top:12px;max-width:440px}
+.closing-actions{display:flex;flex-wrap:wrap;gap:10px}
+
+/* Phone call-to-action that appears after scrolling past the hero */
+.mobile-cta{display:none}
+@media(max-width:800px){
+  .mobile-cta{position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:30;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 10px 10px 16px;border-radius:16px;background:rgba(28,24,40,.94);color:#fff;font-size:13px;box-shadow:0 18px 40px -12px rgba(0,0,0,.45);backdrop-filter:blur(8px);transform:translateY(140%);transition:transform .3s ease}
+  .mobile-cta.is-visible{transform:none}
+  .mobile-cta .button{min-height:42px;padding:10px 16px;font-size:13px}
+  .footer{padding-bottom:96px}
+}
+
+@media(max-width:1050px){.ja-inner{grid-template-columns:1fr;gap:32px}}
+@media(max-width:800px){
+  .proof-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .tour-panel{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .compare-grid{grid-template-columns:1fr}
+  .day-timeline::before{left:12px}
+  .day-timeline li{grid-template-columns:1fr;gap:4px;padding-left:40px}
+  .day-timeline li::before{left:6px}
+  .day-timeline time{text-align:left;padding-top:0}
+}
+@media(max-width:480px){
+  .tour-panel{grid-template-columns:1fr}
+  .proof-grid strong{font-size:26px}
+  .tour-card{padding:20px}
+  .compare-col{padding:22px}
+}
+@media(prefers-reduced-motion:reduce){.tour-panel{animation:none}.tour-card:hover{transform:none}}
