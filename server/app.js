@@ -74,6 +74,8 @@ app.use(express.urlencoded({ extended: true }));
 // ─── Rate Limiting ────────────────────────────────────────────────────────────
 app.use('/api/', rateLimiter);
 
+app.post('/api/v1/whatsapp/webhook', (req,res,next) => require('./services/whatsapp').webhook(req,res).catch(next));
+
 // ─── Tenant Resolution ───────────────────────────────────────────────────────
 // Injects req.tenant on every /api/v1/ request
 // Platform routes bypass tenant resolution — they operate cross-tenant
@@ -179,6 +181,7 @@ async function start() {
             console.log(`   API:     http://localhost:${PORT}/api/v1/`);
             console.log(`   Mode:    ${process.env.NODE_ENV || 'development'}\n`);
             startCronJobs();
+            require('./services/whatsapp').startWorker();
             const { initPush, startNotificationJobs } = require('./services/notifications');
             initPush().then((ready) => console.log(ready ? '   Push:    enabled' : '   Push:    unavailable'));
             startNotificationJobs();

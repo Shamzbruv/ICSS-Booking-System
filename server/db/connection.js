@@ -929,6 +929,30 @@ async function runMigrations(client) {
         )
     `);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_push_subscriptions_user ON push_subscriptions(user_id)`);
+    await client.query(`CREATE TABLE IF NOT EXISTS whatsapp_settings (id INTEGER PRIMARY KEY CHECK(id=1), config JSONB NOT NULL, updated_at TIMESTAMPTZ DEFAULT NOW())`);
+    await client.query(`CREATE TABLE IF NOT EXISTS whatsapp_preferences (tenant_id UUID PRIMARY KEY REFERENCES tenants(id) ON DELETE CASCADE, enabled BOOLEAN DEFAULT false, providers JSONB DEFAULT '[]', reminders JSONB DEFAULT '[24,2]', updated_at TIMESTAMPTZ DEFAULT NOW())`);
+    await client.query(`CREATE TABLE IF NOT EXISTS whatsapp_events (id BIGSERIAL PRIMARY KEY, booking_id UUID NOT NULL REFERENCES bookings(id) ON DELETE CASCADE, kind TEXT NOT NULL, previous JSONB, version TEXT NOT NULL, created_at TIMESTAMPTZ DEFAULT NOW(), processed_at TIMESTAMPTZ, UNIQUE(booking_id,kind,version))`);
+    await client.query(`CREATE TABLE IF NOT EXISTS whatsapp_deliveries (id BIGSERIAL PRIMARY KEY, event_id BIGINT REFERENCES whatsapp_events(id), tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE, booking_id UUID REFERENCES bookings(id) ON DELETE CASCADE, recipient TEXT NOT NULL, template TEXT NOT NULL, variables JSONB NOT NULL, status TEXT NOT NULL DEFAULT 'pending', message_sid TEXT UNIQUE, error TEXT, created_at TIMESTAMPTZ DEFAULT NOW(), updated_at TIMESTAMPTZ DEFAULT NOW(), UNIQUE(event_id,recipient,template))`);
+    await client.query(`ALTER TABLE whatsapp_events ADD COLUMN IF NOT EXISTS snapshot JSONB`);
+    await client.query(`ALTER TABLE whatsapp_preferences ADD COLUMN IF NOT EXISTS enabled_at TIMESTAMPTZ DEFAULT NOW()`);
+    await client.query(`CREATE TABLE IF NOT EXISTS whatsapp_optouts (phone TEXT PRIMARY KEY, created_at TIMESTAMPTZ DEFAULT NOW())`);
+    await client.query(`ALTER TABLE whatsapp_deliveries ADD COLUMN IF NOT EXISTS attempts INTEGER DEFAULT 0`);
+    await client.query(`ALTER TABLE whatsapp_deliveries ADD COLUMN IF NOT EXISTS next_attempt_at TIMESTAMPTZ DEFAULT NOW()`);
+    await client.query(`ALTER TABLE whatsapp_preferences ADD COLUMN IF NOT EXISTS daily_limit INTEGER DEFAULT 100`);
+    await client.query(`CREATE INDEX IF NOT EXISTS whatsapp_events_pending ON whatsapp_events(id) WHERE processed_at IS NULL`);
+    await client.query(`CREATE OR REPLACE FUNCTION capture_whatsapp_booking() RETURNS trigger AS $$
+    DECLARE k TEXT; BEGIN
+      IF TG_OP='INSERT' THEN k := 'new';
+      ELSIF NEW.status IN ('cancelled','rejected') AND OLD.status IS DISTINCT FROM NEW.status THEN k := 'cancelled';
+      ELSIF (NEW.booking_date,NEW.booking_time) IS DISTINCT FROM (OLD.booking_date,OLD.booking_time) THEN k := 'rescheduled';
+      ELSIF NEW.status='confirmed' AND OLD.status IS DISTINCT FROM NEW.status THEN k := 'confirmed';
+      ELSE RETURN NEW; END IF;
+      INSERT INTO whatsapp_events(booking_id,kind,previous,version,snapshot) VALUES(NEW.id,k,CASE WHEN TG_OP='UPDATE' THEN to_jsonb(OLD) ELSE NULL END, clock_timestamp()::text,to_jsonb(NEW));
+      RETURN NEW;
+    END; $$ LANGUAGE plpgsql`);
+    await client.query(`DROP TRIGGER IF EXISTS whatsapp_booking_event ON bookings`);
+    await client.query(`CREATE TRIGGER whatsapp_booking_event AFTER INSERT OR UPDATE ON bookings FOR EACH ROW EXECUTE FUNCTION capture_whatsapp_booking()`);
+
 }
 
 module.exports = { query, transaction, initDatabase, getPool };

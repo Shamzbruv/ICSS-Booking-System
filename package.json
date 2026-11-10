@@ -37,5 +37,8 @@
     "resend": "^6.12.2",
     "uuid": "^14.0.0",
     "web-push": "^3.6.7"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.16"
   }
 }

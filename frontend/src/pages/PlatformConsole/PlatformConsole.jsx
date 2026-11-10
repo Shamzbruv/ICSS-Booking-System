@@ -13,6 +13,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { ConsoleProvider, useConsole } from './ConsoleContext';
 import ImpersonationBanner from './ImpersonationBanner';
+import WhatsAppSettings from './WhatsAppSettings';
 import TenantDrawer from './TenantDrawer';
 import InstallPlatformApp from './InstallPlatformApp';
 import { api } from '../../api';
@@ -63,6 +64,7 @@ function ConsoleLogin() {
 
 // ── Sidebar nav ────────────────────────────────────────────────────────────────
 const NAV = [
+  { id: 'whatsapp', icon: 'message', label: 'WhatsApp' },
   { id: 'dashboard',  icon: 'dashboard', label: 'Dashboard' },
   { id: 'tenants',    icon: 'building', label: 'Tenants' },
   { id: 'themes',     icon: 'layout', label: 'Themes' },
@@ -565,6 +567,7 @@ function InfoRow({ label, value }) {
 }
 
 const VIEW_MAP = {
+  whatsapp: <WhatsAppSettings />,
   dashboard:<DashboardView />,
   tenants:  <TenantsView />,
   themes:   <ThemesView />,

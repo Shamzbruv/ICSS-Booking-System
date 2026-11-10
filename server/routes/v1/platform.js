@@ -50,6 +50,7 @@ function serializeBooking(booking) {
 
 // All platform routes: authenticated + platform_owner only
 router.use(authenticate, requirePlatformOwner);
+router.use('/whatsapp', require('./whatsappPlatform'));
 
 function ownerOnly(req, res, next) {
     if (req.user.role !== 'platform_owner') return res.status(403).json({ error: 'Only the Platform Owner can manage developer accounts.' });

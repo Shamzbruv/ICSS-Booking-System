@@ -1,0 +1,10 @@
+const test=require('node:test');const assert=require('node:assert/strict');
+process.env.ENCRYPTION_KEY='ab'.repeat(32);
+const wa=require('../server/services/whatsapp');
+const b={id:'booking-123',name:'Jane',service_name:'Hair',booking_date:'2026-11-15',booking_time:'10:00:00'};const t={name:'Studio'},p={name:'Alex'};
+test('confirmation puts booking reference in variable 6, not a calendar URL',()=>{assert.equal(wa.variables('confirmation',b,t,p)['6'],'booking-123');});
+test('provider and customer reschedule templates have different variable mappings',()=>{const old={...b,booking_date:'2026-11-14'};const c=wa.variables('client_rescheduled',b,t,p,old),s=wa.variables('provider_rescheduled',b,t,p,old);assert.match(c['4'],/2026-11-14/);assert.match(c['5'],/2026-11-15/);assert.equal(s['3'],'Jane');assert.equal(s['7'],'booking-123');});
+test('cancellation templates have exact variable counts',()=>{assert.equal(Object.keys(wa.variables('client_cancelled',b,t,p)).length,5);assert.equal(Object.keys(wa.variables('provider_cancelled',b,t,p)).length,6);});
+test('provider new booking has provider, business and client in correct order',()=>{assert.deepEqual(Object.values(wa.variables('provider_new',b,t,p)).slice(0,3),['Alex','Studio','Jane']);});
+test('all nine template IDs are valid and cancellation uses replacement',()=>{assert.equal(Object.keys(wa.TEMPLATES).length,9);for(const v of Object.values(wa.TEMPLATES))assert.match(v,/^HX[a-f0-9]{32}$/);assert.equal(wa.TEMPLATES.client_cancelled,'HX1e132f7e824cc3c71c75c4db87543f0b');});
+test('phone normalization rejects unusable numbers',()=>{assert.equal(wa.normalizeWhatsappNumber('8765825685'),'+18765825685');assert.equal(wa.normalizeWhatsappNumber('whatsapp:+16676604341'),'+16676604341');assert.equal(wa.normalizeWhatsappNumber('abc'),null);});
