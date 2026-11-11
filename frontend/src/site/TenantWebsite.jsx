@@ -98,9 +98,11 @@ export default function TenantWebsite({ tenant, services, themeKey, savedSite, b
   const [draft, setDraft] = useState(null);
   const [highlightId, setHighlightId] = useState(null);
   const [musicCommand, setMusicCommand] = useState(null);
-  const [editMode, setEditMode] = useState(true);
+  const [editMode, setEditMode] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  // A public preview query alone does not enable editor controls or instructions.
+  const editing = preview && editMode;
 
   const preset = getPreset(themeKey);
   const site = useMemo(() => {
@@ -112,7 +114,7 @@ export default function TenantWebsite({ tenant, services, themeKey, savedSite, b
 
   const visiblePages = site.pages.filter((page) => page.visible);
   const requestedPage = PAGE_IDS.includes(pageParam) ? pageParam : 'home';
-  const currentPage = site.pages.find((page) => page.id === requestedPage && (page.visible || preview)) || site.pages[0];
+  const currentPage = site.pages.find((page) => page.id === requestedPage && (page.visible || editing)) || site.pages[0];
   const onePage = site.layoutMode === 'onepage';
 
   useGoogleFonts([site.style.headingFont, site.style.bodyFont]);
@@ -130,7 +132,7 @@ export default function TenantWebsite({ tenant, services, themeKey, savedSite, b
       const data = event.data || {};
       switch (data.type) {
         case 'icss:site-edit-mode':
-          setEditMode(data.editing !== false);
+          setEditMode(data.editing === true);
           break;
         case 'icss:site-update':
           if (data.site && typeof data.site === 'object') setDraft(data.site);
@@ -213,9 +215,9 @@ export default function TenantWebsite({ tenant, services, themeKey, savedSite, b
   const resolveTarget = useCallback((target) => {
     if (target === 'contact') return { page: 'home', hash: 'contact' };
     const page = site.pages.find((p) => p.id === target);
-    if (page && (page.visible || preview)) return { page: target };
+    if (page && (page.visible || editing)) return { page: target };
     return { page: target === 'book' ? 'book' : 'home' };
-  }, [site.pages, preview]);
+  }, [site.pages, editing]);
 
   const SiteLink = useMemo(() => function SiteLinkInner({ target, serviceId, className, children, field, globalField }) {
     const { page, hash } = resolveTarget(target);
@@ -274,14 +276,14 @@ export default function TenantWebsite({ tenant, services, themeKey, savedSite, b
 
   const sectionsToRender = onePage
     ? visiblePages.flatMap((page) => page.sections
-      .filter((section) => section.visible || preview)
+      .filter((section) => section.visible || editing)
       .filter((section) => page.id === 'home' || section.type !== 'pageHeader')
       .map((section, index) => ({ ...section, ownerPage: page.id, anchor: index === 0 ? `page-${page.id}` : undefined, hiddenSection: !section.visible })))
-    : currentPage.sections.filter((section) => section.visible || preview).map((section) => ({ ...section, hiddenSection: !section.visible }));
+    : currentPage.sections.filter((section) => section.visible || editing).map((section) => ({ ...section, hiddenSection: !section.visible }));
 
   useReveal(rootRef, site.style.animations !== false, [currentPage.id, sectionsToRender.length, onePage, site.style.animations]);
 
-  const handleGlobalEdit = preview && editMode ? (event) => {
+  const handleGlobalEdit = editing ? (event) => {
     const global = event.target.closest('[data-site-global]')?.dataset.siteGlobal;
     if (!global) return;
     event.preventDefault();
@@ -291,7 +293,7 @@ export default function TenantWebsite({ tenant, services, themeKey, savedSite, b
 
   // Legacy "booking page only" mode.
   if (site.enabled === false) {
-    return <div ref={rootRef} className={s.site} data-site-editing={preview && editMode ? 'true' : undefined} onClickCapture={handleGlobalEdit}>
+    return <div ref={rootRef} className={s.site} data-site-editing={editing ? 'true' : undefined} onClickCapture={handleGlobalEdit}>
       <BookingTheme tenant={{ ...bookingTenant, embedInSite: false }} services={services} />
       <CustomerReviews tenant={tenant} preview={preview} />
     </div>;
@@ -301,7 +303,7 @@ export default function TenantWebsite({ tenant, services, themeKey, savedSite, b
   const navOverHero = site.nav.style === 'transparent' && firstSection && HERO_TYPES.has(firstSection.type);
   const navSolid = !navOverHero || scrolled || menuOpen;
   const brandName = site.brand.name || tenant.name;
-  const ctx = { tenant, services, site, preset, fallback: preset.fallback, SiteLink, renderBooking };
+  const ctx = { tenant, services, site, preset, fallback: preset.fallback, SiteLink, renderBooking, editing };
   const announcement = site.announcement?.enabled && site.announcement.text;
 
   const postSelect = (section, field) => {
@@ -309,7 +311,7 @@ export default function TenantWebsite({ tenant, services, themeKey, savedSite, b
   };
 
   return (
-    <div ref={rootRef} data-site-editing={preview && editMode ? 'true' : undefined}
+    <div ref={rootRef} data-site-editing={editing ? 'true' : undefined}
       onClickCapture={handleGlobalEdit} className={`${s.site} ${site.style.mode === 'dark' ? s.siteDark : ''} ${site.style.buttonStyle === 'outline' ? s.btnOutline : ''}`} style={siteCssVars(site.style)}>
       <a href="#main" className={s.skipLink}>Skip to content</a>
       {announcement && (
@@ -350,7 +352,7 @@ export default function TenantWebsite({ tenant, services, themeKey, savedSite, b
       </div>
 
       <main id="main" className={s.main}>
-        {preview && !currentPage.visible && (
+        {editing && !currentPage.visible && (
           <div className={s.previewNotice}>This page is hidden. Visitors can't see it until you switch it on in Pages.</div>
         )}
         {sectionsToRender.map((section) => (
@@ -358,7 +360,7 @@ export default function TenantWebsite({ tenant, services, themeKey, savedSite, b
             key={section.id}
             id={section.anchor}
             data-section-id={section.id}
-            onClickCapture={preview && editMode ? (event) => {
+            onClickCapture={editing ? (event) => {
               event.preventDefault();
               event.stopPropagation();
               const field = event.target.closest('[data-site-field]')?.dataset.siteField;
@@ -368,7 +370,7 @@ export default function TenantWebsite({ tenant, services, themeKey, savedSite, b
             data-reveal={HERO_TYPES.has(section.type) ? 'shown' : 'pending'}
             className={`${s.sectionShell} ${highlightId === section.id ? s.sectionHighlighted : ''} ${section.hiddenSection ? s.sectionHidden : ''}`}
           >
-            {preview && editMode && (
+            {editing && (
               <button type="button" className={s.editTag} style={HERO_TYPES.has(section.type) ? { top: 'calc(var(--nav-h) + 10px)' } : undefined} onClick={() => postSelect(section)}>
                 ✎ Edit {SECTION_TYPES[section.type]?.label || section.type}{section.hiddenSection ? ' · hidden' : ''}
               </button>

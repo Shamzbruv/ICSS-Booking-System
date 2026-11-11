@@ -3,6 +3,17 @@ import s from './TenantWebsite.module.css';
 import { HeroBackground, Lightbox, SmartImage } from './SiteMedia';
 import { isSafeMediaUrl, youtubeOrVimeoEmbed } from './siteSchema';
 
+// These starter instructions can also be present in previously published sites.
+const TEMPLATE_SETUP_COPY = new Set([
+  'Tell your customers who you are, what you do best and why they’ll love working with you. Edit this text in the Website Builder.',
+  'Share your story here: how you started, what you believe in and what makes your service different.',
+  'Add a short bio in the Website Builder.'
+]);
+
+function isTemplateSetupCopy(text) {
+  return TEMPLATE_SETUP_COPY.has(String(text || '').trim());
+}
+
 function Lines({ text }) {
   if (!text) return null;
   const parts = String(text).split('\n');
@@ -73,12 +84,13 @@ function PageHeader({ props, ctx }) {
 }
 
 function Intro({ props, ctx }) {
+  const showBody = props.body && (ctx.editing || !isTemplateSetupCopy(props.body));
   return (
     <section className={s.section}>
       <div className={`${s.container} ${s.split} ${props.imageSide === 'left' ? s.splitReverse : ''}`}>
         <div className={s.splitText}>
           <SectionHeading eyebrow={props.eyebrow} title={props.title} align="left" />
-          {props.body && <p data-site-field="body" className={s.bodyText}><Lines text={props.body} /></p>}
+          {showBody && <p data-site-field="body" className={s.bodyText}><Lines text={props.body} /></p>}
           {props.ctaLabel && <ctx.SiteLink field="ctaLabel" target={props.ctaTarget || 'book'} className={s.btnPrimary}>{props.ctaLabel}</ctx.SiteLink>}
         </div>
         <SmartImage field="imageUrl" src={props.imageUrl} alt={props.title || ''} className={s.splitImage} fallback={ctx.fallback} />
@@ -114,7 +126,9 @@ function Services({ props, ctx }) {
       <div className={s.container}>
         <SectionHeading title={props.title} subtitle={props.subtitle} />
         {list.length === 0 ? (
-          <p className={s.emptyNote}>Services you add in your dashboard appear here automatically.</p>
+          <p className={s.emptyNote}>{ctx.editing
+            ? 'Services you add in your dashboard appear here automatically.'
+            : 'No services are currently available to book online.'}</p>
         ) : (
           <div className={s.serviceGrid}>
             {list.map((service) => (
@@ -144,6 +158,7 @@ function Gallery({ props, ctx }) {
   const images = (props.images || []).map((image, sourceIndex) => ({ ...image, sourceIndex })).filter((image) => isSafeMediaUrl(image?.url));
   const [open, setOpen] = useState(null);
   const layout = props.layout || 'grid';
+  if (!images.length && !ctx.editing) return null;
   return (
     <section className={s.section}>
       <div className={s.container}>
@@ -187,17 +202,21 @@ function Testimonials({ props }) {
 }
 
 function Team({ props, ctx }) {
+  const members = (props.members || []).filter(member => (
+    ctx.editing || member.name !== 'Team Member' || !isTemplateSetupCopy(member.bio)
+  ));
+  if (!members.length && !ctx.editing) return null;
   return (
     <section className={s.section}>
       <div className={s.container}>
         <SectionHeading title={props.title} subtitle={props.subtitle} />
         <div className={s.teamGrid}>
-          {(props.members || []).map((member, index) => (
+          {members.map((member, index) => (
             <article key={index} className={s.teamCard}>
               <SmartImage field={`members.${index}.photoUrl`} src={member.photoUrl} alt={member.name || ''} className={s.teamPhoto} fallback={ctx.fallback} />
               <h3 data-site-field={`members.${index}.name`}>{member.name}</h3>
               {member.role && <p data-site-field={`members.${index}.role`} className={s.teamRole}>{member.role}</p>}
-              {member.bio && <p data-site-field={`members.${index}.bio`}>{member.bio}</p>}
+              {member.bio && (ctx.editing || !isTemplateSetupCopy(member.bio)) && <p data-site-field={`members.${index}.bio`}>{member.bio}</p>}
             </article>
           ))}
         </div>
@@ -223,6 +242,8 @@ function Stats({ props }) {
 
 function VideoSection({ props, ctx }) {
   const embed = youtubeOrVimeoEmbed(props.videoUrl);
+  const hasVideo = isSafeMediaUrl(props.videoUrl);
+  if (!embed && !hasVideo && !ctx.editing) return null;
   return (
     <section className={s.section}>
       <div className={s.container}>
@@ -230,7 +251,7 @@ function VideoSection({ props, ctx }) {
         <div data-site-field="videoUrl" className={s.videoFrame} style={{ background: ctx.fallback }}>
           {embed ? (
             <iframe src={embed} title={props.title || 'Video'} loading="lazy" allow="accelerometer; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowFullScreen />
-          ) : isSafeMediaUrl(props.videoUrl) ? (
+          ) : hasVideo ? (
             <video src={props.videoUrl} poster={isSafeMediaUrl(props.posterUrl) ? props.posterUrl : undefined} controls playsInline preload="metadata" />
           ) : (
             <p className={s.emptyNote}>Add a video file or a YouTube / Vimeo link.</p>
@@ -295,7 +316,7 @@ function Contact({ props, ctx }) {
                 ))}
               </dl>
             )}
-            {!contact.address && !contact.phone && !contact.email && !whatsapp && (
+            {ctx.editing && !contact.address && !contact.phone && !contact.email && !whatsapp && (
               <p className={s.emptyNote}>Add your address, phone and WhatsApp in the Website Builder → Contact.</p>
             )}
             <ctx.SiteLink target="book" className={s.btnPrimary}>{ctx.site.nav.bookLabel || 'Book now'}</ctx.SiteLink>
