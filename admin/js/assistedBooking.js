@@ -8,6 +8,7 @@
         const serviceInput = el('callerService'), dateInput = el('callerDate'), timeInput = el('callerTime');
         const submit = el('callerSubmit'), result = el('callerResult');
         let services = [], requestVersion = 0, busy = false, completed = false;
+        let whatsappTermsVersion = null;
         const option = (text, value = '') => new Option(text, value);
         function paymentHint() {
             const service = services.find(item => item.id === serviceInput.value);
@@ -47,6 +48,7 @@
         serviceInput.addEventListener('change', loadTimes);
         dateInput.addEventListener('change', loadTimes);
         el('callerPayment').addEventListener('change', paymentHint);
+        el('callerPhone').addEventListener('input', () => { el('callerWhatsApp').checked = false; });
         el('callerReset').addEventListener('click', () => {
             if (busy) return;
             ++requestVersion;
@@ -69,7 +71,9 @@
                     name: el('callerName').value.trim(), phone: el('callerPhone').value.trim(), email: el('callerEmail').value.trim(),
                     service_id: serviceInput.value, date: dateInput.value, time: timeInput.value, notes: el('callerNotes').value.trim(),
                     payment_handling: el('callerPayment').value, verbal_consent: el('callerConsent').checked, terms_accepted: el('callerConsent').checked,
-                    whatsapp_opt_in: el('callerWhatsApp').checked, receipt_image: receipt
+                    whatsapp_opt_in: el('callerWhatsApp').checked,
+                    whatsapp_terms_version: el('callerWhatsApp').checked ? whatsappTermsVersion : undefined,
+                    receipt_image: receipt
                 } });
                 completed = true;
                 const booking = data.booking;
@@ -86,8 +90,9 @@
         });
         try {
             const [serviceData, tenant] = await Promise.all([apiFetch('/api/v1/public/services'), apiFetch('/api/v1/public/tenant')]);
-            el('callerWhatsApp').closest('label').hidden = tenant.whatsapp_available !== true;
-            el('callerWhatsApp').disabled = tenant.whatsapp_available !== true;
+            whatsappTermsVersion = tenant.whatsapp_available === true ? tenant.whatsapp_terms_version : null;
+            el('callerWhatsApp').closest('label').hidden = !whatsappTermsVersion;
+            el('callerWhatsApp').disabled = !whatsappTermsVersion;
             services = serviceData.services || [];
             serviceInput.replaceChildren(option(services.length ? 'Choose a service' : 'Add a service first'));
             services.forEach(service => serviceInput.appendChild(option(`${service.name} · ${service.duration_minutes || 30} min`, service.id)));

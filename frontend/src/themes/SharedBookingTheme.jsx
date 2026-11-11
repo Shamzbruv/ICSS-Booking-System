@@ -666,7 +666,8 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
         receipt_image: receiptBase64,
         after_hours_request: isAfterHoursRequest,
         terms_accepted: termsAccepted,
-        whatsapp_opt_in: tenant.whatsapp_available === true && whatsappOptIn
+        whatsapp_opt_in: tenant.whatsapp_available === true && whatsappOptIn,
+        whatsapp_terms_version: whatsappOptIn ? tenant.whatsapp_terms_version : undefined
       });
       setTermsAccepted(false);
       setWhatsappOptIn(false);
@@ -1042,12 +1043,12 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
                   </span>
                 </label>
 
-                {tenant.whatsapp_available === true && !isDemo && (
+                {tenant.whatsapp_available === true && tenant.whatsapp_terms_version && !isDemo && (
                   <label className={styles.termsConsent}>
                     <input type="checkbox" checked={whatsappOptIn} onChange={(e) => setWhatsappOptIn(e.target.checked)} />
                     <span>
                       <strong>Send me booking updates on WhatsApp (optional)</strong><br />
-                      I agree to receive confirmations, reminders and changes from ICSS Bookings for this appointment at the number above. Reply STOP at any time.
+                      I accept the <a href="/whatsapp-terms" target="_blank" rel="noreferrer">WhatsApp Messaging Terms</a> and agree to receive confirmations, reminders and changes from ICSS Bookings at the number above. Reply STOP at any time.
                     </span>
                   </label>
                 )}

@@ -1,5 +1,7 @@
 const { query } = require('../db/connection');
 const { normalizeWhatsappNumber } = require('./whatsappPhone');
+// Update this version and the effective date on /whatsapp-terms together.
+const WHATSAPP_TERMS_VERSION = '2026-11-11';
 
 async function getWhatsAppPreferences(tenantId, runQuery = query) {
     const { rows } = await runQuery(`
@@ -68,4 +70,4 @@ async function bookingWhatsAppStatus(tenantId, phone, optedIn, runQuery) {
     return blocked.rows.length ? 'unavailable' : 'pending';
 }
 
-module.exports = { getWhatsAppPreferences, validateWhatsAppPreferences, saveWhatsAppPreferences, bookingWhatsAppStatus };
+module.exports = { WHATSAPP_TERMS_VERSION, getWhatsAppPreferences, validateWhatsAppPreferences, saveWhatsAppPreferences, bookingWhatsAppStatus };

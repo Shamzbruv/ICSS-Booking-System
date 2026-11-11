@@ -20,7 +20,7 @@ const { ensureBookingInvoice } = require('../../services/bookingInvoices');
 const { notifyNewBooking, notifyBookingStatusChange, notifyReschedule } = require('../../services/notifications');
 const { RESCHEDULABLE_STATUSES, normalizePolicy, normalizeReason, STAFF_REASONS, CLIENT_REASONS } = require('../../services/bookingReschedule');
 const { sendBookingRescheduledEmail, sendRescheduleDeclinedEmail } = require('../../services/email');
-const { bookingWhatsAppStatus } = require('../../services/whatsappPreferences');
+const { WHATSAPP_TERMS_VERSION, bookingWhatsAppStatus } = require('../../services/whatsappPreferences');
 
 const MAX_BOOKINGS_PER_DAY = 14;
 // Bump when /terms or the booking-consent wording changes materially.
@@ -150,7 +150,7 @@ async function validateTenantAvailability(client, tenant, date, time, totalServi
 
 // POST /api/v1/bookings — Create a new booking
 async function createBooking(req, res) {
-    const { name, email, phone, date, time, notes, region, service_id, receipt_image, after_hours_request, whatsapp_opt_in, terms_accepted } = req.body;
+    const { name, email, phone, date, time, notes, region, service_id, receipt_image, after_hours_request, whatsapp_opt_in, whatsapp_terms_version, terms_accepted } = req.body;
     const assisted = req.assistedBooking === true;
     const tenant = req.tenant;
     const tenantId = tenant.id;
@@ -170,6 +170,9 @@ async function createBooking(req, res) {
     if (assisted && req.body.verbal_consent !== true) return res.status(400).json({ error: 'Confirm that the caller agreed to the booking terms and cancellation policy.' });
     if (terms_accepted !== true) {
         return res.status(400).json({ error: 'Please accept the ICSS Bookings Terms & Conditions and the booking policy to continue.' });
+    }
+    if (whatsapp_opt_in === true && whatsapp_terms_version !== WHATSAPP_TERMS_VERSION) {
+        return res.status(400).json({ error: 'Refresh this page and review the current WhatsApp Messaging Terms before opting in.' });
     }
 
     const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
@@ -295,11 +298,12 @@ async function createBooking(req, res) {
 
             // 5. Insert Booking
             const whatsappStatus = await bookingWhatsAppStatus(tenantId, phone, whatsapp_opt_in, client.query.bind(client));
+            const acceptedWhatsAppVersion = whatsapp_opt_in === true ? WHATSAPP_TERMS_VERSION : null;
             const bookingRes = await client.query(
-                `INSERT INTO bookings (tenant_id, service_id, name, email, phone, booking_date, booking_time, start_time, end_time, notes, region, status, payment_mode, expires_at, is_after_hours_request, after_hours_fee, service_price, service_currency, whatsapp_opt_in, whatsapp_status, terms_accepted_at, terms_version, booking_source, created_by_user_id, terms_acceptance_method)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, NOW(), $21, $22, $23, $24)
+                `INSERT INTO bookings (tenant_id, service_id, name, email, phone, booking_date, booking_time, start_time, end_time, notes, region, status, payment_mode, expires_at, is_after_hours_request, after_hours_fee, service_price, service_currency, whatsapp_opt_in, whatsapp_status, terms_accepted_at, terms_version, booking_source, created_by_user_id, terms_acceptance_method, whatsapp_terms_accepted_at, whatsapp_terms_version)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, NOW(), $21, $22, $23, $24, CASE WHEN $25::text IS NOT NULL THEN NOW() END, $25)
                  RETURNING *`,
-                [tenantId, service_id, name, normalizedEmail, phone, date, time, startTime, endTime, sanitizedNotes, String(region || 'Jamaica').slice(0, 100), status, paymentMode, expiresAt, afterHoursRequested, afterHoursRequested ? Number(tenant.after_hours_fee || 0) : 0, Number(service.price || 0), service.currency || 'JMD', whatsappStatus === 'pending', whatsappStatus, BOOKING_TERMS_VERSION, assisted ? 'phone' : 'online', assisted ? req.user.id : null, assisted ? 'verbal' : 'online']
+                [tenantId, service_id, name, normalizedEmail, phone, date, time, startTime, endTime, sanitizedNotes, String(region || 'Jamaica').slice(0, 100), status, paymentMode, expiresAt, afterHoursRequested, afterHoursRequested ? Number(tenant.after_hours_fee || 0) : 0, Number(service.price || 0), service.currency || 'JMD', whatsappStatus === 'pending', whatsappStatus, BOOKING_TERMS_VERSION, assisted ? 'phone' : 'online', assisted ? req.user.id : null, assisted ? 'verbal' : 'online', acceptedWhatsAppVersion]
             );
             const booking = bookingRes.rows[0];
             if (assisted) await client.query(

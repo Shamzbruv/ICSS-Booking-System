@@ -19,7 +19,8 @@ const state = {
     selectedDate:  null,
     selectedTime:  null,
     selectedLabel: null,
-    branding:      null
+    branding:      null,
+    whatsappTermsVersion: null
 };
 
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -66,8 +67,9 @@ async function loadTenantBranding() {
         if (!res.ok) return;
         const data = await res.json();
         const b    = data.branding || {};
-        document.getElementById('whatsappConsent').hidden = data.whatsapp_available !== true;
-        document.getElementById('fieldWhatsappOptIn').disabled = data.whatsapp_available !== true;
+        state.whatsappTermsVersion = data.whatsapp_available === true ? data.whatsapp_terms_version : null;
+        document.getElementById('whatsappConsent').hidden = !state.whatsappTermsVersion;
+        document.getElementById('fieldWhatsappOptIn').disabled = !state.whatsappTermsVersion;
 
         state.branding = b;
 
@@ -294,6 +296,7 @@ async function submitBooking(e) {
             headers: { 'Content-Type': 'application/json' },
             body:    JSON.stringify({
                 name, email, phone, notes, whatsapp_opt_in: whatsappOptIn, terms_accepted: true,
+                whatsapp_terms_version: whatsappOptIn ? state.whatsappTermsVersion : undefined,
                 date: state.selectedDate,
                 time: state.selectedTime
             })

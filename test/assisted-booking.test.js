@@ -4,6 +4,7 @@ const http = require('node:http');
 const express = require('express');
 const db = require('../server/db/connection');
 const { publicAvailability } = require('../server/services/publicAvailability');
+const { WHATSAPP_TERMS_VERSION } = require('../server/services/whatsappPreferences');
 
 const tenantId = '11111111-1111-4111-8111-111111111111';
 const userId = '22222222-2222-4222-8222-222222222222';
@@ -42,7 +43,7 @@ async function fakeQuery(sql, values = []) {
         return { rows: [{ ...booking }] };
     }
     if (sql.includes('INSERT INTO bookings')) {
-        const booking = { id: bookingId, tenant_id: values[0], name: values[2], email: values[3], phone: values[4], booking_date: values[5], booking_time: values[6], status: values[11], payment_mode: values[12], whatsapp_opt_in: values[18], whatsapp_status: values[19], booking_source: values[21], created_by_user_id: values[22], terms_acceptance_method: values[23] };
+        const booking = { id: bookingId, tenant_id: values[0], name: values[2], email: values[3], phone: values[4], booking_date: values[5], booking_time: values[6], status: values[11], payment_mode: values[12], whatsapp_opt_in: values[18], whatsapp_status: values[19], booking_source: values[21], created_by_user_id: values[22], terms_acceptance_method: values[23], whatsapp_terms_version: values[24] };
         state.records.push(booking); return { rows: [booking] };
     }
     if (sql.includes('INSERT INTO booking_payments')) { state.payments.push({ provider: values[2], amount: values[4], status: 'pending' }); return { rows: [{ id: 'payment' }] }; }
@@ -117,21 +118,40 @@ test('public and assisted bookings reject missing or non-boolean platform terms 
 
 test('booking API records an explicit WhatsApp choice and reports unavailable or opted-out delivery truthfully', async () => {
     const body = { ...payload(), email: 'client@example.com' };
-    const emailOnly = await post(body, null, '/bookings');
+    const consent = { whatsapp_opt_in: true, whatsapp_terms_version: WHATSAPP_TERMS_VERSION };
+    const emailOnly = await post({ ...body, whatsapp_terms_version: WHATSAPP_TERMS_VERSION }, null, '/bookings');
     assert.equal(emailOnly.data.booking.whatsapp_opt_in, false);
     assert.equal(emailOnly.data.booking.whatsapp_status, 'not_requested');
-    const optedIn = await post({ ...body, whatsapp_opt_in: true }, null, '/bookings');
+    assert.equal(emailOnly.data.booking.whatsapp_terms_version, null);
+    const optedIn = await post({ ...body, ...consent }, null, '/bookings');
     assert.equal(optedIn.status, 201);
     assert.equal(optedIn.data.booking.whatsapp_opt_in, true);
     assert.equal(optedIn.data.booking.whatsapp_status, 'pending');
+    assert.equal(optedIn.data.booking.whatsapp_terms_version, WHATSAPP_TERMS_VERSION);
     state.whatsappStopped = true;
-    const stopped = await post({ ...body, whatsapp_opt_in: true }, null, '/bookings');
+    const stopped = await post({ ...body, ...consent }, null, '/bookings');
     assert.equal(stopped.data.booking.whatsapp_opt_in, false);
     assert.equal(stopped.data.booking.whatsapp_status, 'unavailable');
     state.whatsappEnabled = false;
-    const disabled = await post({ ...body, whatsapp_opt_in: true }, null, '/bookings');
+    const disabled = await post({ ...body, ...consent }, null, '/bookings');
     assert.equal(disabled.data.booking.whatsapp_status, 'unavailable');
     assert.equal(state.notices.filter(notice => notice === 'confirmed').length, 4);
+});
+
+test('public and phone bookings require the current WhatsApp terms for a WhatsApp opt-in', async () => {
+    const body = { ...payload(), email: 'client@example.com', whatsapp_opt_in: true };
+    for (const version of [undefined, '2026-01-01']) {
+        const stale = { ...body, whatsapp_terms_version: version };
+        for (const result of [await post(stale), await post(stale, null, '/bookings')]) {
+            assert.equal(result.status, 400);
+            assert.match(result.data.error, /current WhatsApp Messaging Terms/);
+        }
+    }
+    assert.equal(state.records.length, 0);
+    const phone = await post({ ...body, whatsapp_terms_version: WHATSAPP_TERMS_VERSION });
+    assert.equal(phone.status, 201);
+    assert.equal(phone.data.booking.terms_acceptance_method, 'verbal');
+    assert.equal(phone.data.booking.whatsapp_terms_version, WHATSAPP_TERMS_VERSION);
 });
 
 test('offline required payment remains pending, and normal transfers still require a receipt', async () => {
