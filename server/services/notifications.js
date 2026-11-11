@@ -27,6 +27,7 @@ const NOTIFICATION_TYPES = {
     booking_cancelled:    { label: 'Cancellations & rejections', group: 'Bookings', default: true, urgency: 'normal' },
     booking_rescheduled:  { label: 'Reschedules & reschedule requests', group: 'Bookings', default: true, urgency: 'high' },
     booking_updated:      { label: 'Changes made by your team', group: 'Team activity', default: true, urgency: 'low' },
+    booking_review:       { label: 'New customer reviews', group: 'Reviews', default: true, urgency: 'normal' },
     booking_expired:      { label: 'Unpaid holds that expired', group: 'Payments', default: true, urgency: 'normal' },
     appointment_reminder: { label: 'Appointment starting soon (30 min)', group: 'Schedule', default: true, urgency: 'high' },
     daily_summary:        { label: 'Morning agenda (7:00 am)', group: 'Schedule', default: true, urgency: 'normal' },
@@ -179,14 +180,16 @@ async function sendPushToUser(user, notification, unreadCount) {
 /**
  * Deliver one event to a tenant's team.
  * event: { type, title, body, url, bookingId, excludeUserId, onlyUserId, tag }
+ * With a transaction client, save inbox entries with the event and skip push delivery.
  */
-async function notify(tenantId, event) {
+async function notify(tenantId, event, client = null) {
     if (!tenantId || !event || !event.title) return { delivered: 0 };
     const type = NOTIFICATION_TYPES[event.type] ? event.type : 'system';
-    const tenantRes = await query(`SELECT branding FROM tenants WHERE id = $1`, [tenantId]);
-    const timeZone = tenantRes.rows[0]?.branding?.timezone || 'America/Jamaica';
+    const runQuery = client ? client.query.bind(client) : query;
+    const tenantRes = client ? null : await query(`SELECT branding FROM tenants WHERE id = $1`, [tenantId]);
+    const timeZone = tenantRes?.rows[0]?.branding?.timezone || 'America/Jamaica';
 
-    const usersRes = await query(
+    const usersRes = await runQuery(
         `SELECT id, notification_prefs FROM users
          WHERE tenant_id = $1 AND role = ANY($2) AND COALESCE(active, true) = true
            AND ($3::uuid IS NULL OR id <> $3::uuid) AND ($4::uuid IS NULL OR id = $4::uuid)`,
@@ -197,13 +200,13 @@ async function notify(tenantId, event) {
     for (const row of usersRes.rows) {
         const prefs = normalizePrefs(row.notification_prefs || {});
         if (prefs.types[type] === false) continue;
-        const inserted = await query(
+        const inserted = await runQuery(
             `INSERT INTO notifications (tenant_id, user_id, type, title, body, url, booking_id, tag)
              VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id, type, title, body, url, tag`,
             [tenantId, row.id, type, clean(event.title, MAX_TITLE), clean(event.body, MAX_BODY), safeUrl(event.url), event.bookingId || null, event.tag || null]
         );
         delivered += 1;
-        if (!prefs.push || isQuietNow(prefs, timeZone)) continue;
+        if (client || !prefs.push || isQuietNow(prefs, timeZone)) continue;
         const unread = await query(`SELECT COUNT(*)::int AS n FROM notifications WHERE user_id = $1 AND read_at IS NULL`, [row.id]);
         await sendPushToUser({ id: row.id, prefs }, inserted.rows[0], unread.rows[0].n);
     }
@@ -245,6 +248,16 @@ function notifyNewBooking(tenant, booking, serviceName, { actorUserId } = {}) {
     };
     const entry = map[booking.status] || map.confirmed;
     notifySafe(tenant.id, { ...entry, url: bookingUrl(booking), bookingId: booking.id, tag: `booking-${booking.id}`, excludeUserId: actorUserId || null });
+}
+
+function notifyBookingReview(tenantId, bookingId, review, client) {
+    return notify(tenantId, {
+        type: 'booking_review',
+        title: `New ${review.rating}-star review from ${review.display_name}`,
+        body: review.comment,
+        url: bookingUrl({ id: bookingId }),
+        bookingId
+    }, client);
 }
 
 /** Notify the rest of the team when someone changes a booking. */
@@ -373,6 +386,7 @@ module.exports = {
     notify,
     notifySafe,
     notifyNewBooking,
+    notifyBookingReview,
     notifyBookingStatusChange,
     notifyReschedule,
     describeWhen,

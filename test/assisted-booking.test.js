@@ -53,7 +53,7 @@ async function fakeQuery(sql, values = []) {
 db.query = fakeQuery;
 db.transaction = async callback => callback({ query: fakeQuery });
 function stub(modulePath, exports) { const id = require.resolve(modulePath); require.cache[id] = { id, filename: id, loaded: true, exports }; }
-stub('../server/services/email', { sendBookingCancellationEmail: async () => { state.notices.push('cancelled'); }, sendBookingPendingReviewEmail: async () => {}, sendBookingCompletedEmail: async () => {} });
+stub('../server/services/email', { sendBookingCancellationEmail: async () => { state.notices.push('cancelled'); }, sendBookingPendingReviewEmail: async () => {}, sendBookingCompletedEmail: async () => { state.notices.push('completed'); } });
 stub('../server/services/bookingNotifications', { sendBookingConfirmationNotifications: async () => { state.notices.push('confirmed'); } });
 stub('../server/services/calendarSync', { syncBookingWithExternal: async (tenant, booking) => { state.syncs.push(booking.status); } });
 const { signToken } = require('../server/middleware/auth');
@@ -234,6 +234,12 @@ test('repeated status requests do not resend confirmation or cancellation notifi
     assert.equal((await patchStatus('confirmed')).status, 200);
     assert.equal(state.notices.length, 0);
     assert.equal(state.syncs.length, 0);
+});
+test('marking a booking completed triggers the customer completion email once', async () => {
+    existingBooking('none', 'confirmed');
+    assert.equal((await patchStatus('completed')).status, 200);
+    assert.equal((await patchStatus('completed')).status, 200);
+    assert.deepEqual(state.notices, ['completed']);
 });
 test('cancellation rejects foreign tenants and missing bookings without payment changes', async () => {
     existingBooking();

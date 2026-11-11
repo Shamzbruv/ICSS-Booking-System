@@ -18,6 +18,7 @@
         booking_after_hours: { icon: '🌙', tone: 'info' },
         booking_cancelled: { icon: '✕', tone: 'danger' },
         booking_updated: { icon: '✓', tone: 'info' },
+        booking_review: { icon: '★', tone: 'warning' },
         booking_expired: { icon: '⏳', tone: 'warning' },
         appointment_reminder: { icon: '⏰', tone: 'primary' },
         daily_summary: { icon: '☀️', tone: 'primary' },

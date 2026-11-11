@@ -1,6 +1,7 @@
 const express = require('express');
 const { query, transaction } = require('../../db/connection');
 const { verifyReviewToken, reviewerName } = require('../../services/bookingReviews');
+const { notifyBookingReview } = require('../../services/notifications');
 const router = express.Router();
 
 router.get('/', async (req, res) => {
@@ -28,10 +29,24 @@ router.post('/', async (req, res) => {
             const result = await client.query(`SELECT id,name,status FROM bookings WHERE id=$1 AND tenant_id=$2 FOR UPDATE`, [bookingId, req.tenant.id]);
             const booking = result.rows[0];
             if (!booking || booking.status !== 'completed') { const err = new Error('Reviews are available after the business marks your appointment completed.'); err.status = 403; throw err; }
-            const saved = await client.query(`INSERT INTO booking_reviews (tenant_id,booking_id,display_name,rating,comment)
-                VALUES ($1,$2,$3,$4,$5) ON CONFLICT (booking_id) DO UPDATE SET rating=EXCLUDED.rating,comment=EXCLUDED.comment,updated_at=NOW()
-                RETURNING id,display_name,rating,comment,created_at`, [req.tenant.id, bookingId, reviewerName(booking.name), rating, comment.trim().replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g, '')]);
-            return saved.rows[0];
+            const cleanComment = comment.replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g, '').trim();
+            if (!cleanComment) {
+                const err = new Error('Write a review before publishing.');
+                err.status = 400;
+                throw err;
+            }
+            const inserted = await client.query(`INSERT INTO booking_reviews (tenant_id,booking_id,display_name,rating,comment)
+                VALUES ($1,$2,$3,$4,$5) ON CONFLICT (booking_id) DO NOTHING
+                RETURNING id,display_name,rating,comment,created_at`, [req.tenant.id, bookingId, reviewerName(booking.name), rating, cleanComment]);
+            if (inserted.rows[0]) {
+                const newReview = inserted.rows[0];
+                await notifyBookingReview(req.tenant.id, bookingId, newReview, client);
+                return newReview;
+            }
+            const updated = await client.query(`UPDATE booking_reviews
+                SET rating=$3,comment=$4,updated_at=NOW() WHERE tenant_id=$1 AND booking_id=$2
+                RETURNING id,display_name,rating,comment,created_at`, [req.tenant.id, bookingId, rating, cleanComment]);
+            return updated.rows[0];
         });
         res.status(201).json({ success: true, review });
     } catch (err) { if (err.status) return res.status(err.status).json({ error: err.message }); console.error('[Reviews/Save]', err.message); res.status(500).json({ error: 'Your review could not be saved. Please try again.' }); }

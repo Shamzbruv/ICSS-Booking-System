@@ -6,7 +6,7 @@ const db = require('../server/db/connection');
 const tenantId = '11111111-1111-4111-8111-111111111111';
 const bookingId = '44444444-4444-4444-8444-444444444444';
 const foreignId = '33333333-3333-4333-8333-333333333333';
-let saved = [], bookingStatus = 'completed', invoiceRows = [], payments = [], mail = [];
+let saved = [], bookingStatus = 'completed', invoiceRows = [], payments = [], mail = [], notices = [];
 const tenant = { id: tenantId, slug: 'test-company', name: 'Test Company', branding: { replyEmail: 'business@example.com', timezone: 'America/Jamaica' } };
 const booking = { id: bookingId, tenant_id: tenantId, name: 'Jordan Williams', email: 'client@example.com', phone: '+18765550123', booking_date: '2026-10-25', booking_time: '10:00', service_price: 10000, service_currency: 'JMD', payment_mode: 'manual', service_name: 'Original service', duration_minutes: 60, status: 'confirmed' };
 async function fakeQuery(sql, args = []) {
@@ -14,9 +14,26 @@ async function fakeQuery(sql, args = []) {
     if (sql.includes('FROM booking_reviews')) return { rows: saved.filter(r => r.tenant_id === args[0] && (!args[1] || Number(r.id) < Number(args[1]))).sort((a,b) => b.id-a.id).slice(0, args[2]) };
     if (sql.includes('FROM bookings')) return { rows: args[0] === bookingId && args[1] === tenantId ? [{ ...booking, status: bookingStatus }] : [] };
     if (sql.includes('INSERT INTO booking_reviews')) {
-        let row = saved.find(r => r.booking_id === args[1]);
-        if (!row) { row = { id: String(saved.length + 1), tenant_id: args[0], booking_id: args[1], display_name: args[2], created_at: new Date() }; saved.push(row); }
-        Object.assign(row, { rating: args[3], comment: args[4] }); return { rows: [row] };
+        if (saved.some(row => row.booking_id === args[1])) return { rows: [] };
+        const row = { id: String(saved.length + 1), tenant_id: args[0], booking_id: args[1], display_name: args[2], rating: args[3], comment: args[4], created_at: new Date() };
+        saved.push(row);
+        return { rows: [row] };
+    }
+    if (sql.includes('UPDATE booking_reviews')) {
+        const row = saved.find(review => review.tenant_id === args[0] && review.booking_id === args[1]);
+        Object.assign(row, { rating: args[2], comment: args[3] });
+        return { rows: [row] };
+    }
+    if (sql.includes('notification_prefs FROM users')) {
+        assert.equal(args[0], tenantId);
+        assert.deepEqual(args[1], ['tenant_admin', 'staff']);
+        return { rows: [{ id: 'owner', notification_prefs: {} }, { id: 'muted', notification_prefs: { types: { booking_review: false } } }] };
+    }
+    if (sql.includes('INSERT INTO notifications')) {
+        const [tenant_id, user_id, type, title, body, url, booking_id] = args;
+        const row = { tenant_id, user_id, type, title, body, url, booking_id };
+        notices.push(row);
+        return { rows: [row] };
     }
     if (sql.includes('FROM booking_invoices')) return { rows: invoiceRows.filter(r => r.booking_id === args[0] && r.tenant_id === args[1]) };
     if (sql.includes('INSERT INTO booking_invoices')) { const row = { id: '123', tenant_id: args[0], booking_id: args[1], snapshot: JSON.parse(args[2]), created_at: new Date('2026-10-20') }; invoiceRows.push(row); return { rows: [row] }; }
@@ -45,7 +62,7 @@ app.use('/reviews', require('../server/routes/v1/reviews')); app.use('/invoices'
 let server, base;
 test.before(async () => { server = http.createServer(app); await new Promise(resolve => server.listen(0, '127.0.0.1', resolve)); base = `http://127.0.0.1:${server.address().port}`; });
 test.after(() => new Promise(resolve => server.close(resolve)));
-test.beforeEach(() => { saved = []; invoiceRows = []; payments = []; mail = []; bookingStatus = 'completed'; delete tenant.invoice_settings; });
+test.beforeEach(() => { saved = []; invoiceRows = []; payments = []; mail = []; notices = []; bookingStatus = 'completed'; delete tenant.invoice_settings; });
 const auth = (role = 'tenant_admin', tenant_id = tenantId) => signToken({ id: '22222222-2222-4222-8222-222222222222', tenant_id, role });
 async function request(path, body, token, method = 'POST') { return fetch(base + path, { method, headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }, ...(body ? { body: JSON.stringify(body) } : {}) }); }
 const feedback = (overrides = {}) => ({ token: reviews.reviewToken(booking), rating: 5, comment: 'Very helpful team.', publishConsent: true, ...overrides });
@@ -56,22 +73,31 @@ test('reviews require completed bookings, valid tenant-bound invitations and exp
     bookingStatus = 'confirmed'; assert.equal((await request('/reviews', feedback())).status, 403);
     bookingStatus = 'cancelled'; assert.equal((await request('/reviews', feedback())).status, 403);
     assert.equal(saved.length, 0);
+    assert.equal(notices.length, 0);
 });
-test('one completed booking contributes one review; editing changes the score rather than adding votes', async () => {
+test('a new verified review creates one tenant inbox alert and editing the review does not duplicate it', async () => {
     assert.equal((await request('/reviews', feedback())).status, 201);
     assert.equal((await request('/reviews', feedback({ rating: 3, comment: 'Updated feedback' }))).status, 201);
     assert.equal(saved.length, 1); assert.equal(saved[0].display_name, 'Jordan W.');
+    assert.deepEqual(notices, [{
+        tenant_id: tenantId, user_id: 'owner', type: 'booking_review',
+        title: 'New 5-star review from Jordan W.', body: 'Very helpful team.',
+        url: `/admin/bookings.html?focus=${bookingId}`, booking_id: bookingId
+    }]);
     const data = await (await fetch(base + '/reviews')).json();
     assert.equal(data.summary.count, 1); assert.equal(data.summary.average, 3);
 });
 test('public reviews default to three and paginate without returning booking identities', async () => {
     saved = Array.from({ length: 24 }, (_, i) => ({ id: String(i+1), tenant_id: tenantId, display_name: 'Customer', rating: 5, comment: 'Good service', created_at: new Date() }));
     const first = await (await fetch(base + '/reviews')).json();
-    assert.equal(first.reviews.length, 3); assert.equal(first.nextCursor, '22');
+    assert.deepEqual(first.reviews.map(r => r.id), ['24', '23', '22']);
+    assert.deepEqual(first.summary, { count: 24, average: 5 });
+    assert.equal(first.nextCursor, '22');
     assert.equal('tenant_id' in first.reviews[0], false);
     assert.equal('booking_id' in first.reviews[0], false);
     const next = await (await fetch(base + '/reviews?limit=20&before=' + first.nextCursor)).json();
-    assert.equal(next.reviews.length, 20); assert.equal(next.nextCursor, '2');
+    assert.deepEqual(next.reviews.map(r => r.id), Array.from({ length: 20 }, (_, i) => String(21 - i)));
+    assert.equal(next.nextCursor, '2');
     assert.equal((await fetch(base + '/reviews?before=invalid')).status, 400);
 });
 test('review invitations expire and do not share the normal account-token audience', () => {
@@ -116,6 +142,13 @@ test('confirmation, pending-payment, pending-review and completion emails attach
         const pdf = customerMessage.attachments.find(a => a.filename.endsWith('.pdf')); assert.ok(pdf, status);
         assert.equal(pdf.content.subarray(0, 4).toString(), '%PDF');
         assert.equal(customerMessage.html.includes('#review='), status === 'completed');
+        if (status === 'completed') {
+            assert.match(customerMessage.subject, /Thank you/);
+            const [link] = customerMessage.html.match(/https?:[^" ]+\/book#review=[^"]+/);
+            assert.ok(customerMessage.text.includes(link));
+            const invitation = new URLSearchParams(new URL(link).hash.slice(1)).get('review');
+            assert.equal(reviews.verifyReviewToken(invitation, tenantId), bookingId);
+        }
         if (status === 'pending_payment') assert.match(customerMessage.subject, /Awaiting Payment/);
     }
 });
