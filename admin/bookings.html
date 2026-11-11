@@ -256,6 +256,18 @@
                 reject('After-hours time unavailable', 'After-hours request unavailable.', 'Decline')
             );
         }
+        if (b.status === 'completed') {
+            if (!String(b.email || '').trim()) return note('Review email requires a client email address.');
+            if (b.review_email_status === 'sent') return note('Review email accepted by the email provider.');
+            if (['pending', 'sending'].includes(b.review_email_status)) return note('Review email queued. Refresh bookings to check its status.');
+            const failed = b.review_email_status === 'failed';
+            return (failed ? note('The latest review email attempt failed.') : '') + row(actionButton({
+                variant: 'secondary',
+                label: failed ? 'Retry review email' : 'Send review email',
+                id,
+                action: 'review-email'
+            }));
+        }
         return '<span class="cell-muted">—</span>';
     }
     let cancelTargetId = null;
@@ -362,6 +374,10 @@
             openCancelModal(id);
             return;
         }
+        if (button.dataset.bookingAction === 'review-email') {
+            sendReviewEmail(id, button);
+            return;
+        }
         if (button.dataset.bookingAction === 'reschedule') { openRescheduleModal(id); return; }
         if (button.dataset.bookingAction === 'reschedule-approve' || button.dataset.bookingAction === 'reschedule-decline') {
             decideRescheduleRequest(id, button.dataset.requestId, button.dataset.bookingAction === 'reschedule-approve' ? 'approve' : 'decline', button);
@@ -380,11 +396,19 @@
         document.querySelectorAll(`[data-booking-id="${id}"]`).forEach(button => { button.disabled = true; });
         if (triggerButton) { triggerButton.classList.add('is-loading'); triggerButton.innerHTML = '<span class="btn-spinner" aria-hidden="true"></span><span>Saving…</span>'; }
         try {
-            await apiFetch(`/api/v1/bookings/${id}/status`, {
+            const data = await apiFetch(`/api/v1/bookings/${id}/status`, {
                 method: 'PATCH',
                 body: { status: newStatus, note }
             });
-            showToast(`Booking ${String(newStatus).replace(/_/g, ' ')}.`);
+            const emailStatus = data.review_email_status;
+            const completionCopy = {
+                pending: ' Review email queued.',
+                sending: ' Review email is being sent.',
+                sent: ' Review email was already accepted by the email provider.',
+                no_email: ' Add a client email when making a booking to send a review invitation.',
+                failed: ' The review email could not be queued. Use Retry review email.'
+            };
+            showToast(`Booking ${String(newStatus).replace(/_/g, ' ')}.${completionCopy[emailStatus] || ''}`, emailStatus === 'failed' ? 'error' : 'success');
             await loadBookings();
         } catch (e) {
             showToast(e.message, 'error');
@@ -392,6 +416,20 @@
             if (triggerButton && originalHtml) { triggerButton.classList.remove('is-loading'); triggerButton.innerHTML = originalHtml; }
         } finally {
             bookingStatusBusy.delete(id);
+        }
+    }
+
+    async function sendReviewEmail(id, button) {
+        const booking = bookingIndex.get(id);
+        if (!booking?.email || !confirmDialog(`Send the private review link to ${booking.email}?`)) return;
+        button.disabled = true;
+        try {
+            const { review_email_status: status } = await apiFetch(`/api/v1/bookings/${id}/review-email`, { method: 'POST' });
+            showToast(status === 'sent' ? 'The email provider already accepted this review email.' : 'Review email queued.');
+            await loadBookings();
+        } catch (err) {
+            showToast(err.message, 'error');
+            button.disabled = false;
         }
     }
 

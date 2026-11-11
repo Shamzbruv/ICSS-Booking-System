@@ -189,7 +189,7 @@
         svg.appendChild(path);
         badge = el('span', 'notif-badge', '0');
         badge.hidden = true;
-        bell.append(svg, badge);
+        bell.append(svg, el('span', 'notif-bell-label', 'Notifications'), badge);
         bell.addEventListener('click', togglePanel);
         header.classList.add('has-notif-bell');
         header.appendChild(bell);
@@ -212,7 +212,8 @@
         close.type = 'button';
         close.setAttribute('aria-label', 'Close notifications');
         close.addEventListener('click', closePanel);
-        actions.append(readAll, settings, close);
+        if (!impersonating()) actions.append(readAll, settings);
+        actions.append(close);
         head.append(title, actions);
         pushBanner = el('div', 'notif-push-banner');
         pushBanner.hidden = true;
@@ -239,6 +240,7 @@
     function togglePanel() { if (state.open) closePanel(); else openPanel(); }
 
     function openPanel() {
+        if (!bell) return;
         if (!panel) buildPanel();
         state.open = true;
         panel.hidden = false;
@@ -246,6 +248,10 @@
         positionPanel();
         requestAnimationFrame(() => panel.classList.add('is-open'));
         bell.setAttribute('aria-expanded', 'true');
+        if (impersonating()) {
+            list.replaceChildren(el('div', 'notif-empty', 'Sign in as a business admin or staff member to see that account’s notifications.'));
+            return;
+        }
         renderPushBanner();
         loadList();
     }
@@ -288,7 +294,7 @@
     function renderList() {
         if (!state.items.length) {
             const empty = el('div', 'notif-empty');
-            empty.append(el('div', 'notif-empty-icon', '🔔'), el('strong', '', 'You’re all caught up'), el('span', '', 'New bookings, payments and changes will appear here.'));
+            empty.append(el('div', 'notif-empty-icon', '🔔'), el('strong', '', 'You’re all caught up'), el('span', '', 'New bookings, reviews, payments and changes will appear here.'));
             list.replaceChildren(empty);
             return;
         }
@@ -600,8 +606,10 @@
     }
 
     function init() {
-        if (!token() || impersonating() || !document.querySelector('.sidebar')) return;
+        if (!token() || !document.querySelector('.sidebar')) return;
         mountBell();
+        global.addEventListener('resize', () => { if (state.open) positionPanel(); });
+        if (impersonating()) return;
         startPolling();
         pollUnread({ announce: false });
         syncExistingSubscription();
@@ -609,7 +617,6 @@
         focusFromUrl();
         const settingsRoot = document.getElementById('notificationSettings');
         if (settingsRoot) mountSettings(settingsRoot);
-        global.addEventListener('resize', () => { if (state.open) positionPanel(); });
     }
 
     global.ICSSNotifications = { enablePush, disablePush, open: openPanel, refresh: pollUnread };

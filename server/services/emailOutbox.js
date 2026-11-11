@@ -1,17 +1,39 @@
 const { query } = require('../db/connection');
-const { sendSignupWelcomeEmail, sendWelcomeEmail } = require('./email');
+const { sendSignupWelcomeEmail, sendWelcomeEmail, sendBookingCompletedEmail } = require('./email');
 
-async function enqueueEmailOutbox({ messageType, dedupeKey, recipient, payload }) {
-    const result = await query(
+async function saveEmailOutbox({ messageType, dedupeKey, recipient, payload }, client) {
+    const result = await client.query(
         `INSERT INTO email_outbox(message_type,dedupe_key,recipient,payload) VALUES($1,$2,$3,$4)
-         ON CONFLICT(dedupe_key) DO UPDATE SET updated_at=NOW() RETURNING id,status`,
+         ON CONFLICT(dedupe_key) DO UPDATE SET
+           status=CASE WHEN email_outbox.status='cancelled' THEN 'pending' ELSE email_outbox.status END,
+           recipient=CASE WHEN email_outbox.status='cancelled' THEN EXCLUDED.recipient ELSE email_outbox.recipient END
+         RETURNING id,status`,
         [messageType,dedupeKey,recipient,JSON.stringify(payload || {})]
     );
-    if (result.rows[0].status !== 'sent') {
-        const { enqueue } = require('./queue');
-        await enqueue('email-outbox', { outboxId:result.rows[0].id });
-    }
     return result.rows[0];
+}
+
+async function dispatchEmailOutbox(outboxId) {
+    const { enqueue } = require('./queue');
+    const jobId = await enqueue('email-outbox', { outboxId });
+    if (!jobId) throw new Error('The email queue did not accept the job.');
+}
+
+async function enqueueEmailOutbox(email) {
+    const row = await saveEmailOutbox(email, { query });
+    if (row.status !== 'sent') await dispatchEmailOutbox(row.id);
+    return row;
+}
+
+async function saveBookingReviewEmail(client, booking) {
+    const recipient = String(booking.email || '').trim();
+    if (!recipient) return null;
+    return saveEmailOutbox({
+        messageType: 'booking_completed',
+        dedupeKey: `booking_completed:${booking.id}`,
+        recipient,
+        payload: { bookingId: booking.id, tenantId: booking.tenant_id }
+    }, client);
 }
 
 async function processEmailOutbox(job) {
@@ -19,7 +41,9 @@ async function processEmailOutbox(job) {
     if (!outboxId) throw new Error('email-outbox job is missing outboxId.');
     const claimed = await query(
         `UPDATE email_outbox SET status='sending',attempts=attempts+1,updated_at=NOW()
-         WHERE id=$1 AND status<>'sent' AND next_attempt_at<=NOW() RETURNING *`, [outboxId]
+         WHERE id=$1 AND next_attempt_at<=NOW()
+           AND (status IN ('pending','failed') OR (status='sending' AND updated_at < NOW() - INTERVAL '15 minutes'))
+         RETURNING *`, [outboxId]
     );
     if (!claimed.rows.length) return;
     const row = claimed.rows[0], payload = row.payload || {};
@@ -29,6 +53,19 @@ async function processEmailOutbox(job) {
             providerResult = await sendSignupWelcomeEmail(row.recipient,payload.firstName,payload.tenantName,payload.options || {});
         } else if (row.message_type === 'platform_ready') {
             providerResult = await sendWelcomeEmail(row.recipient,payload.firstName,payload.tenantName,{ tenantSlug:payload.tenantSlug });
+        } else if (row.message_type === 'booking_completed') {
+            const [bookings, tenants] = await Promise.all([
+                query('SELECT * FROM bookings WHERE id=$1 AND tenant_id=$2', [payload.bookingId, payload.tenantId]),
+                query('SELECT id,slug,name,branding FROM tenants WHERE id=$1', [payload.tenantId])
+            ]);
+            const booking = bookings.rows[0];
+            const tenant = tenants.rows[0];
+            if (!tenant || booking?.status !== 'completed' || String(booking.email || '').trim() !== row.recipient) {
+                await query("UPDATE email_outbox SET status='cancelled',updated_at=NOW() WHERE id=$1", [row.id]);
+                return;
+            }
+            providerResult = await sendBookingCompletedEmail(booking, tenant, { idempotencyKey: row.dedupe_key });
+            if (!providerResult?.id) throw new Error('The email provider did not confirm acceptance.');
         } else throw new Error(`Unsupported outbox message type: ${row.message_type}`);
         await query(`UPDATE email_outbox SET status='sent',sent_at=NOW(),provider_message_id=$2,last_error=NULL,updated_at=NOW() WHERE id=$1`, [row.id,providerResult?.id || null]);
     } catch (err) {
@@ -37,4 +74,4 @@ async function processEmailOutbox(job) {
     }
 }
 
-module.exports = { enqueueEmailOutbox, processEmailOutbox };
+module.exports = { enqueueEmailOutbox, processEmailOutbox, dispatchEmailOutbox, saveBookingReviewEmail };

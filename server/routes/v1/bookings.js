@@ -8,7 +8,8 @@ const router  = express.Router();
 const { query, transaction }    = require('../../db/connection');
 const { authenticate, requireRole, requireTenantOwnership } = require('../../middleware/auth');
 const { enforceBookingLimit }   = require('../../services/subscription');
-const { sendBookingCancellationEmail, sendBookingPendingReviewEmail, sendBookingCompletedEmail } = require('../../services/email');
+const { sendBookingCancellationEmail, sendBookingPendingReviewEmail } = require('../../services/email');
+const { saveBookingReviewEmail, dispatchEmailOutbox } = require('../../services/emailOutbox');
 const { sendBookingConfirmationNotifications } = require('../../services/bookingNotifications');
 const calendarSync              = require('../../services/calendarSync');
 const { normalizeDepositConfig, calculateAmountDue } = require('../../services/paymentRules');
@@ -474,11 +475,12 @@ router.get('/', authenticate, requireRole('staff', 'tenant_admin', 'super_admin'
     try {
         const [rows, total] = await Promise.all([
             query(
-                `SELECT b.*, s.name AS service_name,
+                `SELECT b.*, s.name AS service_name, review_email.status AS review_email_status,
                         pr.id AS pending_request_id, pr.new_date AS pending_new_date, pr.new_time AS pending_new_time,
                         pr.reason_code AS pending_reason_code, pr.reason AS pending_reason
                  FROM bookings b
                  LEFT JOIN services s ON s.id = b.service_id
+                 LEFT JOIN email_outbox review_email ON review_email.dedupe_key = 'booking_completed:' || b.id::text
                  LEFT JOIN LATERAL (
                      SELECT id, new_date, new_time, reason_code, reason FROM booking_reschedules
                      WHERE booking_id = b.id AND status = 'pending' ORDER BY created_at DESC LIMIT 1
@@ -527,6 +529,22 @@ router.get('/:id', authenticate, requireRole('staff', 'tenant_admin'), async (re
     }
 });
 
+async function queueReviewEmail(outbox) {
+    if (!outbox) return 'no_email';
+    if (outbox.status === 'sent' || outbox.status === 'sending') return outbox.status;
+    try {
+        await dispatchEmailOutbox(outbox.id);
+        return 'pending';
+    } catch (err) {
+        console.error('[Bookings/ReviewEmail] Could not schedule email:', err.message);
+        await query(
+            `UPDATE email_outbox SET status='failed', last_error=$2, updated_at=NOW()
+             WHERE id=$1 AND status IN ('pending','failed')`, [outbox.id, 'Could not schedule email delivery.']
+        ).catch(error => console.error('[Bookings/ReviewEmail]', error.message));
+        return 'failed';
+    }
+}
+
 // PATCH /api/v1/bookings/:id/status (Admin approval logic)
 router.patch('/:id/status', authenticate, requireRole('staff', 'tenant_admin'), async (req, res) => {
     const { status, note } = req.body;
@@ -537,6 +555,7 @@ router.patch('/:id/status', authenticate, requireRole('staff', 'tenant_admin'), 
     
     try {
         let previousStatus = null;
+        let reviewEmail = null;
         const result = await transaction(async (client) => {
             const bRes = await client.query(`SELECT * FROM bookings WHERE id = $1 AND tenant_id = $2 FOR UPDATE`, [req.params.id, req.tenant.id]);
             if (bRes.rows.length === 0) {
@@ -596,11 +615,14 @@ router.patch('/:id/status', authenticate, requireRole('staff', 'tenant_admin'), 
                 `UPDATE bookings SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING *`,
                 [status, booking.id]
             );
+            if (status === 'completed') reviewEmail = await saveBookingReviewEmail(client, updRes.rows[0]);
             return updRes.rows[0];
         });
 
         // Repeated requests are idempotent, including their notifications.
         if (status === previousStatus) return res.json({ success: true, booking: serializeBooking(result) });
+
+        const reviewEmailStatus = status === 'completed' ? await queueReviewEmail(reviewEmail) : undefined;
 
         // Async tasks
         if (status === 'confirmed') {
@@ -609,16 +631,41 @@ router.patch('/:id/status', authenticate, requireRole('staff', 'tenant_admin'), 
         } else if (status === 'cancelled' || status === 'rejected') {
             calendarSync.syncBookingWithExternal(req.tenant.id, result).catch(console.error);
             sendBookingCancellationEmail(result, note, req.tenant).catch(console.error);
-        } else if (status === 'completed' && previousStatus !== 'completed') {
-            sendBookingCompletedEmail(result, req.tenant).catch(console.error);
         }
         notifyBookingStatusChange(req.tenant, result, status, { actorUserId: req.user?.id, actorName: req.user?.name || req.user?.email });
 
-        res.json({ success: true, booking: serializeBooking(result) });
+        res.json({ success: true, booking: serializeBooking(result), review_email_status: reviewEmailStatus });
     } catch (err) {
         if (err.status) return res.status(err.status).json({ error: err.message });
         console.error('[Bookings/StatusUpdate]', err.message);
         res.status(500).json({ error: 'Failed to update booking status.' });
+    }
+});
+
+// POST /api/v1/bookings/:id/review-email — send or retry for an already completed booking.
+router.post('/:id/review-email', authenticate, requireRole('staff', 'tenant_admin'), async (req, res) => {
+    try {
+        const outbox = await transaction(async client => {
+            const result = await client.query(
+                'SELECT * FROM bookings WHERE id = $1 AND tenant_id = $2 FOR UPDATE',
+                [req.params.id, req.tenant.id]
+            );
+            const booking = result.rows[0];
+            if (!booking) throw Object.assign(new Error('Booking not found.'), { status: 404 });
+            if (booking.status !== 'completed') throw Object.assign(new Error('Mark the booking completed before sending a review email.'), { status: 409 });
+            if (!String(booking.email || '').trim()) throw Object.assign(new Error('This booking has no client email address.'), { status: 422 });
+            return saveBookingReviewEmail(client, booking);
+        });
+        const status = await queueReviewEmail(outbox);
+        res.status(status === 'failed' ? 503 : 200).json({
+            success: status !== 'failed',
+            review_email_status: status,
+            ...(status === 'failed' ? { error: 'The review email could not be queued. Please try again.' } : {})
+        });
+    } catch (err) {
+        if (err.status) return res.status(err.status).json({ error: err.message });
+        console.error('[Bookings/ReviewEmail]', err.message);
+        res.status(500).json({ error: 'Could not schedule the review email.' });
     }
 });
 
