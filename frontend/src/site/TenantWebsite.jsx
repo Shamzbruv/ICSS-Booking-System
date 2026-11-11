@@ -378,7 +378,7 @@ export default function TenantWebsite({ tenant, services, themeKey, savedSite, b
             <SiteSection section={section} ctx={ctx} />
           </div>
         ))}
-        {(currentPage.id === 'book' || onePage) && <CustomerReviews tenant={tenant} preview={preview} />}
+        {(requestedPage === 'book' || onePage) && <CustomerReviews tenant={tenant} preview={preview} />}
       </main>
 
       <footer data-site-global="footer.text" className={s.footer}>
