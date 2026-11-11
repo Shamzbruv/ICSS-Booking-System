@@ -9,25 +9,63 @@ const TEMPLATES = {
 };
 async function config() {
  const {rows}=await query('SELECT config FROM whatsapp_settings WHERE id=1');
- const c=rows[0]?.config;
+ return readConfig(rows[0]?.config);
+}
+function readConfig(c) {
  return c ? {...c, token:decrypt(c.token),templates:{...TEMPLATES,...c.templates}} : {enabled:false,sid:process.env.TWILIO_ACCOUNT_SID||'',token:process.env.TWILIO_AUTH_TOKEN||'',from:process.env.TWILIO_WHATSAPP_FROM||'+16676604341',templates:TEMPLATES};
 }
-async function saveConfig(input,{configure=false}={}) {
- const c=await config();
- const next={enabled:input.enabled===true,sid:String(input.sid||'').trim(),from:normalizeWhatsappNumber(input.from),token:input.token||c.token,templates:{...TEMPLATES,...input.templates}};
- if(!/^AC[a-f0-9]{32}$/i.test(next.sid)||!next.from||!next.token||next.token.length>256)throw new Error('Valid Account SID, sender number and Auth Token are required.');
- if(Object.values(next.templates).some(x=>!/^HX[a-f0-9]{32}$/i.test(x)))throw new Error('Every template must have a valid HX SID.');
- next.callback_url=callbackUrl();
- if(configure && next.enabled){
-  try{Object.assign(next,await configureSender(next));}catch(e){
+async function setupSender(settings) {
+  try { return await configureSender(settings); } catch(e) {
    if(e.response)throw new Error('Twilio could not finish sender setup (error '+(e.response.data?.code||e.response.status)+'). Check the Account SID, Auth Token and sender number, then save again.');
    if(e.code)throw new Error('Could not reach Twilio to finish setup. Please save again shortly.');
    throw e;
   }
- }
- next.enabled_at=next.enabled && !c.enabled ? new Date().toISOString() : c.enabled_at;
- next.token=encrypt(next.token);
- await query(`INSERT INTO whatsapp_settings(id,config) VALUES(1,$1) ON CONFLICT(id) DO UPDATE SET config=$1,updated_at=NOW()`,[JSON.stringify(next)]);
+}
+async function saveConfig(input) {
+    await transaction(async db => {
+        const { rows } = await db.query('SELECT config FROM whatsapp_settings WHERE id=1 FOR UPDATE');
+        const current = readConfig(rows[0]?.config);
+        const next = {
+            enabled: current.enabled === true,
+            enabled_at: current.enabled_at,
+            sid: String(input.sid || '').trim(),
+            from: normalizeWhatsappNumber(input.from),
+            token: input.token || current.token,
+            templates: { ...TEMPLATES, ...input.templates }
+        };
+        if (!/^AC[a-f0-9]{32}$/i.test(next.sid) || !next.from || !next.token || next.token.length > 256) {
+            throw new Error('Valid Account SID, sender number and Auth Token are required.');
+        }
+        if (Object.values(next.templates).some(sid => !/^HX[a-f0-9]{32}$/i.test(sid))) {
+            throw new Error('Every template must have a valid HX SID.');
+        }
+        const sameConnection = next.sid === current.sid && next.from === current.from && next.token === current.token;
+        next.callback_url = sameConnection ? callbackUrl(current) : callbackUrl();
+        if (sameConnection) {
+            next.sender_sid = current.sender_sid;
+            next.webhook_configured_at = current.webhook_configured_at;
+        }
+        if (next.enabled) Object.assign(next, await setupSender(next));
+        next.token = encrypt(next.token);
+        await db.query(`INSERT INTO whatsapp_settings(id,config) VALUES(1,$1)
+            ON CONFLICT(id) DO UPDATE SET config=$1,updated_at=NOW()`, [JSON.stringify(next)]);
+    });
+}
+async function setEnabled(enabled) {
+    if (!enabled) {
+        await query(`UPDATE whatsapp_settings SET config=jsonb_set(config,'{enabled}','false'),updated_at=NOW() WHERE id=1`);
+        return false;
+    }
+    return transaction(async db => {
+        const { rows } = await db.query('SELECT config FROM whatsapp_settings WHERE id=1 FOR UPDATE');
+        const stored = rows[0]?.config;
+        if (stored?.enabled === true) return true;
+        if (!stored?.sid || !stored?.from || !stored?.token) throw new Error('Save the Twilio connection before turning on WhatsApp.');
+        const sender = await setupSender(readConfig(stored));
+        const next = { ...stored, ...sender, enabled: true, enabled_at: new Date().toISOString() };
+        await db.query('UPDATE whatsapp_settings SET config=$1,updated_at=NOW() WHERE id=1', [JSON.stringify(next)]);
+        return true;
+    });
 }
 function day(v){return v instanceof Date?v.toISOString().slice(0,10):String(v||'').slice(0,10);}
 function when(b){return `${day(b.booking_date)} at ${String(b.booking_time||'').slice(0,5)} (Jamaica time)`;}
@@ -52,7 +90,7 @@ async function plan(e) {
  const {rows}=await db.query(`SELECT b.*,s.name AS service_name,t.name AS business_name,p.enabled AS wa_enabled,p.providers,p.reminders,p.enabled_at,(SELECT created_at>=p.enabled_at FROM whatsapp_events WHERE id=$2) AS activation_eligible FROM bookings b JOIN tenants t ON t.id=b.tenant_id LEFT JOIN services s ON s.id=b.service_id LEFT JOIN whatsapp_preferences p ON p.tenant_id=b.tenant_id WHERE b.id=$1`,[e.booking_id,e.id]);
  const b=rows[0];
  const settings=await config();
- if(b?.wa_enabled && b.activation_eligible && new Date(e.created_at)>=new Date(settings.enabled_at||Date.now())){
+ if(settings.enabled && b?.wa_enabled && b.activation_eligible && new Date(e.created_at)>=new Date(settings.enabled_at||Date.now())){
  const reminder=e.kind.startsWith('reminder_');
  // Recheck current status and schedule before planning an older event.
  const live=!['cancelled','rejected','expired','completed','no_show'].includes(b.status);
@@ -78,16 +116,21 @@ async function tick(){
  const events=await query('SELECT * FROM whatsapp_events WHERE processed_at IS NULL ORDER BY id LIMIT 100');for(const e of events.rows)await plan(e);
  for(let i=0;i<50;i++){
  const claimed=await transaction(async db=>{await db.query('SELECT pg_advisory_xact_lock(834991)');return db.query(`UPDATE whatsapp_deliveries d SET status='sending',attempts=attempts+1,updated_at=NOW() WHERE id=(SELECT w.id FROM whatsapp_deliveries w JOIN whatsapp_preferences p ON p.tenant_id=w.tenant_id WHERE w.status='pending' AND w.next_attempt_at<=NOW() AND (SELECT COUNT(*) FROM whatsapp_deliveries x WHERE x.tenant_id=w.tenant_id AND x.status NOT IN ('pending','skipped') AND x.created_at>=date_trunc('day',NOW() AT TIME ZONE 'America/Jamaica') AT TIME ZONE 'America/Jamaica')<p.daily_limit ORDER BY w.id FOR UPDATE OF w SKIP LOCKED LIMIT 1) RETURNING d.*`);});const d=claimed.rows[0];if(!d)break;
- const live=await query(`SELECT b.*,p.enabled AS wa_enabled,p.providers,e.kind,e.version,e.snapshot FROM bookings b JOIN whatsapp_events e ON e.id=$2 LEFT JOIN whatsapp_preferences p ON p.tenant_id=b.tenant_id WHERE b.id=$1`,[d.booking_id,d.event_id]);const b=live.rows[0];
+ const live=await query(`SELECT b.*,p.enabled AS wa_enabled,p.providers,e.kind,e.version,e.snapshot,e.created_at AS event_created_at FROM bookings b JOIN whatsapp_events e ON e.id=$2 LEFT JOIN whatsapp_preferences p ON p.tenant_id=b.tenant_id WHERE b.id=$1`,[d.booking_id,d.event_id]);const b=live.rows[0];
  const cancelled=['cancelled','rejected'].includes(b?.status);
  const customer=!d.template.startsWith('provider');
  const optedOut=await query('SELECT phone FROM whatsapp_optouts WHERE phone=$1',[d.recipient]);
  const snapshotChanged=b?.snapshot && (day(b.booking_date)!==day(b.snapshot.booking_date)||String(b.booking_time).slice(0,5)!==String(b.snapshot.booking_time).slice(0,5));
- const stale=optedOut.rows.length || snapshotChanged || !b?.wa_enabled || (customer?!b.whatsapp_opt_in:!(b.providers||[]).some(p=>p.opt_in&&normalizeWhatsappNumber(p.phone)===d.recipient)) || (d.template.endsWith('cancelled')?!cancelled:['expired','completed','no_show','cancelled','rejected'].includes(b.status)) || (b.kind.startsWith('reminder_')&&(b.status!=='confirmed'||new Date(b.start_time).getTime()<=Date.now()||String(new Date(b.start_time).getTime())!==String(new Date(b.version).getTime())));
+ const stale=optedOut.rows.length || snapshotChanged || !b?.wa_enabled || new Date(b.event_created_at)<new Date(c.enabled_at) || (customer?!b.whatsapp_opt_in:!(b.providers||[]).some(p=>p.opt_in&&normalizeWhatsappNumber(p.phone)===d.recipient)) || (d.template.endsWith('cancelled')?!cancelled:['expired','completed','no_show','cancelled','rejected'].includes(b.status)) || (b.kind.startsWith('reminder_')&&(b.status!=='confirmed'||new Date(b.start_time).getTime()<=Date.now()||String(new Date(b.start_time).getTime())!==String(new Date(b.version).getTime())));
  if(stale){await query("UPDATE whatsapp_deliveries SET status='skipped',updated_at=NOW() WHERE id=$1",[d.id]);continue;}
+ const current=await config();
+ if(!current.enabled || current.enabled_at!==c.enabled_at){
+  await query("UPDATE whatsapp_deliveries SET status='pending',updated_at=NOW() WHERE id=$1",[d.id]);
+  break;
+ }
  try{
- const body=new URLSearchParams({To:'whatsapp:'+d.recipient,From:'whatsapp:'+c.from,ContentSid:c.templates[d.template],ContentVariables:JSON.stringify(d.variables),StatusCallback:callbackUrl(c)});
- const r=await api(c,'/Messages.json','post',body.toString());await query(`UPDATE whatsapp_deliveries SET message_sid=$2,status=CASE WHEN status='sending' THEN $3 ELSE status END,updated_at=NOW() WHERE id=$1`,[d.id,r.data.sid,r.data.status||'queued']);
+ const body=new URLSearchParams({To:'whatsapp:'+d.recipient,From:'whatsapp:'+current.from,ContentSid:current.templates[d.template],ContentVariables:JSON.stringify(d.variables),StatusCallback:callbackUrl(current)});
+ const r=await api(current,'/Messages.json','post',body.toString());await query(`UPDATE whatsapp_deliveries SET message_sid=$2,status=CASE WHEN status='sending' THEN $3 ELSE status END,updated_at=NOW() WHERE id=$1`,[d.id,r.data.sid,r.data.status||'queued']);
  }catch(err){if(err.response?.status===429 && d.attempts<3){await query("UPDATE whatsapp_deliveries SET status='pending',next_attempt_at=NOW()+INTERVAL '2 minutes',error='Rate limited; safe retry scheduled',updated_at=NOW() WHERE id=$1",[d.id]);continue;}await query(`UPDATE whatsapp_deliveries SET status=$2,error=$3,updated_at=NOW() WHERE id=$1`,[d.id,err.response && err.response.status<500?'failed':'unknown',err.response?.data?.code?'Twilio error '+err.response.data.code:'Request outcome uncertain; check Twilio logs.']);}
  }
 }
@@ -104,4 +147,4 @@ async function webhook(req,res){
 }
 // Booking events are captured transactionally by the database trigger. Retain the existing caller API without double-sending.
 async function sendBookingConfirmationWhatsApp(){return {queued:true};}
-module.exports={config,saveConfig,TEMPLATES,variables,normalizeWhatsappNumber,checkConnection,startWorker,webhook,sendBookingConfirmationWhatsApp,tick};
+module.exports={config,saveConfig,setEnabled,TEMPLATES,variables,normalizeWhatsappNumber,checkConnection,startWorker,webhook,sendBookingConfirmationWhatsApp,tick};

@@ -950,6 +950,12 @@ async function runMigrations(client) {
         UPDATE whatsapp_preferences SET enabled_at=CASE WHEN enabled THEN enabled_at ELSE NOW() END, enabled=true,updated_at=NOW();
       END IF;
     END $$`);
+    await client.query(`DO $$ BEGIN
+      INSERT INTO whatsapp_migrations(version) VALUES('platform_pause_2026_11_11') ON CONFLICT DO NOTHING;
+      IF FOUND THEN
+        UPDATE whatsapp_settings SET config=jsonb_set(config,'{enabled}','false'),updated_at=NOW() WHERE id=1;
+      END IF;
+    END $$`);
     await client.query(`INSERT INTO whatsapp_preferences(tenant_id) SELECT id FROM tenants ON CONFLICT(tenant_id) DO NOTHING`);
     await client.query(`CREATE OR REPLACE FUNCTION create_tenant_whatsapp_defaults() RETURNS trigger AS $$
       BEGIN INSERT INTO whatsapp_preferences(tenant_id) VALUES(NEW.id) ON CONFLICT DO NOTHING; RETURN NEW; END;
@@ -959,6 +965,7 @@ async function runMigrations(client) {
     await client.query(`CREATE INDEX IF NOT EXISTS whatsapp_events_pending ON whatsapp_events(id) WHERE processed_at IS NULL`);
     await client.query(`CREATE OR REPLACE FUNCTION capture_whatsapp_booking() RETURNS trigger AS $$
     DECLARE k TEXT; BEGIN
+      IF NOT EXISTS (SELECT 1 FROM whatsapp_settings WHERE id=1 AND config->>'enabled'='true') THEN RETURN NEW; END IF;
       IF NOT EXISTS (SELECT 1 FROM whatsapp_preferences WHERE tenant_id=NEW.tenant_id AND enabled) THEN RETURN NEW; END IF;
       IF TG_OP='INSERT' THEN k := 'new';
       ELSIF NEW.status IN ('cancelled','rejected') AND OLD.status IS DISTINCT FROM NEW.status THEN k := 'cancelled';
