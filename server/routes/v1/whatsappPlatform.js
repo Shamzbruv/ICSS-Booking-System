@@ -1,19 +1,20 @@
 const router=require('express').Router();
 const {query}=require('../../db/connection');
 const wa=require('../../services/whatsapp');
+const {callbackUrl}=require('../../services/whatsappConnection');
 router.use((req,res,next)=>{res.set('Cache-Control','no-store');next();});
-router.get('/',async(req,res)=>{const c=await wa.config();res.json({enabled:c.enabled,sid:c.sid,from:c.from,tokenConfigured:!!c.token,templates:c.templates,callbackUrl:(process.env.BASE_URL||'').replace(/\/$/,'')+'/api/v1/whatsapp/webhook'});});
-router.put('/',async(req,res)=>{if(req.user.role!=='platform_owner')return res.status(403).json({error:'Only the platform owner can change Twilio credentials.'});try{await wa.saveConfig(req.body);res.json({saved:true});}catch(e){res.status(400).json({error:e.message});}});
+router.get('/',async(req,res)=>{const c=await wa.config();res.json({enabled:c.enabled,sid:c.sid,from:c.from,tokenConfigured:!!c.token,templates:c.templates,callbackUrl:callbackUrl(c),webhookConfigured:!!c.webhook_configured_at});});
+router.put('/',async(req,res)=>{if(req.user.role!=='platform_owner')return res.status(403).json({error:'Only the platform owner can change Twilio credentials.'});try{await wa.saveConfig(req.body,{configure:true});res.json({saved:true});}catch(e){res.status(400).json({error:e.message});}});
 router.post('/test',async(req,res)=>{try{res.json(await wa.checkConnection());}catch(e){res.status(400).json({error:'Twilio connection failed. Check the saved Account SID and Auth Token.'});}});
 router.post('/test-message',async(req,res)=>{
  const phone=wa.normalizeWhatsappNumber(req.body.phone);
  if(!phone||req.body.consent!==true)return res.status(400).json({error:'Enter your test number and confirm permission to message it.'});
  const c=await wa.config();
- if(!c.sid||!c.token||!/^https:\/\//.test(process.env.BASE_URL||''))return res.status(400).json({error:'Save valid credentials and configure the public HTTPS BASE_URL first.'});
+ if(!c.sid||!c.token)return res.status(400).json({error:'Save your Twilio Account SID and Auth Token first.'});
  const blocked=await query('SELECT phone FROM whatsapp_optouts WHERE phone=$1',[phone]);if(blocked.rows.length)return res.status(400).json({error:'This number opted out. Use a different consenting test number.'});
  const vars=wa.variables('confirmation',{id:'TEST-ONLY',name:'Test customer',service_name:'Integration test — no appointment created',booking_date:'2030-01-01',booking_time:'10:00'},{name:'ICSS Bookings test'});
  const log=await query(`INSERT INTO whatsapp_deliveries(recipient,template,variables,status,attempts) VALUES($1,'confirmation',$2,'sending',1) RETURNING id`,[phone,JSON.stringify(vars)]);
- try{const axios=require('axios');const body=new URLSearchParams({To:'whatsapp:'+phone,From:'whatsapp:'+c.from,ContentSid:c.templates.confirmation,ContentVariables:JSON.stringify(vars),StatusCallback:process.env.BASE_URL.replace(/\/$/,'')+'/api/v1/whatsapp/webhook'});
+ try{const axios=require('axios');const body=new URLSearchParams({To:'whatsapp:'+phone,From:'whatsapp:'+c.from,ContentSid:c.templates.confirmation,ContentVariables:JSON.stringify(vars),StatusCallback:callbackUrl(c)});
  const response=await axios.post('https://api.twilio.com/2010-04-01/Accounts/'+c.sid+'/Messages.json',body.toString(),{auth:{username:c.sid,password:c.token},headers:{'Content-Type':'application/x-www-form-urlencoded'},timeout:15000});
  await query('UPDATE whatsapp_deliveries SET status=$2,message_sid=$3,updated_at=NOW() WHERE id=$1',[log.rows[0].id,response.data.status,response.data.sid]);res.json({status:response.data.status});
  }catch(e){await query("UPDATE whatsapp_deliveries SET status='unknown',error='Test request failed; check Twilio logs before retrying.' WHERE id=$1",[log.rows[0].id]);res.status(400).json({error:'Test message could not be confirmed. Check Twilio logs before retrying.'});}

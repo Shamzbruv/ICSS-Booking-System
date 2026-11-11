@@ -2,6 +2,7 @@ const axios = require('axios');
 const { query, transaction } = require('../db/connection');
 const { encrypt, decrypt } = require('./encryption');
 const crypto = require('crypto');
+const {callbackUrl,configureSender}=require('./whatsappConnection');
 const TEMPLATES = {
  confirmation:'HXcdfce55e0a94b839b263ae3dfeac5c36', client_reminder:'HXfe8bf80c890570aafde1947d800aeade', provider_reminder:'HXc4f072938b0dc6f2aeb8991c18203959', provider_new:'HX25fe5c6633d8b610109f9ed704499fd8', request:'HX770edfc0063f1fe355726d335de6bae3', client_rescheduled:'HX5b8b3313bd2a90c15ace53d3f663490c', provider_rescheduled:'HX62e95b086a56e4a6b2284be45c081bc6', client_cancelled:'HX1e132f7e824cc3c71c75c4db87543f0b', provider_cancelled:'HXfd8946274c7fa800a74ea48b531e4231'
 };
@@ -17,12 +18,19 @@ async function config() {
  const c=rows[0]?.config;
  return c ? {...c, token:decrypt(c.token),templates:{...TEMPLATES,...c.templates}} : {enabled:false,sid:process.env.TWILIO_ACCOUNT_SID||'',token:process.env.TWILIO_AUTH_TOKEN||'',from:process.env.TWILIO_WHATSAPP_FROM||'+16676604341',templates:TEMPLATES};
 }
-async function saveConfig(input) {
+async function saveConfig(input,{configure=false}={}) {
  const c=await config();
  const next={enabled:input.enabled===true,sid:String(input.sid||'').trim(),from:normalizeWhatsappNumber(input.from),token:input.token||c.token,templates:{...TEMPLATES,...input.templates}};
  if(!/^AC[a-f0-9]{32}$/i.test(next.sid)||!next.from||!next.token||next.token.length>256)throw new Error('Valid Account SID, sender number and Auth Token are required.');
  if(Object.values(next.templates).some(x=>!/^HX[a-f0-9]{32}$/i.test(x)))throw new Error('Every template must have a valid HX SID.');
- if(next.enabled&&!/^https:\/\//.test(process.env.BASE_URL||''))throw new Error('Set the server BASE_URL to its public HTTPS URL before enabling WhatsApp.');
+ next.callback_url=callbackUrl();
+ if(configure && next.enabled){
+  try{Object.assign(next,await configureSender(next));}catch(e){
+   if(e.response)throw new Error('Twilio could not finish sender setup (error '+(e.response.data?.code||e.response.status)+'). Check the Account SID, Auth Token and sender number, then save again.');
+   if(e.code)throw new Error('Could not reach Twilio to finish setup. Please save again shortly.');
+   throw e;
+  }
+ }
  next.enabled_at=next.enabled && !c.enabled ? new Date().toISOString() : c.enabled_at;
  next.token=encrypt(next.token);
  await query(`INSERT INTO whatsapp_settings(id,config) VALUES(1,$1) ON CONFLICT(id) DO UPDATE SET config=$1,updated_at=NOW()`,[JSON.stringify(next)]);
@@ -84,15 +92,15 @@ async function tick(){
  const stale=optedOut.rows.length || snapshotChanged || !b?.wa_enabled || (customer?!b.whatsapp_opt_in:!(b.providers||[]).some(p=>p.opt_in&&normalizeWhatsappNumber(p.phone)===d.recipient)) || (d.template.endsWith('cancelled')?!cancelled:['expired','completed','no_show','cancelled','rejected'].includes(b.status)) || (b.kind.startsWith('reminder_')&&(b.status!=='confirmed'||new Date(b.start_time).getTime()<=Date.now()||String(new Date(b.start_time).getTime())!==String(new Date(b.version).getTime())));
  if(stale){await query("UPDATE whatsapp_deliveries SET status='skipped',updated_at=NOW() WHERE id=$1",[d.id]);continue;}
  try{
- const body=new URLSearchParams({To:'whatsapp:'+d.recipient,From:'whatsapp:'+c.from,ContentSid:c.templates[d.template],ContentVariables:JSON.stringify(d.variables),StatusCallback:process.env.BASE_URL.replace(/\/$/,'')+'/api/v1/whatsapp/webhook'});
+ const body=new URLSearchParams({To:'whatsapp:'+d.recipient,From:'whatsapp:'+c.from,ContentSid:c.templates[d.template],ContentVariables:JSON.stringify(d.variables),StatusCallback:callbackUrl(c)});
  const r=await api(c,'/Messages.json','post',body.toString());await query(`UPDATE whatsapp_deliveries SET message_sid=$2,status=CASE WHEN status='sending' THEN $3 ELSE status END,updated_at=NOW() WHERE id=$1`,[d.id,r.data.sid,r.data.status||'queued']);
  }catch(err){if(err.response?.status===429 && d.attempts<3){await query("UPDATE whatsapp_deliveries SET status='pending',next_attempt_at=NOW()+INTERVAL '2 minutes',error='Rate limited; safe retry scheduled',updated_at=NOW() WHERE id=$1",[d.id]);continue;}await query(`UPDATE whatsapp_deliveries SET status=$2,error=$3,updated_at=NOW() WHERE id=$1`,[d.id,err.response && err.response.status<500?'failed':'unknown',err.response?.data?.code?'Twilio error '+err.response.data.code:'Request outcome uncertain; check Twilio logs.']);}
  }
 }
 function startWorker(){let busy=false;const run=async()=>{if(busy)return;busy=true;try{await tick();}catch(e){console.error('[WhatsApp worker]',e.message);}finally{busy=false;}};setInterval(run,60000).unref();run();}
 async function webhook(req,res){
- const c=await config();if(!c.token||!process.env.BASE_URL)return res.sendStatus(503);
- const url=process.env.BASE_URL.replace(/\/$/,'')+'/api/v1/whatsapp/webhook';
+ const c=await config();if(!c.token)return res.sendStatus(503);
+ const url=callbackUrl(c);
  const data=url+Object.keys(req.body).sort().map(k=>k+req.body[k]).join('');
  const expected=crypto.createHmac('sha1',c.token).update(data).digest('base64');const actual=String(req.get('X-Twilio-Signature')||'');
  if(actual.length!==expected.length||!crypto.timingSafeEqual(Buffer.from(actual),Buffer.from(expected)))return res.sendStatus(403);
