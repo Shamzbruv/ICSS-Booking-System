@@ -64,12 +64,12 @@ function ConsoleLogin() {
 
 // ── Sidebar nav ────────────────────────────────────────────────────────────────
 const NAV = [
-  { id: 'whatsapp', icon: 'message', label: 'WhatsApp' },
   { id: 'dashboard',  icon: 'dashboard', label: 'Dashboard' },
   { id: 'tenants',    icon: 'building', label: 'Tenants' },
   { id: 'themes',     icon: 'layout', label: 'Themes' },
   { id: 'jobs',       icon: 'activity', label: 'Jobs & Queue' },
   { id: 'payments',   icon: 'payment', label: 'Payments' },
+  { id: 'whatsapp',   icon: 'message', label: 'WhatsApp' },
   { id: 'audit',      icon: 'receipt', label: 'Audit Log' },
   { id: 'team',       icon: 'users', label: 'Developer Admins', ownerOnly: true },
   { id: 'contracts',  icon: 'pen', label: 'Contracts', ownerOnly: true },
