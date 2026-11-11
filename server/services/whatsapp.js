@@ -3,16 +3,10 @@ const { query, transaction } = require('../db/connection');
 const { encrypt, decrypt } = require('./encryption');
 const crypto = require('crypto');
 const {callbackUrl,configureSender}=require('./whatsappConnection');
+const {normalizeWhatsappNumber}=require('./whatsappPhone');
 const TEMPLATES = {
  confirmation:'HXcdfce55e0a94b839b263ae3dfeac5c36', client_reminder:'HXfe8bf80c890570aafde1947d800aeade', provider_reminder:'HXc4f072938b0dc6f2aeb8991c18203959', provider_new:'HX25fe5c6633d8b610109f9ed704499fd8', request:'HX770edfc0063f1fe355726d335de6bae3', client_rescheduled:'HX5b8b3313bd2a90c15ace53d3f663490c', provider_rescheduled:'HX62e95b086a56e4a6b2284be45c081bc6', client_cancelled:'HX1e132f7e824cc3c71c75c4db87543f0b', provider_cancelled:'HXfd8946274c7fa800a74ea48b531e4231'
 };
-function normalizeWhatsappNumber(value) {
- const raw=String(value||'').replace(/^whatsapp:/,'').trim(), digits=raw.replace(/\D/g,'');
- if(raw.startsWith('+') && digits.length>=8 && digits.length<=15)return '+'+digits;
- if(digits.length===10)return '+1'+digits;
- if(digits.length===11 && digits.startsWith('1'))return '+'+digits;
- return null;
-}
 async function config() {
  const {rows}=await query('SELECT config FROM whatsapp_settings WHERE id=1');
  const c=rows[0]?.config;

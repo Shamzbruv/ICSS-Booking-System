@@ -2,6 +2,7 @@ const router=require('express').Router();
 const {query}=require('../../db/connection');
 const wa=require('../../services/whatsapp');
 const {callbackUrl}=require('../../services/whatsappConnection');
+const {validateWhatsAppPreferences,saveWhatsAppPreferences}=require('../../services/whatsappPreferences');
 router.use((req,res,next)=>{res.set('Cache-Control','no-store');next();});
 router.get('/',async(req,res)=>{const c=await wa.config();res.json({enabled:c.enabled,sid:c.sid,from:c.from,tokenConfigured:!!c.token,templates:c.templates,callbackUrl:callbackUrl(c),webhookConfigured:!!c.webhook_configured_at});});
 router.put('/',async(req,res)=>{if(req.user.role!=='platform_owner')return res.status(403).json({error:'Only the platform owner can change Twilio credentials.'});try{await wa.saveConfig(req.body,{configure:true});res.json({saved:true});}catch(e){res.status(400).json({error:e.message});}});
@@ -22,13 +23,11 @@ router.post('/test-message',async(req,res)=>{
 router.get('/history',async(req,res)=>{const r=await query(`SELECT id,tenant_id,booking_id,recipient,template,status,message_sid,error,created_at FROM whatsapp_deliveries ORDER BY id DESC LIMIT 100`);res.json({deliveries:r.rows});});
 router.get('/businesses',async(req,res)=>{const r=await query(`SELECT t.id,t.name,COALESCE(p.enabled,true) AS enabled,COALESCE(p.providers,'[]') AS providers,COALESCE(p.reminders,'[24,2]') AS reminders,COALESCE(p.daily_limit,100) AS daily_limit FROM tenants t LEFT JOIN whatsapp_preferences p ON p.tenant_id=t.id ORDER BY t.name`);res.json({businesses:r.rows});});
 router.put('/businesses/:id',async(req,res)=>{
- const providers=req.body.providers,reminders=req.body.reminders;
- if(!Array.isArray(providers)||providers.length>20||!Array.isArray(reminders)||reminders.length>4||reminders.some(h=>!Number.isInteger(h)||h<1||h>168))return res.status(400).json({error:'Use up to 20 recipients and 4 reminder times from 1 to 168 hours.'});
+ let settings;
+ try{settings=validateWhatsAppPreferences(req.body);}catch(err){return res.status(400).json({error:err.message});}
  if(!Number.isInteger(req.body.daily_limit)||req.body.daily_limit<1||req.body.daily_limit>10000)return res.status(400).json({error:'Daily message limit must be between 1 and 10,000.'});
- const clean=providers.map(p=>({name:String(p.name||'').trim().slice(0,100),phone:wa.normalizeWhatsappNumber(p.phone),opt_in:p.opt_in===true,consent_recorded_at:new Date().toISOString()}));
- if(clean.some(p=>!p.name||!p.phone))return res.status(400).json({error:'Each provider needs a name and valid phone number.'});
  if(!/^[a-f0-9-]{36}$/i.test(req.params.id))return res.status(400).json({error:'Invalid business ID.'});
  const r=await query('SELECT id FROM tenants WHERE id=$1',[req.params.id]);if(!r.rows.length)return res.sendStatus(404);
- await query(`INSERT INTO whatsapp_preferences(tenant_id,enabled,providers,reminders,daily_limit) VALUES($1,$2,$3,$4,$5) ON CONFLICT(tenant_id) DO UPDATE SET enabled=$2,providers=$3,reminders=$4,daily_limit=$5,enabled_at=CASE WHEN $2 AND NOT whatsapp_preferences.enabled THEN NOW() ELSE whatsapp_preferences.enabled_at END,updated_at=NOW()`,[req.params.id,req.body.enabled===true,JSON.stringify(clean),JSON.stringify([...new Set(reminders)]),req.body.daily_limit]);res.json({saved:true});
+ await saveWhatsAppPreferences(req.params.id,settings,req.body.daily_limit);res.json({saved:true});
 });
 module.exports=router;
