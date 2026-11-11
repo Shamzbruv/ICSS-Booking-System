@@ -74,6 +74,8 @@
                 completed = true;
                 const booking = data.booking;
                 result.textContent = `Booking recorded for ${booking.name}. Reference: ${String(booking.id).slice(0, 8).toUpperCase()}. ${booking.booking_date} at ${String(booking.booking_time).slice(0, 5)}. Status: ${booking.status.replaceAll('_', ' ')}.`;
+                if (booking.whatsapp_status === 'pending') result.appendChild(document.createTextNode(' WhatsApp updates requested for this booking.'));
+                if (booking.whatsapp_status === 'unavailable') result.appendChild(document.createTextNode(' WhatsApp updates are unavailable for this booking.'));
                 if (data.amountDue > 0) result.appendChild(document.createTextNode(` Required payment: ${data.currency} ${Number(data.amountDue).toLocaleString()}.`));
                 if (data.checkoutUrl && /^https?:$/.test(new URL(data.checkoutUrl, location.origin).protocol)) {
                     const link = document.createElement('a'); link.href = data.checkoutUrl; link.textContent = ' Open customer payment link'; link.target = '_blank'; link.rel = 'noreferrer'; result.appendChild(link);
@@ -84,6 +86,8 @@
         });
         try {
             const [serviceData, tenant] = await Promise.all([apiFetch('/api/v1/public/services'), apiFetch('/api/v1/public/tenant')]);
+            el('callerWhatsApp').closest('label').hidden = tenant.whatsapp_available !== true;
+            el('callerWhatsApp').disabled = tenant.whatsapp_available !== true;
             services = serviceData.services || [];
             serviceInput.replaceChildren(option(services.length ? 'Choose a service' : 'Add a service first'));
             services.forEach(service => serviceInput.appendChild(option(`${service.name} · ${service.duration_minutes || 30} min`, service.id)));

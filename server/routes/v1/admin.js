@@ -7,12 +7,30 @@
 const express = require('express');
 const router  = express.Router();
 const { query }  = require('../../db/connection');
-const { authenticate, requireRole } = require('../../middleware/auth');
+const { authenticate, requireRole, requireTenantOwnership } = require('../../middleware/auth');
 const { getSupportContactEmail, sendSupportRequestEmail } = require('../../services/email');
+const { getWhatsAppPreferences, validateWhatsAppPreferences, saveWhatsAppPreferences } = require('../../services/whatsappPreferences');
 
 // All admin routes require authentication
 router.use(authenticate);
 router.use(requireRole('staff', 'tenant_admin', 'super_admin'));
+
+router.get('/whatsapp-settings', requireTenantOwnership('tenant_admin'), async (req, res) => {
+    res.set('Cache-Control', 'no-store');
+    res.json(await getWhatsAppPreferences(req.tenant.id));
+});
+
+router.put('/whatsapp-settings', requireTenantOwnership('tenant_admin'), async (req, res) => {
+    let settings;
+    try {
+        settings = validateWhatsAppPreferences(req.body);
+    } catch (err) {
+        return res.status(400).json({ error: err.message });
+    }
+    await saveWhatsAppPreferences(req.tenant.id, settings);
+    res.set('Cache-Control', 'no-store');
+    res.json(await getWhatsAppPreferences(req.tenant.id));
+});
 
 // v3: tour covers the Website Builder and payment gateways, so every tenant sees it once more.
 const MIN_DASHBOARD_TOUR_VERSION = 3;
