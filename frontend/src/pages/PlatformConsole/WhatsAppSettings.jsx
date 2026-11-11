@@ -6,20 +6,35 @@ export default function WhatsAppSettings(){
  const {platformUser}=useConsole();const [config,setConfig]=useState(null),[token,setToken]=useState(''),[businesses,setBusinesses]=useState([]),[selected,setSelected]=useState(''),[prefs,setPrefs]=useState(null),[history,setHistory]=useState([]),[message,setMessage]=useState(''),[busy,setBusy]=useState(false),[testPhone,setTestPhone]=useState(''),[testConsent,setTestConsent]=useState(false);
  const run=async(fn)=>{setBusy(true);setMessage('');try{await fn();}catch(e){setMessage(e.message);}finally{setBusy(false);}};
  const load=async()=>{const [c,b,h]=await Promise.all([request(),request('/businesses'),request('/history')]);setConfig(c);setBusinesses(b.businesses);setHistory(h.deliveries);};
+ const toggleWhatsApp = () => run(async () => {
+  const { enabled } = await request('/enabled', 'PUT', { enabled: !config.enabled });
+  setConfig(current => ({ ...current, enabled, webhookConfigured: enabled || current.webhookConfigured }));
+  setMessage(enabled ? 'WhatsApp is on.' : 'WhatsApp is off.');
+ });
  useEffect(()=>{run(load);},[]);
  const pick=id=>{setSelected(id);const b=businesses.find(b=>b.id===id);setPrefs(b?{...b,providers:b.providers.map(p=>({...p}))}:null);};
  const input={width:'100%',padding:12,border:'1px solid #7776',borderRadius:8,background:'transparent',color:'inherit',boxSizing:'border-box'};
  const card={border:'1px solid #7775',borderRadius:14,padding:22,marginBottom:20};
  return <div className={s.view}><h2>WhatsApp notifications</h2><p>ICSS Bookings · confirmations, reminders and booking updates</p><p role="status" style={{color:'#8d7cf7'}}>{message}</p>{!config?<p>Loading settings…</p>:<>
- <section style={card}><h3>Twilio connection</h3><p>Your Auth Token is encrypted on the server and is never returned to this page. Saving a blank token keeps the existing one.</p><form onSubmit={e=>{e.preventDefault();run(async()=>{await request('','PUT',{...config,token});setToken('');await load();setMessage(config.enabled?'Twilio connected. Reply handling and delivery updates configured automatically.':'Twilio credentials saved. Automatic messages are paused.');});}} style={{display:'grid',gap:14,maxWidth:800}}>
+ <section style={card}>
+  <h3>WhatsApp is {config.enabled ? 'on' : 'off'}</h3>
+  <p>{config.enabled
+   ? 'Turn off WhatsApp to hide the booking opt-in and pause all WhatsApp messages.'
+   : 'The WhatsApp option is hidden on booking pages. Turn it on when your sender is ready.'}</p>
+  {platformUser?.role === 'platform_owner' && (
+   <button type="button" className={s.btnPrimary} disabled={busy} onClick={toggleWhatsApp}>
+    {config.enabled ? 'Turn off WhatsApp' : 'Turn on WhatsApp'}
+   </button>
+  )}
+ </section>
+ <section style={card}><h3>Twilio connection</h3><p>Your Auth Token is encrypted on the server and is never returned to this page. Saving a blank token keeps the existing one.</p><form onSubmit={e=>{e.preventDefault();run(async()=>{await request('','PUT',{...config,token});setToken('');await load();setMessage('Twilio connection saved.');});}} style={{display:'grid',gap:14,maxWidth:800}}>
  <label>Account SID<input style={input} value={config.sid} required onChange={e=>setConfig({...config,sid:e.target.value})}/></label>
  <label>Auth Token {config.tokenConfigured?'(saved)':''}<input style={input} type="password" autoComplete="new-password" value={token} placeholder={config.tokenConfigured?'Leave blank to keep saved token':'Enter Twilio Auth Token'} onChange={e=>setToken(e.target.value)}/></label>
  <label>WhatsApp sender number<input style={input} value={config.from} required onChange={e=>setConfig({...config,from:e.target.value})}/></label>
- <label><input type="checkbox" checked={config.enabled} onChange={e=>setConfig({...config,enabled:e.target.checked})}/> Enable automatic WhatsApp notifications</label>
  <p>Existing and new businesses are enabled by default; you can turn off individual businesses below. Connection test checks credentials without sending or charging for a WhatsApp message.</p>
  <div><button className={s.btnPrimary} disabled={busy||platformUser?.role!=='platform_owner'}>Save connection</button> <button className={s.btnGhost} type="button" disabled={busy} onClick={()=>run(async()=>{const d=await request('/test','POST',{});setMessage('Twilio account: '+d.accountStatus);})}>Test saved connection</button></div></form>
- <p>{config.webhookConfigured?'Reply handling and delivery tracking are configured.':'Save with automatic notifications enabled to finish sender setup automatically.'}</p><p>Customers can reply STOP to unsubscribe. For other replies, they should contact the business they booked with.</p>
- <details style={{marginBottom:18}}><summary>Send a test to your own WhatsApp</summary><p>This sends a clearly labelled test confirmation and may incur messaging charges. It creates no booking.</p><label>Test number<input style={input} value={testPhone} placeholder="+1876…" onChange={e=>setTestPhone(e.target.value)}/></label><label><input type="checkbox" checked={testConsent} onChange={e=>setTestConsent(e.target.checked)}/> I have permission to send a test to this number.</label><button type="button" className={s.btnGhost} disabled={busy||!testConsent||!testPhone} onClick={()=>run(async()=>{const d=await request('/test-message','POST',{phone:testPhone,consent:testConsent});setMessage('Test message status: '+d.status);})}>Send test WhatsApp</button></details>
+ <p>{config.webhookConfigured?'Reply handling and delivery tracking are configured.':'Turning on WhatsApp configures reply handling and delivery tracking.'}</p><p>Customers can reply STOP to unsubscribe. For other replies, they should contact the business they booked with.</p>
+ {config.enabled && <details style={{marginBottom:18}}><summary>Send a test to your own WhatsApp</summary><p>This sends a clearly labelled test confirmation and may incur messaging charges. It creates no booking.</p><label>Test number<input style={input} value={testPhone} placeholder="+1876…" onChange={e=>setTestPhone(e.target.value)}/></label><label><input type="checkbox" checked={testConsent} onChange={e=>setTestConsent(e.target.checked)}/> I have permission to send a test to this number.</label><button type="button" className={s.btnGhost} disabled={busy||!testConsent||!testPhone} onClick={()=>run(async()=>{const d=await request('/test-message','POST',{phone:testPhone,consent:testConsent});setMessage('Test message status: '+d.status);})}>Send test WhatsApp</button></details>}
  <details><summary>Approved template IDs</summary>{Object.entries(config.templates).map(([key,value])=><label key={key} style={{display:'block',marginTop:12}}>{key.replaceAll('_',' ')}<input style={input} value={value} onChange={e=>setConfig({...config,templates:{...config.templates,[key]:e.target.value}})}/></label>)}</details></section>
  <section style={card}><h3>Business notification settings</h3><p>WhatsApp notifications are included by default for every current and future business, using the shared Twilio connection and approved templates. Customers still need to opt in. Provider alerts begin only after consenting recipients are added below.</p><p>Provider alerts go to the recipients below. They are business-wide alerts; individual staff assignment is not yet tracked by booking records. Only add people authorized to see this business’s bookings.</p><select aria-label="Business" style={input} value={selected} onChange={e=>pick(e.target.value)}><option value="">Choose a business</option>{businesses.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}</select>
  {prefs&&<form style={{display:'grid',gap:16,marginTop:18}} onSubmit={e=>{e.preventDefault();run(async()=>{await request('/businesses/'+selected,'PUT',prefs);await load();setMessage('Business settings saved. Only future booking events will send alerts.');});}}>

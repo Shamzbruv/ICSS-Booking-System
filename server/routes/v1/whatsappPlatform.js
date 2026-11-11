@@ -5,12 +5,26 @@ const {callbackUrl}=require('../../services/whatsappConnection');
 const {validateWhatsAppPreferences,saveWhatsAppPreferences}=require('../../services/whatsappPreferences');
 router.use((req,res,next)=>{res.set('Cache-Control','no-store');next();});
 router.get('/',async(req,res)=>{const c=await wa.config();res.json({enabled:c.enabled,sid:c.sid,from:c.from,tokenConfigured:!!c.token,templates:c.templates,callbackUrl:callbackUrl(c),webhookConfigured:!!c.webhook_configured_at});});
-router.put('/',async(req,res)=>{if(req.user.role!=='platform_owner')return res.status(403).json({error:'Only the platform owner can change Twilio credentials.'});try{await wa.saveConfig(req.body,{configure:true});res.json({saved:true});}catch(e){res.status(400).json({error:e.message});}});
+router.put('/',async(req,res)=>{if(req.user.role!=='platform_owner')return res.status(403).json({error:'Only the platform owner can change Twilio credentials.'});try{await wa.saveConfig(req.body);res.json({saved:true});}catch(e){res.status(400).json({error:e.message});}});
+router.put('/enabled', async (req, res) => {
+    if (req.user.role !== 'platform_owner') {
+        return res.status(403).json({ error: 'Only the platform owner can turn WhatsApp on or off.' });
+    }
+    if (typeof req.body?.enabled !== 'boolean') {
+        return res.status(400).json({ error: 'Choose whether to turn WhatsApp on or off.' });
+    }
+    try {
+        res.json({ enabled: await wa.setEnabled(req.body.enabled) });
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
 router.post('/test',async(req,res)=>{try{res.json(await wa.checkConnection());}catch(e){res.status(400).json({error:'Twilio connection failed. Check the saved Account SID and Auth Token.'});}});
 router.post('/test-message',async(req,res)=>{
  const phone=wa.normalizeWhatsappNumber(req.body.phone);
  if(!phone||req.body.consent!==true)return res.status(400).json({error:'Enter your test number and confirm permission to message it.'});
  const c=await wa.config();
+ if(!c.enabled)return res.status(409).json({error:'WhatsApp is turned off.'});
  if(!c.sid||!c.token)return res.status(400).json({error:'Save your Twilio Account SID and Auth Token first.'});
  const blocked=await query('SELECT phone FROM whatsapp_optouts WHERE phone=$1',[phone]);if(blocked.rows.length)return res.status(400).json({error:'This number opted out. Use a different consenting test number.'});
  const vars=wa.variables('confirmation',{id:'TEST-ONLY',name:'Test customer',service_name:'Integration test — no appointment created',booking_date:'2030-01-01',booking_time:'10:00'},{name:'ICSS Bookings test'});
