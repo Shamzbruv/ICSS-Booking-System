@@ -617,6 +617,7 @@ function ConsoleShell() {
             <button
               key={item.id}
               className={`${s.navItem} ${activeView === item.id ? s['navItem--active'] : ''}`}
+              aria-current={activeView === item.id ? 'page' : undefined}
               onClick={() => { setActiveView(item.id); setNavOpen(false); }}
             >
               <span className={s.navItem__icon}><svg aria-hidden="true" width="20" height="20"><use href={`/icons/ui.svg#${item.icon}`} /></svg></span>
