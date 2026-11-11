@@ -146,9 +146,9 @@
                     <label for="fieldEmail">Email Address <span class="req">*</span></label>
                     <input type="email" id="fieldEmail" placeholder="you@example.com" required autocomplete="email">
                 </div>
-                <label class="whatsapp-consent" for="fieldWhatsappOptIn">
+                <label class="whatsapp-consent" for="fieldWhatsappOptIn" id="whatsappConsent" hidden>
                     <input type="checkbox" id="fieldWhatsappOptIn">
-                    <span><strong>Send my booking confirmation by WhatsApp too</strong><small>We will only use this number for booking updates. You can also add the confirmed appointment to your calendar from WhatsApp.</small></span>
+                    <span><strong>Send me booking updates on WhatsApp (optional)</strong><small>I agree to receive confirmations, reminders and changes from ICSS Bookings for this appointment at the number above. Reply STOP at any time.</small></span>
                 </label>
                 <div class="field-wrap">
                     <label for="fieldNotes">Additional Notes <span class="opt">(optional)</span></label>
@@ -174,6 +174,7 @@
                 <div class="confirm-icon">✓</div>
                 <h2 class="confirm-title">You're Booked!</h2>
                 <p class="confirm-sub" id="confirmationDelivery"><span id="deliveryPrefix">A confirmation email has been sent to </span><strong id="confirmEmail">—</strong><span id="deliverySuffix"></span></p>
+                <p class="confirm-note" id="whatsappBookingStatus" role="status"></p>
                 <div class="confirm-card" id="confirmCard">
                     <div class="confirm-row"><span>Date</span><strong id="confirmDate">—</strong></div>
                     <div class="confirm-row"><span>Time</span><strong id="confirmTime">—</strong></div>

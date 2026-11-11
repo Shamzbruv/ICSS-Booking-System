@@ -85,6 +85,39 @@
         <div id="notificationSettings" class="notif-settings"></div>
     </section>
 
+    <section class="card settings-card" id="whatsapp-settings" style="max-width: 800px; margin: 0 auto;" hidden>
+        <h2 class="settings-section-title">WhatsApp notifications</h2>
+        <p id="whatsappSettingsStatus" class="page-subtitle settings-section-copy" role="status">Loading WhatsApp settings…</p>
+        <form id="whatsappSettingsForm" class="reschedule-policy" hidden>
+            <label class="notif-switch">
+                <span class="notif-switch-text"><span>Enable WhatsApp for this business</span><small>Customers choose whether to receive booking updates when they book.</small></span>
+                <input type="checkbox" id="whatsappEnabled"><span class="notif-switch-ui"></span>
+            </label>
+            <div class="form-group">
+                <label for="whatsappReminderHours">Reminder hours before the appointment</label>
+                <input type="text" id="whatsappReminderHours" class="form-control" placeholder="24, 2" aria-describedby="whatsappReminderHelp">
+                <small class="gw-help" id="whatsappReminderHelp">Enter up to four times, separated by commas. Leave blank to turn off WhatsApp reminders.</small>
+            </div>
+            <div class="form-group">
+                <h3>Team alerts</h3>
+                <p class="gw-help">Add authorized recipients who agreed to receive alerts about this business’s bookings.</p>
+                <div id="whatsappRecipients"></div>
+                <button type="button" id="addWhatsappRecipient" class="btn btn-ghost">Add recipient</button>
+            </div>
+            <button type="submit" class="btn btn-primary btn-block">Save WhatsApp settings</button>
+        </form>
+        <template id="whatsappRecipientTemplate">
+            <div class="whatsapp-recipient">
+                <div class="reschedule-policy-grid">
+                    <label class="form-group">Name<input class="form-control" name="recipientName" maxlength="100" required></label>
+                    <label class="form-group">WhatsApp number<input class="form-control" name="recipientPhone" type="tel" placeholder="+1 876 555 0000" required></label>
+                </div>
+                <label><input type="checkbox" name="recipientConsent"> This recipient agreed to receive WhatsApp booking alerts.</label>
+                <button type="button" class="btn btn-ghost" data-remove-recipient>Remove recipient</button>
+            </div>
+        </template>
+    </section>
+
     <section class="card settings-card" id="rescheduling" style="max-width: 800px; margin: 0 auto;" data-tour="reschedule-policy">
         <p class="settings-section-kicker">Bookings</p>
         <h2 class="settings-section-title">Rescheduling &amp; cancellations</h2>
@@ -391,6 +424,7 @@
 <script src="js/admin.js"></script>
 <script src="js/notifications.js" defer></script>
 <script src="js/reschedulePolicy.js" defer></script>
+<script src="js/whatsappSettings.js" defer></script>
 <script>
     const DAYS = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
     const DAY_LABELS = { monday:'Monday', tuesday:'Tuesday', wednesday:'Wednesday', thursday:'Thursday', friday:'Friday', saturday:'Saturday', sunday:'Sunday' };

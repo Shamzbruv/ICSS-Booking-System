@@ -14,10 +14,12 @@ while (future.getUTCDay() === 0) future.setUTCDate(future.getUTCDate() + 1);
 const date = future.toISOString().slice(0, 10);
 let state;
 function reset() {
-    state = { blocks: [], conflicts: [], dailyCount: 0, records: [], payments: [], invoices: [], audits: [], syncs: [], notices: [],
+    state = { blocks: [], conflicts: [], dailyCount: 0, records: [], payments: [], invoices: [], audits: [], syncs: [], notices: [], whatsappEnabled: true, whatsappStopped: false,
         service: { id: serviceId, name: 'Service', active: true, duration_minutes: 60, buffer_time_minutes: 0, price: 5000, currency: 'JMD', payment_mode: 'tenant_default', payment_requirement_type: 'none' } };
 }
 async function fakeQuery(sql, values = []) {
+    if (sql.includes('LEFT JOIN whatsapp_preferences')) return { rows: [{ enabled: state.whatsappEnabled, platform_enabled: true }] };
+    if (sql.includes('FROM whatsapp_optouts')) return { rows: state.whatsappStopped ? [{}] : [] };
     if (sql.includes('FROM impersonation_sessions')) return { rows: [{ id: 'session', mode: 'read_only' }] };
     if (sql.includes('FROM booking_invoices')) return { rows: state.invoices.filter(i => i.booking_id === values[0] && i.tenant_id === values[1]) };
     if (sql.includes('INSERT INTO booking_invoices')) { const invoice = { id: '1', tenant_id: values[0], booking_id: values[1], snapshot: JSON.parse(values[2]), created_at: new Date() }; state.invoices.push(invoice); return { rows: [invoice] }; }
@@ -40,7 +42,7 @@ async function fakeQuery(sql, values = []) {
         return { rows: [{ ...booking }] };
     }
     if (sql.includes('INSERT INTO bookings')) {
-        const booking = { id: bookingId, tenant_id: values[0], name: values[2], email: values[3], phone: values[4], booking_date: values[5], booking_time: values[6], status: values[11], payment_mode: values[12], booking_source: values[21], created_by_user_id: values[22], terms_acceptance_method: values[23] };
+        const booking = { id: bookingId, tenant_id: values[0], name: values[2], email: values[3], phone: values[4], booking_date: values[5], booking_time: values[6], status: values[11], payment_mode: values[12], whatsapp_opt_in: values[18], whatsapp_status: values[19], booking_source: values[21], created_by_user_id: values[22], terms_acceptance_method: values[23] };
         state.records.push(booking); return { rows: [booking] };
     }
     if (sql.includes('INSERT INTO booking_payments')) { state.payments.push({ provider: values[2], amount: values[4], status: 'pending' }); return { rows: [{ id: 'payment' }] }; }
@@ -111,6 +113,25 @@ test('public and assisted bookings reject missing or non-boolean platform terms 
     const accepted = await post({ ...payload(), email: 'client@example.com' }, null, '/bookings');
     assert.equal(accepted.status, 201);
     assert.equal(accepted.data.booking.terms_acceptance_method, 'online');
+});
+
+test('booking API records an explicit WhatsApp choice and reports unavailable or opted-out delivery truthfully', async () => {
+    const body = { ...payload(), email: 'client@example.com' };
+    const emailOnly = await post(body, null, '/bookings');
+    assert.equal(emailOnly.data.booking.whatsapp_opt_in, false);
+    assert.equal(emailOnly.data.booking.whatsapp_status, 'not_requested');
+    const optedIn = await post({ ...body, whatsapp_opt_in: true }, null, '/bookings');
+    assert.equal(optedIn.status, 201);
+    assert.equal(optedIn.data.booking.whatsapp_opt_in, true);
+    assert.equal(optedIn.data.booking.whatsapp_status, 'pending');
+    state.whatsappStopped = true;
+    const stopped = await post({ ...body, whatsapp_opt_in: true }, null, '/bookings');
+    assert.equal(stopped.data.booking.whatsapp_opt_in, false);
+    assert.equal(stopped.data.booking.whatsapp_status, 'unavailable');
+    state.whatsappEnabled = false;
+    const disabled = await post({ ...body, whatsapp_opt_in: true }, null, '/bookings');
+    assert.equal(disabled.data.booking.whatsapp_status, 'unavailable');
+    assert.equal(state.notices.filter(notice => notice === 'confirmed').length, 4);
 });
 
 test('offline required payment remains pending, and normal transfers still require a receipt', async () => {

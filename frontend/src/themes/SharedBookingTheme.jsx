@@ -448,6 +448,7 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
   const [phone, setPhone] = useState('');
   const [receiptImage, setReceiptImage] = useState(null);
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const [whatsappOptIn, setWhatsappOptIn] = useState(false);
   const [hasDateInteraction, setHasDateInteraction] = useState(false);
   const [selectedOption, setSelectedOption] = useState(optionConfig?.options?.[0] || null);
   const [selectedAddons, setSelectedAddons] = useState(new Set());
@@ -664,17 +665,23 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
         notes,
         receipt_image: receiptBase64,
         after_hours_request: isAfterHoursRequest,
-        terms_accepted: termsAccepted
+        terms_accepted: termsAccepted,
+        whatsapp_opt_in: tenant.whatsapp_available === true && whatsappOptIn
       });
       setTermsAccepted(false);
+      setWhatsappOptIn(false);
+      const appointment = {
+        service: selectedService.name,
+        date: selectedDate,
+        time: selectedTime,
+        duration: selectedService.duration_minutes,
+        whatsappStatus: res.booking?.whatsapp_status
+      };
 
       if (res.checkoutUrl && res.paymentGateway && res.paymentGateway.key !== 'paypal') {
         const gatewayAmount = formatCurrency(res.paymentGateway.amount, res.paymentGateway.currency);
         setConfirmModal({
-          service: selectedService.name,
-          date: selectedDate,
-          time: selectedTime,
-          duration: selectedService.duration_minutes,
+          ...appointment,
           status: 'pending_payment',
           title: `Continue to ${res.paymentGateway.label}`,
           text: `Pay ${gatewayAmount} on ${res.paymentGateway.label}'s secure checkout. If the amount isn't filled in, enter it exactly and use reference ${res.paymentGateway.reference}. Your booking stays pending until the business verifies the payment.`,
@@ -690,10 +697,7 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
           : formatCurrency(paymentDetails.dueToday, selectedService.currency || 'JMD');
         const usd = conversion ? `USD $${Number(conversion.usdAmount).toFixed(2)}` : 'the USD amount shown';
         setConfirmModal({
-          service: selectedService.name,
-          date: selectedDate,
-          time: selectedTime,
-          duration: selectedService.duration_minutes,
+          ...appointment,
           status: 'pending_payment',
           title: 'Continue to PayPal',
           text: `${source} has been converted to ${usd} for PayPal. Open PayPal below, complete payment, then return to this screen. Your booking remains pending until the business verifies the payment.`,
@@ -704,10 +708,7 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
         });
       } else {
         setConfirmModal({
-          service: selectedService.name,
-          date: selectedDate,
-          time: selectedTime,
-          duration: selectedService.duration_minutes,
+          ...appointment,
           status: res.booking?.status || 'confirmed',
           title: res.booking?.status === 'pending_after_hours_confirmation'
             ? 'After-hours Request Sent'
@@ -930,7 +931,7 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
                 <div className={styles.field}>
                   <label>Phone number</label>
                   <div className={styles.inputShell}>
-                    <input type="tel" required placeholder={theme.phonePlaceholder || '+1 (555) 000-9999'} value={phone} onChange={(e) => setPhone(e.target.value)} />
+                    <input type="tel" required placeholder={theme.phonePlaceholder || '+1 (555) 000-9999'} value={phone} onChange={(e) => { setPhone(e.target.value); setWhatsappOptIn(false); }} />
                   </div>
                 </div>
 
@@ -1041,6 +1042,15 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
                   </span>
                 </label>
 
+                {tenant.whatsapp_available === true && !isDemo && (
+                  <label className={styles.termsConsent}>
+                    <input type="checkbox" checked={whatsappOptIn} onChange={(e) => setWhatsappOptIn(e.target.checked)} />
+                    <span>
+                      <strong>Send me booking updates on WhatsApp (optional)</strong><br />
+                      I agree to receive confirmations, reminders and changes from ICSS Bookings for this appointment at the number above. Reply STOP at any time.
+                    </span>
+                  </label>
+                )}
                 <button type="submit" className={styles.primaryButton} disabled={!selectedService || paymentDetails.hasConfigurationIssue || !termsAccepted}>
                   {isAfterHoursRequest ? 'Submit time request' : (theme.bookButtonLabel || paymentDetails.buttonLabel)}
                 </button>
@@ -1074,6 +1084,12 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
             <p className={styles.modalLead}>
               {confirmModal.text}
             </p>
+            {confirmModal.whatsappStatus === 'pending' && (
+              <p className={styles.modalTime}>WhatsApp updates requested for this booking.</p>
+            )}
+            {confirmModal.whatsappStatus === 'unavailable' && (
+              <p className={styles.modalTime}>WhatsApp updates are unavailable for this booking. Check your email for updates.</p>
+            )}
             <div className={styles.modalSummary}>
               <p className={styles.modalLabel}>Your appointment</p>
               <p className={styles.modalService}>{confirmModal.service}</p>

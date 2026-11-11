@@ -63,6 +63,8 @@ async function loadTenantBranding() {
         if (!res.ok) return;
         const data = await res.json();
         const b    = data.branding || {};
+        document.getElementById('whatsappConsent').hidden = data.whatsapp_available !== true;
+        document.getElementById('fieldWhatsappOptIn').disabled = data.whatsapp_available !== true;
 
         state.branding = b;
 
@@ -303,10 +305,12 @@ async function submitBooking(e) {
         document.getElementById('confirmTime').textContent  = state.selectedLabel;
         document.getElementById('confirmName').textContent  = name;
         document.getElementById('confirmEmail').textContent = email;
-        document.getElementById('deliveryPrefix').textContent = whatsappOptIn
-            ? 'Your confirmation is being sent by email to '
-            : 'A confirmation email has been sent to ';
-        document.getElementById('deliverySuffix').textContent = whatsappOptIn ? ' and by WhatsApp.' : '.';
+        document.getElementById('deliveryPrefix').textContent = 'Booking updates will be emailed to ';
+        document.getElementById('deliverySuffix').textContent = '.';
+        document.getElementById('whatsappBookingStatus').textContent = data.booking?.whatsapp_status === 'pending'
+            ? 'WhatsApp updates requested for this booking.'
+            : data.booking?.whatsapp_status === 'unavailable'
+            ? 'WhatsApp updates are unavailable for this booking. Check your email for updates.' : '';
 
         goToStep(4);
     } catch (err) {
