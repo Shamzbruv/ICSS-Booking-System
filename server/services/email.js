@@ -22,8 +22,8 @@ function getResend() {
     if (!key) return null;
     const client = new Resend(key);
     const providerSend = client.emails.send.bind(client.emails);
-    client.emails.send = async payload => {
-        const result = await providerSend(payload);
+    client.emails.send = async (payload, options) => {
+        const result = await providerSend(payload, options);
         if (result?.error) throw new Error(result.error.message || result.error.name || 'Email provider rejected the message.');
         return result?.data || result;
     };
@@ -627,10 +627,14 @@ async function sendBookingCancellationEmail(booking, reason, tenant) {
 }
 
 // ── Booking Fulfilled ─────────────────────────────────────────────────────────
-async function sendBookingCompletedEmail(booking, tenant) {
+async function sendBookingCompletedEmail(booking, tenant, options) {
     const resend = getResend();
-    if (!resend || !booking?.email) return false;
+    if (!resend) throw new Error('Email delivery is unavailable because Resend is not configured.');
+    const recipient = String(booking?.email || '').trim();
+    if (!recipient) throw new Error('The booking has no client email address.');
     const brand = getBrand(tenant);
+    // The platform sends completion emails using the shared platform domain.
+    brand.sendingDomain = 'icssbookings.com';
     const service = await getBookingServiceDetails(booking);
     const firstName = escapeHtml((booking.name || '').split(' ')[0] || 'there');
     const displayDate = formatDate(booking.booking_date);
@@ -641,9 +645,9 @@ async function sendBookingCompletedEmail(booking, tenant) {
         return null;
     });
     const feedbackUrl = reviewUrl(booking, tenant);
-    await resend.emails.send({
+    const sent = await resend.emails.send({
         from: getSenderAddress('appointments', brand),
-        to: [booking.email],
+        to: [recipient],
         replyTo: brand.replyEmail,
         subject: `Thank you for visiting ${brand.name}`,
         text: `Thank you for choosing ${brand.name}. We'd love to hear about your visit.\n\nLeave a review: ${feedbackUrl}\n\nYour personal review link is valid for 180 days.`,
@@ -665,9 +669,9 @@ async function sendBookingCompletedEmail(booking, tenant) {
             </div>${footerHtml(brand)}
         </div>`,
         attachments: invoiceAttachment ? [invoiceAttachment] : []
-    });
-    console.log(`[Email] Booking completion sent to ${booking.email}`);
-    return true;
+    }, options);
+    console.log(`[Email] Booking completion accepted for booking ${booking.id}`);
+    return sent;
 }
 
 // ── Order Confirmation ─────────────────────────────────────────────────────────

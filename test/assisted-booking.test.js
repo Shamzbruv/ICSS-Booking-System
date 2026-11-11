@@ -15,13 +15,25 @@ while (future.getUTCDay() === 0) future.setUTCDate(future.getUTCDate() + 1);
 const date = future.toISOString().slice(0, 10);
 let state;
 function reset() {
-    state = { blocks: [], conflicts: [], dailyCount: 0, records: [], payments: [], invoices: [], audits: [], syncs: [], notices: [], whatsappEnabled: true, whatsappStopped: false,
+    state = { blocks: [], conflicts: [], dailyCount: 0, records: [], payments: [], invoices: [], audits: [], syncs: [], notices: [], outbox: [], emailJobs: [], queueFails: false, whatsappEnabled: true, whatsappStopped: false,
         service: { id: serviceId, name: 'Service', active: true, duration_minutes: 60, buffer_time_minutes: 0, price: 5000, currency: 'JMD', payment_mode: 'tenant_default', payment_requirement_type: 'none' } };
 }
 async function fakeQuery(sql, values = []) {
     if (sql.includes('LEFT JOIN whatsapp_preferences')) return { rows: [{ enabled: state.whatsappEnabled, platform_enabled: true }] };
     if (sql.includes('FROM whatsapp_optouts')) return { rows: state.whatsappStopped ? [{}] : [] };
     if (sql.includes('FROM impersonation_sessions')) return { rows: [{ id: 'session', mode: 'read_only' }] };
+    if (sql.includes('INSERT INTO email_outbox')) {
+        let row = state.outbox.find(email => email.dedupe_key === values[1]);
+        if (!row) {
+            row = { id: 'review-email', message_type: values[0], dedupe_key: values[1], recipient: values[2], payload: JSON.parse(values[3]), status: 'pending' };
+            state.outbox.push(row);
+        }
+        return { rows: [row] };
+    }
+    if (sql.includes('UPDATE email_outbox')) {
+        state.outbox.find(email => email.id === values[0]).status = 'failed';
+        return { rows: [] };
+    }
     if (sql.includes('FROM booking_invoices')) return { rows: state.invoices.filter(i => i.booking_id === values[0] && i.tenant_id === values[1]) };
     if (sql.includes('INSERT INTO booking_invoices')) { const invoice = { id: '1', tenant_id: values[0], booking_id: values[1], snapshot: JSON.parse(values[2]), created_at: new Date() }; state.invoices.push(invoice); return { rows: [invoice] }; }
     if (sql.includes('FROM services')) return { rows: values[0] === serviceId ? [state.service] : [] };
@@ -53,7 +65,12 @@ async function fakeQuery(sql, values = []) {
 db.query = fakeQuery;
 db.transaction = async callback => callback({ query: fakeQuery });
 function stub(modulePath, exports) { const id = require.resolve(modulePath); require.cache[id] = { id, filename: id, loaded: true, exports }; }
-stub('../server/services/email', { sendBookingCancellationEmail: async () => { state.notices.push('cancelled'); }, sendBookingPendingReviewEmail: async () => {}, sendBookingCompletedEmail: async () => { state.notices.push('completed'); } });
+stub('../server/services/email', { sendBookingCancellationEmail: async () => { state.notices.push('cancelled'); }, sendBookingPendingReviewEmail: async () => {} });
+stub('../server/services/queue', { enqueue: async (name, data) => {
+    if (state.queueFails) throw new Error('Queue unavailable');
+    state.emailJobs.push({ name, data });
+    return 'job-id';
+} });
 stub('../server/services/bookingNotifications', { sendBookingConfirmationNotifications: async () => { state.notices.push('confirmed'); } });
 stub('../server/services/calendarSync', { syncBookingWithExternal: async (tenant, booking) => { state.syncs.push(booking.status); } });
 const { signToken } = require('../server/middleware/auth');
@@ -235,11 +252,46 @@ test('repeated status requests do not resend confirmation or cancellation notifi
     assert.equal(state.notices.length, 0);
     assert.equal(state.syncs.length, 0);
 });
-test('marking a booking completed triggers the customer completion email once', async () => {
+test('marking a booking completed saves and queues one review email to the booking address', async () => {
     existingBooking('none', 'confirmed');
+    state.records[0].email = 'client@example.test';
+    const completion = await patchStatus('completed');
+    assert.equal(completion.status, 200);
+    assert.equal(completion.data.review_email_status, 'pending');
     assert.equal((await patchStatus('completed')).status, 200);
-    assert.equal((await patchStatus('completed')).status, 200);
-    assert.deepEqual(state.notices, ['completed']);
+    assert.deepEqual(state.outbox, [{
+        id: 'review-email', message_type: 'booking_completed', dedupe_key: `booking_completed:${bookingId}`,
+        recipient: 'client@example.test', payload: { bookingId, tenantId }, status: 'pending'
+    }]);
+    assert.deepEqual(state.emailJobs, [{ name: 'email-outbox', data: { outboxId: 'review-email' } }]);
+});
+test('already completed bookings can queue a review email, with tenant and booking status checks', async () => {
+    existingBooking('none', 'confirmed');
+    const url = `/bookings/${bookingId}/review-email`;
+    assert.equal((await post({}, token(), url)).status, 409);
+    state.records[0].status = 'completed';
+    state.records[0].email = '';
+    assert.equal((await post({}, token({ tenant_id: serviceId }), url)).status, 403);
+    assert.equal((await post({}, token(), url)).status, 422);
+    state.records[0].email = 'client@example.test';
+    assert.equal((await post({}, token(), url)).data.review_email_status, 'pending');
+    state.outbox[0].status = 'sent';
+    assert.equal((await post({}, token(), url)).data.review_email_status, 'sent');
+    assert.equal(state.emailJobs.length, 1);
+});
+test('queue failure preserves completion and lets staff retry the saved review email', async () => {
+    existingBooking('none', 'confirmed');
+    state.records[0].email = 'client@example.test';
+    state.queueFails = true;
+    const result = await patchStatus('completed');
+    assert.equal(result.status, 200);
+    assert.equal(result.data.review_email_status, 'failed');
+    assert.equal(state.records[0].status, 'completed');
+    assert.equal(state.outbox[0].status, 'failed');
+    state.queueFails = false;
+    assert.equal((await post({}, token(), `/bookings/${bookingId}/review-email`)).data.review_email_status, 'pending');
+    assert.equal(state.outbox.length, 1);
+    assert.equal(state.emailJobs.length, 1);
 });
 test('cancellation rejects foreign tenants and missing bookings without payment changes', async () => {
     existingBooking();

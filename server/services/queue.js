@@ -57,9 +57,10 @@ async function initQueue() {
     await boss.work('provisioning-jobs', singleJobWorker('provisioning-jobs', processProvisioningJob));
 
     const { processEmailOutbox } = require('./emailOutbox');
+    await boss.createQueue('email-outbox');
     await boss.work('email-outbox', singleJobWorker('email-outbox', processEmailOutbox));
     const { query } = require('../db/connection');
-    const pendingEmails = await query(`SELECT id FROM email_outbox WHERE status<>'sent' AND next_attempt_at<=NOW() ORDER BY created_at LIMIT 100`);
+    const pendingEmails = await query(`SELECT id FROM email_outbox WHERE status IN ('pending','failed','sending') AND next_attempt_at<=NOW() ORDER BY created_at LIMIT 100`);
     for (const row of pendingEmails.rows) await boss.send('email-outbox', { outboxId:row.id }, QUEUE_RETRY_OPTIONS['email-outbox']);
 
     return boss;
