@@ -222,7 +222,7 @@
   scroll-margin-top: 92px;
 }
 
-.legal-section h3 {
+.legal-section :is(h2, h3) {
   font-size: 1.08rem;
   font-weight: 700;
   margin-bottom: 0.75rem;

@@ -10,7 +10,7 @@ const { query } = require('../../db/connection');
 const { normalizeDepositConfig } = require('../../services/paymentRules');
 const { publicGatewaySummary } = require('../../services/paymentGateways');
 const { themeKeyForName } = require('../../services/siteConfig');
-const { getWhatsAppPreferences } = require('../../services/whatsappPreferences');
+const { WHATSAPP_TERMS_VERSION, getWhatsAppPreferences } = require('../../services/whatsappPreferences');
 
 // GET /api/v1/public/tenant — Expose safe branding for the booking widget
 router.get('/tenant', async (req, res) => {
@@ -61,6 +61,7 @@ router.get('/tenant', async (req, res) => {
         name,
         slug,
         whatsapp_available: Boolean(whatsapp?.enabled && whatsapp.platform_enabled),
+        whatsapp_terms_version: WHATSAPP_TERMS_VERSION,
         plan: plan_id,
         branding: safeBranding,
         layout: req.tenant.layout,
