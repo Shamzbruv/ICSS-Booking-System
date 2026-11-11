@@ -47,10 +47,10 @@ async function checkConnection(){const c=await config();const r=await api(c,'.js
 async function plan(e) {
  await transaction(async db=>{
  const lock=await db.query('SELECT * FROM whatsapp_events WHERE id=$1 AND processed_at IS NULL FOR UPDATE',[e.id]);if(!lock.rows.length)return;
- const {rows}=await db.query(`SELECT b.*,s.name AS service_name,t.name AS business_name,p.enabled AS wa_enabled,p.providers,p.reminders,p.enabled_at FROM bookings b JOIN tenants t ON t.id=b.tenant_id LEFT JOIN services s ON s.id=b.service_id LEFT JOIN whatsapp_preferences p ON p.tenant_id=b.tenant_id WHERE b.id=$1`,[e.booking_id]);
+ const {rows}=await db.query(`SELECT b.*,s.name AS service_name,t.name AS business_name,p.enabled AS wa_enabled,p.providers,p.reminders,p.enabled_at,(SELECT created_at>=p.enabled_at FROM whatsapp_events WHERE id=$2) AS activation_eligible FROM bookings b JOIN tenants t ON t.id=b.tenant_id LEFT JOIN services s ON s.id=b.service_id LEFT JOIN whatsapp_preferences p ON p.tenant_id=b.tenant_id WHERE b.id=$1`,[e.booking_id,e.id]);
  const b=rows[0];
  const settings=await config();
- if(b?.wa_enabled && new Date(e.created_at)>=new Date(b.enabled_at) && new Date(e.created_at)>=new Date(settings.enabled_at||Date.now())){
+ if(b?.wa_enabled && b.activation_eligible && new Date(e.created_at)>=new Date(settings.enabled_at||Date.now())){
  const reminder=e.kind.startsWith('reminder_');
  // Recheck current status and schedule before planning an older event.
  const live=!['cancelled','rejected','expired','completed','no_show'].includes(b.status);

@@ -19,7 +19,7 @@ router.post('/test-message',async(req,res)=>{
  }catch(e){await query("UPDATE whatsapp_deliveries SET status='unknown',error='Test request failed; check Twilio logs before retrying.' WHERE id=$1",[log.rows[0].id]);res.status(400).json({error:'Test message could not be confirmed. Check Twilio logs before retrying.'});}
 });
 router.get('/history',async(req,res)=>{const r=await query(`SELECT id,tenant_id,booking_id,recipient,template,status,message_sid,error,created_at FROM whatsapp_deliveries ORDER BY id DESC LIMIT 100`);res.json({deliveries:r.rows});});
-router.get('/businesses',async(req,res)=>{const r=await query(`SELECT t.id,t.name,COALESCE(p.enabled,false) AS enabled,COALESCE(p.providers,'[]') AS providers,COALESCE(p.reminders,'[24,2]') AS reminders,COALESCE(p.daily_limit,100) AS daily_limit FROM tenants t LEFT JOIN whatsapp_preferences p ON p.tenant_id=t.id ORDER BY t.name`);res.json({businesses:r.rows});});
+router.get('/businesses',async(req,res)=>{const r=await query(`SELECT t.id,t.name,COALESCE(p.enabled,true) AS enabled,COALESCE(p.providers,'[]') AS providers,COALESCE(p.reminders,'[24,2]') AS reminders,COALESCE(p.daily_limit,100) AS daily_limit FROM tenants t LEFT JOIN whatsapp_preferences p ON p.tenant_id=t.id ORDER BY t.name`);res.json({businesses:r.rows});});
 router.put('/businesses/:id',async(req,res)=>{
  const providers=req.body.providers,reminders=req.body.reminders;
  if(!Array.isArray(providers)||providers.length>20||!Array.isArray(reminders)||reminders.length>4||reminders.some(h=>!Number.isInteger(h)||h<1||h>168))return res.status(400).json({error:'Use up to 20 recipients and 4 reminder times from 1 to 168 hours.'});

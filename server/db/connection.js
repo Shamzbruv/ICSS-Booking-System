@@ -930,7 +930,7 @@ async function runMigrations(client) {
     `);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_push_subscriptions_user ON push_subscriptions(user_id)`);
     await client.query(`CREATE TABLE IF NOT EXISTS whatsapp_settings (id INTEGER PRIMARY KEY CHECK(id=1), config JSONB NOT NULL, updated_at TIMESTAMPTZ DEFAULT NOW())`);
-    await client.query(`CREATE TABLE IF NOT EXISTS whatsapp_preferences (tenant_id UUID PRIMARY KEY REFERENCES tenants(id) ON DELETE CASCADE, enabled BOOLEAN DEFAULT false, providers JSONB DEFAULT '[]', reminders JSONB DEFAULT '[24,2]', updated_at TIMESTAMPTZ DEFAULT NOW())`);
+    await client.query(`CREATE TABLE IF NOT EXISTS whatsapp_preferences (tenant_id UUID PRIMARY KEY REFERENCES tenants(id) ON DELETE CASCADE, enabled BOOLEAN DEFAULT true, providers JSONB DEFAULT '[]', reminders JSONB DEFAULT '[24,2]', updated_at TIMESTAMPTZ DEFAULT NOW())`);
     await client.query(`CREATE TABLE IF NOT EXISTS whatsapp_events (id BIGSERIAL PRIMARY KEY, booking_id UUID NOT NULL REFERENCES bookings(id) ON DELETE CASCADE, kind TEXT NOT NULL, previous JSONB, version TEXT NOT NULL, created_at TIMESTAMPTZ DEFAULT NOW(), processed_at TIMESTAMPTZ, UNIQUE(booking_id,kind,version))`);
     await client.query(`CREATE TABLE IF NOT EXISTS whatsapp_deliveries (id BIGSERIAL PRIMARY KEY, event_id BIGINT REFERENCES whatsapp_events(id), tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE, booking_id UUID REFERENCES bookings(id) ON DELETE CASCADE, recipient TEXT NOT NULL, template TEXT NOT NULL, variables JSONB NOT NULL, status TEXT NOT NULL DEFAULT 'pending', message_sid TEXT UNIQUE, error TEXT, created_at TIMESTAMPTZ DEFAULT NOW(), updated_at TIMESTAMPTZ DEFAULT NOW(), UNIQUE(event_id,recipient,template))`);
     await client.query(`ALTER TABLE whatsapp_events ADD COLUMN IF NOT EXISTS snapshot JSONB`);
@@ -939,9 +939,25 @@ async function runMigrations(client) {
     await client.query(`ALTER TABLE whatsapp_deliveries ADD COLUMN IF NOT EXISTS attempts INTEGER DEFAULT 0`);
     await client.query(`ALTER TABLE whatsapp_deliveries ADD COLUMN IF NOT EXISTS next_attempt_at TIMESTAMPTZ DEFAULT NOW()`);
     await client.query(`ALTER TABLE whatsapp_preferences ADD COLUMN IF NOT EXISTS daily_limit INTEGER DEFAULT 100`);
+    // Enable existing businesses once; later explicit tenant opt-outs must survive restarts.
+    await client.query(`ALTER TABLE whatsapp_preferences ALTER COLUMN enabled SET DEFAULT true`);
+    await client.query(`CREATE TABLE IF NOT EXISTS whatsapp_migrations (version TEXT PRIMARY KEY, applied_at TIMESTAMPTZ DEFAULT NOW())`);
+    await client.query(`DO $$ BEGIN
+      INSERT INTO whatsapp_migrations(version) VALUES('tenant_defaults_v1') ON CONFLICT DO NOTHING;
+      IF FOUND THEN
+        UPDATE whatsapp_preferences SET enabled_at=CASE WHEN enabled THEN enabled_at ELSE NOW() END, enabled=true,updated_at=NOW();
+      END IF;
+    END $$`);
+    await client.query(`INSERT INTO whatsapp_preferences(tenant_id) SELECT id FROM tenants ON CONFLICT(tenant_id) DO NOTHING`);
+    await client.query(`CREATE OR REPLACE FUNCTION create_tenant_whatsapp_defaults() RETURNS trigger AS $$
+      BEGIN INSERT INTO whatsapp_preferences(tenant_id) VALUES(NEW.id) ON CONFLICT DO NOTHING; RETURN NEW; END;
+    $$ LANGUAGE plpgsql`);
+    await client.query(`DROP TRIGGER IF EXISTS tenant_whatsapp_defaults ON tenants`);
+    await client.query(`CREATE TRIGGER tenant_whatsapp_defaults AFTER INSERT ON tenants FOR EACH ROW EXECUTE FUNCTION create_tenant_whatsapp_defaults()`);
     await client.query(`CREATE INDEX IF NOT EXISTS whatsapp_events_pending ON whatsapp_events(id) WHERE processed_at IS NULL`);
     await client.query(`CREATE OR REPLACE FUNCTION capture_whatsapp_booking() RETURNS trigger AS $$
     DECLARE k TEXT; BEGIN
+      IF NOT EXISTS (SELECT 1 FROM whatsapp_preferences WHERE tenant_id=NEW.tenant_id AND enabled) THEN RETURN NEW; END IF;
       IF TG_OP='INSERT' THEN k := 'new';
       ELSIF NEW.status IN ('cancelled','rejected') AND OLD.status IS DISTINCT FROM NEW.status THEN k := 'cancelled';
       ELSIF (NEW.booking_date,NEW.booking_time) IS DISTINCT FROM (OLD.booking_date,OLD.booking_time) THEN k := 'rescheduled';
