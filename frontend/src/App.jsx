@@ -11,6 +11,7 @@ const CustomThemeRequest = lazy(() => import('./pages/CustomThemeRequest/CustomT
 const PublicBookingPage = lazy(() => import('./pages/PublicBookingPage/PublicBookingPage'));
 const DemoSite          = lazy(() => import('./pages/DemoSite/DemoSite'));
 const ManageBooking     = lazy(() => import('./pages/ManageBooking/ManageBooking'));
+const ConsultationPage = lazy(() => import('./pages/Consultations/ConsultationPage'));
 const PlatformConsole   = lazy(() => import('./pages/PlatformConsole/PlatformConsole'));
 const ForgotPassword    = lazy(() => import('./pages/Auth/ForgotPassword'));
 const ResetPassword     = lazy(() => import('./pages/Auth/ResetPassword'));
@@ -35,6 +36,8 @@ function App() {
         <Route path="/demo/:themeKey/:page?" element={<DemoSite />} />
         {/* Customer self-service link from booking emails: reschedule or cancel */}
         <Route path="/manage" element={<ManageBooking />} />
+        <Route path="/consultation" element={<ConsultationPage />} />
+        <Route path="/consultation/manage" element={<ConsultationPage />} />
         {/* Tenant websites: /:slug (home), /:slug/about, /:slug/gallery, /:slug/book */}
         <Route path="/:slug/:page?"     element={<PublicBookingPage />} />
       </Routes>

@@ -1,0 +1,50 @@
+.workspace {
+  --ink: #eeedf9;
+  --muted: #a5a8be;
+  --accent: #6a56da;
+  --line: #333648;
+  --field-bg: #171927;
+  display: grid;
+  gap: 18px;
+}
+.heading, .actions, .filters, .blocks, .contact { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.heading { justify-content: space-between; }
+.heading h2, .heading p, .panel h3, .panel p, .appointmentBody p { margin: 0; }
+.heading h2 { font-size: 28px; letter-spacing: -.035em; }
+.heading p, .muted, .appointment small, .share small { color: var(--muted); }
+.share, .panel, .appointment { background: var(--pc-surface); border: 1px solid var(--line); border-radius: 14px; }
+.share, .panel { padding: 16px; display: grid; gap: 12px; }
+.share > div { display: flex; gap: 8px; }
+.share input { flex: 1; }
+.workspace label { display: grid; gap: 6px; font-size: 13px; font-weight: 600; }
+.workspace label small { color: var(--muted); }
+.workspace input:not([type=checkbox]), .workspace textarea, .workspace select {
+  min-width: 0; width: 100%; padding: 9px 10px; border-radius: 8px; border: 1px solid var(--line);
+  color: var(--ink); background: var(--field-bg); font: inherit; color-scheme: dark;
+}
+.workspace textarea { resize: vertical; }
+.button, .primary {
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid var(--line); border-radius: 9px; padding: 9px 13px; min-height: 38px;
+  font: inherit; font-weight: 650; color: var(--ink); background: var(--field-bg); cursor: pointer; text-decoration: none;
+}
+.primary, .button[aria-pressed="true"] { background: var(--accent); color: #fff; border-color: var(--accent); }
+.button:disabled, .primary:disabled { opacity: .45; cursor: default; }
+.schedules { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); align-items: start; gap: 16px; }
+.hours, .bookings { display: grid; gap: 9px; }
+.day { display: grid; grid-template-columns: 104px 1fr; gap: 8px; align-items: center; }
+.workspace .check, .range { display: flex; align-items: center; gap: 7px; }
+.blocks, .filters { align-items: end; }
+.blockList { list-style: none; margin: 0; padding: 0; display: grid; gap: 5px; }
+.blockList li { display: flex; align-items: center; gap: 12px; }
+.appointment summary { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px 16px; padding: 15px; cursor: pointer; }
+.appointment summary span { display: grid; gap: 4px; }
+.appointment[open] summary { border-bottom: 1px solid var(--line); }
+.appointmentBody { display: grid; gap: 12px; padding: 15px; }
+.contact a { color: #b6adff; }
+.details { white-space: pre-wrap; overflow-wrap: anywhere; }
+.slotEditor { display: grid; gap: 12px; }
+.error { color: #ff9cb0; }
+@media (max-width: 450px) {
+  .day { grid-template-columns: 1fr; }
+}

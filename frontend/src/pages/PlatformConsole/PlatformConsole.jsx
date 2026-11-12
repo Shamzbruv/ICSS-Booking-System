@@ -14,6 +14,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { ConsoleProvider, useConsole } from './ConsoleContext';
 import ImpersonationBanner from './ImpersonationBanner';
 import WhatsAppSettings from './WhatsAppSettings';
+import ConsultationWorkspace from '../Consultations/ConsultationWorkspace';
 import TenantDrawer from './TenantDrawer';
 import InstallPlatformApp from './InstallPlatformApp';
 import { api } from '../../api';
@@ -65,6 +66,7 @@ function ConsoleLogin() {
 // ── Sidebar nav ────────────────────────────────────────────────────────────────
 const NAV = [
   { id: 'dashboard',  icon: 'dashboard', label: 'Dashboard' },
+  { id: 'consultations', icon: 'calendar', label: 'Consultations', consultationTeam: true },
   { id: 'tenants',    icon: 'building', label: 'Tenants' },
   { id: 'themes',     icon: 'layout', label: 'Themes' },
   { id: 'jobs',       icon: 'activity', label: 'Jobs & Queue' },
@@ -568,6 +570,7 @@ function InfoRow({ label, value }) {
 
 const VIEW_MAP = {
   whatsapp: <WhatsAppSettings />,
+  consultations: <ConsultationWorkspace />,
   dashboard:<DashboardView />,
   tenants:  <TenantsView />,
   themes:   <ThemesView />,
@@ -590,6 +593,7 @@ function ConsoleShell() {
     if (!platformUser || loading) return;
     return window.ICSSMobileNavigation?.({ trigger: navTriggerRef.current, drawer: sidebarRef.current, onOpen: () => setNavOpen(true), onClose: () => setNavOpen(false), breakpoint: 760 });
   }, [platformUser, loading]);
+  const canManageConsultations = platformUser?.consultationsAccess === true;
   const activeLabel = NAV.find(item => item.id === activeView)?.label || 'Platform Console';
 
   if (loading) return <div className={s.fullscreen}><div className={s.spinner} /></div>;
@@ -613,7 +617,7 @@ function ConsoleShell() {
         </div>
 
         <nav className={s.sidebar__nav}>
-          {NAV.filter(item => !item.ownerOnly || platformUser.role === 'platform_owner').map(item => (
+          {NAV.filter(item => (!item.ownerOnly || platformUser.role === 'platform_owner') && (!item.consultationTeam || canManageConsultations)).map(item => (
             <button
               key={item.id}
               className={`${s.navItem} ${activeView === item.id ? s['navItem--active'] : ''}`}

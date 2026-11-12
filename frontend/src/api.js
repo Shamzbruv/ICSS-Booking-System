@@ -81,9 +81,21 @@ export const api = {
   bookings: (params = '') => apiFetch(`/bookings?${params}`),
   updateBookingStatus: (id, status, note) => apiFetch(`/bookings/${id}/status`, { method: 'PATCH', body: { status, note } }),
 
+  consultations: {
+    calendar: signal => apiFetch('/consultations', { signal, cache: 'no-store' }),
+    slots: (host, date, signal) => apiFetch(`/consultations/slots?${new URLSearchParams({ host, date })}`, { signal, cache: 'no-store' }),
+    book: body => apiFetch('/consultations', { method: 'POST', body }),
+    manage: (body, signal) => apiFetch('/consultations/manage', { method: 'POST', body, signal })
+  },
+
   // ── Platform Console (platform_owner only) ────────────────────────────────
   // All platform calls use the owner's main localStorage token automatically.
   platform: {
+    consultationList: (filters, signal) => apiFetch(`/platform/consultations?${new URLSearchParams(filters)}`, { signal, cache: 'no-store' }),
+    consultationSchedule: (id, body) => apiFetch(`/platform/consultations/hosts/${id}`, { method: 'PUT', body }),
+    consultationChange: (id, body) => apiFetch(`/platform/consultations/${id}`, { method: 'PATCH', body }),
+    consultationSlots: (host, date, signal) => apiFetch(`/platform/consultations/slots?${new URLSearchParams({ host, date })}`, { signal, cache: 'no-store' }),
+
     // Tenant management
     listTenants:          (search = '', page = 1) => apiFetch(`/platform/tenants?search=${encodeURIComponent(search)}&page=${page}`),
     getTenant:            (id)   => apiFetch(`/platform/tenants/${id}`),

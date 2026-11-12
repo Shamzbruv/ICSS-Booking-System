@@ -23,6 +23,7 @@ const calendarRoutes    = require('./routes/v1/calendar');
 const themesRoutes      = require('./routes/v1/themes');
 const servicesRoutes    = require('./routes/v1/services');
 const platformRoutes    = require('./routes/v1/platform');
+const consultations = require('./routes/v1/consultations');
 const partnerRoutes     = require('./routes/v1/partners');
 const notificationRoutes = require('./routes/v1/notifications');
 const manageRoutes       = require('./routes/v1/manage');
@@ -81,7 +82,7 @@ app.post('/api/v1/whatsapp/webhook', (req,res,next) => require('./services/whats
 // Platform routes bypass tenant resolution — they operate cross-tenant
 app.use('/api/v1', (req, res, next) => {
     // /manage resolves its business from the signed manage link itself.
-    if (req.path.startsWith('/platform') || req.path.startsWith('/partners') || req.path === '/manage' || req.path.startsWith('/manage/')) return next();
+    if (req.path === '/consultations' || req.path.startsWith('/consultations/') || req.path.startsWith('/platform') || req.path.startsWith('/partners') || req.path === '/manage' || req.path.startsWith('/manage/')) return next();
     tenantResolver(req, res, next);
 });
 
@@ -128,6 +129,8 @@ app.use('/api/v1/themes',       themesRoutes);
 app.use('/api/v1/services',     servicesRoutes);
 app.use('/api/v1/invoices', require('./routes/v1/invoices'));
 app.use('/api/v1/reviews', require('./routes/v1/reviews'));
+app.use('/api/v1/consultations', consultations.publicRouter);
+app.use('/api/v1/platform/consultations', consultations.staffRouter);
 app.use('/api/v1/platform',     platformRoutes);
 app.use('/api/v1/partners',     partnerRoutes);
 app.use('/api/v1/notifications', notificationRoutes);
@@ -141,6 +144,11 @@ app.get('/health', (req, res) => {
         version: '1.0.0',
         timestamp: new Date().toISOString()
     });
+});
+
+app.use(['/consultation', '/consultation/manage'], (req, res, next) => {
+    res.set({ 'X-Robots-Tag': 'noindex, nofollow', 'Referrer-Policy': 'no-referrer' });
+    next();
 });
 
 // ─── React SPA Fallback ───────────────────────────────────────────────────────

@@ -71,6 +71,11 @@
       ['Charts', 'Swipe inside a monthly chart to see all months on a phone. Tap a bar or line point for its value. Tap a status or legend entry to inspect that part of the status mix. Details appear beside the relevant chart.'],
       ['Top tenants', 'The tenant table compares confirmed booking count and value. Scroll the table sideways where necessary; tapping a row reveals its details.']
     ]],
+    'platform:consultations': ['Consultations', 'Manage both consultant calendars and share a single booking page.', [
+      ['Publish hours', 'Open Availability, select the days and times you can meet, and turn on Accept online bookings. You can also block individual dates or add a meeting link.'],
+      ['Share the page', 'Copy the client booking link. Clients can choose a consultant or the first available appointment.'],
+      ['Manage appointments', 'Open a booking to see the client’s details, leave internal notes, reschedule or switch hosts, and update the status.']
+    ]],
     'platform:tenants': ['Tenants', 'Find a business and use the management actions authorized for your platform role.', [
       ['Search and inspect', 'Search by name or handle and open a tenant for more details. Verify its owner, status, theme and payment setup before changing anything.'],
       ['View or edit admin', 'View Admin starts read-only access; Edit Admin permits changes under the selected access session. Use the least access needed and end the session when finished.'],

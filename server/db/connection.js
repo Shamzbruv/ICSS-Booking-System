@@ -108,6 +108,7 @@ async function initDatabase() {
         client = await getPool().connect();
         console.log('🔗 Connected to PostgreSQL database.');
         await runMigrations(client);
+        await require('./consultations').migrateConsultations(client);
         await require('./maintenance').runDatabaseMaintenance(client);
         console.log('✅ Database schema up to date.');
     } catch (err) {
