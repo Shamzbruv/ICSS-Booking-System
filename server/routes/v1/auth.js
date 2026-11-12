@@ -3,6 +3,7 @@
  * Login, Register, and Token Refresh
  */
 
+const { canManageConsultations } = require('../../services/consultationAccess');
 const express = require('express');
 const router  = express.Router();
 const bcrypt  = require('bcryptjs');
@@ -89,7 +90,7 @@ router.post('/login', authLimiter, async (req, res) => {
                 if (!valid) return res.status(401).json({ error: 'Invalid email or password.' });
 
                 const token = signToken({ id: owner.id, email: owner.email, role: owner.role }, tokenExpiry);
-                return res.json({ token, user: { id: owner.id, email: owner.email, name: owner.name, role: owner.role } });
+                return res.json({ token, user: { id: owner.id, email: owner.email, name: owner.name, role: owner.role, consultationsAccess: canManageConsultations(owner) } });
             }
         }
 
@@ -173,7 +174,8 @@ router.get('/me', authenticate, async (req, res) => {
         if (result.rows.length === 0) {
             return res.status(404).json({ error: 'User not found.' });
         }
-        res.json({ user: result.rows[0] });
+        const user = result.rows[0];
+        res.json({ user: { ...user, consultationsAccess: canManageConsultations(user) } });
     } catch (err) {
         console.error('[Auth/Me]', err.message);
         res.status(500).json({ error: 'Failed to fetch user profile.' });
