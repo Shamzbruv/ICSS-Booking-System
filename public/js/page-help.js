@@ -75,7 +75,8 @@
       ['Publish hours', 'Open Availability, select the days and times you can meet, and turn on Accept online bookings. You can also block individual dates or add a meeting link.'],
       ['Share the page', 'Copy the client booking link. Clients can choose either consultant, the first available appointment, or a joint meeting.'],
       ['Confirm a request', 'Open the request from your team email or the workspace. Create a Google Meet link in the prefilled Google Calendar event, paste the joining link into the request and select Confirm & email client.'],
-      ['Manage appointments', 'Open a booking to see the client’s details, leave internal notes, reschedule or switch hosts, and update the status.']
+      ['Manage appointments', 'Open a booking to see the client’s details, leave internal notes, reschedule or switch hosts, and update the status.'],
+      ['Close out a consultation', 'Use Ready to close out after the meeting. Choose Lead or Lost, add an optional client message, then preview and send the follow-up.']
     ]],
     'platform:tenants': ['Tenants', 'Find a business and use the management actions authorized for your platform role.', [
       ['Search and inspect', 'Search by name or handle and open a tenant for more details. Verify its owner, status, theme and payment setup before changing anything.'],

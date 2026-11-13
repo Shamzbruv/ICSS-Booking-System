@@ -1310,9 +1310,30 @@ async function sendConsultationEmail(booking, idempotencyKey, action) {
     }, { idempotencyKey });
 }
 
+async function sendConsultationFollowUpEmail(recipient, draft, idempotencyKey) {
+    const resend = getResend();
+    if (!resend) throw new Error('Consultation email delivery is unavailable.');
+    const paragraphs = draft.paragraphs.map(paragraph =>
+        `<p style="white-space:pre-wrap;margin:0 0 18px;">${escapeHtml(paragraph)}</p>`
+    ).join('');
+    return resend.emails.send({
+        from: 'ICSS Bookings <appointments@icssbookings.com>',
+        replyTo: getDefaultNotificationEmail(),
+        to: [recipient],
+        subject: draft.subject,
+        text: draft.paragraphs.join('\n\n'),
+        html: `<div style="max-width:560px;margin:auto;padding:28px;font:16px/1.6 Arial,sans-serif;color:#192637">
+            <p style="font-weight:bold;color:#4c35a8;">ICSS Bookings</p>
+            <h1 style="font-size:24px;">${escapeHtml(draft.subject)}</h1>
+            ${paragraphs}
+        </div>`
+    }, { idempotencyKey });
+}
+
 module.exports = {
     sendConsultationEmail,
     sendConsultationRequestEmail,
+    sendConsultationFollowUpEmail,
     getSupportContactEmail,
     sendBookingRescheduledEmail,
     sendRescheduleRequestEmails,

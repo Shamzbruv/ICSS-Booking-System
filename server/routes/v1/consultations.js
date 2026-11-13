@@ -5,7 +5,7 @@ const { query } = require('../../db/connection');
 const { authenticate, requirePlatformOwner } = require('../../middleware/auth');
 const {
     HOSTS, HOST_ROLES, TOPICS, DURATION, timeWindow, checkedHost, normalizeSchedule, loadHosts,
-    slotsFor, nextOpenDate, createBooking, changeBooking, publicBooking, manageToken, verifyToken, fail
+    slotsFor, nextOpenDate, createBooking, changeBooking, publicBooking, manageToken, verifyToken, previewFollowUp, fail
 } = require('../../services/consultations');
 
 const publicRouter = express.Router();
@@ -83,18 +83,23 @@ const bookingEmailStatus = `
     ) email ON true`;
 
 staffRouter.get('/', async (req, res) => {
-    const { status = 'upcoming', host = 'any' } = req.query;
+    const { status = 'upcoming', host = 'any', outcome = 'any' } = req.query;
     checkedHost(host, true);
-    if (!['upcoming', 'pending', 'all', 'confirmed', 'completed', 'cancelled', 'no_show'].includes(status)) fail(400, 'Invalid status filter.');
+    if (!['upcoming', 'pending', 'all', 'confirmed', 'completed', 'cancelled', 'no_show', 'closeout'].includes(status)) fail(400, 'Invalid status filter.');
+    if (!['any', 'lead', 'lost'].includes(outcome)) fail(400, 'Invalid outcome filter.');
     const page = Math.max(1, Math.min(100000, Number.parseInt(req.query.page, 10) || 1));
     const [hosts, { rows }] = await Promise.all([
         loadHosts(db),
         query(`${bookingEmailStatus}
             WHERE ($1='any' OR ($1='both' AND c.joint) OR
                    ($1 IN ('shamar', 'jemelia') AND (c.host_id=$1 OR c.joint)))
-              AND ($2='all' OR c.status=$2 OR ($2='upcoming' AND c.status IN ('pending','confirmed') AND c.starts_at>=NOW()))
+              AND ($2='all' OR c.status=$2
+                   OR ($2='upcoming' AND c.status IN ('pending','confirmed') AND c.starts_at>=NOW())
+                   OR ($2='closeout' AND c.status IN ('confirmed','completed') AND c.outcome IS NULL
+                       AND c.starts_at <= NOW()))
+              AND ($4='any' OR c.outcome=$4)
             ORDER BY CASE WHEN $2='upcoming' THEN c.starts_at END ASC, c.starts_at DESC, c.id
-            LIMIT 26 OFFSET $3`, [host, status, (page - 1) * 25])
+            LIMIT 26 OFFSET $3`, [host, status, (page - 1) * 25, outcome])
     ]);
     res.json({
         hosts: hosts.map(({ id, enabled, hours, blocked_dates, meeting_url }) => ({
@@ -125,6 +130,13 @@ staffRouter.get('/:id', async (req, res) => {
     const { rows: [booking] } = await query(`${bookingEmailStatus} WHERE c.id=$1`, [id]);
     if (!booking) fail(404, 'Consultation not found.');
     res.json({ booking });
+});
+staffRouter.post('/:id/follow-up-preview', async (req, res) => {
+    const id = req.params.id;
+    if (!/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(id)) fail(404, 'Consultation not found.');
+    const { rows: [booking] } = await query('SELECT client_name,email FROM consultations WHERE id=$1', [id]);
+    if (!booking) fail(404, 'Consultation not found.');
+    res.json({ to: booking.email, ...previewFollowUp(booking, req.body || {}) });
 });
 staffRouter.patch('/:id', async (req, res) => {
     const booking = await changeBooking(req.params.id, req.body || {}, req.user.id);

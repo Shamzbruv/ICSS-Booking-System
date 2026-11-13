@@ -50,6 +50,10 @@ async function migrateConsultations(client) {
         CREATE UNIQUE INDEX IF NOT EXISTS consultation_jemelia_hold ON consultations (starts_at)
         WHERE status IN ('pending','confirmed') AND (host_id = 'jemelia' OR joint)
     `);
+    await client.query(`ALTER TABLE consultations ADD COLUMN IF NOT EXISTS outcome TEXT
+        CHECK (outcome IN ('lead', 'lost'))`);
+    await client.query(`ALTER TABLE consultations ADD COLUMN IF NOT EXISTS outcome_by UUID REFERENCES users(id) ON DELETE SET NULL`);
+    await client.query(`ALTER TABLE consultations ADD COLUMN IF NOT EXISTS outcome_at TIMESTAMPTZ`);
     await client.query(`CREATE INDEX IF NOT EXISTS consultation_start ON consultations (starts_at DESC)`);
 }
 
