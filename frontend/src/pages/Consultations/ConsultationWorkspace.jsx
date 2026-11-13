@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { api } from '../../api';
 import { ConsultationSlots } from './ConsultationSlots';
-import { addToCalendar, dateLabel, timeLabel } from './format';
+import { addToCalendar, dateLabel, jamaicaDate, timeLabel } from './format';
 import pc from '../PlatformConsole/PlatformConsole.module.css';
 import s from './ConsultationWorkspace.module.css';
 
@@ -36,6 +36,7 @@ function Schedule({ host, onChange }) {
   }
   return <form className={s.panel} onSubmit={save}>
     <h3>{host.name}</h3>
+    <p className={s.muted}>{host.role}</p>
     <label className={s.check}><input type="checkbox" checked={draft.enabled}
       onChange={event => setDraft({ ...draft, enabled: event.target.checked })} /> Accept online bookings</label>
     <div className={s.hours}>
@@ -71,13 +72,16 @@ function Schedule({ host, onChange }) {
 
 function Appointment({ booking, calendar, onChange }) {
   const [notes, setNotes] = useState(booking.staff_notes);
-  const [host, setHost] = useState(booking.host_id);
+  const assignedHost = booking.joint ? 'both' : booking.host_id;
+  const [host, setHost] = useState(assignedHost);
   const [date, setDate] = useState('');
   const [startsAt, setStartsAt] = useState('');
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
-  const assigned = calendar.hosts.find(item => item.id === booking.host_id)?.name;
+  const assigned = booking.joint ? 'Shamar Baker and Jemelia Peart' : calendar.hosts.find(item => item.id === booking.host_id)?.name;
+  const getSlots = useCallback((choice, day, signal) =>
+    api.platform.consultationSlots(choice, day, signal, booking.id), [booking.id]);
   const started = Date.parse(booking.starts_at) <= Date.now();
   async function change(action) {
     if (action === 'cancel' && !window.confirm('Cancel this consultation and notify the client?')) return;
@@ -114,14 +118,19 @@ function Appointment({ booking, calendar, onChange }) {
       <div className={s.actions}>
         <button type="button" className={s.button} disabled={busy || notes === booking.staff_notes} onClick={() => change('notes')}>Save notes</button>
         {booking.status === 'confirmed' && <>
-          <button type="button" className={s.button} disabled={busy} onClick={() => setEditing(!editing)}>Reschedule or reassign</button>
+          <button type="button" className={s.button} disabled={busy} onClick={() => {
+            setEditing(!editing);
+            setHost(assignedHost);
+            setDate(jamaicaDate(booking.starts_at));
+            setStartsAt('');
+          }}>Reschedule or reassign</button>
           <button type="button" className={s.button} disabled={busy} onClick={() => change('cancel')}>Cancel</button>
           {started && <><button type="button" className={s.button} disabled={busy} onClick={() => change('complete')}>Mark completed</button>
             <button type="button" className={s.button} disabled={busy} onClick={() => change('no_show')}>Mark no-show</button></>}
         </>}
       </div>
       {editing && <div className={s.slotEditor}>
-        <ConsultationSlots calendar={calendar} getSlots={api.platform.consultationSlots}
+        <ConsultationSlots calendar={calendar} getSlots={getSlots}
           {...{ host, setHost, date, setDate, startsAt, setStartsAt }} />
         <button type="button" className={s.primary} disabled={!startsAt || busy} onClick={() => change('reschedule')}>Save new time and host</button>
       </div>}
@@ -186,7 +195,7 @@ export default function ConsultationWorkspace() {
             {Object.entries(states).map(([value, label]) => <option value={value} key={value}>{label}</option>)}
           </select></label>
           <label>Consultant<select value={filter.host} onChange={event => setFilter({ ...filter, host: event.target.value, page: 1 })}>
-            <option value="any">Both consultants</option>{data.hosts.map(host => <option value={host.id} key={host.id}>{host.name}</option>)}
+            <option value="any">All consultations</option><option value="both">Joint meetings</option>{data.hosts.map(host => <option value={host.id} key={host.id}>{host.name}</option>)}
           </select></label>
           <button type="button" className={s.button} onClick={refresh}>Refresh</button>
         </div>

@@ -1257,8 +1257,8 @@ async function sendClientCancellationEmails(booking, reason, tenant) {
 async function sendConsultationEmail(booking, idempotencyKey) {
     const resend = getResend();
     if (!resend) throw new Error('Consultation email delivery is unavailable.');
-    const { HOSTS, manageToken, DURATION } = require('./consultations');
-    const host = HOSTS[booking.host_id];
+    const { consultationHostName, manageToken, DURATION } = require('./consultations');
+    const host = consultationHostName(booking);
     const date = new Intl.DateTimeFormat('en-JM', {
         dateStyle: 'full', timeStyle: 'short', timeZone: 'America/Jamaica'
     }).format(new Date(booking.starts_at));
@@ -1268,17 +1268,17 @@ async function sendConsultationEmail(booking, idempotencyKey) {
     const heading = cancelled ? 'Your consultation has been cancelled'
         : booking.version > 1 ? 'Your consultation has been updated' : 'Your consultation is confirmed';
     const nextStep = booking.meeting_url ? 'Join your consultation using the meeting link below.'
-        : 'Your consultant will contact you by email with joining details.';
+        : 'The ICSS Bookings team will email you the joining details.';
     const summary = `${booking.topic} with ${host} · ${date} Jamaica time · ${DURATION} minutes`;
     return resend.emails.send({
-        from: 'iCreate Solutions & Services <appointments@icssbookings.com>',
+        from: 'ICSS Bookings <appointments@icssbookings.com>',
         replyTo: getDefaultNotificationEmail(),
         to: [booking.email],
-        subject: `${heading} | iCreate Solutions & Services`,
+        subject: `${heading} | ICSS Bookings`,
         text: [`Hi ${booking.client_name},`, heading, summary, cancelled ? '' : nextStep,
             cancelled ? '' : booking.meeting_url, cancelled ? '' : `Manage your consultation: ${manage}`].filter(Boolean).join('\n\n'),
         html: `<div style="max-width:560px;margin:auto;padding:28px;font:16px/1.6 Arial,sans-serif;color:#192637">
-            <p>iCreate Solutions &amp; Services</p><h1>${heading}</h1>
+            <p>ICSS Bookings</p><h1>${heading}</h1>
             <p>Hi ${escapeHtml(booking.client_name)},</p><p>${escapeHtml(summary)}</p>
             ${cancelled ? '' : `<p>${nextStep}</p>
             ${booking.meeting_url ? `<p><a href="${escapeHtml(booking.meeting_url)}">Join consultation</a></p>` : ''}

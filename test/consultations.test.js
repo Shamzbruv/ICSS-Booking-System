@@ -80,7 +80,8 @@ test('consultation booking, shared host management, and private client changes',
         assert.equal((await enable('shamar', jemelia)).status, 200);
         assert.equal((await enable('jemelia', owner, { blockedDates: [date] })).status, 200);
         assert.deepEqual((await call(`/public/slots?host=jemelia&date=${date}`)).body.slots, []);
-        assert.equal((await enable('jemelia', owner)).status, 200);
+        assert.deepEqual((await call(`/public/slots?host=both&date=${date}`)).body.slots, []);
+        assert.equal((await enable('jemelia', owner, { hours: { [day]: { start: '09:30', end: '11:00' } } })).status, 200);
         assert.equal((await enable('jemelia', owner, { meetingUrl: 'javascript:alert(1)' })).status, 400);
         const config = (await call('/public')).body;
         assert.equal(config.hosts.length, 2);
@@ -110,8 +111,10 @@ test('consultation booking, shared host management, and private client changes',
         assert.ok(sent[0].text.includes(first.token));
 
         const id = list.bookings[0].id;
+        const jointSlots = (await call(`/public/slots?host=both&date=${date}`)).body.slots;
+        assert.deepEqual(jointSlots, slots.slice(1));
         const move = await call('/staff/' + id, { token: jemelia, method: 'PATCH',
-            body: { action: 'reschedule', host: 'jemelia', startsAt: slots[0] } });
+            body: { action: 'reschedule', host: 'jemelia', startsAt: slots[1] } });
         assert.equal(move.status, 200);
         assert.equal(move.body.booking.host_id, 'jemelia');
         const manage = body => call('/public/manage', { method: 'POST', body });
@@ -123,7 +126,48 @@ test('consultation booking, shared host management, and private client changes',
         assert.equal(sent.length, 1, 'obsolete reschedule email is suppressed');
         await processEmailOutbox({ data: jobs[2] });
         assert.match(sent[1].subject, /cancelled/);
-        assert.ok((await call(`/public/slots?host=jemelia&date=${date}`)).body.slots.includes(slots[0]));
+        assert.ok((await call(`/public/slots?host=jemelia&date=${date}`)).body.slots.includes(slots[1]));
+
+        const race = await Promise.all([
+            book({ ...intake, host: 'both', startsAt: slots[1] }),
+            book({ ...intake, host: 'jemelia', startsAt: slots[1], email: 'other-client@example.test' })
+        ]);
+        assert.deepEqual(race.map(result => result.status).sort(), [201, 409]);
+        let joint = race[0];
+        if (joint.status === 409) {
+            const existing = race[1].body.token;
+            assert.equal((await manage({ token: existing, action: 'cancel' })).status, 200);
+            joint = await book({ ...intake, host: 'both', startsAt: slots[1] });
+        }
+        assert.equal(joint.status, 201);
+        assert.equal(joint.body.booking.hostId, 'both');
+        assert.equal(joint.body.booking.host, 'Shamar Baker and Jemelia Peart');
+        assert.equal(joint.body.booking.meetingUrl, 'https://example.test/meeting');
+        const jointJob = jobs.at(-1);
+        await processEmailOutbox({ data: jointJob });
+        assert.match(sent.at(-1).subject, /ICSS Bookings/);
+        assert.match(sent.at(-1).text, /Shamar Baker and Jemelia Peart/);
+
+        for (const host of ['shamar', 'jemelia', 'any', 'both']) {
+            const available = await call(`/public/slots?host=${host}&date=${date}`);
+            assert.equal(available.body.slots.includes(slots[1]), false);
+        }
+        for (const host of ['shamar', 'jemelia', 'both']) {
+            const filtered = await call(`/staff?host=${host}`, { token: owner });
+            assert.equal(filtered.body.bookings.length, 1);
+            assert.equal(filtered.body.bookings[0].joint, true);
+        }
+
+        const jointRecord = (await call('/staff?host=both', { token: owner })).body.bookings[0];
+        await assert.rejects(() => db.query(`INSERT INTO consultations (host_id,starts_at,client_name,email,topic)
+            VALUES ('jemelia',$1,'Test','test@example.test','Test')`, [slots[1]]), { code: '23505' });
+        const ownSlot = await call(`/staff/slots?host=both&date=${date}&exclude=${jointRecord.id}`, { token: owner });
+        assert.ok(ownSlot.body.slots.includes(slots[1]));
+        const movedJoint = await manage({ token: joint.body.token, action: 'reschedule', host: 'both', startsAt: slots[2] });
+        assert.equal(movedJoint.body.booking.hostId, 'both');
+        assert.ok((await call(`/public/slots?host=both&date=${date}`)).body.slots.includes(slots[1]));
+        assert.equal((await manage({ token: joint.body.token, action: 'cancel' })).status, 200);
+        assert.ok((await call(`/public/slots?host=both&date=${date}`)).body.slots.includes(slots[2]));
     } finally {
         if (server) await new Promise(resolve => server.close(resolve));
         await db.close();

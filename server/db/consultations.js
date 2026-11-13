@@ -31,6 +31,15 @@ async function migrateConsultations(client) {
         CREATE UNIQUE INDEX IF NOT EXISTS consultation_host_slot
         ON consultations (host_id, starts_at) WHERE status = 'confirmed'
     `);
+    await client.query(`ALTER TABLE consultations ADD COLUMN IF NOT EXISTS joint BOOLEAN NOT NULL DEFAULT false`);
+    await client.query(`
+        CREATE UNIQUE INDEX IF NOT EXISTS consultation_shamar_slot ON consultations (starts_at)
+        WHERE status = 'confirmed' AND (host_id = 'shamar' OR joint)
+    `);
+    await client.query(`
+        CREATE UNIQUE INDEX IF NOT EXISTS consultation_jemelia_slot ON consultations (starts_at)
+        WHERE status = 'confirmed' AND (host_id = 'jemelia' OR joint)
+    `);
     await client.query(`CREATE INDEX IF NOT EXISTS consultation_start ON consultations (starts_at DESC)`);
 }
 

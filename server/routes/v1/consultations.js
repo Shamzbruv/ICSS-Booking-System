@@ -4,7 +4,7 @@ const { canManageConsultations } = require('../../services/consultationAccess');
 const { query } = require('../../db/connection');
 const { authenticate, requirePlatformOwner } = require('../../middleware/auth');
 const {
-    HOSTS, TOPICS, DURATION, timeWindow, checkedHost, normalizeSchedule, loadHosts,
+    HOSTS, HOST_ROLES, TOPICS, DURATION, timeWindow, checkedHost, normalizeSchedule, loadHosts,
     slotsFor, nextOpenDate, createBooking, changeBooking, publicBooking, manageToken, verifyToken, fail
 } = require('../../services/consultations');
 
@@ -32,15 +32,15 @@ publicRouter.use(noCache);
 publicRouter.get('/', async (req, res) => {
     const hosts = await loadHosts(db);
     res.json({
-        hosts: hosts.filter(host => host.enabled).map(host => ({ id: host.id, name: HOSTS[host.id] })),
+        hosts: hosts.filter(host => host.enabled).map(host => ({ id: host.id, name: HOSTS[host.id], role: HOST_ROLES[host.id] })),
         topics: TOPICS, duration: DURATION, ...timeWindow(), nextDate: await nextOpenDate(db, hosts)
     });
 });
 
 async function sendSlots(req, res) {
     const host = checkedHost(req.query.host || 'any', true);
-    const hosts = (await loadHosts(db)).filter(item => host === 'any' || host === item.id);
-    const slots = await slotsFor(db, hosts, req.query.date);
+    const hosts = await loadHosts(db);
+    const slots = await slotsFor(db, hosts, req.query.date, host);
     res.json({ slots: slots.map(item => item.startsAt) });
 }
 
@@ -79,19 +79,28 @@ staffRouter.get('/', async (req, res) => {
         loadHosts(db),
         query(`SELECT c.*, e.status AS email_status FROM consultations c
             LEFT JOIN email_outbox e ON e.dedupe_key = 'consultation:' || c.id::text || ':' || c.version::text
-            WHERE ($1='any' OR c.host_id=$1)
+            WHERE ($1='any' OR ($1='both' AND c.joint) OR
+                   ($1 IN ('shamar', 'jemelia') AND (c.host_id=$1 OR c.joint)))
               AND ($2='all' OR c.status=$2 OR ($2='upcoming' AND c.status='confirmed' AND c.starts_at>=NOW()))
             ORDER BY CASE WHEN $2='upcoming' THEN c.starts_at END ASC, c.starts_at DESC, c.id
             LIMIT 26 OFFSET $3`, [host, status, (page - 1) * 25])
     ]);
     res.json({
         hosts: hosts.map(({ id, enabled, hours, blocked_dates, meeting_url }) => ({
-            id, name: HOSTS[id], enabled, hours, blockedDates: blocked_dates, meetingUrl: meeting_url
+            id, name: HOSTS[id], role: HOST_ROLES[id], enabled, hours, blockedDates: blocked_dates, meetingUrl: meeting_url
         })),
         bookings: rows.slice(0, 25), hasMore: rows.length > 25, duration: DURATION, ...timeWindow()
     });
 });
-staffRouter.get('/slots', sendSlots);
+staffRouter.get('/slots', async (req, res) => {
+    const host = checkedHost(req.query.host || 'any', true);
+    const exclude = req.query.exclude || null;
+    if (exclude && (typeof exclude !== 'string' || !/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(exclude))) {
+        fail(400, 'Choose a valid consultation.');
+    }
+    const slots = await slotsFor(db, await loadHosts(db), req.query.date, host, exclude);
+    res.json({ slots: slots.map(item => item.startsAt) });
+});
 staffRouter.put('/hosts/:id', async (req, res) => {
     const id = checkedHost(req.params.id);
     const schedule = normalizeSchedule(req.body || {});

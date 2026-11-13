@@ -29,7 +29,7 @@ export default function ConsultationPage() {
 
   useEffect(() => {
     const previous = document.title;
-    document.title = 'Book a Consultation | iCreate Solutions & Services';
+    document.title = 'Book a Consultation | ICSS Bookings';
     return () => { document.title = previous; };
   }, []);
   useEffect(() => {
@@ -44,6 +44,9 @@ export default function ConsultationPage() {
       setCalendar(config);
       setDate(config.nextDate || '');
       setBooking(current?.booking || null);
+      const savedHost = current?.booking.hostId;
+      setHost(savedHost === 'both' || config.hosts.some(item => item.id === savedHost) ? savedHost : 'any');
+      setStartsAt('');
       setToken(manage ? location.hash.slice(1) : '');
       setRescheduling(false);
       setReady(true);
@@ -82,12 +85,12 @@ export default function ConsultationPage() {
   return <div className={s.page}>
     <header className={s.masthead}>
       <a href="/" className={s.brand}><img src="/admin/icons/app-192-v2.png" alt="" />
-        <span>iCreate <small>Solutions &amp; Services</small></span></a>
+        <span>ICSS Bookings</span></a>
       <span className={s.mastheadNote}>Online consultations</span>
     </header>
     <main className={s.layout}>
       <div className={s.intro}>
-        <span className={s.kicker}><span aria-hidden="true" /> Meet with ICSS</span>
+        <span className={s.kicker}><span aria-hidden="true" /> Meet the ICSS Bookings team</span>
         <h1>{manage ? 'Your consultation.' : <>Let’s talk about<br />your business.</>}</h1>
         <p>Tell us what you’re working on. We’ll talk through your goals, answer your questions, and help you decide what to do next.</p>
         <div className={s.introMeta}>
@@ -95,7 +98,10 @@ export default function ConsultationPage() {
             <span><strong>{calendar?.duration || 30} minutes</strong><small>Online · Jamaica time</small></span>
           </div>
           <div><svg aria-hidden="true" width="20" height="20"><use href="/icons/ui.svg#users" /></svg>
-            <span><strong>Shamar Baker &amp; Jemelia Peart</strong><small>iCreate Solutions &amp; Services</small></span>
+            <span className={s.team}>
+              <span><strong>Shamar Baker</strong><small>Founder</small></span>
+              <span><strong>Jemelia Peart</strong><small>Marketing Manager (Partner)</small></span>
+            </span>
           </div>
         </div>
       </div>
@@ -114,7 +120,7 @@ export default function ConsultationPage() {
           </div>
           {canManage && <p className={s.muted}>{booking.meetingUrl
             ? 'Use your meeting link when it’s time to join.'
-            : 'Your consultant will email you the joining details.'}</p>}
+            : 'The ICSS Bookings team will email you the joining details.'}</p>}
           {canManage && <div className={s.links}>
             {booking.meetingUrl && <a href={booking.meetingUrl} target="_blank" rel="noreferrer">Join consultation ↗</a>}
             <a href={addToCalendar(booking, calendar.duration)} target="_blank" rel="noreferrer">Add to Google Calendar ↗</a>
@@ -149,6 +155,9 @@ export default function ConsultationPage() {
         {error && <p role="alert" className={s.error}>{error}</p>}
       </section>
     </main>
-    <footer className={s.footer}><span>iCreate Solutions &amp; Services</span><a href="/terms#privacy">Privacy</a></footer>
+    <footer className={s.footer}>
+      <span>ICSS Bookings by <a href="https://icreatesolutionsandservices.com">iCreate Solutions &amp; Services</a></span>
+      <a href="/terms#privacy">Privacy</a>
+    </footer>
   </div>;
 }
