@@ -32,5 +32,6 @@ test('mobile workspaces do not retain desktop-only minimum widths', () => {
 test('homepage actions are CSP-safe', () => {
   const home = read('public/index.html');
   assert.doesNotMatch(home, /onclick=/i);
-  assert.match(home, /data-scroll-target="showcase"/);
+  assert.match(home, /<a[^>]+href="#showcase"/);
+  assert.match(home, /<section[^>]+id="showcase"/);
 });
