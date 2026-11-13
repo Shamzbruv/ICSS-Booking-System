@@ -6,8 +6,61 @@ import pc from '../PlatformConsole/PlatformConsole.module.css';
 import s from './ConsultationWorkspace.module.css';
 
 const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-const states = { upcoming: 'Upcoming', pending: 'Awaiting confirmation', confirmed: 'All confirmed', completed: 'Completed', cancelled: 'Cancelled', no_show: 'No-show', all: 'All consultations' };
+const states = { upcoming: 'Upcoming', closeout: 'Ready to close out', pending: 'Awaiting confirmation', confirmed: 'All confirmed', completed: 'Completed', cancelled: 'Cancelled', no_show: 'No-show', all: 'All consultations' };
 const labels = { pending: 'Awaiting confirmation', confirmed: 'Confirmed', completed: 'Completed', cancelled: 'Cancelled', no_show: 'No-show' };
+
+const outcomeLabels = { lead: 'Lead', lost: 'Lost' };
+
+function Closeout({ booking, onComplete }) {
+  const [outcome, setOutcome] = useState('');
+  const [message, setMessage] = useState('');
+  const [preview, setPreview] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  async function submit(event) {
+    event.preventDefault();
+    if (busy || !outcome) return;
+    setBusy(true);
+    setError('');
+    try {
+      if (preview) {
+        await api.platform.consultationChange(booking.id, {
+          action: 'complete', outcome, message, version: preview.version
+        });
+        onComplete();
+      } else {
+        const draft = await api.platform.consultationFollowUpPreview(booking.id, { outcome, message });
+        setPreview({ ...draft, version: booking.version });
+      }
+    } catch (err) { setError(err.message); }
+    finally { setBusy(false); }
+  }
+
+  return <form className={s.closeout} onSubmit={submit}>
+    <h3 className={s.approvalHeading}>Complete consultation</h3>
+    <label>Outcome <small>Visible to the consultation team</small>
+      <select required value={outcome} disabled={busy} onChange={event => { setOutcome(event.target.value); setPreview(null); }}>
+        <option value="">Choose an outcome</option>
+        <option value="lead">Lead — worth pursuing</option>
+        <option value="lost">Lost — closing this opportunity</option>
+      </select>
+    </label>
+    <label>Personal message to the client <small>Optional · included in their email</small>
+      <textarea maxLength={1500} rows={3} value={message} disabled={busy}
+        onChange={event => { setMessage(event.target.value); setPreview(null); }} />
+    </label>
+    {preview && <div className={s.emailPreview} aria-label="Client email preview">
+      <small>To {preview.to}</small>
+      <strong>{preview.subject}</strong>
+      {preview.paragraphs.map((paragraph, index) => <p key={index}>{paragraph}</p>)}
+    </div>}
+    {error && <p role="alert" className={s.error}>{error}</p>}
+    <button type="submit" className={s.primary} disabled={busy || !outcome}>
+      {busy ? 'Working…' : preview ? 'Complete & email client' : 'Preview client email'}
+    </button>
+  </form>;
+}
 
 function Schedule({ host, onChange }) {
   const [draft, setDraft] = useState(host);
@@ -78,12 +131,14 @@ function Appointment({ booking, calendar, onChange, focus = false }) {
   const [date, setDate] = useState('');
   const [startsAt, setStartsAt] = useState('');
   const [editing, setEditing] = useState(false);
+  const [closing, setClosing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const assigned = booking.joint ? 'Shamar Baker and Jemelia Peart' : calendar.hosts.find(item => item.id === booking.host_id)?.name;
   const getSlots = useCallback((choice, day, signal) =>
     api.platform.consultationSlots(choice, day, signal, booking.id), [booking.id]);
   const started = Date.parse(booking.starts_at) <= Date.now();
+  const canClose = started && !booking.outcome && ['confirmed', 'completed'].includes(booking.status);
   const pending = booking.status === 'pending';
   const calendarBooking = { startsAt: booking.starts_at, host: assigned, meetingUrl: booking.meeting_url };
   async function change(action) {
@@ -103,7 +158,7 @@ function Appointment({ booking, calendar, onChange, focus = false }) {
   return <details className={s.appointment} open={focus || undefined}>
     <summary>
       <span><strong>{booking.client_name}</strong><small>{booking.topic} · {assigned}</small></span>
-      <span>{dateLabel(booking.starts_at)}<small>{timeLabel(booking.starts_at)} · {labels[booking.status]}</small></span>
+      <span>{dateLabel(booking.starts_at)}<small>{timeLabel(booking.starts_at)} · {labels[booking.status]}{booking.outcome && ` · ${outcomeLabels[booking.outcome]}`}</small></span>
     </summary>
     <div className={s.appointmentBody}>
       <div className={s.contact}><a href={`mailto:${booking.email}`}>{booking.email}</a>
@@ -112,7 +167,7 @@ function Appointment({ booking, calendar, onChange, focus = false }) {
         {booking.status === 'confirmed' && <a href={addToCalendar(calendarBooking, calendar.duration)} target="_blank" rel="noreferrer">Add to Google Calendar ↗</a>}
       </div>
       {booking.details && <p className={s.details}>{booking.details}</p>}
-      {booking.email_status && <small>{{
+      {booking.email_status && <small>{booking.outcome ? 'Client follow-up · ' : ''}{{
         sent: 'Email accepted by the provider', pending: 'Email queued', sending: 'Sending email',
         failed: 'Email attempt failed', cancelled: 'Older email superseded'
       }[booking.email_status]}</small>}
@@ -132,15 +187,23 @@ function Appointment({ booking, calendar, onChange, focus = false }) {
         {(booking.status === 'confirmed' || pending) && <>
           <button type="button" className={s.button} disabled={busy} onClick={() => {
             setEditing(!editing);
+            setClosing(false);
             setHost(assignedHost);
             setDate(jamaicaDate(booking.starts_at));
             setStartsAt('');
           }}>Reschedule or reassign</button>
           <button type="button" className={s.button} disabled={busy} onClick={() => change('cancel')}>Cancel</button>
-          {started && !pending && <><button type="button" className={s.button} disabled={busy} onClick={() => change('complete')}>Mark completed</button>
-            <button type="button" className={s.button} disabled={busy} onClick={() => change('no_show')}>Mark no-show</button></>}
+          {started && !pending && <button type="button" className={s.button} disabled={busy} onClick={() => change('no_show')}>Mark no-show</button>}
         </>}
+        {canClose && <button type="button" className={s.button} aria-expanded={closing} disabled={busy} onClick={() => {
+          setClosing(!closing);
+          setEditing(false);
+        }}>{closing ? 'Close follow-up form' : 'Mark completed'}</button>}
       </div>
+      {closing && canClose && <Closeout booking={booking} onComplete={() => {
+        setClosing(false);
+        onChange('Consultation completed. The client follow-up is queued.');
+      }} />}
       {editing && <div className={s.slotEditor}>
         <ConsultationSlots calendar={calendar} getSlots={getSlots}
           {...{ host, setHost, date, setDate, startsAt, setStartsAt }} />
@@ -156,12 +219,17 @@ export default function ConsultationWorkspace({ requestedId }) {
   const [focused, setFocused] = useState(null);
   const [focusError, setFocusError] = useState('');
   const [data, setData] = useState(null);
-  const [filter, setFilter] = useState({ status: 'upcoming', host: 'any', page: 1 });
+  const [filter, setFilter] = useState({ status: 'upcoming', host: 'any', outcome: 'any', page: 1 });
   const [revision, setRevision] = useState(0);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
+  const [feedback, setFeedback] = useState('');
   const link = new URL('/consultation', window.location.origin).href;
   const refresh = () => setRevision(value => value + 1);
+  const refreshAfterChange = message => {
+    setFeedback(message || '');
+    refresh();
+  };
   useEffect(() => {
     const controller = new AbortController();
     setError('');
@@ -200,6 +268,7 @@ export default function ConsultationWorkspace({ requestedId }) {
       <div><h2>Consultations</h2><p>Manage bookings and availability for Shamar and Jemelia.</p></div>
       <a className={s.button} href={link} target="_blank" rel="noreferrer">Open booking page ↗</a>
     </header>
+    {feedback && <p role="status">{feedback}</p>}
     {error && <p role="alert" className={s.error}>{error}</p>}
     {data && <>
       <div className={s.share}>
@@ -217,18 +286,24 @@ export default function ConsultationWorkspace({ requestedId }) {
         <div className={s.schedules}>{data.hosts.map(host => <Schedule key={host.id} host={host} onChange={refresh} />)}</div>
       </> : <>
         {focusError && <p role="alert" className={s.error}>{focusError}</p>}
-        {focused && <Appointment key={focused.id} booking={focused} calendar={data} onChange={refresh} focus />}
+        {focused && <Appointment key={focused.id} booking={focused} calendar={data} onChange={refreshAfterChange} focus />}
         <div className={s.filters}>
-          <label>Status<select value={filter.status} onChange={event => setFilter({ ...filter, status: event.target.value, page: 1 })}>
+          <label>Status<select value={filter.status} onChange={event => setFilter({ ...filter, status: event.target.value, outcome: 'any', page: 1 })}>
             {Object.entries(states).map(([value, label]) => <option value={value} key={value}>{label}</option>)}
           </select></label>
           <label>Consultant<select value={filter.host} onChange={event => setFilter({ ...filter, host: event.target.value, page: 1 })}>
             <option value="any">All consultations</option><option value="both">Joint meetings</option>{data.hosts.map(host => <option value={host.id} key={host.id}>{host.name}</option>)}
           </select></label>
+          <label>Outcome<select value={filter.outcome} onChange={event => setFilter({
+            ...filter, status: event.target.value === 'any' ? filter.status : 'completed', outcome: event.target.value, page: 1
+          })}>
+            <option value="any">All outcomes</option>
+            {Object.entries(outcomeLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+          </select></label>
           <button type="button" className={s.button} onClick={refresh}>Refresh</button>
         </div>
         {data.bookings.length ? <div className={s.bookings}>
-          {data.bookings.filter(booking => booking.id !== focused?.id).map(booking => <Appointment key={booking.id} booking={booking} calendar={data} onChange={refresh} />)}
+          {data.bookings.filter(booking => booking.id !== focused?.id).map(booking => <Appointment key={booking.id} booking={booking} calendar={data} onChange={refreshAfterChange} />)}
         </div> : <p className={s.muted}>No consultations match these filters.</p>}
         {(filter.page > 1 || data.hasMore) && <div className={s.actions}>
           <button type="button" className={s.button} disabled={filter.page <= 1} onClick={() => setFilter({ ...filter, page: filter.page - 1 })}>Previous</button>

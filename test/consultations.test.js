@@ -196,6 +196,62 @@ test('consultation booking, shared host management, and private client changes',
         assert.ok((await call(`/public/slots?host=both&date=${date}`)).body.slots.includes(slots[1]));
         assert.equal((await manage({ token: joint.body.token, action: 'cancel' })).status, 200);
         assert.ok((await call(`/public/slots?host=both&date=${date}`)).body.slots.includes(slots[2]));
+
+        async function pastConsultation(status, email) {
+            const { rows: [row] } = await db.query(`INSERT INTO consultations
+                (host_id, starts_at, client_name, email, topic, status, staff_notes)
+                VALUES ('shamar', NOW() - INTERVAL '1 day', 'Sam Client', $1, 'ICSS Bookings demo', $2, 'Internal qualification details')
+                RETURNING *`, [email, status]);
+            return row;
+        }
+        const lead = await pastConsultation('confirmed', 'lead@example.test');
+        const lost = await pastConsultation('completed', 'lost@example.test');
+        const noShow = await pastConsultation('no_show', 'no-show@example.test');
+        const complete = (booking, token, outcome, message = '') => call('/staff/' + booking.id, {
+            token, method: 'PATCH', body: { action: 'complete', outcome, message, version: booking.version }
+        });
+        const followUpPreview = (booking, token, outcome, message) => call('/staff/' + booking.id + '/follow-up-preview', {
+            token, method: 'POST', body: { outcome, message }
+        });
+        const ready = await call('/staff?status=closeout', { token: owner });
+        assert.deepEqual(new Set(ready.body.bookings.map(item => item.id)), new Set([lead.id, lost.id]));
+        assert.equal((await followUpPreview(lead, unrelated, 'lead')).status, 403);
+        assert.equal((await complete(lead, jemelia, ['lead'])).status, 400);
+        assert.equal((await complete(lead, jemelia, 'lead', 'x'.repeat(1501))).status, 400);
+        assert.equal((await complete(noShow, jemelia, 'lost')).status, 409);
+        assert.equal((await manage({
+            token: require('../server/services/consultations').manageToken(lead.id), action: 'complete', outcome: 'lead'
+        })).status, 400);
+
+        const followUp = 'As discussed, we can start with your booking page. <Next step>';
+        const leadDraft = (await followUpPreview(lead, owner, 'lead', followUp)).body;
+        const lostDraft = (await followUpPreview(lost, jemelia, 'lost')).body;
+        assert.notEqual(leadDraft.subject, lostDraft.subject);
+        assert.equal(leadDraft.to, lead.email);
+        const beforeCloseout = jobs.length;
+        const closeResults = await Promise.all([complete(lead, jemelia, 'lead', followUp), complete(lead, owner, 'lead', followUp)]);
+        assert.ok(closeResults.every(result => result.status === 200 && result.body.booking.outcome === 'lead'));
+        assert.equal(jobs.length, beforeCloseout + 1);
+        assert.equal((await complete(lead, owner, 'lost')).status, 409);
+        const result = await complete(lost, owner, 'lost');
+        assert.equal(result.body.booking.status, 'completed');
+        assert.equal(result.body.booking.outcome, 'lost');
+        assert.ok(result.body.booking.outcome_by);
+        assert.ok(result.body.booking.outcome_at);
+        await Promise.all(jobs.slice(beforeCloseout).map(data => processEmailOutbox({ data })));
+        for (const [booking, draft] of [[lead, leadDraft], [lost, lostDraft]]) {
+            const email = sent.find(message => message.to[0] === booking.email);
+            assert.equal(email.subject, draft.subject);
+            assert.equal(email.text, draft.paragraphs.join('\n\n'));
+            assert.doesNotMatch(email.text, /Internal qualification details|Outcome:|marked as lost/i);
+        }
+        assert.match(sent.find(message => message.to[0] === lead.email).html, /&lt;Next step&gt;/);
+        const publicCompleted = await manage({ token: require('../server/services/consultations').manageToken(lead.id) });
+        assert.equal(publicCompleted.body.booking.status, 'completed');
+        assert.equal('outcome' in publicCompleted.body.booking, false);
+        const leads = await call('/staff?status=completed&outcome=lead', { token: owner });
+        assert.deepEqual(leads.body.bookings.map(item => item.id), [lead.id]);
+        assert.equal(leads.body.bookings[0].email_status, 'sent');
     } finally {
         if (server) await new Promise(resolve => server.close(resolve));
         await db.close();

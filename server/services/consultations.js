@@ -1,5 +1,6 @@
 const { createHmac, timingSafeEqual } = require('node:crypto');
 const { transaction } = require('../db/connection');
+const { buildFollowUp } = require('./consultationFollowUp');
 const { canManageConsultations } = require('./consultationAccess');
 const { saveEmailOutbox, dispatchEmailOutbox } = require('./emailOutbox');
 const HOSTS = { shamar: 'Shamar Baker', jemelia: 'Jemelia Peart' };
@@ -185,12 +186,12 @@ async function pickSlot(client, hosts, input, excludeId) {
     return { hostId: selected.id, joint: false, startsAt, meetingUrl: selected.meeting_url };
 }
 
-async function saveNotice(client, booking, action) {
+async function saveNotice(client, booking, action, followUp) {
     return saveEmailOutbox({
         messageType: 'consultation',
         dedupeKey: `consultation:${booking.id}:${booking.version}`,
         recipient: booking.email,
-        payload: { id: booking.id, version: booking.version, action }
+        payload: { id: booking.id, version: booking.version, action, ...(followUp ? { followUp } : {}) }
     }, client);
 }
 
@@ -244,6 +245,32 @@ function googleMeetUrl(value) {
     return url.origin + url.pathname.replace(/\/$/, '');
 }
 
+function previewFollowUp(booking, input) {
+    const message = input.message ?? '';
+    if (typeof message !== 'string' || message.length > 1500) fail(400, 'Keep the client message within 1,500 characters.');
+    const draft = buildFollowUp(booking, input.outcome, message.trim());
+    if (!draft) fail(400, 'Choose Lead or Lost to complete the consultation.');
+    return draft;
+}
+
+async function completeBooking(client, booking, input, actor) {
+    if (booking.status === 'completed' && booking.outcome) {
+        if (booking.outcome === input.outcome) return { booking };
+        fail(409, 'An outcome has already been recorded for this consultation.');
+    }
+    if (!['confirmed', 'completed'].includes(booking.status)) fail(409, 'Only a confirmed or completed consultation can be closed out.');
+    if (Date.parse(booking.starts_at) > Date.now()) {
+        fail(409, 'The consultation has not started yet.');
+    }
+    if (booking.version !== input.version) fail(409, 'This consultation changed. Refresh it before recording the outcome.');
+
+    const draft = previewFollowUp(booking, input);
+    const { rows: [updated] } = await client.query(`UPDATE consultations
+        SET status='completed', outcome=$2, outcome_by=$3, outcome_at=NOW(), version=version+1, updated_at=NOW()
+        WHERE id=$1 RETURNING *`, [booking.id, input.outcome, actor]);
+    return { booking: updated, notices: [await saveNotice(client, updated, 'complete', draft)] };
+}
+
 async function changeBooking(id, input, actor) {
     if (!UUID.test(id)) fail(404, 'Consultation not found.');
     const action = input.action;
@@ -257,6 +284,7 @@ async function changeBooking(id, input, actor) {
                 WHERE id=$1 RETURNING *`, [id, clean(input.notes, 4000)]);
             return { booking: updated };
         }
+        if (action === 'complete') return completeBooking(client, booking, input, actor);
         if (action === 'confirm') {
             const meetingUrl = googleMeetUrl(input.meetingUrl);
             if (booking.status === 'confirmed' && booking.meeting_url === meetingUrl) return { booking };
@@ -269,10 +297,10 @@ async function changeBooking(id, input, actor) {
             return { booking: updated, notices: [await saveNotice(client, updated, action)] };
         }
         if (!['pending', 'confirmed'].includes(booking.status)) fail(409, 'This consultation has already been closed.');
-        if (booking.status === 'pending' && ['complete', 'no_show'].includes(action)) fail(409, 'Confirm the request before closing it out.');
+        if (booking.status === 'pending' && action === 'no_show') fail(409, 'Confirm the request before closing it out.');
         const hasStarted = Date.parse(booking.starts_at) <= Date.now();
         if (!actor && hasStarted) fail(409, 'This consultation has already started.');
-        if (['complete', 'no_show'].includes(action) && !hasStarted) fail(409, 'You can close out the consultation after its start time.');
+        if (action === 'no_show' && !hasStarted) fail(409, 'You can close out the consultation after its start time.');
         let { host_id: hostId, starts_at: startsAt, meeting_url: meetingUrl, joint } = booking;
         if (action === 'reschedule') {
             const slot = await pickSlot(client, hosts, input, booking.id);
@@ -285,7 +313,7 @@ async function changeBooking(id, input, actor) {
                 fail(400, 'Choose a different time or consultant.');
             }
         }
-        const status = { cancel: 'cancelled', complete: 'completed', no_show: 'no_show', reschedule: booking.status }[action];
+        const status = { cancel: 'cancelled', no_show: 'no_show', reschedule: booking.status }[action];
         const { rows: [updated] } = await client.query(`UPDATE consultations SET host_id=$2, starts_at=$3, meeting_url=$4,
             status=$5, joint=$6, version=version+1, updated_at=NOW() WHERE id=$1 RETURNING *`, [id, hostId, startsAt, meetingUrl, status, joint]);
         let notices = [];
@@ -301,4 +329,4 @@ async function changeBooking(id, input, actor) {
 }
 
 module.exports = { HOSTS, HOST_ROLES, consultationHostName, TOPICS, DURATION, timeWindow, checkedHost, validDate, normalizeSchedule,
-    loadHosts, slotsFor, nextOpenDate, createBooking, changeBooking, publicBooking, manageToken, verifyToken, fail };
+    loadHosts, slotsFor, nextOpenDate, createBooking, changeBooking, publicBooking, manageToken, verifyToken, previewFollowUp, fail };
