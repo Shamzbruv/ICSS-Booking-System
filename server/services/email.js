@@ -1254,6 +1254,92 @@ async function sendClientCancellationEmails(booking, reason, tenant) {
     }
 }
 
+// Consultation emails use presentation tables and inline styles for email clients.
+function consultationEmailButton({ label, url }, primary = true) {
+    const background = primary ? '#5b39bd' : '#f5f1fe';
+    const color = primary ? '#ffffff' : '#47268e';
+    return `<table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:0 0 12px;">
+        <tr><td bgcolor="${background}" style="background-color:${background};border-radius:10px;">
+            <a href="${escapeHtml(url)}" style="display:inline-block;padding:13px 19px;color:${color};background-color:${background};font:700 15px/22px Arial,sans-serif;text-decoration:none;border-radius:10px;mso-padding-alt:0;">
+                <!--[if mso]><i style="mso-font-width:150%;mso-text-raise:24pt;">&emsp;</i><![endif]-->
+                <span style="mso-text-raise:12pt;">${escapeHtml(label)}</span>
+                <!--[if mso]><i style="mso-font-width:150%;">&emsp;&#8203;</i><![endif]-->
+            </a>
+        </td></tr>
+    </table>`;
+}
+
+function consultationEmailDetails(booking, label, person) {
+    const when = new Date(booking.starts_at);
+    const date = new Intl.DateTimeFormat('en-JM', { dateStyle: 'full', timeZone: 'America/Jamaica' }).format(when);
+    const time = new Intl.DateTimeFormat('en-JM', { timeStyle: 'short', timeZone: 'America/Jamaica' }).format(when);
+    const rows = [[label, person], ['Topic', booking.topic], ['Date', date], ['Time', `${time} · Jamaica time`]];
+    return `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;margin:4px 0 24px;">
+        <tr><td bgcolor="#f6f3fd" style="background-color:#f6f3fd;padding:6px 18px;border:1px solid #e9e0f8;border-radius:14px;">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;">
+                ${rows.map(([key, value], index) => {
+                    const line = index ? 'border-top:1px solid #e8e0f4;' : '';
+                    return `<tr>
+                        <td width="72" valign="top" style="padding:11px 12px 11px 0;${line}font:700 13px/20px Arial,sans-serif;color:#635477;">${escapeHtml(key)}</td>
+                        <td valign="top" style="padding:11px 0;${line}font:600 15px/20px Arial,sans-serif;color:#271b3f;word-break:break-word;">${escapeHtml(value)}</td>
+                    </tr>`;
+                }).join('')}
+            </table>
+        </td></tr>
+    </table>`;
+}
+
+function consultationEmailLayout({ origin, heading, context, preheader, paragraphs, details = '', action, secondaryAction }) {
+    const paragraphHtml = paragraphs.filter(Boolean).map(value =>
+        `<p style="margin:0 0 17px;font:16px/25px Arial,sans-serif;color:#392f4b;word-break:break-word;">${escapeHtml(value).replace(/\r\n|\r|\n/g, '<br>')}</p>`
+    ).join('');
+    return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light"><meta name="supported-color-schemes" content="light">
+<title>${escapeHtml(heading)}</title>
+<style>
+    @media only screen and (max-width:480px) {
+        .email-outer { padding:12px 8px !important; }
+        .email-panel { padding-left:20px !important; padding-right:20px !important; }
+        .email-title { font-size:27px !important; line-height:33px !important; }
+    }
+</style>
+</head>
+<body style="margin:0;padding:0;background-color:#efedf6;">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;mso-hide:all;">${escapeHtml(preheader)}</div>
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="#efedf6" style="width:100%;background-color:#efedf6;">
+    <tr><td class="email-outer" align="center" style="padding:28px 12px;">
+        <!--[if mso]><table role="presentation" width="600" cellspacing="0" cellpadding="0" border="0"><tr><td><![endif]-->
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;max-width:600px;">
+            <tr><td class="email-panel" bgcolor="#23163f" style="background-color:#23163f;padding:26px 34px 30px;border-radius:17px 17px 0 0;background-image:linear-gradient(120deg,#201632,#392060);">
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0">
+                    <tr>
+                        <td style="padding:0 12px 0 0;"><img src="${escapeHtml(origin)}/favicon.png" width="38" height="38" alt="" style="display:block;width:38px;height:38px;border:0;"></td>
+                        <td style="font:700 17px/22px Arial,sans-serif;color:#ffffff;">ICSS Bookings</td>
+                    </tr>
+                </table>
+                <p style="margin:23px 0 7px;color:#e3d0ff;font:700 12px/18px Arial,sans-serif;letter-spacing:1.3px;text-transform:uppercase;">${escapeHtml(context)}</p>
+                <h1 class="email-title" style="margin:0;color:#ffffff;font:700 32px/38px Arial,sans-serif;letter-spacing:-.6px;">${escapeHtml(heading)}</h1>
+            </td></tr>
+            <tr><td class="email-panel" bgcolor="#ffffff" style="background-color:#ffffff;padding:26px 34px 28px;border-right:1px solid #e5dfee;border-left:1px solid #e5dfee;">
+                ${paragraphHtml}
+                ${details}
+                ${action ? consultationEmailButton(action) : ''}
+                ${secondaryAction ? consultationEmailButton(secondaryAction, !action) : ''}
+            </td></tr>
+            <tr><td class="email-panel" bgcolor="#f9f7fd" style="background-color:#f9f7fd;padding:17px 34px;border:1px solid #e5dfee;border-radius:0 0 17px 17px;">
+                <p style="margin:0;font:13px/20px Arial,sans-serif;color:#635477;"><a href="${escapeHtml(origin)}" style="color:#47268e;font-weight:bold;text-decoration:none;">ICSS Bookings</a> by iCreate Solutions &amp; Services</p>
+            </td></tr>
+        </table>
+        <!--[if mso]></td></tr></table><![endif]-->
+    </td></tr>
+</table>
+</body>
+</html>`;
+}
+
 async function sendConsultationRequestEmail(booking, recipient, idempotencyKey) {
     const resend = getResend();
     if (!resend) throw new Error('Consultation email delivery is unavailable.');
@@ -1263,17 +1349,20 @@ async function sendConsultationRequestEmail(booking, recipient, idempotencyKey) 
     const when = new Intl.DateTimeFormat('en-JM', {
         dateStyle: 'full', timeStyle: 'short', timeZone: 'America/Jamaica'
     }).format(new Date(booking.starts_at)) + ' Jamaica time';
-    const summary = `${booking.client_name} requested ${booking.topic} with ${consultationHostName(booking)}.`;
+    const host = consultationHostName(booking);
+    const summary = `${booking.client_name} requested ${booking.topic} with ${host}.`;
     const nextStep = 'Open the request to create a Google Meet link and confirm the consultation.';
     return resend.emails.send({
         from: 'ICSS Bookings <appointments@icssbookings.com>',
         to: [recipient],
         subject: 'Consultation request awaiting confirmation | ICSS Bookings',
         text: [summary, when, nextStep, reviewUrl].join('\n\n'),
-        html: `<div style="max-width:560px;margin:auto;padding:28px;font:16px/1.6 Arial,sans-serif;color:#192637">
-            <h1>New consultation request</h1><p>${escapeHtml(summary)}</p><p>${escapeHtml(when)}</p>
-            <p>${nextStep}</p><p><a href="${escapeHtml(reviewUrl)}">Review request and set up Google Meet</a></p>
-        </div>`
+        html: consultationEmailLayout({
+            origin, heading: 'New consultation request', context: 'Awaiting your confirmation',
+            preheader: summary, paragraphs: [`${booking.client_name} requested a consultation with ${host}.`, nextStep],
+            details: consultationEmailDetails(booking, 'Client', booking.client_name),
+            action: { label: 'Review request and set up Google Meet', url: reviewUrl }
+        })
     }, { idempotencyKey });
 }
 
@@ -1288,8 +1377,9 @@ async function sendConsultationEmail(booking, idempotencyKey, action) {
     const origin = require('./whatsappConnection').publicOrigin();
     const manage = `${origin}/consultation/manage#${manageToken(booking.id)}`;
     const cancelled = booking.status === 'cancelled';
+    const rescheduled = action === 'reschedule' || (!action && booking.version > 1);
     const heading = cancelled ? 'Your consultation has been cancelled'
-        : (action === 'reschedule' || (!action && booking.version > 1)) ? 'Your consultation has been updated' : 'Your consultation is confirmed';
+        : rescheduled ? 'Your consultation has been updated' : 'Your consultation is confirmed';
     const nextStep = booking.meeting_url ? 'Join your consultation using the meeting link below.'
         : 'The ICSS Bookings team will email you the joining details.';
     const summary = `${booking.topic} with ${host} · ${date} Jamaica time · ${DURATION} minutes`;
@@ -1300,33 +1390,31 @@ async function sendConsultationEmail(booking, idempotencyKey, action) {
         subject: `${heading} | ICSS Bookings`,
         text: [`Hi ${booking.client_name},`, heading, summary, cancelled ? '' : nextStep,
             cancelled ? '' : booking.meeting_url, cancelled ? '' : `Manage your consultation: ${manage}`].filter(Boolean).join('\n\n'),
-        html: `<div style="max-width:560px;margin:auto;padding:28px;font:16px/1.6 Arial,sans-serif;color:#192637">
-            <p>ICSS Bookings</p><h1>${heading}</h1>
-            <p>Hi ${escapeHtml(booking.client_name)},</p><p>${escapeHtml(summary)}</p>
-            ${cancelled ? '' : `<p>${nextStep}</p>
-            ${booking.meeting_url ? `<p><a href="${escapeHtml(booking.meeting_url)}">Join consultation</a></p>` : ''}
-            <p><a href="${escapeHtml(manage)}">Manage your consultation</a></p>`}
-        </div>`
+        html: consultationEmailLayout({
+            origin, heading, context: cancelled || rescheduled ? 'Consultation update' : 'Online consultation',
+            preheader: cancelled ? `The consultation on ${date} has been cancelled.` : `${date} Jamaica time · ${DURATION} minutes with ${host}.`,
+            paragraphs: [`Hi ${booking.client_name},`, cancelled ? 'The appointment below has been cancelled.' : nextStep],
+            details: consultationEmailDetails(booking, 'With', host),
+            action: !cancelled && booking.meeting_url ? { label: 'Join on Google Meet', url: booking.meeting_url } : null,
+            secondaryAction: !cancelled ? { label: 'Manage your consultation', url: manage } : null
+        })
     }, { idempotencyKey });
 }
 
 async function sendConsultationFollowUpEmail(recipient, draft, idempotencyKey) {
     const resend = getResend();
     if (!resend) throw new Error('Consultation email delivery is unavailable.');
-    const paragraphs = draft.paragraphs.map(paragraph =>
-        `<p style="white-space:pre-wrap;margin:0 0 18px;">${escapeHtml(paragraph)}</p>`
-    ).join('');
+    const origin = require('./whatsappConnection').publicOrigin();
     return resend.emails.send({
         from: 'ICSS Bookings <appointments@icssbookings.com>',
         replyTo: getDefaultNotificationEmail(),
         to: [recipient],
         subject: draft.subject,
         text: draft.paragraphs.join('\n\n'),
-        html: `<div style="max-width:560px;margin:auto;padding:28px;font:16px/1.6 Arial,sans-serif;color:#192637">
-            <p style="font-weight:bold;color:#4c35a8;">ICSS Bookings</p>
-            <h1 style="font-size:24px;">${escapeHtml(draft.subject)}</h1>
-            ${paragraphs}
-        </div>`
+        html: consultationEmailLayout({
+            origin, heading: draft.subject, context: 'Consultation follow-up',
+            preheader: draft.paragraphs[1], paragraphs: draft.paragraphs
+        })
     }, { idempotencyKey });
 }
 

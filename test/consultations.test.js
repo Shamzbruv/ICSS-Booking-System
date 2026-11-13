@@ -120,6 +120,8 @@ test('consultation booking, shared host management, and private client changes',
         assert.deepEqual(sent.flatMap(message => message.to).sort(), ['jemelia.peart@gmail.com', 'owner@example.test']);
         assert.ok(sent.every(message => message.text.includes('/platform?consultation=' + id)));
         assert.ok(sent.every(message => !message.text.includes(first.token)));
+        assert.ok(sent.every(message => message.html.includes('/platform?consultation=' + id)));
+        assert.ok(sent.every(message => !message.html.includes(first.token)));
 
         const jointSlots = (await call(`/public/slots?host=both&date=${date}`)).body.slots;
         assert.deepEqual(jointSlots, slots.slice(1));
@@ -140,6 +142,10 @@ test('consultation booking, shared host management, and private client changes',
         assert.match(confirmation.text, /Jamaica time/);
         assert.ok(confirmation.text.includes(meet));
         assert.ok(confirmation.text.includes(first.token));
+        assert.match(confirmation.html, /Join on Google Meet/);
+        assert.ok(confirmation.html.includes(`href="${meet}"`));
+        assert.ok(confirmation.html.includes('/consultation/manage#' + first.token));
+        assert.match(confirmation.html, /Jamaica time/);
         assert.equal((await call('/staff/' + id, { token: owner })).body.booking.email_status, 'sent');
 
         const move = await call('/staff/' + id, { token: jemelia, method: 'PATCH',
@@ -152,6 +158,7 @@ test('consultation booking, shared host management, and private client changes',
         assert.equal(sent.length, 3, 'obsolete reschedule email is suppressed');
         await processEmailOutbox({ data: jobs[4] });
         assert.match(sent.at(-1).subject, /cancelled/);
+        assert.doesNotMatch(sent.at(-1).html, /Join on Google Meet|\/consultation\/manage#/);
         assert.ok((await call(`/public/slots?host=jemelia&date=${date}`)).body.slots.includes(slots[1]));
 
         const race = await Promise.all([
