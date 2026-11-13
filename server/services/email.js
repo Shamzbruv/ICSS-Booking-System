@@ -1254,7 +1254,30 @@ async function sendClientCancellationEmails(booking, reason, tenant) {
     }
 }
 
-async function sendConsultationEmail(booking, idempotencyKey) {
+async function sendConsultationRequestEmail(booking, recipient, idempotencyKey) {
+    const resend = getResend();
+    if (!resend) throw new Error('Consultation email delivery is unavailable.');
+    const { consultationHostName } = require('./consultations');
+    const origin = require('./whatsappConnection').publicOrigin();
+    const reviewUrl = `${origin}/platform?consultation=${booking.id}`;
+    const when = new Intl.DateTimeFormat('en-JM', {
+        dateStyle: 'full', timeStyle: 'short', timeZone: 'America/Jamaica'
+    }).format(new Date(booking.starts_at)) + ' Jamaica time';
+    const summary = `${booking.client_name} requested ${booking.topic} with ${consultationHostName(booking)}.`;
+    const nextStep = 'Open the request to create a Google Meet link and confirm the consultation.';
+    return resend.emails.send({
+        from: 'ICSS Bookings <appointments@icssbookings.com>',
+        to: [recipient],
+        subject: 'Consultation request awaiting confirmation | ICSS Bookings',
+        text: [summary, when, nextStep, reviewUrl].join('\n\n'),
+        html: `<div style="max-width:560px;margin:auto;padding:28px;font:16px/1.6 Arial,sans-serif;color:#192637">
+            <h1>New consultation request</h1><p>${escapeHtml(summary)}</p><p>${escapeHtml(when)}</p>
+            <p>${nextStep}</p><p><a href="${escapeHtml(reviewUrl)}">Review request and set up Google Meet</a></p>
+        </div>`
+    }, { idempotencyKey });
+}
+
+async function sendConsultationEmail(booking, idempotencyKey, action) {
     const resend = getResend();
     if (!resend) throw new Error('Consultation email delivery is unavailable.');
     const { consultationHostName, manageToken, DURATION } = require('./consultations');
@@ -1266,7 +1289,7 @@ async function sendConsultationEmail(booking, idempotencyKey) {
     const manage = `${origin}/consultation/manage#${manageToken(booking.id)}`;
     const cancelled = booking.status === 'cancelled';
     const heading = cancelled ? 'Your consultation has been cancelled'
-        : booking.version > 1 ? 'Your consultation has been updated' : 'Your consultation is confirmed';
+        : (action === 'reschedule' || (!action && booking.version > 1)) ? 'Your consultation has been updated' : 'Your consultation is confirmed';
     const nextStep = booking.meeting_url ? 'Join your consultation using the meeting link below.'
         : 'The ICSS Bookings team will email you the joining details.';
     const summary = `${booking.topic} with ${host} · ${date} Jamaica time · ${DURATION} minutes`;
@@ -1289,6 +1312,7 @@ async function sendConsultationEmail(booking, idempotencyKey) {
 
 module.exports = {
     sendConsultationEmail,
+    sendConsultationRequestEmail,
     getSupportContactEmail,
     sendBookingRescheduledEmail,
     sendRescheduleRequestEmails,

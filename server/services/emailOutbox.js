@@ -1,5 +1,5 @@
 const { query } = require('../db/connection');
-const { sendSignupWelcomeEmail, sendWelcomeEmail, sendBookingCompletedEmail, sendConsultationEmail } = require('./email');
+const { sendSignupWelcomeEmail, sendWelcomeEmail, sendBookingCompletedEmail, sendConsultationEmail, sendConsultationRequestEmail } = require('./email');
 
 async function saveEmailOutbox({ messageType, dedupeKey, recipient, payload }, client) {
     const result = await client.query(
@@ -66,13 +66,15 @@ async function processEmailOutbox(job) {
             }
             providerResult = await sendBookingCompletedEmail(booking, tenant, { idempotencyKey: row.dedupe_key });
             if (!providerResult?.id) throw new Error('The email provider did not confirm acceptance.');
-        } else if (row.message_type === 'consultation') {
+        } else if (['consultation', 'consultation_request'].includes(row.message_type)) {
             const { rows: [booking] } = await query('SELECT * FROM consultations WHERE id=$1', [payload.id]);
             if (!booking || booking.version !== payload.version) {
                 await query("UPDATE email_outbox SET status='cancelled',updated_at=NOW() WHERE id=$1", [row.id]);
                 return;
             }
-            providerResult = await sendConsultationEmail(booking, row.dedupe_key);
+            providerResult = row.message_type === 'consultation_request'
+                ? await sendConsultationRequestEmail(booking, row.recipient, row.dedupe_key)
+                : await sendConsultationEmail(booking, row.dedupe_key, payload.action);
             if (!providerResult?.id) throw new Error('The email provider did not confirm acceptance.');
         } else throw new Error(`Unsupported outbox message type: ${row.message_type}`);
         await query(`UPDATE email_outbox SET status='sent',sent_at=NOW(),provider_message_id=$2,last_error=NULL,updated_at=NOW() WHERE id=$1`, [row.id,providerResult?.id || null]);

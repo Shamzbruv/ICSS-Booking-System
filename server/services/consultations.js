@@ -1,5 +1,6 @@
 const { createHmac, timingSafeEqual } = require('node:crypto');
 const { transaction } = require('../db/connection');
+const { canManageConsultations } = require('./consultationAccess');
 const { saveEmailOutbox, dispatchEmailOutbox } = require('./emailOutbox');
 const HOSTS = { shamar: 'Shamar Baker', jemelia: 'Jemelia Peart' };
 const HOST_ROLES = { shamar: 'Founder', jemelia: 'Marketing Manager (Partner)' };
@@ -103,7 +104,7 @@ async function slotsFor(client, hosts, date, hostChoice, excludeId = null) {
     if (!validDate(date)) fail(400, 'Choose a valid date.');
     const day = `${date}T00:00:00-05:00`;
     const busy = await client.query(`SELECT host_id, starts_at, joint FROM consultations
-        WHERE status='confirmed' AND starts_at >= $1 AND starts_at < $1::timestamptz + INTERVAL '24 hours'
+        WHERE status IN ('pending','confirmed') AND starts_at >= $1 AND starts_at < $1::timestamptz + INTERVAL '24 hours'
           AND ($2::uuid IS NULL OR id <> $2)`, [day, excludeId]);
     const choices = hosts.filter(item => hostChoice === 'any' || hostChoice === 'both' || item.id === hostChoice);
     const slots = openSlots(choices, busy.rows, date);
@@ -115,7 +116,7 @@ async function nextOpenDate(client, hosts, now = Date.now()) {
     if (!enabled.length) return null;
     const { to } = timeWindow(now);
     const busy = await client.query(`SELECT host_id, starts_at, joint FROM consultations
-        WHERE status='confirmed' AND starts_at >= $1 AND starts_at < $2::timestamptz + INTERVAL '24 hours'`,
+        WHERE status IN ('pending','confirmed') AND starts_at >= $1 AND starts_at < $2::timestamptz + INTERVAL '24 hours'`,
         [new Date(now).toISOString(), `${to}T00:00:00-05:00`]);
     for (let offset = 0; offset <= HORIZON; offset++) {
         const date = dayAt(now + offset * DAY);
@@ -177,20 +178,36 @@ async function pickSlot(client, hosts, input, excludeId) {
     let selected = available[0];
     if (available.length > 1) {
         const counts = await client.query(`SELECT host_id, joint, COUNT(*)::int AS total FROM consultations
-            WHERE status='confirmed' AND starts_at > NOW() GROUP BY host_id, joint`);
+            WHERE status IN ('pending','confirmed') AND starts_at > NOW() GROUP BY host_id, joint`);
         const booked = new Map(counts.rows.filter(row => !row.joint).map(row => [row.host_id, row.total]));
         selected = available.sort((a, b) => (booked.get(a.id) || 0) - (booked.get(b.id) || 0))[0];
     }
     return { hostId: selected.id, joint: false, startsAt, meetingUrl: selected.meeting_url };
 }
 
-async function saveNotice(client, booking) {
+async function saveNotice(client, booking, action) {
     return saveEmailOutbox({
         messageType: 'consultation',
         dedupeKey: `consultation:${booking.id}:${booking.version}`,
         recipient: booking.email,
-        payload: { id: booking.id, version: booking.version }
+        payload: { id: booking.id, version: booking.version, action }
     }, client);
+}
+
+async function saveRequestNotices(client, booking) {
+    const { rows } = await client.query(`SELECT role,email FROM users
+        WHERE tenant_id IS NULL AND active IS TRUE AND role IN ('platform_owner','developer_admin')`);
+    const recipients = new Set(rows.filter(canManageConsultations).map(user => user.email.trim().toLowerCase()));
+    const notices = [];
+    for (const recipient of recipients) {
+        notices.push(await saveEmailOutbox({
+            messageType: 'consultation_request',
+            dedupeKey: `consultation_request:${booking.id}:${booking.version}:${recipient}`,
+            recipient,
+            payload: { id: booking.id, version: booking.version }
+        }, client));
+    }
+    return notices;
 }
 
 async function dispatchNotice(outbox) {
@@ -202,23 +219,35 @@ async function createBooking(input) {
     const intake = normalizeIntake(input);
     const result = await transaction(async client => {
         const hosts = await loadHosts(client, true);
-        const { hostId, joint, startsAt, meetingUrl } = await pickSlot(client, hosts, input);
-        const existing = await client.query(`SELECT id FROM consultations WHERE email=$1 AND starts_at=$2 AND status='confirmed'`, [intake.email, startsAt]);
-        if (existing.rows.length) fail(409, 'You already have a consultation at this time. Use the link in your confirmation email to manage it.');
+        const { hostId, joint, startsAt } = await pickSlot(client, hosts, input);
+        const existing = await client.query(`SELECT id FROM consultations WHERE email=$1 AND starts_at=$2 AND status IN ('pending','confirmed')`, [intake.email, startsAt]);
+        if (existing.rows.length) fail(409, 'You already have a consultation request or booking at this time.');
         const { rows: [booking] } = await client.query(`
-            INSERT INTO consultations (host_id, starts_at, client_name, email, company, topic, details, meeting_url, joint)
-            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *
-        `, [hostId, startsAt, intake.name, intake.email, intake.company, intake.topic, intake.details, meetingUrl, joint]);
-        return { booking, outbox: await saveNotice(client, booking) };
+            INSERT INTO consultations (host_id, starts_at, client_name, email, company, topic, details, joint, status)
+            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'pending') RETURNING *
+        `, [hostId, startsAt, intake.name, intake.email, intake.company, intake.topic, intake.details, joint]);
+        return { booking, notices: await saveRequestNotices(client, booking) };
     });
-    await dispatchNotice(result.outbox);
+    await Promise.all(result.notices.map(dispatchNotice));
     return result.booking;
+}
+
+function googleMeetUrl(value) {
+    let url;
+    try { url = new URL(typeof value === 'string' ? value.trim() : ''); } catch {
+        fail(400, 'Paste the Google Meet joining link to confirm this consultation.');
+    }
+    if (url.origin !== 'https://meet.google.com' || url.username || url.password ||
+        !/^\/[a-z]{3}-[a-z]{4}-[a-z]{3}\/?$/.test(url.pathname)) {
+        fail(400, 'Use the Google Meet joining link, such as https://meet.google.com/abc-defg-hij.');
+    }
+    return url.origin + url.pathname.replace(/\/$/, '');
 }
 
 async function changeBooking(id, input, actor) {
     if (!UUID.test(id)) fail(404, 'Consultation not found.');
     const action = input.action;
-    if (!['cancel', 'reschedule', ...(actor ? ['notes', 'complete', 'no_show'] : [])].includes(action)) fail(400, 'Choose a valid consultation action.');
+    if (!['cancel', 'reschedule', ...(actor ? ['notes', 'confirm', 'complete', 'no_show'] : [])].includes(action)) fail(400, 'Choose a valid consultation action.');
     const result = await transaction(async client => {
         const hosts = await loadHosts(client, true);
         const { rows: [booking] } = await client.query('SELECT * FROM consultations WHERE id=$1 FOR UPDATE', [id]);
@@ -228,27 +257,46 @@ async function changeBooking(id, input, actor) {
                 WHERE id=$1 RETURNING *`, [id, clean(input.notes, 4000)]);
             return { booking: updated };
         }
-        if (booking.status !== 'confirmed') fail(409, 'This consultation has already been closed.');
+        if (action === 'confirm') {
+            const meetingUrl = googleMeetUrl(input.meetingUrl);
+            if (booking.status === 'confirmed' && booking.meeting_url === meetingUrl) return { booking };
+            if (booking.status !== 'pending') fail(409, 'Only a pending request can be confirmed.');
+            if (input.version !== booking.version) fail(409, 'This request changed. Refresh it and verify the date and time before confirming.');
+            if (Date.parse(booking.starts_at) <= Date.now()) fail(409, 'Reschedule this request to a future time before confirming.');
+            const { rows: [updated] } = await client.query(`UPDATE consultations
+                SET status='confirmed', meeting_url=$2, confirmed_by=$3, confirmed_at=NOW(), version=version+1, updated_at=NOW()
+                WHERE id=$1 RETURNING *`, [id, meetingUrl, actor]);
+            return { booking: updated, notices: [await saveNotice(client, updated, action)] };
+        }
+        if (!['pending', 'confirmed'].includes(booking.status)) fail(409, 'This consultation has already been closed.');
+        if (booking.status === 'pending' && ['complete', 'no_show'].includes(action)) fail(409, 'Confirm the request before closing it out.');
         const hasStarted = Date.parse(booking.starts_at) <= Date.now();
         if (!actor && hasStarted) fail(409, 'This consultation has already started.');
         if (['complete', 'no_show'].includes(action) && !hasStarted) fail(409, 'You can close out the consultation after its start time.');
         let { host_id: hostId, starts_at: startsAt, meeting_url: meetingUrl, joint } = booking;
         if (action === 'reschedule') {
-            ({ hostId, startsAt, meetingUrl, joint } = await pickSlot(client, hosts, input, booking.id));
+            const slot = await pickSlot(client, hosts, input, booking.id);
+            ({ hostId, startsAt, joint } = slot);
+            if (booking.status === 'confirmed' && !booking.confirmed_at) meetingUrl = slot.meetingUrl;
             const overlap = await client.query(`SELECT id FROM consultations
-                WHERE id<>$1 AND email=$2 AND starts_at=$3 AND status='confirmed'`, [id, booking.email, startsAt]);
+                WHERE id<>$1 AND email=$2 AND starts_at=$3 AND status IN ('pending','confirmed')`, [id, booking.email, startsAt]);
             if (overlap.rows.length) fail(409, 'The client already has a consultation at this time.');
             if (hostId === booking.host_id && joint === booking.joint && Date.parse(startsAt) === Date.parse(booking.starts_at)) {
                 fail(400, 'Choose a different time or consultant.');
             }
         }
-        const status = { cancel: 'cancelled', complete: 'completed', no_show: 'no_show', reschedule: 'confirmed' }[action];
+        const status = { cancel: 'cancelled', complete: 'completed', no_show: 'no_show', reschedule: booking.status }[action];
         const { rows: [updated] } = await client.query(`UPDATE consultations SET host_id=$2, starts_at=$3, meeting_url=$4,
             status=$5, joint=$6, version=version+1, updated_at=NOW() WHERE id=$1 RETURNING *`, [id, hostId, startsAt, meetingUrl, status, joint]);
-        const outbox = ['cancel', 'reschedule'].includes(action) ? await saveNotice(client, updated) : null;
-        return { booking: updated, outbox };
+        let notices = [];
+        if (booking.status === 'confirmed' && ['cancel', 'reschedule'].includes(action)) {
+            notices = [await saveNotice(client, updated, action)];
+        } else if (booking.status === 'pending' && action === 'reschedule') {
+            notices = await saveRequestNotices(client, updated);
+        }
+        return { booking: updated, notices };
     });
-    await dispatchNotice(result.outbox);
+    await Promise.all((result.notices || []).map(dispatchNotice));
     return result.booking;
 }
 

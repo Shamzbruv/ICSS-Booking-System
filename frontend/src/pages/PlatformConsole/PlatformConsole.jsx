@@ -570,7 +570,6 @@ function InfoRow({ label, value }) {
 
 const VIEW_MAP = {
   whatsapp: <WhatsAppSettings />,
-  consultations: <ConsultationWorkspace />,
   dashboard:<DashboardView />,
   tenants:  <TenantsView />,
   themes:   <ThemesView />,
@@ -585,7 +584,8 @@ const VIEW_MAP = {
 // ── Console shell ─────────────────────────────────────────────────────────────
 function ConsoleShell() {
   const { platformUser, logout, loading, authError, isImpersonating } = useConsole();
-  const [activeView, setActiveView] = useState('dashboard');
+  const requestedConsultation = new URLSearchParams(window.location.search).get('consultation');
+  const [activeView, setActiveView] = useState(requestedConsultation ? 'consultations' : 'dashboard');
   const [navOpen, setNavOpen] = useState(false);
   const navTriggerRef = useRef(null);
   const sidebarRef = useRef(null);
@@ -648,7 +648,11 @@ function ConsoleShell() {
       {/* Main */}
       <main className={s.main}>
         <div className={s.pageHelpBar}><button type="button" className="page-help-button" aria-label={`About this page: ${activeLabel}`} title="About this page" onClick={event => window.ICSSPageHelp?.open(`platform:${activeView}`, event.currentTarget)}>?</button></div>
-        {VIEW_MAP[activeView]}
+        {activeView === 'consultations'
+          ? canManageConsultations
+            ? <ConsultationWorkspace requestedId={requestedConsultation} />
+            : <p role="alert">Sign in with a consultation team account to open this request.</p>
+          : VIEW_MAP[activeView]}
       </main>
     </div>
   );

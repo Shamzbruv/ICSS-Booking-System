@@ -92,6 +92,7 @@ export const api = {
   // All platform calls use the owner's main localStorage token automatically.
   platform: {
     consultationList: (filters, signal) => apiFetch(`/platform/consultations?${new URLSearchParams(filters)}`, { signal, cache: 'no-store' }),
+    consultationGet: (id, signal) => apiFetch(`/platform/consultations/${encodeURIComponent(id)}`, { signal, cache: 'no-store' }),
     consultationSchedule: (id, body) => apiFetch(`/platform/consultations/hosts/${id}`, { method: 'PUT', body }),
     consultationChange: (id, body) => apiFetch(`/platform/consultations/${id}`, { method: 'PATCH', body }),
     consultationSlots: (host, date, signal, exclude) => apiFetch(`/platform/consultations/slots?${new URLSearchParams({ host, date, ...(exclude ? { exclude } : {}) })}`, { signal, cache: 'no-store' }),

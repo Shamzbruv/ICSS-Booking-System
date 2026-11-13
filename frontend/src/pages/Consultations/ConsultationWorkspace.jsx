@@ -6,8 +6,8 @@ import pc from '../PlatformConsole/PlatformConsole.module.css';
 import s from './ConsultationWorkspace.module.css';
 
 const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-const states = { upcoming: 'Upcoming', confirmed: 'All confirmed', completed: 'Completed', cancelled: 'Cancelled', no_show: 'No-show', all: 'All consultations' };
-const labels = { confirmed: 'Confirmed', completed: 'Completed', cancelled: 'Cancelled', no_show: 'No-show' };
+const states = { upcoming: 'Upcoming', pending: 'Awaiting confirmation', confirmed: 'All confirmed', completed: 'Completed', cancelled: 'Cancelled', no_show: 'No-show', all: 'All consultations' };
+const labels = { pending: 'Awaiting confirmation', confirmed: 'Confirmed', completed: 'Completed', cancelled: 'Cancelled', no_show: 'No-show' };
 
 function Schedule({ host, onChange }) {
   const [draft, setDraft] = useState(host);
@@ -70,8 +70,9 @@ function Schedule({ host, onChange }) {
   </form>;
 }
 
-function Appointment({ booking, calendar, onChange }) {
+function Appointment({ booking, calendar, onChange, focus = false }) {
   const [notes, setNotes] = useState(booking.staff_notes);
+  const [meetingUrl, setMeetingUrl] = useState('');
   const assignedHost = booking.joint ? 'both' : booking.host_id;
   const [host, setHost] = useState(assignedHost);
   const [date, setDate] = useState('');
@@ -83,20 +84,23 @@ function Appointment({ booking, calendar, onChange }) {
   const getSlots = useCallback((choice, day, signal) =>
     api.platform.consultationSlots(choice, day, signal, booking.id), [booking.id]);
   const started = Date.parse(booking.starts_at) <= Date.now();
+  const pending = booking.status === 'pending';
+  const calendarBooking = { startsAt: booking.starts_at, host: assigned, meetingUrl: booking.meeting_url };
   async function change(action) {
-    if (action === 'cancel' && !window.confirm('Cancel this consultation and notify the client?')) return;
+    if (action === 'cancel' && !window.confirm(pending ? 'Cancel this request and release the time?' : 'Cancel this consultation and notify the client?')) return;
     setBusy(true);
     setMessage('');
     try {
-      await api.platform.consultationChange(booking.id, { action, notes, host, startsAt });
+      await api.platform.consultationChange(booking.id, { action, notes, host, startsAt, meetingUrl, version: booking.version });
       setEditing(false);
       setStartsAt('');
-      setMessage(action === 'notes' ? 'Notes saved.' : 'Consultation updated.');
+      setMessage(action === 'confirm' ? 'Consultation confirmed. The client email is queued.' :
+        action === 'notes' ? 'Notes saved.' : 'Consultation updated.');
       onChange();
     } catch (err) { setMessage(err.message); }
     finally { setBusy(false); }
   }
-  return <details className={s.appointment}>
+  return <details className={s.appointment} open={focus || undefined}>
     <summary>
       <span><strong>{booking.client_name}</strong><small>{booking.topic} · {assigned}</small></span>
       <span>{dateLabel(booking.starts_at)}<small>{timeLabel(booking.starts_at)} · {labels[booking.status]}</small></span>
@@ -105,19 +109,27 @@ function Appointment({ booking, calendar, onChange }) {
       <div className={s.contact}><a href={`mailto:${booking.email}`}>{booking.email}</a>
         {booking.company && <span>{booking.company}</span>}
         {booking.meeting_url && booking.status === 'confirmed' && <a href={booking.meeting_url} target="_blank" rel="noreferrer">Open meeting link ↗</a>}
-        {booking.status === 'confirmed' && <a href={addToCalendar({
-          startsAt: booking.starts_at, host: assigned, meetingUrl: booking.meeting_url
-        }, calendar.duration)} target="_blank" rel="noreferrer">Add to Google Calendar ↗</a>}
+        {booking.status === 'confirmed' && <a href={addToCalendar(calendarBooking, calendar.duration)} target="_blank" rel="noreferrer">Add to Google Calendar ↗</a>}
       </div>
       {booking.details && <p className={s.details}>{booking.details}</p>}
       {booking.email_status && <small>{{
         sent: 'Email accepted by the provider', pending: 'Email queued', sending: 'Sending email',
         failed: 'Email attempt failed', cancelled: 'Older email superseded'
       }[booking.email_status]}</small>}
+      {pending && <form className={s.slotEditor} onSubmit={event => { event.preventDefault(); change('confirm'); }}>
+        <h3 className={s.approvalHeading}>Confirm this request</h3>
+        <a className={s.button} href={addToCalendar(calendarBooking, calendar.duration, booking)}
+          target="_blank" rel="noreferrer">Open Google Calendar to create a Meet link ↗</a>
+        <p className={s.muted}>The date, time, and client details are filled in. In Google Calendar, add Google Meet video conferencing and save the event. Copy the joining link and paste it below.</p>
+        {started && <p role="status">This time has passed. Reschedule the request before confirming.</p>}
+        <label>Google Meet link<input type="url" value={meetingUrl} required placeholder="https://meet.google.com/abc-defg-hij"
+          onChange={event => setMeetingUrl(event.target.value)} /></label>
+        <button type="submit" className={s.primary} disabled={busy || started || !meetingUrl.trim()}>Confirm &amp; email client</button>
+      </form>}
       <label>Internal notes<textarea maxLength={4000} rows={3} value={notes} onChange={event => setNotes(event.target.value)} /></label>
       <div className={s.actions}>
         <button type="button" className={s.button} disabled={busy || notes === booking.staff_notes} onClick={() => change('notes')}>Save notes</button>
-        {booking.status === 'confirmed' && <>
+        {(booking.status === 'confirmed' || pending) && <>
           <button type="button" className={s.button} disabled={busy} onClick={() => {
             setEditing(!editing);
             setHost(assignedHost);
@@ -125,7 +137,7 @@ function Appointment({ booking, calendar, onChange }) {
             setStartsAt('');
           }}>Reschedule or reassign</button>
           <button type="button" className={s.button} disabled={busy} onClick={() => change('cancel')}>Cancel</button>
-          {started && <><button type="button" className={s.button} disabled={busy} onClick={() => change('complete')}>Mark completed</button>
+          {started && !pending && <><button type="button" className={s.button} disabled={busy} onClick={() => change('complete')}>Mark completed</button>
             <button type="button" className={s.button} disabled={busy} onClick={() => change('no_show')}>Mark no-show</button></>}
         </>}
       </div>
@@ -139,8 +151,10 @@ function Appointment({ booking, calendar, onChange }) {
   </details>;
 }
 
-export default function ConsultationWorkspace() {
+export default function ConsultationWorkspace({ requestedId }) {
   const [tab, setTab] = useState('bookings');
+  const [focused, setFocused] = useState(null);
+  const [focusError, setFocusError] = useState('');
   const [data, setData] = useState(null);
   const [filter, setFilter] = useState({ status: 'upcoming', host: 'any', page: 1 });
   const [revision, setRevision] = useState(0);
@@ -158,6 +172,18 @@ export default function ConsultationWorkspace() {
     });
     return () => controller.abort();
   }, [filter, revision]);
+
+  useEffect(() => {
+    if (!requestedId) return;
+    const controller = new AbortController();
+    setFocusError('');
+    api.platform.consultationGet(requestedId, controller.signal).then(result => {
+      if (!controller.signal.aborted) setFocused(result.booking);
+    }).catch(err => {
+      if (!controller.signal.aborted) setFocusError(err.message);
+    });
+    return () => controller.abort();
+  }, [requestedId, revision]);
 
   async function copy() {
     try {
@@ -190,6 +216,8 @@ export default function ConsultationWorkspace() {
         <p className={s.muted}>Set weekly hours in Jamaica time and block any dates you’re away.</p>
         <div className={s.schedules}>{data.hosts.map(host => <Schedule key={host.id} host={host} onChange={refresh} />)}</div>
       </> : <>
+        {focusError && <p role="alert" className={s.error}>{focusError}</p>}
+        {focused && <Appointment key={focused.id} booking={focused} calendar={data} onChange={refresh} focus />}
         <div className={s.filters}>
           <label>Status<select value={filter.status} onChange={event => setFilter({ ...filter, status: event.target.value, page: 1 })}>
             {Object.entries(states).map(([value, label]) => <option value={value} key={value}>{label}</option>)}
@@ -200,7 +228,7 @@ export default function ConsultationWorkspace() {
           <button type="button" className={s.button} onClick={refresh}>Refresh</button>
         </div>
         {data.bookings.length ? <div className={s.bookings}>
-          {data.bookings.map(booking => <Appointment key={booking.id} booking={booking} calendar={data} onChange={refresh} />)}
+          {data.bookings.filter(booking => booking.id !== focused?.id).map(booking => <Appointment key={booking.id} booking={booking} calendar={data} onChange={refresh} />)}
         </div> : <p className={s.muted}>No consultations match these filters.</p>}
         {(filter.page > 1 || data.hasMore) && <div className={s.actions}>
           <button type="button" className={s.button} disabled={filter.page <= 1} onClick={() => setFilter({ ...filter, page: filter.page - 1 })}>Previous</button>
