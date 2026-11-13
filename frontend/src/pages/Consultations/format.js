@@ -6,6 +6,10 @@ export const timeLabel = (stamp) => new Intl.DateTimeFormat('en-JM', {
   timeStyle: 'short', timeZone: 'America/Jamaica'
 }).format(new Date(stamp));
 
+export const jamaicaDate = stamp => new Intl.DateTimeFormat('sv-SE', {
+  year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'America/Jamaica'
+}).format(new Date(stamp));
+
 export function addToCalendar(booking, duration) {
   const start = new Date(booking.startsAt);
   const end = new Date(start.getTime() + duration * 60000);

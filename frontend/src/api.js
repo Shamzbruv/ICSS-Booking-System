@@ -94,7 +94,7 @@ export const api = {
     consultationList: (filters, signal) => apiFetch(`/platform/consultations?${new URLSearchParams(filters)}`, { signal, cache: 'no-store' }),
     consultationSchedule: (id, body) => apiFetch(`/platform/consultations/hosts/${id}`, { method: 'PUT', body }),
     consultationChange: (id, body) => apiFetch(`/platform/consultations/${id}`, { method: 'PATCH', body }),
-    consultationSlots: (host, date, signal) => apiFetch(`/platform/consultations/slots?${new URLSearchParams({ host, date })}`, { signal, cache: 'no-store' }),
+    consultationSlots: (host, date, signal, exclude) => apiFetch(`/platform/consultations/slots?${new URLSearchParams({ host, date, ...(exclude ? { exclude } : {}) })}`, { signal, cache: 'no-store' }),
 
     // Tenant management
     listTenants:          (search = '', page = 1) => apiFetch(`/platform/tenants?search=${encodeURIComponent(search)}&page=${page}`),

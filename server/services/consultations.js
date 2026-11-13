@@ -2,6 +2,8 @@ const { createHmac, timingSafeEqual } = require('node:crypto');
 const { transaction } = require('../db/connection');
 const { saveEmailOutbox, dispatchEmailOutbox } = require('./emailOutbox');
 const HOSTS = { shamar: 'Shamar Baker', jemelia: 'Jemelia Peart' };
+const HOST_ROLES = { shamar: 'Founder', jemelia: 'Marketing Manager (Partner)' };
+const JOINT_LABEL = 'Shamar Baker and Jemelia Peart';
 const TOPICS = ['ICSS Bookings demo', 'Website or online store', 'Custom software or automation', 'Something else'];
 const DURATION = 30;
 const DAY = 86400000;
@@ -28,8 +30,8 @@ function timeWindow(now = Date.now()) {
     return { from: dayAt(now), to: dayAt(now + HORIZON * DAY) };
 }
 
-function checkedHost(id, allowAny = false) {
-    if ((allowAny && id === 'any') || Object.hasOwn(HOSTS, id)) return id;
+function checkedHost(id, allowGroup = false) {
+    if (typeof id === 'string' && ((allowGroup && ['any', 'both'].includes(id)) || Object.hasOwn(HOSTS, id))) return id;
     fail(400, 'Choose an available consultant.');
 }
 
@@ -75,7 +77,11 @@ function openSlots(hosts, bookings, date, now = Date.now()) {
     const window = timeWindow(now);
     if (!validDate(date) || date < window.from || date > window.to) return [];
     const weekday = new Date(date + 'T00:00:00Z').getUTCDay();
-    const busy = new Set(bookings.map(item => `${item.host_id}:${new Date(item.starts_at).getTime()}`));
+    const busy = new Set(bookings.flatMap(item => {
+        const time = new Date(item.starts_at).getTime();
+        const hostIds = item.joint ? Object.keys(HOSTS) : [item.host_id];
+        return hostIds.map(id => `${id}:${time}`);
+    }));
     const result = new Map();
     for (const host of hosts) {
         const range = host.hours[weekday];
@@ -93,20 +99,22 @@ function openSlots(hosts, bookings, date, now = Date.now()) {
     }));
 }
 
-async function slotsFor(client, hosts, date, excludeId = null) {
+async function slotsFor(client, hosts, date, hostChoice, excludeId = null) {
     if (!validDate(date)) fail(400, 'Choose a valid date.');
     const day = `${date}T00:00:00-05:00`;
-    const busy = await client.query(`SELECT host_id, starts_at FROM consultations
+    const busy = await client.query(`SELECT host_id, starts_at, joint FROM consultations
         WHERE status='confirmed' AND starts_at >= $1 AND starts_at < $1::timestamptz + INTERVAL '24 hours'
           AND ($2::uuid IS NULL OR id <> $2)`, [day, excludeId]);
-    return openSlots(hosts, busy.rows, date);
+    const choices = hosts.filter(item => hostChoice === 'any' || hostChoice === 'both' || item.id === hostChoice);
+    const slots = openSlots(choices, busy.rows, date);
+    return hostChoice === 'both' ? slots.filter(item => item.available.length === Object.keys(HOSTS).length) : slots;
 }
 
 async function nextOpenDate(client, hosts, now = Date.now()) {
     const enabled = hosts.filter(host => host.enabled);
     if (!enabled.length) return null;
     const { to } = timeWindow(now);
-    const busy = await client.query(`SELECT host_id, starts_at FROM consultations
+    const busy = await client.query(`SELECT host_id, starts_at, joint FROM consultations
         WHERE status='confirmed' AND starts_at >= $1 AND starts_at < $2::timestamptz + INTERVAL '24 hours'`,
         [new Date(now).toISOString(), `${to}T00:00:00-05:00`]);
     for (let offset = 0; offset <= HORIZON; offset++) {
@@ -116,11 +124,15 @@ async function nextOpenDate(client, hosts, now = Date.now()) {
     return null;
 }
 
+function consultationHostName(row) {
+    return row.joint ? JOINT_LABEL : HOSTS[row.host_id];
+}
+
 function publicBooking(row) {
     return {
         reference: row.id.slice(0, 8).toUpperCase(),
-        host: HOSTS[row.host_id],
-        hostId: row.host_id,
+        host: consultationHostName(row),
+        hostId: row.joint ? 'both' : row.host_id,
         startsAt: row.starts_at,
         status: row.status,
         name: row.client_name,
@@ -153,15 +165,23 @@ async function pickSlot(client, hosts, input, excludeId) {
     const host = checkedHost(input.host, true);
     const timestamp = typeof input.startsAt === 'string' ? Date.parse(input.startsAt) : NaN;
     if (!Number.isFinite(timestamp)) fail(400, 'Choose an available time.');
-    const choices = hosts.filter(item => host === 'any' || item.id === host);
-    const slots = await slotsFor(client, choices, dayAt(timestamp), excludeId);
-    const available = slots.find(item => item.startsAt === new Date(timestamp).toISOString())?.available;
+    const startsAt = new Date(timestamp).toISOString();
+    const slots = await slotsFor(client, hosts, dayAt(timestamp), host, excludeId);
+    const available = slots.find(item => item.startsAt === startsAt)?.available;
     if (!available?.length) fail(409, 'That time is no longer available. Choose another time.');
-    if (available.length === 1) return { host: available[0], startsAt: new Date(timestamp).toISOString() };
-    const counts = await client.query(`SELECT host_id, COUNT(*)::int AS total FROM consultations
-        WHERE status='confirmed' AND starts_at > NOW() GROUP BY host_id`);
-    const booked = new Map(counts.rows.map(row => [row.host_id, row.total]));
-    return { host: available.sort((a, b) => (booked.get(a.id) || 0) - (booked.get(b.id) || 0))[0], startsAt: new Date(timestamp).toISOString() };
+    if (host === 'both') {
+        const shamar = available.find(item => item.id === 'shamar');
+        const jemelia = available.find(item => item.id === 'jemelia');
+        return { hostId: shamar.id, joint: true, startsAt, meetingUrl: shamar.meeting_url || jemelia.meeting_url };
+    }
+    let selected = available[0];
+    if (available.length > 1) {
+        const counts = await client.query(`SELECT host_id, joint, COUNT(*)::int AS total FROM consultations
+            WHERE status='confirmed' AND starts_at > NOW() GROUP BY host_id, joint`);
+        const booked = new Map(counts.rows.filter(row => !row.joint).map(row => [row.host_id, row.total]));
+        selected = available.sort((a, b) => (booked.get(a.id) || 0) - (booked.get(b.id) || 0))[0];
+    }
+    return { hostId: selected.id, joint: false, startsAt, meetingUrl: selected.meeting_url };
 }
 
 async function saveNotice(client, booking) {
@@ -182,13 +202,13 @@ async function createBooking(input) {
     const intake = normalizeIntake(input);
     const result = await transaction(async client => {
         const hosts = await loadHosts(client, true);
-        const { host, startsAt } = await pickSlot(client, hosts, input);
+        const { hostId, joint, startsAt, meetingUrl } = await pickSlot(client, hosts, input);
         const existing = await client.query(`SELECT id FROM consultations WHERE email=$1 AND starts_at=$2 AND status='confirmed'`, [intake.email, startsAt]);
         if (existing.rows.length) fail(409, 'You already have a consultation at this time. Use the link in your confirmation email to manage it.');
         const { rows: [booking] } = await client.query(`
-            INSERT INTO consultations (host_id, starts_at, client_name, email, company, topic, details, meeting_url)
-            VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *
-        `, [host.id, startsAt, intake.name, intake.email, intake.company, intake.topic, intake.details, host.meeting_url]);
+            INSERT INTO consultations (host_id, starts_at, client_name, email, company, topic, details, meeting_url, joint)
+            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *
+        `, [hostId, startsAt, intake.name, intake.email, intake.company, intake.topic, intake.details, meetingUrl, joint]);
         return { booking, outbox: await saveNotice(client, booking) };
     });
     await dispatchNotice(result.outbox);
@@ -212,24 +232,19 @@ async function changeBooking(id, input, actor) {
         const hasStarted = Date.parse(booking.starts_at) <= Date.now();
         if (!actor && hasStarted) fail(409, 'This consultation has already started.');
         if (['complete', 'no_show'].includes(action) && !hasStarted) fail(409, 'You can close out the consultation after its start time.');
-        let hostId = booking.host_id;
-        let startsAt = booking.starts_at;
-        let meetingUrl = booking.meeting_url;
+        let { host_id: hostId, starts_at: startsAt, meeting_url: meetingUrl, joint } = booking;
         if (action === 'reschedule') {
-            const slot = await pickSlot(client, hosts, input, booking.id);
-            hostId = slot.host.id;
-            startsAt = slot.startsAt;
-            meetingUrl = slot.host.meeting_url;
+            ({ hostId, startsAt, meetingUrl, joint } = await pickSlot(client, hosts, input, booking.id));
             const overlap = await client.query(`SELECT id FROM consultations
                 WHERE id<>$1 AND email=$2 AND starts_at=$3 AND status='confirmed'`, [id, booking.email, startsAt]);
             if (overlap.rows.length) fail(409, 'The client already has a consultation at this time.');
-            if (hostId === booking.host_id && Date.parse(startsAt) === Date.parse(booking.starts_at)) {
+            if (hostId === booking.host_id && joint === booking.joint && Date.parse(startsAt) === Date.parse(booking.starts_at)) {
                 fail(400, 'Choose a different time or consultant.');
             }
         }
         const status = { cancel: 'cancelled', complete: 'completed', no_show: 'no_show', reschedule: 'confirmed' }[action];
         const { rows: [updated] } = await client.query(`UPDATE consultations SET host_id=$2, starts_at=$3, meeting_url=$4,
-            status=$5, version=version+1, updated_at=NOW() WHERE id=$1 RETURNING *`, [id, hostId, startsAt, meetingUrl, status]);
+            status=$5, joint=$6, version=version+1, updated_at=NOW() WHERE id=$1 RETURNING *`, [id, hostId, startsAt, meetingUrl, status, joint]);
         const outbox = ['cancel', 'reschedule'].includes(action) ? await saveNotice(client, updated) : null;
         return { booking: updated, outbox };
     });
@@ -237,5 +252,5 @@ async function changeBooking(id, input, actor) {
     return result.booking;
 }
 
-module.exports = { HOSTS, TOPICS, DURATION, timeWindow, checkedHost, validDate, normalizeSchedule,
+module.exports = { HOSTS, HOST_ROLES, consultationHostName, TOPICS, DURATION, timeWindow, checkedHost, validDate, normalizeSchedule,
     loadHosts, slotsFor, nextOpenDate, createBooking, changeBooking, publicBooking, manageToken, verifyToken, fail };
