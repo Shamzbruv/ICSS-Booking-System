@@ -6,7 +6,6 @@ nav.addEventListener('click', event => { if (event.target.closest('a')) closeMen
 document.addEventListener('keydown', event => { if (event.key === 'Escape' && nav.classList.contains('is-open')) { closeMenu(); toggle.focus(); } });
 document.addEventListener('click', event => { if (!event.target.closest('.navigation')) closeMenu(); });
 window.matchMedia('(min-width: 801px)').addEventListener('change', closeMenu);
-document.querySelectorAll('[data-scroll-target]').forEach(button => button.addEventListener('click', () => document.getElementById(button.dataset.scrollTarget)?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' })));
 document.getElementById('year').textContent = new Date().getFullYear();
 
 // ── "See your space" live website preview ────────────────────────────────────
