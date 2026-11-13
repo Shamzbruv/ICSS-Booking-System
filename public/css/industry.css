@@ -307,3 +307,7 @@ a:focus-visible { outline: 3px solid var(--primary); outline-offset: 4px; }
 .industry-related { display: flex; flex-wrap: wrap; gap: 10px; }
 .industry-next { margin-top: 20px; color: var(--muted); }
 .industry-next a { color: var(--primary); text-decoration: underline; }
+
+#industry-demos, #choosing-a-booking-system { scroll-margin-top: 64px; }
+#choosing-a-booking-system > p:first-of-type { margin-bottom: 24px; }
+#choosing-a-booking-system .feature-card a { color: var(--primary); text-decoration: underline; }
