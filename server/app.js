@@ -104,8 +104,19 @@ app.get('/Template/:file', (req, res, next) => {
 });
 app.use('/Template', express.static(path.join(__dirname, '../Template')));
 
+const publicDir = path.join(__dirname, '../public');
+app.get('/index.html', (req, res) => res.redirect(308, '/'));
+app.get('/industries', (req, res) => {
+    if (req.path.endsWith('/')) return res.redirect(308, '/industries');
+    res.sendFile(path.join(publicDir, 'industries/index.html'));
+});
+app.get(/^\/industries\/([a-z-]+)(?:\.html|\/)$/, (req, res) => {
+    const slug = req.params[0];
+    res.redirect(308, slug === 'index' ? '/industries' : `/industries/${slug}`);
+});
+
 // Serve legacy public folder (landing page, legal pages, industry pages, images, etc.) FIRST
-app.use('/', express.static(path.join(__dirname, '../public'), {
+app.use('/', express.static(publicDir, {
     extensions: ['html']
 }));
 
@@ -155,6 +166,9 @@ app.use(['/consultation', '/consultation/manage'], (req, res, next) => {
 // Serve React SPA for app routes. Static public pages (/, /industries/*, /faq, /terms)
 // are already handled above by express.static(public) — so exclude them here.
 app.get(/^\/(?!api\/|admin\/|admin$|Template\/|media\/|health$|industries\/|industries$|faq|terms|sitemap\.xml|robots\.txt|favicon|logo)/, (req, res) => {
+    if (/^\/demo(?:\/|$)/.test(req.path) || req.query.preview === '1') {
+        res.set('X-Robots-Tag', 'noindex, follow');
+    }
     res.sendFile(path.join(frontendDist, 'index.html'));
 });
 
