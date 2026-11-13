@@ -294,3 +294,16 @@ a:focus-visible { outline: 3px solid var(--primary); outline-offset: 4px; }
 .icss-everything-actions a:first-child{background:#fed100;color:#111;border-color:#fed100}
 .icss-everything-head .icss-ja{line-height:1.3;text-align:left}
 @media(max-width:700px){.icss-everything{margin:32px 16px 0;padding:28px 18px}.icss-everything-list{grid-template-columns:1fr}}
+
+.industry-intro { padding-bottom: 44px; }
+.industry-section { padding-top: 32px; padding-bottom: 32px; }
+.industry-section h2 { margin-bottom: 16px; }
+.industry-questions details { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; margin-top: 12px; }
+.industry-questions summary { cursor: pointer; font-weight: 700; }
+.industry-questions details p { color: var(--muted); margin-top: 8px; }
+.industry-directory { list-style: none; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 12px; }
+.industry-directory a, .industry-related a { display: flex; justify-content: space-between; gap: 8px; padding: 12px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; font-weight: 600; }
+.industry-directory a:hover, .industry-related a:hover { border-color: var(--primary); color: var(--primary); }
+.industry-related { display: flex; flex-wrap: wrap; gap: 10px; }
+.industry-next { margin-top: 20px; color: var(--muted); }
+.industry-next a { color: var(--primary); text-decoration: underline; }

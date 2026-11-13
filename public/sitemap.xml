@@ -1,111 +1,28 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-
-  <!-- Homepage -->
-  <url>
-    <loc>https://icssbookings.com/</loc>
-    <lastmod>2026-04-24</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>1.0</priority>
-  </url>
-
-  <!-- Website builder playground -->
-  <url>
-    <loc>https://icssbookings.com/playground</loc>
-    <lastmod>2026-10-16</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>
-
-  <!-- Pricing / Setup -->
-  <url>
-    <loc>https://icssbookings.com/platform-setup.html</loc>
-    <lastmod>2026-04-24</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.9</priority>
-  </url>
-
-  <!-- FAQ -->
-  <url>
-    <loc>https://icssbookings.com/faq</loc>
-    <lastmod>2026-05-05</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>
-
-  <!-- Terms -->
-  <url>
-    <loc>https://icssbookings.com/terms</loc>
-    <lastmod>2026-05-05</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-
-  <url>
-    <loc>https://icssbookings.com/whatsapp-terms</loc>
-    <lastmod>2026-11-11</lastmod>
-  </url>
-
-  <!-- Industry Landing Pages -->
-  <url>
-    <loc>https://icssbookings.com/industries/barbers</loc>
-    <lastmod>2026-04-24</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://icssbookings.com/industries/salons</loc>
-    <lastmod>2026-04-24</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://icssbookings.com/industries/nail-techs</loc>
-    <lastmod>2026-04-24</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://icssbookings.com/industries/photographers</loc>
-    <lastmod>2026-04-24</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://icssbookings.com/industries/clinics</loc>
-    <lastmod>2026-04-24</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://icssbookings.com/industries/mechanics</loc>
-    <lastmod>2026-04-24</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://icssbookings.com/industries/fitness</loc>
-    <lastmod>2026-04-24</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://icssbookings.com/industries/wellness-spa</loc>
-    <lastmod>2026-04-24</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://icssbookings.com/industries/events</loc>
-    <lastmod>2026-04-24</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://icssbookings.com/industries/legal</loc>
-    <lastmod>2026-04-24</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>
-
+  <url><loc>https://icssbookings.com/</loc><lastmod>2026-11-13</lastmod></url>
+  <url><loc>https://icssbookings.com/industries</loc><lastmod>2026-11-13</lastmod></url>
+  <url><loc>https://icssbookings.com/playground</loc><lastmod>2026-10-16</lastmod></url>
+  <url><loc>https://icssbookings.com/faq</loc><lastmod>2026-05-05</lastmod></url>
+  <url><loc>https://icssbookings.com/terms</loc><lastmod>2026-05-05</lastmod></url>
+  <url><loc>https://icssbookings.com/whatsapp-terms</loc><lastmod>2026-11-11</lastmod></url>
+  <url><loc>https://icssbookings.com/industries/barbers</loc><lastmod>2026-11-13</lastmod></url>
+  <url><loc>https://icssbookings.com/industries/car-rental</loc><lastmod>2026-11-13</lastmod></url>
+  <url><loc>https://icssbookings.com/industries/catering</loc><lastmod>2026-11-13</lastmod></url>
+  <url><loc>https://icssbookings.com/industries/cleaning</loc><lastmod>2026-11-13</lastmod></url>
+  <url><loc>https://icssbookings.com/industries/clinics</loc><lastmod>2026-11-13</lastmod></url>
+  <url><loc>https://icssbookings.com/industries/detailing</loc><lastmod>2026-11-13</lastmod></url>
+  <url><loc>https://icssbookings.com/industries/events</loc><lastmod>2026-11-13</lastmod></url>
+  <url><loc>https://icssbookings.com/industries/fitness</loc><lastmod>2026-11-13</lastmod></url>
+  <url><loc>https://icssbookings.com/industries/home-repairs</loc><lastmod>2026-11-13</lastmod></url>
+  <url><loc>https://icssbookings.com/industries/landscaping</loc><lastmod>2026-11-13</lastmod></url>
+  <url><loc>https://icssbookings.com/industries/legal</loc><lastmod>2026-11-13</lastmod></url>
+  <url><loc>https://icssbookings.com/industries/mechanics</loc><lastmod>2026-11-13</lastmod></url>
+  <url><loc>https://icssbookings.com/industries/musicians</loc><lastmod>2026-11-13</lastmod></url>
+  <url><loc>https://icssbookings.com/industries/nail-techs</loc><lastmod>2026-11-13</lastmod></url>
+  <url><loc>https://icssbookings.com/industries/party-rentals</loc><lastmod>2026-11-13</lastmod></url>
+  <url><loc>https://icssbookings.com/industries/photographers</loc><lastmod>2026-11-13</lastmod></url>
+  <url><loc>https://icssbookings.com/industries/salons</loc><lastmod>2026-11-13</lastmod></url>
+  <url><loc>https://icssbookings.com/industries/tutoring</loc><lastmod>2026-11-13</lastmod></url>
+  <url><loc>https://icssbookings.com/industries/wellness-spa</loc><lastmod>2026-11-13</lastmod></url>
 </urlset>

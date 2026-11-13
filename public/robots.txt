@@ -5,7 +5,6 @@ Allow: /$
 Allow: /industries/
 Allow: /faq
 Allow: /terms
-Allow: /platform-setup.html
 
 # Block internal app routes
 Disallow: /onboarding
@@ -25,8 +24,5 @@ Disallow: /api/
 
 # Block template previews (internal)
 Disallow: /Template/
-
-# Block query string duplicates
-Disallow: /*?*
 
 Sitemap: https://icssbookings.com/sitemap.xml
