@@ -70,18 +70,29 @@ staffRouter.use(noCache, authenticate, requirePlatformOwner, async (req, res, ne
     }
     next();
 });
+const bookingEmailStatus = `
+    SELECT c.*, email.status AS email_status FROM consultations c
+    LEFT JOIN LATERAL (
+        SELECT CASE WHEN COUNT(*) FILTER (WHERE e.status='failed') > 0 THEN 'failed'
+                    WHEN COUNT(*) FILTER (WHERE e.status='sending') > 0 THEN 'sending'
+                    WHEN COUNT(*) FILTER (WHERE e.status='pending') > 0 THEN 'pending'
+                    WHEN COUNT(*) FILTER (WHERE e.status='sent') > 0 THEN 'sent' END AS status
+        FROM email_outbox e
+        WHERE e.dedupe_key = 'consultation:' || c.id::text || ':' || c.version::text
+           OR (c.status='pending' AND e.dedupe_key LIKE 'consultation_request:' || c.id::text || ':' || c.version::text || ':%')
+    ) email ON true`;
+
 staffRouter.get('/', async (req, res) => {
     const { status = 'upcoming', host = 'any' } = req.query;
     checkedHost(host, true);
-    if (!['upcoming', 'all', 'confirmed', 'completed', 'cancelled', 'no_show'].includes(status)) fail(400, 'Invalid status filter.');
+    if (!['upcoming', 'pending', 'all', 'confirmed', 'completed', 'cancelled', 'no_show'].includes(status)) fail(400, 'Invalid status filter.');
     const page = Math.max(1, Math.min(100000, Number.parseInt(req.query.page, 10) || 1));
     const [hosts, { rows }] = await Promise.all([
         loadHosts(db),
-        query(`SELECT c.*, e.status AS email_status FROM consultations c
-            LEFT JOIN email_outbox e ON e.dedupe_key = 'consultation:' || c.id::text || ':' || c.version::text
+        query(`${bookingEmailStatus}
             WHERE ($1='any' OR ($1='both' AND c.joint) OR
                    ($1 IN ('shamar', 'jemelia') AND (c.host_id=$1 OR c.joint)))
-              AND ($2='all' OR c.status=$2 OR ($2='upcoming' AND c.status='confirmed' AND c.starts_at>=NOW()))
+              AND ($2='all' OR c.status=$2 OR ($2='upcoming' AND c.status IN ('pending','confirmed') AND c.starts_at>=NOW()))
             ORDER BY CASE WHEN $2='upcoming' THEN c.starts_at END ASC, c.starts_at DESC, c.id
             LIMIT 26 OFFSET $3`, [host, status, (page - 1) * 25])
     ]);
@@ -107,6 +118,13 @@ staffRouter.put('/hosts/:id', async (req, res) => {
     await query('UPDATE consultation_hosts SET enabled=$2,hours=$3,blocked_dates=$4,meeting_url=$5 WHERE id=$1',
         [id, schedule.enabled, JSON.stringify(schedule.hours), schedule.blockedDates, schedule.meetingUrl]);
     res.json({ success: true });
+});
+staffRouter.get('/:id', async (req, res) => {
+    const id = req.params.id;
+    if (!/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(id)) fail(404, 'Consultation not found.');
+    const { rows: [booking] } = await query(`${bookingEmailStatus} WHERE c.id=$1`, [id]);
+    if (!booking) fail(404, 'Consultation not found.');
+    res.json({ booking });
 });
 staffRouter.patch('/:id', async (req, res) => {
     const booking = await changeBooking(req.params.id, req.body || {}, req.user.id);

@@ -7,7 +7,7 @@ import { addToCalendar, dateLabel, timeLabel } from './format';
 import s from './Consultations.module.css';
 
 const blankIntake = { name: '', email: '', company: '', topic: '', details: '' };
-const statusLabels = { confirmed: 'Confirmed', cancelled: 'Cancelled', completed: 'Completed', no_show: 'Missed' };
+const statusLabels = { pending: 'Awaiting confirmation', confirmed: 'Confirmed', cancelled: 'Cancelled', completed: 'Completed', no_show: 'Missed' };
 
 export default function ConsultationPage() {
   useNoIndex();
@@ -79,7 +79,7 @@ export default function ConsultationPage() {
     }
   }
 
-  const canManage = booking?.status === 'confirmed' && Date.parse(booking.startsAt) > Date.now();
+  const canManage = ['pending', 'confirmed'].includes(booking?.status) && Date.parse(booking.startsAt) > Date.now();
   const intakeField = key => ({ value: intake[key], onChange: event => setIntake({ ...intake, [key]: event.target.value }) });
 
   return <div className={s.page}>
@@ -111,19 +111,20 @@ export default function ConsultationPage() {
         {!ready && !loadError && <p role="status" className={s.muted}>Loading consultations…</p>}
         {ready && booking && !rescheduling && <>
           <span className={s.bookingStatus}>{statusLabels[booking.status]}</span>
-          <h2>{booking.status === 'confirmed' ? 'You’re all set.' : 'Consultation details'}</h2>
+          <h2>{booking.status === 'pending' ? 'Request received.' : booking.status === 'confirmed' ? 'You’re all set.' : 'Consultation details'}</h2>
           <div className={s.summary}>
             <strong>{booking.topic}</strong>
             <span>With {booking.host}</span>
             <span>{dateLabel(booking.startsAt)} · {timeLabel(booking.startsAt)} Jamaica time</span>
             <span>Reference {booking.reference}</span>
           </div>
-          {canManage && <p className={s.muted}>{booking.meetingUrl
+          {booking.status === 'pending' && <p className={s.muted}>We’re holding your selected time. Once the ICSS Bookings team confirms it, you’ll receive an email with your date, time, and Google Meet link.</p>}
+          {canManage && booking.status === 'confirmed' && <p className={s.muted}>{booking.meetingUrl
             ? 'Use your meeting link when it’s time to join.'
             : 'The ICSS Bookings team will email you the joining details.'}</p>}
           {canManage && <div className={s.links}>
             {booking.meetingUrl && <a href={booking.meetingUrl} target="_blank" rel="noreferrer">Join consultation ↗</a>}
-            <a href={addToCalendar(booking, calendar.duration)} target="_blank" rel="noreferrer">Add to Google Calendar ↗</a>
+            {booking.status === 'confirmed' && <a href={addToCalendar(booking, calendar.duration)} target="_blank" rel="noreferrer">Add to Google Calendar ↗</a>}
             {token && !manage && <Link to={`/consultation/manage#${token}`}>Manage booking</Link>}
             {manage && <><button type="button" onClick={() => { setRescheduling(true); setError(''); }}>Reschedule</button>
               <button type="button" disabled={busy} onClick={() => { if (window.confirm('Cancel this consultation?')) submit('cancel'); }}>Cancel consultation</button></>}
@@ -131,6 +132,7 @@ export default function ConsultationPage() {
         </>}
         {ready && (!booking || rescheduling) && <>
           <h2>{rescheduling ? 'Choose a new time' : 'Book a consultation'}</h2>
+          {!rescheduling && <p className={s.muted}>Choose a time to request. We’ll email your Google Meet link once we confirm.</p>}
           {!calendar.hosts.length ? <p className={s.muted}>Online booking is currently closed. Check back for new times.</p> :
             <form className={s.form} onSubmit={event => { event.preventDefault(); if (startsAt) submit(rescheduling ? 'reschedule' : ''); }}>
               <ConsultationSlots {...{ calendar, host, setHost, date, setDate, startsAt, setStartsAt, revision }} getSlots={api.consultations.slots} />
@@ -147,7 +149,7 @@ export default function ConsultationPage() {
                 <label>Anything we should know? <span>Optional</span><textarea rows={3} maxLength={1500}
                   placeholder="A little about your goals or what you need help with" {...intakeField('details')} /></label>
               </>}
-              <button type="submit" className={s.primary} disabled={!startsAt || busy}>{busy ? 'Saving…' : rescheduling ? 'Confirm new time' : 'Confirm consultation'} <span aria-hidden="true">→</span></button>
+              <button type="submit" className={s.primary} disabled={!startsAt || busy}>{busy ? 'Saving…' : rescheduling ? 'Save new time' : 'Request consultation'} <span aria-hidden="true">→</span></button>
               {rescheduling && <button type="button" className={s.secondary} disabled={busy}
                 onClick={() => { setRescheduling(false); setError(''); }}>Back to consultation</button>}
             </form>}

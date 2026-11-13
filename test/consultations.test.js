@@ -105,27 +105,53 @@ test('consultation booking, shared host management, and private client changes',
         assert.equal(list.bookings[0].details, 'Private project details');
 
         const { processEmailOutbox } = require('../server/services/emailOutbox');
-        await processEmailOutbox({ data: jobs[0] });
-        assert.equal(sent.length, 1);
-        assert.match(sent[0].text, /\/consultation\/manage#/);
-        assert.ok(sent[0].text.includes(first.token));
-
         const id = list.bookings[0].id;
+        const approve = (token, meetingUrl, version = 1, bookingId = id) => call('/staff/' + bookingId, {
+            token, method: 'PATCH', body: { action: 'confirm', meetingUrl, version }
+        });
+        const meet = 'https://meet.google.com/abc-defg-hij';
+        assert.equal(first.booking.status, 'pending');
+        assert.equal(first.booking.meetingUrl, '');
+        assert.equal((await call('/staff/' + id)).status, 401);
+        assert.equal((await call('/staff/' + id, { token: unrelated })).status, 403);
+        assert.equal((await call('/staff/' + id, { token: jemelia })).body.booking.id, id);
+        assert.equal(jobs.length, 2);
+        await Promise.all(jobs.slice().map(data => processEmailOutbox({ data })));
+        assert.deepEqual(sent.flatMap(message => message.to).sort(), ['jemelia.peart@gmail.com', 'owner@example.test']);
+        assert.ok(sent.every(message => message.text.includes('/platform?consultation=' + id)));
+        assert.ok(sent.every(message => !message.text.includes(first.token)));
+
         const jointSlots = (await call(`/public/slots?host=both&date=${date}`)).body.slots;
         assert.deepEqual(jointSlots, slots.slice(1));
+        const manage = body => call('/public/manage', { method: 'POST', body });
+        assert.equal((await manage({ token: first.token + 'x' })).status, 404);
+        assert.equal((await manage({ token: first.token, action: 'confirm', meetingUrl: meet })).status, 400);
+        assert.equal((await approve(unrelated, meet)).status, 403);
+        assert.equal((await approve(jemelia, 'https://example.test/meeting')).status, 400);
+        assert.equal(jobs.length, 2);
+        const approvals = await Promise.all([approve(jemelia, meet + '?authuser=1'), approve(owner, meet)]);
+        assert.ok(approvals.every(result => result.status === 200 && result.body.booking.status === 'confirmed'));
+        assert.equal(jobs.length, 3, 'confirmation queues exactly one email even if both hosts submit');
+        await processEmailOutbox({ data: jobs[2] });
+        const confirmation = sent.at(-1);
+        assert.equal(sent.length, 3);
+        assert.equal(confirmation.to[0], list.bookings[0].email);
+        assert.match(confirmation.subject, /consultation is confirmed/);
+        assert.match(confirmation.text, /Jamaica time/);
+        assert.ok(confirmation.text.includes(meet));
+        assert.ok(confirmation.text.includes(first.token));
+        assert.equal((await call('/staff/' + id, { token: owner })).body.booking.email_status, 'sent');
+
         const move = await call('/staff/' + id, { token: jemelia, method: 'PATCH',
             body: { action: 'reschedule', host: 'jemelia', startsAt: slots[1] } });
         assert.equal(move.status, 200);
         assert.equal(move.body.booking.host_id, 'jemelia');
-        const manage = body => call('/public/manage', { method: 'POST', body });
-        assert.equal((await manage({ token: first.token + 'x' })).status, 404);
-        assert.equal((await manage({ token: first.token, action: 'notes' })).status, 400);
-        assert.equal((await manage({ token: first.token })).body.booking.host, 'Jemelia Peart');
+        assert.equal((await manage({ token: first.token })).body.booking.meetingUrl, meet);
         assert.equal((await manage({ token: first.token, action: 'cancel' })).body.booking.status, 'cancelled');
-        await processEmailOutbox({ data: jobs[1] });
-        assert.equal(sent.length, 1, 'obsolete reschedule email is suppressed');
-        await processEmailOutbox({ data: jobs[2] });
-        assert.match(sent[1].subject, /cancelled/);
+        await processEmailOutbox({ data: jobs[3] });
+        assert.equal(sent.length, 3, 'obsolete reschedule email is suppressed');
+        await processEmailOutbox({ data: jobs[4] });
+        assert.match(sent.at(-1).subject, /cancelled/);
         assert.ok((await call(`/public/slots?host=jemelia&date=${date}`)).body.slots.includes(slots[1]));
 
         const race = await Promise.all([
@@ -142,12 +168,8 @@ test('consultation booking, shared host management, and private client changes',
         assert.equal(joint.status, 201);
         assert.equal(joint.body.booking.hostId, 'both');
         assert.equal(joint.body.booking.host, 'Shamar Baker and Jemelia Peart');
-        assert.equal(joint.body.booking.meetingUrl, 'https://example.test/meeting');
-        const jointJob = jobs.at(-1);
-        await processEmailOutbox({ data: jointJob });
-        assert.match(sent.at(-1).subject, /ICSS Bookings/);
-        assert.match(sent.at(-1).text, /Shamar Baker and Jemelia Peart/);
-
+        assert.equal(joint.body.booking.status, 'pending');
+        assert.equal(joint.body.booking.meetingUrl, '');
         for (const host of ['shamar', 'jemelia', 'any', 'both']) {
             const available = await call(`/public/slots?host=${host}&date=${date}`);
             assert.equal(available.body.slots.includes(slots[1]), false);
@@ -165,6 +187,12 @@ test('consultation booking, shared host management, and private client changes',
         assert.ok(ownSlot.body.slots.includes(slots[1]));
         const movedJoint = await manage({ token: joint.body.token, action: 'reschedule', host: 'both', startsAt: slots[2] });
         assert.equal(movedJoint.body.booking.hostId, 'both');
+        assert.equal(movedJoint.body.booking.status, 'pending');
+        assert.equal((await approve(owner, meet, jointRecord.version, jointRecord.id)).status, 409);
+        const moved = (await call('/staff/' + jointRecord.id, { token: owner })).body.booking;
+        assert.equal((await approve(owner, meet, moved.version, jointRecord.id)).status, 200);
+        await processEmailOutbox({ data: jobs.at(-1) });
+        assert.match(sent.at(-1).text, /Shamar Baker and Jemelia Peart/);
         assert.ok((await call(`/public/slots?host=both&date=${date}`)).body.slots.includes(slots[1]));
         assert.equal((await manage({ token: joint.body.token, action: 'cancel' })).status, 200);
         assert.ok((await call(`/public/slots?host=both&date=${date}`)).body.slots.includes(slots[2]));

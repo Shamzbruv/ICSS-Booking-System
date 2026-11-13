@@ -32,13 +32,23 @@ async function migrateConsultations(client) {
         ON consultations (host_id, starts_at) WHERE status = 'confirmed'
     `);
     await client.query(`ALTER TABLE consultations ADD COLUMN IF NOT EXISTS joint BOOLEAN NOT NULL DEFAULT false`);
+    await client.query(`DO $$ BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_constraint
+            WHERE conrelid='consultations'::regclass AND conname='consultations_approval_status_check') THEN
+            ALTER TABLE consultations DROP CONSTRAINT IF EXISTS consultations_status_check;
+            ALTER TABLE consultations ADD CONSTRAINT consultations_approval_status_check
+                CHECK (status IN ('pending','confirmed','cancelled','completed','no_show'));
+        END IF;
+    END $$`);
+    await client.query(`ALTER TABLE consultations ADD COLUMN IF NOT EXISTS confirmed_by UUID REFERENCES users(id) ON DELETE SET NULL`);
+    await client.query(`ALTER TABLE consultations ADD COLUMN IF NOT EXISTS confirmed_at TIMESTAMPTZ`);
     await client.query(`
-        CREATE UNIQUE INDEX IF NOT EXISTS consultation_shamar_slot ON consultations (starts_at)
-        WHERE status = 'confirmed' AND (host_id = 'shamar' OR joint)
+        CREATE UNIQUE INDEX IF NOT EXISTS consultation_shamar_hold ON consultations (starts_at)
+        WHERE status IN ('pending','confirmed') AND (host_id = 'shamar' OR joint)
     `);
     await client.query(`
-        CREATE UNIQUE INDEX IF NOT EXISTS consultation_jemelia_slot ON consultations (starts_at)
-        WHERE status = 'confirmed' AND (host_id = 'jemelia' OR joint)
+        CREATE UNIQUE INDEX IF NOT EXISTS consultation_jemelia_hold ON consultations (starts_at)
+        WHERE status IN ('pending','confirmed') AND (host_id = 'jemelia' OR joint)
     `);
     await client.query(`CREATE INDEX IF NOT EXISTS consultation_start ON consultations (starts_at DESC)`);
 }

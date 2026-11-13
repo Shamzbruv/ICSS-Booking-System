@@ -73,7 +73,8 @@
     ]],
     'platform:consultations': ['Consultations', 'Manage both consultant calendars and share a single booking page.', [
       ['Publish hours', 'Open Availability, select the days and times you can meet, and turn on Accept online bookings. You can also block individual dates or add a meeting link.'],
-      ['Share the page', 'Copy the client booking link. Clients can choose a consultant or the first available appointment.'],
+      ['Share the page', 'Copy the client booking link. Clients can choose either consultant, the first available appointment, or a joint meeting.'],
+      ['Confirm a request', 'Open the request from your team email or the workspace. Create a Google Meet link in the prefilled Google Calendar event, paste the joining link into the request and select Confirm & email client.'],
       ['Manage appointments', 'Open a booking to see the client’s details, leave internal notes, reschedule or switch hosts, and update the status.']
     ]],
     'platform:tenants': ['Tenants', 'Find a business and use the management actions authorized for your platform role.', [
