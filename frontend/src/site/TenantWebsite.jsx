@@ -38,9 +38,26 @@ function useGoogleFonts(fonts) {
   }, [key]);
 }
 
-function useSeo(site, tenantName) {
+function useSeo(site, tenant, page, preview) {
+  const { name, slug, isDemo } = tenant;
   useEffect(() => {
-    const title = site.seo?.title || [site.brand?.name || tenantName, site.brand?.tagline].filter(Boolean).join(' — ');
+    const manifest = document.getElementById('tenant-seo');
+    if (manifest && !preview && !isDemo) {
+      const seo = JSON.parse(manifest.textContent);
+      const current = seo.slug === slug && seo.pages[page];
+      if (current) {
+        document.title = current.title;
+        document.querySelector('link[rel="canonical"]')?.setAttribute('href', current.url);
+        for (const [selector, value] of [
+          ['meta[name="description"]', current.description], ['meta[name="robots"]', current.robots],
+          ['meta[property="og:title"]', current.title], ['meta[property="og:description"]', current.description],
+          ['meta[property="og:url"]', current.url], ['meta[name="twitter:title"]', current.title],
+          ['meta[name="twitter:description"]', current.description]
+        ]) document.querySelector(selector)?.setAttribute('content', value);
+        return;
+      }
+    }
+    const title = site.seo?.title || [site.brand?.name || name, site.brand?.tagline].filter(Boolean).join(' — ');
     if (title) document.title = title;
     const description = site.seo?.description || site.brand?.tagline;
     if (description) {
@@ -52,7 +69,7 @@ function useSeo(site, tenantName) {
       }
       meta.content = description.slice(0, 300);
     }
-  }, [site.seo?.title, site.seo?.description, site.brand?.name, site.brand?.tagline, tenantName]);
+  }, [site.seo?.title, site.seo?.description, site.brand?.name, site.brand?.tagline, name, slug, isDemo, page, preview]);
 }
 
 function useReveal(rootRef, enabled, deps) {
@@ -118,7 +135,7 @@ export default function TenantWebsite({ tenant, services, themeKey, savedSite, b
   const onePage = site.layoutMode === 'onepage';
 
   useGoogleFonts([site.style.headingFont, site.style.bodyFont]);
-  useSeo(site, tenant.name);
+  useSeo(site, tenant, currentPage.id, preview);
 
   // ── Builder bridge (preview only) ─────────────────────────────────────────
   const latest = useRef({});

@@ -9,6 +9,12 @@
 
 // ── Media guidance shown next to every upload field ──────────────────────────
 export const MEDIA_GUIDE = {
+  shareImage: {
+    ratio: '1.9:1 landscape',
+    size: '1200 × 630 px',
+    format: 'JPG, PNG or WebP',
+    tip: 'Optional. Add a custom image for shared links, or leave it blank to use your logo.'
+  },
   heroImage: {
     ratio: '16:9 landscape',
     size: '1920 × 1080 px (minimum 1600 × 900)',
@@ -261,7 +267,9 @@ export const GLOBAL_FIELDS = {
     toggle('autoplay', 'Try to start automatically (falls back to a play button)')
   ],
   seo: [
-    text('title', 'Browser tab / Google title'), area('description', 'Google description (150 characters)')
+    text('title', 'Search title (optional)'), area('description', 'Search description (optional)'),
+    media('shareImageUrl', 'Link preview image (optional)', 'image', 'shareImage'),
+    toggle('noIndex', 'Hide this website from search engines')
   ],
   footer: [area('text', 'Footer text')],
   booking: [
@@ -338,7 +346,7 @@ const BASE_SITE = {
   contact: { phone: '', whatsapp: '', email: '', address: '', mapQuery: '' },
   social: {},
   music: { enabled: false, url: '', title: '', volume: 0.35, autoplay: true },
-  seo: { title: '', description: '' },
+  seo: { title: '', description: '', shareImageUrl: '', noIndex: false },
   footer: { text: '' },
   policies: {
     bookingTerms: 'Please arrive on time for your appointment. If you need to cancel or reschedule, let us know at least 24 hours in advance. Late arrivals may have a shortened appointment, and missed appointments or late cancellations may lose any deposit paid.'

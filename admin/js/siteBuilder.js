@@ -820,7 +820,7 @@
                 ['social', 'Social links', 'Paste the full link to each profile.'],
                 ['booking', 'Booking form', 'The logo, business name and tagline come from Brand & logo; location comes from Contact details. Photos, badges, notes and staff here update the booking form. Save as a draft and Publish when ready.'],
                 ['policies', 'Booking terms', 'Customers must tick a box accepting this policy (plus the ICSS Terms & Conditions) before they can book.'],
-                ['seo', 'Google & sharing', 'What appears in Google results and link previews.'],
+                ['seo', 'Google & sharing', 'Published pages use your business details for search and your logo for link previews. Add a custom title, description or preview image here, then publish your changes.'],
                 ['footer', 'Footer', '']
             ];
             groups.forEach(([key, title, hint], index) => {
@@ -884,7 +884,7 @@
 
         renderGuideTable() {
             const guide = this.catalog.mediaGuide;
-            const labels = { heroImage: 'Hero photo', heroMobileImage: 'Hero photo (phones)', heroVideo: 'Hero / background video', poster: 'Video poster', bannerImage: 'Page banners', featureImage: 'Text + image photos', galleryImage: 'Gallery photos', teamPhoto: 'Team photos', logo: 'Logo', music: 'Theme music' };
+            const labels = { heroImage: 'Hero photo', heroMobileImage: 'Hero photo (phones)', heroVideo: 'Hero / background video', poster: 'Video poster', bannerImage: 'Page banners', featureImage: 'Text + image photos', galleryImage: 'Gallery photos', teamPhoto: 'Team photos', logo: 'Logo', shareImage: 'Link preview image', music: 'Theme music' };
             return h('details', { class: 'sb-group', open: true }, h('summary', { text: '📐 Size & quality guide' }),
                 h('p', { class: 'sb-hint', text: 'Follow these sizes for sharp results that still load fast on phones. Photos you upload are automatically resized and compressed.' }),
                 h('div', { class: 'sb-guide-table' }, Object.entries(guide).map(([key, g]) => h('div', { class: 'sb-guide-row' },

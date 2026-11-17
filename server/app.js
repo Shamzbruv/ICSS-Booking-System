@@ -105,6 +105,11 @@ app.get('/Template/:file', (req, res, next) => {
 app.use('/Template', express.static(path.join(__dirname, '../Template')));
 
 const publicDir = path.join(__dirname, '../public');
+const frontendDist = path.join(__dirname, '../frontend/dist');
+const { APP_ROUTES } = require('./services/tenantSeo');
+const { createTenantSiteHandlers } = require('./routes/tenantSites');
+const tenantSites = createTenantSiteHandlers(frontendDist, publicDir);
+app.get('/sitemap.xml', tenantSites.sitemap);
 app.get('/index.html', (req, res) => res.redirect(308, '/'));
 app.get('/industries', (req, res) => {
     if (req.path.endsWith('/')) return res.redirect(308, '/industries');
@@ -121,7 +126,6 @@ app.use('/', express.static(publicDir, {
 }));
 
 // Serve the compiled React application (SPA)
-const frontendDist = path.join(__dirname, '../frontend/dist');
 app.use(express.static(frontendDist));
 
 // ─── API Routes ───────────────────────────────────────────────────────────────
@@ -157,22 +161,17 @@ app.get('/health', (req, res) => {
     });
 });
 
-app.use(['/consultation', '/consultation/manage'], (req, res, next) => {
+// Internal SPA pages and demo templates are excluded before any tenant lookup.
+app.get(new RegExp(`^/(?:${APP_ROUTES.join('|')})(?:/|$)`), (req, res) => {
     res.set({ 'X-Robots-Tag': 'noindex, nofollow', 'Referrer-Policy': 'no-referrer' });
-    next();
-});
-
-// ─── React SPA Fallback ───────────────────────────────────────────────────────
-// Serve React SPA for app routes. Static public pages (/, /industries/*, /faq, /terms)
-// are already handled above by express.static(public) — so exclude them here.
-app.get(/^\/(?!api\/|admin\/|admin$|Template\/|media\/|health$|industries\/|industries$|faq|terms|sitemap\.xml|robots\.txt|favicon|logo)/, (req, res) => {
-    if (/^\/demo(?:\/|$)/.test(req.path) || req.query.preview === '1') {
-        res.set('X-Robots-Tag', 'noindex, follow');
-    }
     res.sendFile(path.join(frontendDist, 'index.html'));
 });
 
-// ─── 404 Handler (API only now) ──────────────────────────────────────────────
+// Public tenant websites get their own HTML metadata before React starts.
+app.get(/^\/([a-z0-9-]{2,50})\/(share-card\.png|site-logo\.png)$/, tenantSites.shareCard);
+app.get(/^\/([a-z0-9-]{2,50})(?:\/(home|about|gallery|book))?\/?$/, tenantSites.tenantPage);
+
+// ─── 404 Handler ──────────────────────────────────────────────
 app.use((req, res) => {
     res.status(404).json({ error: 'Route not found', path: req.path });
 });

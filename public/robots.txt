@@ -7,14 +7,20 @@ Allow: /faq
 Allow: /terms
 
 # Block internal app routes
-Disallow: /onboarding
-Disallow: /themes
-Disallow: /editor
-Disallow: /provisioning
-Disallow: /custom-theme
-Disallow: /platform
-Disallow: /forgot-password
-Disallow: /reset-password
+Disallow: /onboarding$
+Disallow: /onboarding/
+Disallow: /themes$
+Disallow: /themes/
+Disallow: /editor$
+Disallow: /editor/
+Disallow: /provisioning$
+Disallow: /provisioning/
+Disallow: /custom-theme$
+Disallow: /custom-theme/
+Disallow: /platform$
+Disallow: /platform/
+Disallow: /forgot-password$
+Disallow: /reset-password$
 
 # Block admin panel
 Disallow: /admin/
