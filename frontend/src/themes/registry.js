@@ -12,11 +12,13 @@ import ThemePhotography from './ThemePhotography';
 import ThemeUniversal from './ThemeUniversal';
 import ThemeLandscaping from './ThemeLandscaping';
 import ThemeCleaning from './ThemeCleaning';
+import kits from '../site/presets/career-starter-kits.json';
 
 import { ThemePartyRentals, ThemeCarRental, ThemeCatering, ThemeDetailing, ThemeHomeRepairs, ThemeTutoring, ThemeMusicians,
-  ThemeDrivingLessons, ThemePastorMinistry, ThemeCateringEvents, ThemePhotographyVideo, ThemeTutoringCoaching, ThemeHomeServices } from './ThemeLocalServices';
+  ThemeDrivingLessons, ThemePastorMinistry, ThemeCateringEvents, ThemePhotographyVideo, ThemeTutoringCoaching, ThemeHomeServices, TRADE_BOOKING_THEMES } from './ThemeLocalServices';
 
 export const BOOKING_THEMES = {
+  ...TRADE_BOOKING_THEMES,
   'driving-lessons': ThemeDrivingLessons,
   'pastor-ministry': ThemePastorMinistry,
   'catering-events': ThemeCateringEvents,
@@ -46,12 +48,7 @@ export const BOOKING_THEMES = {
 };
 
 const LEGACY_NAMES = {
-  'Harbour Driving School': 'driving-lessons',
-  'Open Door Ministry': 'pastor-ministry',
-  'Island Table Catering': 'catering-events',
-  'Still & Motion Studio': 'photography-video',
-  'Next Step Learning': 'tutoring-coaching',
-  'YardReady Home Services': 'home-services',
+  ...Object.fromEntries(kits.map(kit => [kit.name, kit.key])),
   'Island Sound Music': 'musicians',
   'Island Occasion Rentals': 'party-rentals',
   'Island Drive Rentals': 'car-rental',

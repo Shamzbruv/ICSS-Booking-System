@@ -321,3 +321,6 @@ a:focus-visible { outline: 3px solid var(--primary); outline-offset: 4px; }
 .starter-kit h3 span { color:#5837a3; }
 .starter-kit p { margin:0 16px 17px;line-height:1.55; }
 @media(max-width:470px){ .starter-kits { grid-template-columns:1fr; } }
+
+#trade-starters { scroll-margin-top: 64px; }
+@media(min-width:840px){ .starter-kits.trade-starters { grid-template-columns:repeat(3,minmax(0,1fr)); } }

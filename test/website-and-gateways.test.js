@@ -37,10 +37,18 @@ test('site sanitiser rejects non-objects and oversized documents', () => {
     assert.throws(() => sanitizeSiteConfig({ footer: { text: 'x'.repeat(300 * 1024) } }), /too large/);
 });
 
-test('every template maps to a website preset and a live demo', () => {
+test('every template maps to a website preset and a live demo', async () => {
     const presetIndex = read('frontend/src/site/presets/index.js');
     const registry = read('frontend/src/themes/registry.js');
+    const { TRADE_PRESETS } = await import('../frontend/src/site/presets/trade-starters.js');
+    assert.match(presetIndex, /\.\.\.TRADE_PRESETS/);
+    assert.match(registry, /\.\.\.TRADE_BOOKING_THEMES/);
     for (const key of new Set(Object.values(THEME_KEYS))) {
+        if (TRADE_PRESETS[key]) {
+            assert.equal(TRADE_PRESETS[key].key, key);
+            assert.match(read('public/industries/index.html'), new RegExp(`href="/demo/${key}"`));
+            continue;
+        }
         assert.ok(fs.existsSync(path.join(root, `frontend/src/site/presets/${key}.js`)), `missing preset for ${key}`);
         assert.match(presetIndex, new RegExp(key.includes('-') ? `'${key}'` : `\\b${key}\\b`));
         assert.match(registry, new RegExp(key.includes('-') ? `'${key}'` : `\\b${key}:`));
@@ -50,15 +58,26 @@ test('every template maps to a website preset and a live demo', () => {
     assert.equal(themeKeyForName('Unknown'), 'universal');
 });
 
-test('each preset is individually designed with all four pages', () => {
+test('each preset is individually designed with all four pages', async () => {
     const fonts = new Set();
+    const { TRADE_PRESETS } = await import('../frontend/src/site/presets/trade-starters.js');
+    const tradeHeadlines = new Set();
     for (const key of new Set(Object.values(THEME_KEYS))) {
+        const preset = TRADE_PRESETS[key];
+        if (preset) {
+            assert.deepEqual(preset.site.pages.map(page => page.id), ['home', 'about', 'gallery', 'book']);
+            assert.ok(preset.site.pages[3].sections.some(section => section.type === 'booking'));
+            tradeHeadlines.add(preset.site.pages[0].sections[0].props.headline);
+            fonts.add(preset.site.style.headingFont);
+            continue;
+        }
         const source = read(`frontend/src/site/presets/${key}.js`);
         for (const pageId of ['home', 'about', 'gallery', 'book']) assert.match(source, new RegExp(`page\\('${pageId}'`), `${key} lacks ${pageId}`);
         assert.match(source, /section\('booking-main', 'booking'/, `${key} needs a booking widget`);
         const heading = source.match(/headingFont: '([^']+)'/)[1];
         fonts.add(heading);
     }
+    assert.equal(tradeHeadlines.size, Object.keys(TRADE_PRESETS).length);
     assert.ok(fonts.size >= 8, 'templates should not all share the same typography');
 });
 
