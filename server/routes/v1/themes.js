@@ -6,6 +6,7 @@
 const express = require('express');
 const router = express.Router();
 const { query } = require('../../db/connection');
+const { retiredStarterNames } = require('../../db/careerStarters');
 const { authenticate } = require('../../middleware/auth');
 
 // GET /api/v1/themes - Publicly readable list of available starter kits
@@ -13,7 +14,8 @@ router.get('/', async (req, res) => {
     try {
         const result = await query(
             `SELECT id, name, category, preview_image_url, template_path, visual_config, business_config 
-             FROM themes ORDER BY category ASC, name ASC`
+             FROM themes WHERE NOT (name = ANY($1::text[])) ORDER BY category ASC, name ASC`,
+            [retiredStarterNames]
         );
         res.json({ themes: result.rows });
     } catch (err) {

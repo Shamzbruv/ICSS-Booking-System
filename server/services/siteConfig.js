@@ -79,7 +79,7 @@ const URL_KEY_PATTERN = /(url|href|link|src|poster)$/i;
 function sanitizeUrl(value) {
     const text = String(value || '').trim();
     if (!text) return '';
-    if (/^\/images\/starter-kits\/template-[a-z-]+\.svg$/.test(text)) return text;
+    if (/^\/images\/starter-kits\/(?:template-[a-z-]+\.svg|(?:driving-lessons|pastor-ministry)(?:-(?:detail|mobile))?\.webp)$/.test(text)) return text;
     if (text.startsWith('/media/') && /^\/media\/[0-9a-f-]{36}$/i.test(text)) return text;
     if (/^#[A-Za-z0-9_-]{0,60}$/.test(text)) return text;
     if (/^(mailto|tel):[^\s<>"']{1,200}$/i.test(text)) return text;
