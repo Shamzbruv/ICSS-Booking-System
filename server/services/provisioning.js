@@ -45,9 +45,9 @@ async function seedStarterServices(tenantId, themeId, db = { query }) {
         // Only seed if no services exist
         for (const s of services) {
             await db.query(
-                `INSERT INTO services (tenant_id, name, description, duration_minutes, price, currency)
-                 VALUES ($1, $2, $3, $4, $5, 'JMD')`,
-                [tenantId, s.name, s.description || 'Starter service', s.duration_minutes || 30, s.price || 0]
+                `INSERT INTO services (tenant_id, name, description, duration_minutes, price, currency, active)
+                 VALUES ($1, $2, $3, $4, $5, 'JMD', $6)`,
+                [tenantId, s.name, s.description || 'Starter service', s.duration_minutes || 30, s.price || 0, s.active !== false]
             );
         }
         console.log(`[Provisioning] Seeded ${services.length} starter services for tenant ${tenantId}.`);

@@ -43,6 +43,12 @@
   <script>
     (function () {
       var TEMPLATES = [
+        { key: "driving-lessons", label: "Driving Lessons · Harbour Driving School" },
+        { key: "pastor-ministry", label: "Pastor & Ministry · Open Door Ministry" },
+        { key: "catering-events", label: "Catering & Events · Island Table Catering" },
+        { key: "photography-video", label: "Photography & Video · Still & Motion Studio" },
+        { key: "tutoring-coaching", label: "Tutoring & Coaching · Next Step Learning" },
+        { key: "home-services", label: "Home Services · YardReady Home Services" },
         { key: 'barber', label: 'Barber · Iron & Blade' },
         { key: 'hairdresser', label: 'Hair salon · Blush & Braids' },
         { key: 'nail-tech', label: 'Nail tech · Elegant Nails' },
@@ -74,7 +80,7 @@
         themeKey: theme,
         templates: TEMPLATES,
         previewBase: '/demo/' + theme,
-        ctaHref: '/onboarding',
+        ctaHref: '/onboarding?template=' + encodeURIComponent(theme),
         onReady: function (instance) {
           if (instance._personalised) return;
           instance._personalised = true;
@@ -90,6 +96,7 @@
       var originalSwitch = builder.switchTemplate.bind(builder);
       builder.switchTemplate = function (key) {
         builder.previewBase = '/demo/' + key;
+        if (builder.ctaLink) builder.ctaLink.href = '/onboarding?template=' + encodeURIComponent(key);
         builder._personalised = false;
         originalSwitch(key);
       };

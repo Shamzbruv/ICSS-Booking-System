@@ -13,13 +13,16 @@
  * http(s), a same-origin media path, or an in-page anchor.
  */
 
+const careerKits = require('../../frontend/src/site/presets/career-starter-kits.json');
+
 const MAX_SITE_BYTES = 256 * 1024;
 const MAX_DEPTH = 10;
 const MAX_ARRAY_ITEMS = 80;
 const MAX_STRING = 6000;
 
-// Theme name → website preset key (frontend/src/site/themePresets.js).
+// Theme name → website preset key (frontend/src/site/presets/index.js).
 const THEME_KEYS = {
+    ...Object.fromEntries(careerKits.map(kit => [kit.name, kit.key])),
     'Island Sound Music': 'musicians',
     'Island Occasion Rentals': 'party-rentals',
     'Island Drive Rentals': 'car-rental',
@@ -76,6 +79,7 @@ const URL_KEY_PATTERN = /(url|href|link|src|poster)$/i;
 function sanitizeUrl(value) {
     const text = String(value || '').trim();
     if (!text) return '';
+    if (/^\/images\/starter-kits\/template-[a-z-]+\.svg$/.test(text)) return text;
     if (text.startsWith('/media/') && /^\/media\/[0-9a-f-]{36}$/i.test(text)) return text;
     if (/^#[A-Za-z0-9_-]{0,60}$/.test(text)) return text;
     if (/^(mailto|tel):[^\s<>"']{1,200}$/i.test(text)) return text;

@@ -1,0 +1,189 @@
+[
+  {
+    "key": "driving-lessons",
+    "name": "Harbour Driving School",
+    "category": "Driving Lessons",
+    "summary": "For instructors and driving schools. Show lesson options, test prep and where you teach.",
+    "art": "/images/starter-kits/template-driving-lessons.svg",
+    "services": [
+      {
+        "name": "Introductory Call",
+        "description": "Discuss your experience, available times, pickup areas and transmission preferences.",
+        "duration_minutes": 15,
+        "price": 0,
+        "active": true
+      },
+      {
+        "name": "Beginner Driving Lesson",
+        "description": "A practical introduction to the controls, moving off and stopping smoothly.",
+        "duration_minutes": 60,
+        "price": 3500,
+        "active": false
+      },
+      {
+        "name": "Refresher Drive",
+        "description": "Practise parking, observation and busier routes at a comfortable pace.",
+        "duration_minutes": 60,
+        "price": 3500,
+        "active": false
+      },
+      {
+        "name": "Road Test Practice",
+        "description": "Work through manoeuvres and agree what to practise before test day.",
+        "duration_minutes": 90,
+        "price": 5000,
+        "active": false
+      }
+    ]
+  },
+  {
+    "key": "pastor-ministry",
+    "name": "Open Door Ministry",
+    "category": "Pastor & Ministry",
+    "summary": "For pastors, churches and ministries. Welcome first-time visitors, share messages and invite speaking enquiries.",
+    "art": "/images/starter-kits/template-pastor-ministry.svg",
+    "services": [
+      {
+        "name": "First Visit Conversation",
+        "description": "Ask about the service schedule, directions or accessibility.",
+        "duration_minutes": 15,
+        "price": 0,
+        "active": true
+      },
+      {
+        "name": "Ministry Introduction",
+        "description": "Talk about the ministry and ways to get involved. Keep sensitive details for private follow-up.",
+        "duration_minutes": 20,
+        "price": 0,
+        "active": true
+      },
+      {
+        "name": "Speaking Invitation Call",
+        "description": "Discuss the event, audience and topic. This does not confirm the pastor for your event.",
+        "duration_minutes": 30,
+        "price": 0,
+        "active": true
+      }
+    ]
+  },
+  {
+    "key": "catering-events",
+    "name": "Island Table Catering",
+    "category": "Catering & Events",
+    "summary": "For caterers, bakers and private chefs. Present menus and invite event quotes.",
+    "art": "/images/starter-kits/template-catering.svg",
+    "services": [
+      {
+        "name": "Event Catering Consultation",
+        "description": "Discuss menus and service for a celebration or gathering.",
+        "duration_minutes": 35,
+        "price": 0,
+        "active": true
+      },
+      {
+        "name": "Corporate Lunch Planning",
+        "description": "Plan food for an office, training session or team event.",
+        "duration_minutes": 25,
+        "price": 0,
+        "active": true
+      },
+      {
+        "name": "Private Dining Consultation",
+        "description": "Discuss the menu, location and style of service.",
+        "duration_minutes": 30,
+        "price": 0,
+        "active": true
+      }
+    ]
+  },
+  {
+    "key": "photography-video",
+    "name": "Still & Motion Studio",
+    "category": "Photography & Video",
+    "summary": "For photographers and videographers. Showcase your style, session options and packages.",
+    "art": "/images/starter-kits/template-photography.svg",
+    "services": [
+      {
+        "name": "Portrait Discovery Call",
+        "description": "Talk through the setting, people and mood for your portraits.",
+        "duration_minutes": 20,
+        "price": 0,
+        "active": true
+      },
+      {
+        "name": "Event Coverage Consultation",
+        "description": "Discuss your dates, venue, timings and photography or film coverage.",
+        "duration_minutes": 30,
+        "price": 0,
+        "active": true
+      },
+      {
+        "name": "Brand Content Planning",
+        "description": "Share the goal, audience and formats needed for a brand shoot.",
+        "duration_minutes": 30,
+        "price": 0,
+        "active": true
+      }
+    ]
+  },
+  {
+    "key": "tutoring-coaching",
+    "name": "Next Step Learning",
+    "category": "Tutoring & Coaching",
+    "summary": "For tutors and learning coaches. Share subjects, lesson formats and exam preparation options.",
+    "art": "/images/starter-kits/template-tutoring.svg",
+    "services": [
+      {
+        "name": "Learning Goals Call",
+        "description": "Discuss the subject, grade or exam and the learner’s goals.",
+        "duration_minutes": 20,
+        "price": 0,
+        "active": true
+      },
+      {
+        "name": "Subject Tutoring Session",
+        "description": "One-to-one support on an agreed subject or topic.",
+        "duration_minutes": 60,
+        "price": 2500,
+        "active": false
+      },
+      {
+        "name": "Exam Preparation Session",
+        "description": "Structured practice for an agreed exam such as PEP or CSEC.",
+        "duration_minutes": 60,
+        "price": 3000,
+        "active": false
+      }
+    ]
+  },
+  {
+    "key": "home-services",
+    "name": "YardReady Home Services",
+    "category": "Home Services",
+    "summary": "For tradespeople and maintenance teams. Explain your services, coverage and how to request a quote.",
+    "art": "/images/starter-kits/template-home-services.svg",
+    "services": [
+      {
+        "name": "Repair Enquiry Call",
+        "description": "Tell us what needs repair and where you’re based.",
+        "duration_minutes": 20,
+        "price": 0,
+        "active": true
+      },
+      {
+        "name": "Installation Planning Call",
+        "description": "Discuss the item, scope, materials and schedule.",
+        "duration_minutes": 25,
+        "price": 0,
+        "active": true
+      },
+      {
+        "name": "Property Maintenance Consultation",
+        "description": "Talk through one-off or ongoing upkeep and whether a visit is needed.",
+        "duration_minutes": 30,
+        "price": 0,
+        "active": true
+      }
+    ]
+  }
+]

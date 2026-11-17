@@ -13,9 +13,16 @@ import ThemeUniversal from './ThemeUniversal';
 import ThemeLandscaping from './ThemeLandscaping';
 import ThemeCleaning from './ThemeCleaning';
 
-import { ThemePartyRentals, ThemeCarRental, ThemeCatering, ThemeDetailing, ThemeHomeRepairs, ThemeTutoring, ThemeMusicians } from './ThemeLocalServices';
+import { ThemePartyRentals, ThemeCarRental, ThemeCatering, ThemeDetailing, ThemeHomeRepairs, ThemeTutoring, ThemeMusicians,
+  ThemeDrivingLessons, ThemePastorMinistry, ThemeCateringEvents, ThemePhotographyVideo, ThemeTutoringCoaching, ThemeHomeServices } from './ThemeLocalServices';
 
 export const BOOKING_THEMES = {
+  'driving-lessons': ThemeDrivingLessons,
+  'pastor-ministry': ThemePastorMinistry,
+  'catering-events': ThemeCateringEvents,
+  'photography-video': ThemePhotographyVideo,
+  'tutoring-coaching': ThemeTutoringCoaching,
+  'home-services': ThemeHomeServices,
   musicians: ThemeMusicians,
   'party-rentals': ThemePartyRentals,
   'car-rental': ThemeCarRental,
@@ -39,6 +46,12 @@ export const BOOKING_THEMES = {
 };
 
 const LEGACY_NAMES = {
+  'Harbour Driving School': 'driving-lessons',
+  'Open Door Ministry': 'pastor-ministry',
+  'Island Table Catering': 'catering-events',
+  'Still & Motion Studio': 'photography-video',
+  'Next Step Learning': 'tutoring-coaching',
+  'YardReady Home Services': 'home-services',
   'Island Sound Music': 'musicians',
   'Island Occasion Rentals': 'party-rentals',
   'Island Drive Rentals': 'car-rental',

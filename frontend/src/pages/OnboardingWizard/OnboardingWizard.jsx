@@ -106,25 +106,45 @@ function StepBasics({ data, onChange, onNext }) {
 }
 
 // ── Step 1: Theme Selection (delegates to ThemeSelector page) ────────────────
-function StepTheme({ data, onChange, onNext, onBack }) {
+function StepTheme({ data, onSelect, preferred, onPreferredUsed, onNext, onBack }) {
   const [themes,setThemes] = useState([]);
   const [loading,setLoading] = useState(true);
   const [error,setError] = useState('');
   const loadThemes = () => { setLoading(true); setError(''); api.themes().then(result=>setThemes(result.themes||[])).catch(()=>setError('We could not load the themes. Please try again.')).finally(()=>setLoading(false)); };
   useEffect(loadThemes,[]);
+  const preferredTheme = preferred ? themes.find(theme => theme.template_path === '/demo/' + preferred) : null;
+  useEffect(() => {
+    if (!preferredTheme) return;
+    onSelect(preferredTheme);
+    onPreferredUsed();
+  }, [preferredTheme, onSelect, onPreferredUsed]);
+  const selectedTheme = themes.find(theme => theme.id === data.themeId);
+  const orderedThemes = selectedTheme ? [selectedTheme, ...themes.filter(theme => theme.id !== selectedTheme.id)] : themes;
   return (
     <>
       <h1 className={s.wizard__title}>Pick your starter theme</h1>
-      <p className={s.wizard__subtitle}>Your theme defines your public booking page style. You can customise it fully in the editor.</p>
-      <div style={{ display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))',gap:10,marginBottom:16 }}>
-        {loading&&<p role="status">Loading themes…</p>}
-        {error&&<div role="alert"><p>{error}</p><button type="button" className={`${s.btn} ${s['btn--ghost']}`} onClick={loadThemes}>Try again</button></div>}
-        {!loading&&!error&&themes.length===0&&<p>No themes are available yet. Please contact support for help.</p>}
-        {themes.map(theme=><button type="button" key={theme.id} aria-pressed={data.themeId===theme.id} onClick={()=>{onChange('themeId',theme.id);onChange('themeName',theme.name)}} style={{padding:14,textAlign:'left',borderRadius:10,border:data.themeId===theme.id?'2px solid #7c6ef7':'1px solid var(--color-border)',background:'var(--color-surface-2)',color:'inherit',cursor:'pointer'}}><strong>{theme.name}</strong><br/><small>{theme.category}</small></button>)}
+      <p className={s.wizard__subtitle}>Preview an entire website with a sample booking flow. After setup, use Website Builder to change the pages, images, colours and wording.</p>
+      <div className={s.starterGrid}>
+        {loading && <p role="status">Loading themes…</p>}
+        {error && <div role="alert"><p>{error}</p><button type="button" className={`${s.btn} ${s['btn--ghost']}`} onClick={loadThemes}>Try again</button></div>}
+        {!loading && !error && !themes.length && <p>No themes are available yet. Please contact support for help.</p>}
+        {orderedThemes.map(theme => (
+          <article className={s.starterCard} key={theme.id} data-selected={data.themeId === theme.id}>
+            {theme.preview_image_url && <img src={theme.preview_image_url} alt="" width="960" height="600" loading="lazy" />}
+            <div className={s.starterBody}>
+              <span>{theme.category}</span><strong>{theme.name}</strong>
+              {theme.visual_config?.summary && <p>{theme.visual_config.summary}</p>}
+              <div className={s.starterActions}>
+                <button type="button" aria-pressed={data.themeId === theme.id} aria-label={`Select ${theme.name}`} onClick={() => onSelect(theme)}>{data.themeId === theme.id ? 'Selected' : 'Select'}</button>
+                {/^\/demo\/[a-z-]+$/.test(theme.template_path || '') && <a href={theme.template_path} target="_blank" rel="noopener">Live preview <span aria-hidden="true">↗</span></a>}
+              </div>
+            </div>
+          </article>
+        ))}
       </div>
       <div className={s.wizard__actions}>
         <button className={`${s.btn} ${s['btn--ghost']}`} onClick={onBack}>← Back</button>
-        <button className={`${s.btn} ${s['btn--primary']}`} onClick={onNext} disabled={!data.themeId}>
+        <button className={`${s.btn} ${s['btn--primary']}`} onClick={onNext} disabled={!selectedTheme}>
           Launch Subscription →
         </button>
       </div>
@@ -292,8 +312,13 @@ const SAFE_FIELDS = ['businessName', 'ownerName', 'email', 'themeId', 'themeName
 
 export default function OnboardingWizard() {
   const navigate = useNavigate();
+  const [preferred, setPreferred] = useState(() => {
+    const key = new URLSearchParams(window.location.search).get('template') || '';
+    return /^[a-z-]{1,48}$/.test(key) ? key : '';
+  });
 
   const [step, setStep] = useState(() => {
+    if (preferred) return 0;
     try {
       const saved = localStorage.getItem(PERSIST_KEY);
       return saved ? (JSON.parse(saved).step ?? 0) : 0;
@@ -336,13 +361,14 @@ export default function OnboardingWizard() {
   }, []);
 
   const onChange = (key, value) => setData(d => ({ ...d, [key]: value }));
+  const selectTheme = (theme) => setData(d => ({ ...d, themeId: theme.id, themeName: theme.name }));
   const onNext   = () => setStep(s => Math.min(s + 1, TOTAL_STEPS));
   const onBack   = () => setStep(s => Math.max(s - 1, 0));
 
   const renderStep = () => {
     switch (step) {
       case 0: return <StepBasics  data={data} onChange={onChange} onNext={onNext} />;
-      case 1: return <StepTheme data={data} onChange={onChange} onNext={onNext} onBack={onBack} />;
+      case 1: return <StepTheme data={data} onSelect={selectTheme} preferred={preferred} onPreferredUsed={() => setPreferred('')} onNext={onNext} onBack={onBack} />;
       case 2: return <StepPayPal  data={data} onNext={onNext} />;
       case 3: return <StepSuccess navigate={navigate} />;
       default: return null;

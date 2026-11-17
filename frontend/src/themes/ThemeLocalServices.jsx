@@ -3,6 +3,31 @@ import SharedBookingTheme from './SharedBookingTheme';
 const field = (name, label, type = 'text', required = false) => ({ name, label, noteLabel: label, type, required });
 const rentalFields = [field('hireFrom', 'Requested rental start', 'date', true), field('hireUntil', 'Requested rental end', 'date', true)];
 const configurations = {
+  drivingLessons: { name: 'driving-lessons', color: '#9d3a1b', title: 'Choose a lesson or introductory call', fields: [
+    { ...field('transmission', 'Transmission preference', 'select', true), options: ['', 'Automatic', 'Manual', 'No preference'].map(value => ({ value, label: value || 'Select your preference' })) },
+    field('area', 'Parish & pickup community', 'text', true),
+    field('experience', 'Driving experience and what you want to practise', 'textarea', true),
+    field('testDate', 'Road test date (if scheduled)', 'date')
+  ], note: 'Your instructor confirms the pickup point and vehicle. Do not enter your permit number.' },
+  pastorMinistry: { name: 'pastor-ministry', color: '#62445d', title: 'Choose how to connect', fields: [
+    { ...field('reason', 'Reason for reaching out', 'select', true), options: ['', 'Planning a first visit', 'Ministry information', 'Speaking invitation', 'Other'].map(value => ({ value, label: value || 'Choose a reason' })) },
+    field('eventDate', 'Proposed event date (speaking invitation only)', 'date'),
+    field('eventDetails', 'Event location and topic (if applicable)', 'textarea')
+  ], note: 'This sets aside a conversation time. Keep private pastoral details out of the form; the ministry confirms speaking invitations separately.' },
+  cateringEvents: { name: 'catering-events', color: '#884025', title: 'Choose a menu consultation', fields: [
+    field('eventDate', 'Event date (if known)', 'date'), field('guests', 'Expected guest count', 'number', true),
+    field('eventDetails', 'Venue, menu ideas & dietary requirements', 'textarea', true)
+  ], note: 'Book a planning appointment. The caterer confirms availability, menus and quotes separately.' },
+  photographyVideo: { name: 'photography-video', color: '#643f86', title: 'Plan your shoot', fields: [
+    field('shootDate', 'Proposed shoot date (if known)', 'date'), field('location', 'Venue or parish', 'text'),
+    field('shootDetails', 'Type of shoot and where you’ll use the finished work', 'textarea', true)
+  ], note: 'Choose a discovery call. The studio confirms shoot dates, pricing and image usage separately.' },
+  tutoringCoaching: { name: 'tutoring-coaching', color: '#235f87', title: 'Choose a tutoring session', fields: [
+    field('level', 'Subject, grade or exam', 'text', true), field('goals', 'Learning goals & preferred lesson format', 'textarea', true)
+  ], note: 'Use a parent or guardian’s contact details when booking for a child. Please leave out school records and other private details.' },
+  homeServices: { name: 'home-services', color: '#21645e', title: 'Tell us about the job', fields: [
+    field('area', 'Parish & community', 'text', true), field('scope', 'Work needed and your preferred time frame', 'textarea', true)
+  ], note: 'This schedules a first discussion. Please leave out access codes and ask whether an inspection is needed.' },
   musicians: { name: 'musicians', color: '#956021', title: 'Performance & studio enquiries', fields: [
     field('eventDate', 'Requested event or session date', 'date', true),
     { ...field('eventType', 'Occasion / project', 'select', true), options: ['', 'Live show', 'Wedding / private event', 'Church / worship', 'Corporate event', 'Studio recording', 'Other'].map(value => ({ value, label: value || 'Choose an occasion' })) },
@@ -39,3 +64,10 @@ export function ThemeHomeRepairs(props) { return <LocalServiceBooking {...props}
 export function ThemeTutoring(props) { return <LocalServiceBooking {...props} industry="tutoring" />; }
 
 export function ThemeMusicians(props) { return <LocalServiceBooking {...props} industry="musicians" />; }
+
+export function ThemeDrivingLessons(props) { return <LocalServiceBooking {...props} industry="drivingLessons" />; }
+export function ThemePastorMinistry(props) { return <LocalServiceBooking {...props} industry="pastorMinistry" />; }
+export function ThemeCateringEvents(props) { return <LocalServiceBooking {...props} industry="cateringEvents" />; }
+export function ThemePhotographyVideo(props) { return <LocalServiceBooking {...props} industry="photographyVideo" />; }
+export function ThemeTutoringCoaching(props) { return <LocalServiceBooking {...props} industry="tutoringCoaching" />; }
+export function ThemeHomeServices(props) { return <LocalServiceBooking {...props} industry="homeServices" />; }

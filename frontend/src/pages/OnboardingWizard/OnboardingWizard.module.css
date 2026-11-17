@@ -50,3 +50,15 @@
   .wizard__actions > * { flex: 1; }
 }
 @media (max-width: 360px) { .wizard__card { padding: 20px 16px; } }
+
+.starterGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,215px),1fr));gap:14px;margin:0 0 18px}
+.starterCard{display:flex;flex-direction:column;overflow:hidden;min-width:0;border:1px solid var(--color-border);border-radius:12px;background:var(--color-surface-2)}
+.starterCard[data-selected=true]{border-color:#9b8bfd;box-shadow:0 0 0 1px #9b8bfd}
+.starterCard img{display:block;width:100%;height:auto;aspect-ratio:2;object-fit:cover}
+.starterBody{display:flex;flex:1;flex-direction:column;align-items:start;gap:6px;padding:12px}
+.starterBody>span,.starterBody>p{font-size:.8rem;line-height:1.35}
+.starterBody>p{margin:0 0 3px}
+.starterActions{display:flex;align-items:center;gap:10px 12px;flex-wrap:wrap;margin-top:auto;padding-top:7px;font-size:.84rem}
+.starterActions button{padding:5px 9px;border:1px solid #9b8bfd;border-radius:7px;color:inherit;background:transparent;cursor:pointer}
+.starterActions button[aria-pressed=true]{background:#7561e9;color:#fff}
+.starterActions a{color:inherit;text-decoration:underline;text-underline-offset:3px}

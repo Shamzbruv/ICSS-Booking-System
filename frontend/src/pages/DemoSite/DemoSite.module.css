@@ -1,0 +1,6 @@
+.previewBar{display:flex;justify-content:space-between;align-items:center;gap:8px 22px;flex-wrap:wrap;padding:11px max(16px,4vw);background:#fff;color:#1b2333;font:650 .82rem/1.3 Inter,system-ui,sans-serif}
+.previewBar a{color:inherit;text-decoration:none}
+.previewBar a:hover{text-decoration:underline}
+.previewBar a:focus-visible{outline:2px solid #5b39a6;outline-offset:4px}
+.previewBar .useStarter{border-radius:7px;background:#34215d;color:#fff;padding:9px 13px}
+@media(max-width:590px){.previewBar span{order:1;flex-basis:100%;font-size:.73rem}}
