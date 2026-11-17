@@ -23,18 +23,39 @@ test('active starter templates refresh their default previews and preserve exist
             ('Harbour Driving School', 'Driving Lessons', '/images/starter-kits/template-driving-lessons.svg', '/demo/driving-lessons',
              '{"services":[{"name":"Existing lesson","duration_minutes":45,"price":1000}]}'),
             ('Island Table Catering', 'Catering & Events', '/images/starter-kits/template-catering.svg', '/demo/catering-events', '{}');
+        INSERT INTO themes (name, category, template_path, visual_config, business_config)
+        VALUES ('Open Door Ministry', 'Pastor & Ministry', '/demo/pastor-ministry', '{"summary":"Original description","custom":true}',
+            '{"custom":true,"services":[
+              {"name":"First Visit Conversation","description":"Ask about the service schedule, directions or accessibility.","duration_minutes":15,"price":0,"active":true},
+              {"name":"Ministry Introduction","description":"Talk about the ministry and ways to get involved. Keep sensitive details for private follow-up.","duration_minutes":20,"price":0,"active":true},
+              {"name":"Speaking Invitation Call","description":"Discuss the event, audience and topic. This does not confirm the pastor for your event.","duration_minutes":30,"price":0,"active":true}
+            ]}');
+        INSERT INTO services (tenant_id, name, active) VALUES ('existing-pastor', 'Existing appointment', true);
     `);
     const { rows: existing } = await db.query('SELECT * FROM themes');
     await seedCareerStarters(db);
     await seedCareerStarters(db);
     const { rows } = await db.query('SELECT * FROM themes ORDER BY name');
-    assert.equal(rows.length, 4);
+    assert.equal(rows.length, 10);
     assert.equal(rows.find(row => row.name === 'Yaad Table Catering').template_path, '/demo/catering');
     assert.deepEqual(rows.find(row => row.name === 'Island Table Catering'), existing.find(row => row.name === 'Island Table Catering'));
     const driving = rows.find(row => row.name === 'Harbour Driving School');
     const originalDriving = existing.find(row => row.id === driving.id);
     assert.deepEqual(driving.business_config, originalDriving.business_config);
     assert.deepEqual(retiredStarterNames, ['Island Table Catering', 'Still & Motion Studio', 'Next Step Learning', 'YardReady Home Services']);
+
+    const { TRADE_PRESETS } = await import('../frontend/src/site/presets/trade-starters.js');
+    const pastor = rows.find(row => row.name === 'Open Door Ministry');
+    assert.equal(pastor.id, existing.find(row => row.name === pastor.name).id);
+    assert.equal(pastor.category, 'Pastoral Care');
+    assert.equal(pastor.visual_config.custom, true);
+    assert.equal(pastor.business_config.custom, true);
+    await seedStarterServices('new-pastor', pastor.id, db);
+    await seedStarterServices('existing-pastor', pastor.id, db);
+    assert.deepEqual((await db.query("SELECT name FROM services WHERE tenant_id = 'new-pastor' ORDER BY name")).rows.map(row => row.name), [
+        'Follow-up Appointment', 'Member Meeting', 'Pastoral Counseling', 'Prayer & Spiritual Guidance'
+    ]);
+    assert.deepEqual((await db.query("SELECT name FROM services WHERE tenant_id = 'existing-pastor'")).rows, [{ name: 'Existing appointment' }]);
 
     for (const kit of kits) {
         assert.equal(themeKeyForName(kit.name), kit.key);
@@ -44,10 +65,15 @@ test('active starter templates refresh their default previews and preserve exist
             assert.equal(theme.preview_image_url, kit.art);
         }
         assert.ok(fs.existsSync(path.join(__dirname, '../public', kit.art)));
-        const { default: preset } = await import('../frontend/src/site/presets/' + kit.key + '.js');
+        const preset = TRADE_PRESETS[kit.key] || (await import('../frontend/src/site/presets/' + kit.key + '.js')).default;
         assert.equal(preset.demo.services.length, kit.services.length);
         assert.equal(preset.site.pages.find(page => page.id === 'book').sections.some(section => section.type === 'booking'), true);
         assert.equal(sanitizeSiteConfig(preset.site).pages[0].sections[0].props.imageUrl, kit.art);
+        if (kit.trade) {
+            const image = sanitizeSiteConfig(preset.site).pages[0].sections[0].props.mobileImageUrl;
+            assert.equal(image, kit.art.replace('.webp', '-mobile.webp'));
+            assert.ok(fs.existsSync(path.join(__dirname, '../public', image)));
+        }
     }
 
     await db.query('DELETE FROM themes WHERE id = $1', [driving.id]);

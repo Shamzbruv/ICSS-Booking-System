@@ -1,4 +1,5 @@
 import SharedBookingTheme from './SharedBookingTheme';
+import kits from '../site/presets/career-starter-kits.json';
 
 const field = (name, label, type = 'text', required = false) => ({ name, label, noteLabel: label, type, required });
 const rentalFields = [field('hireFrom', 'Requested rental start', 'date', true), field('hireUntil', 'Requested rental end', 'date', true)];
@@ -9,11 +10,10 @@ const configurations = {
     field('experience', 'Driving experience and what you want to practise', 'textarea', true),
     field('testDate', 'Road test date (if scheduled)', 'date')
   ], note: 'Your instructor confirms the pickup point and vehicle. Do not enter your permit number.' },
-  pastorMinistry: { name: 'pastor-ministry', color: '#62445d', title: 'Choose how to connect', fields: [
-    { ...field('reason', 'Reason for reaching out', 'select', true), options: ['', 'Planning a first visit', 'Ministry information', 'Speaking invitation', 'Other'].map(value => ({ value, label: value || 'Choose a reason' })) },
-    field('eventDate', 'Proposed event date (speaking invitation only)', 'date'),
-    field('eventDetails', 'Event location and topic (if applicable)', 'textarea')
-  ], note: 'This sets aside a conversation time. Keep private pastoral details out of the form; the ministry confirms speaking invitations separately.' },
+  pastorMinistry: { name: 'pastor-ministry', color: '#324c5b', title: 'Choose an appointment type', fields: [
+    { ...field('meetingPreference', 'Meeting preference', 'select'),
+      options: ['', 'In person', 'By phone', 'Discuss when contacted'].map(value => ({ value, label: value || 'Select a preference' })) }
+  ], note: 'Use contact details you’re comfortable receiving booking messages on. Save personal details for your conversation.' },
   cateringEvents: { name: 'catering-events', color: '#884025', title: 'Choose a menu consultation', fields: [
     field('eventDate', 'Event date (if known)', 'date'), field('guests', 'Expected guest count', 'number', true),
     field('eventDetails', 'Venue, menu ideas & dietary requirements', 'textarea', true)
@@ -41,6 +41,14 @@ const configurations = {
   homeRepairs: { name: 'home-repairs', color: '#a95b20', title: 'Arrange a service visit', fields: [field('address', 'Service address', 'text', true), field('job', 'Describe the issue & access details', 'textarea', true)], note: 'An assessment may be needed before a final quote. Specialist work is confirmed with the business.' },
   tutoring: { name: 'tutoring', color: '#394f9c', title: 'Choose a lesson', fields: [field('level', 'Subject, grade or exam level', 'text', true), field('goals', 'Lesson goals & online / in-person preference', 'textarea', true)], note: 'For a child, use a parent or guardian’s contact details. Confirm the lesson format with the tutor.' }
 };
+
+for (const { key, trade } of kits.filter(kit => kit.trade)) {
+  configurations[key] = {
+    name: key, color: trade.accent, title: 'Choose the service you need',
+    fields: [field('community', 'Parish and community', 'text', true), ...trade.fields.map(args => field(...args))],
+    note: 'Confirm the job address and quote directly with the business. Keep gate codes and other access details out of this form.'
+  };
+}
 
 function LocalServiceBooking({ tenant, services, industry }) {
   const config = configurations[industry];
@@ -71,3 +79,8 @@ export function ThemeCateringEvents(props) { return <LocalServiceBooking {...pro
 export function ThemePhotographyVideo(props) { return <LocalServiceBooking {...props} industry="photographyVideo" />; }
 export function ThemeTutoringCoaching(props) { return <LocalServiceBooking {...props} industry="tutoringCoaching" />; }
 export function ThemeHomeServices(props) { return <LocalServiceBooking {...props} industry="homeServices" />; }
+
+export const TRADE_BOOKING_THEMES = Object.fromEntries(kits.filter(kit => kit.trade).map(({ key }) => [
+  key,
+  function TradeBooking(props) { return <LocalServiceBooking {...props} industry={key} />; }
+]));

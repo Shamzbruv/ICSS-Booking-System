@@ -39,28 +39,35 @@
   {
     "key": "pastor-ministry",
     "name": "Open Door Ministry",
-    "category": "Pastor & Ministry",
-    "summary": "For pastors, churches and ministries. Welcome first-time visitors, share messages and invite speaking enquiries.",
+    "category": "Pastoral Care",
+    "summary": "Give members a place to book meetings with their pastor, pastoral counseling, prayer and follow-up appointments.",
     "art": "/images/starter-kits/pastor-ministry.webp",
     "services": [
       {
-        "name": "First Visit Conversation",
-        "description": "Ask about the service schedule, directions or accessibility.",
-        "duration_minutes": 15,
-        "price": 0,
-        "active": true
-      },
-      {
-        "name": "Ministry Introduction",
-        "description": "Talk about the ministry and ways to get involved. Keep sensitive details for private follow-up.",
-        "duration_minutes": 20,
-        "price": 0,
-        "active": true
-      },
-      {
-        "name": "Speaking Invitation Call",
-        "description": "Discuss the event, audience and topic. This does not confirm the pastor for your event.",
+        "name": "Member Meeting",
+        "description": "Set aside time to speak with your pastor one-on-one.",
         "duration_minutes": 30,
+        "price": 0,
+        "active": true
+      },
+      {
+        "name": "Pastoral Counseling",
+        "description": "Talk through a difficult season, relationship concern or life decision with your pastor.",
+        "duration_minutes": 45,
+        "price": 0,
+        "active": true
+      },
+      {
+        "name": "Prayer & Spiritual Guidance",
+        "description": "Meet for prayer or talk through questions about faith and spiritual life.",
+        "duration_minutes": 30,
+        "price": 0,
+        "active": true
+      },
+      {
+        "name": "Follow-up Appointment",
+        "description": "Reconnect after a previous conversation and discuss your next steps.",
+        "duration_minutes": 20,
         "price": 0,
         "active": true
       }
@@ -189,5 +196,323 @@
       }
     ],
     "retired": true
+  },
+  {
+    "key": "plumbing",
+    "name": "Bluewater Plumbing",
+    "category": "Plumbers",
+    "summary": "Book plumbing assessments for leaks, blocked drains and fixture installations.",
+    "art": "/images/starter-kits/plumbing.webp",
+    "services": [
+      {
+        "name": "Plumbing Enquiry Call",
+        "description": "Talk through the affected fixture and arrange the next step.",
+        "duration_minutes": 15,
+        "price": 0,
+        "active": true
+      },
+      {
+        "name": "Leak & Drain Assessment",
+        "description": "Inspect a leaking pipe, slow drain or recurring blockage before repairs are quoted.",
+        "duration_minutes": 45,
+        "price": 0,
+        "active": false
+      },
+      {
+        "name": "Fixture Installation Estimate",
+        "description": "Review fitting or replacing a sink, tap or toilet.",
+        "duration_minutes": 45,
+        "price": 0,
+        "active": false
+      }
+    ],
+    "trade": {
+      "eyebrow": "Plumbing repairs & installations",
+      "headline": "Get your plumbing sorted.",
+      "intro": "From a leak under the sink to a fixture that needs replacing, tell us what is happening and arrange a time to discuss the job.",
+      "accent": "#075b62",
+      "background": "#f1f8f7",
+      "font": "Manrope",
+      "visit": "Which fixture is affected, when did it start, and is there visible water or a blockage?",
+      "fields": [
+        [
+          "issue",
+          "Which fixture is affected and what is it doing?",
+          "textarea",
+          true
+        ],
+        [
+          "water",
+          "Is the water supply still on?",
+          "text",
+          false
+        ]
+      ]
+    }
+  },
+  {
+    "key": "electrical",
+    "name": "CurrentLine Electrical",
+    "category": "Electricians",
+    "summary": "Schedule electrical diagnostics, fixture work and upgrade estimates.",
+    "art": "/images/starter-kits/electrical.webp",
+    "services": [
+      {
+        "name": "Electrical Enquiry Call",
+        "description": "Describe the fault or installation and discuss the next step.",
+        "duration_minutes": 15,
+        "price": 0,
+        "active": true
+      },
+      {
+        "name": "Electrical Fault Assessment",
+        "description": "Arrange a visit to assess tripping circuits, outlets or lighting faults.",
+        "duration_minutes": 45,
+        "price": 0,
+        "active": false
+      },
+      {
+        "name": "Lighting & Outlet Installation Estimate",
+        "description": "Review fixture, socket and switch locations before quoting the installation.",
+        "duration_minutes": 45,
+        "price": 0,
+        "active": false
+      }
+    ],
+    "trade": {
+      "eyebrow": "Electrical diagnostics & installations",
+      "headline": "Find the fault. Plan the fix.",
+      "intro": "Arrange an assessment for lights, outlets, tripping circuits or planned electrical work. Tell us which part of the property is affected.",
+      "accent": "#2c466e",
+      "background": "#f2f5fb",
+      "font": "Space Grotesk",
+      "visit": "Tell us where you noticed the problem and whether it affects one room or more of the property.",
+      "fields": [
+        [
+          "electricalIssue",
+          "Which room, fixture or circuit is affected?",
+          "textarea",
+          true
+        ],
+        [
+          "property",
+          "Property type (home, shop or other)",
+          "text",
+          false
+        ]
+      ]
+    }
+  },
+  {
+    "key": "air-conditioning",
+    "name": "Cool Breeze AC",
+    "category": "AC Technicians",
+    "summary": "Schedule AC servicing, a cooling fault assessment or a mini-split installation estimate.",
+    "art": "/images/starter-kits/air-conditioning.webp",
+    "services": [
+      {
+        "name": "AC Service Enquiry",
+        "description": "Share the unit type and what you need help with.",
+        "duration_minutes": 15,
+        "price": 0,
+        "active": true
+      },
+      {
+        "name": "Split Unit Servicing",
+        "description": "Arrange a maintenance visit for an existing mini-split unit.",
+        "duration_minutes": 60,
+        "price": 0,
+        "active": false
+      },
+      {
+        "name": "AC Installation Estimate",
+        "description": "Review room size, placement and installation requirements.",
+        "duration_minutes": 45,
+        "price": 0,
+        "active": false
+      }
+    ],
+    "trade": {
+      "eyebrow": "Air-conditioning service & installation",
+      "headline": "Make your space cool again.",
+      "intro": "Book a time to discuss routine servicing, a unit that has stopped cooling or a new installation for your home or business.",
+      "accent": "#12617e",
+      "background": "#edf7fa",
+      "font": "DM Sans",
+      "visit": "Share the unit type and number of units. If there is a fault, describe what changed and when.",
+      "fields": [
+        [
+          "unit",
+          "AC unit type and number of units",
+          "text",
+          true
+        ],
+        [
+          "symptoms",
+          "Cooling problem or service needed",
+          "textarea",
+          true
+        ]
+      ]
+    }
+  },
+  {
+    "key": "carpentry",
+    "name": "Cedarline Carpentry",
+    "category": "Carpenters",
+    "summary": "Arrange site measurements and estimates for cabinetry, shelving and wood repairs.",
+    "art": "/images/starter-kits/carpentry.webp",
+    "services": [
+      {
+        "name": "Carpentry Project Call",
+        "description": "Discuss a repair, installation or custom woodworking project.",
+        "duration_minutes": 20,
+        "price": 0,
+        "active": true
+      },
+      {
+        "name": "Cabinet & Shelving Measurement",
+        "description": "Arrange a site measurement for built-in storage, shelving or cabinets.",
+        "duration_minutes": 60,
+        "price": 0,
+        "active": false
+      },
+      {
+        "name": "Door & Woodwork Repair Assessment",
+        "description": "Review sticking doors, damaged fittings or woodwork that needs repair.",
+        "duration_minutes": 45,
+        "price": 0,
+        "active": false
+      }
+    ],
+    "trade": {
+      "eyebrow": "Cabinetry, joinery & wood repairs",
+      "headline": "Woodwork made to fit.",
+      "intro": "Have a cabinet to replace, a door that needs attention or a storage idea to build? Tell us about your space and arrange a measurement.",
+      "accent": "#6b482d",
+      "background": "#faf4eb",
+      "font": "Fraunces",
+      "visit": "Rough dimensions and the intended use are helpful when discussing doors, cabinets or shelving.",
+      "fields": [
+        [
+          "project",
+          "What would you like built or repaired?",
+          "textarea",
+          true
+        ],
+        [
+          "dimensions",
+          "Approximate dimensions or number of items",
+          "text",
+          false
+        ]
+      ]
+    }
+  },
+  {
+    "key": "painting",
+    "name": "FreshCoat Painting",
+    "category": "Painters",
+    "summary": "Set up interior and exterior painting estimates with space to discuss prep and finishes.",
+    "art": "/images/starter-kits/painting.webp",
+    "services": [
+      {
+        "name": "Painting Project Call",
+        "description": "Talk through the rooms, surfaces and your preferred timeline.",
+        "duration_minutes": 15,
+        "price": 0,
+        "active": true
+      },
+      {
+        "name": "Interior Painting Estimate",
+        "description": "Review the area, current finish, prep and colour preferences.",
+        "duration_minutes": 45,
+        "price": 0,
+        "active": false
+      },
+      {
+        "name": "Exterior Painting Assessment",
+        "description": "Look at exterior walls, trim and the condition of the existing coating.",
+        "duration_minutes": 60,
+        "price": 0,
+        "active": false
+      }
+    ],
+    "trade": {
+      "eyebrow": "Interior & exterior painting",
+      "headline": "A fresh finish for your space.",
+      "intro": "Plan a single-room refresh or a larger repaint. Share the surfaces you want covered so we can discuss prep, finish and timing.",
+      "accent": "#8a462e",
+      "background": "#fcf3ec",
+      "font": "Plus Jakarta Sans",
+      "visit": "Tell us whether the job is interior or exterior and whether you have noticed peeling paint or surface damage.",
+      "fields": [
+        [
+          "surfaces",
+          "Rooms or exterior surfaces to paint",
+          "textarea",
+          true
+        ],
+        [
+          "condition",
+          "Surface condition or paint finish preference",
+          "text",
+          false
+        ]
+      ]
+    }
+  },
+  {
+    "key": "tiling",
+    "name": "LevelStone Tiling",
+    "category": "Tile Installers",
+    "summary": "Book site measurements for tile installation, repairs and surface preparation.",
+    "art": "/images/starter-kits/tiling.webp",
+    "services": [
+      {
+        "name": "Tiling Project Call",
+        "description": "Discuss the area, material and type of job before planning a visit.",
+        "duration_minutes": 15,
+        "price": 0,
+        "active": true
+      },
+      {
+        "name": "Tile Installation Measurement",
+        "description": "Measure walls or floors and inspect the surface before estimating work.",
+        "duration_minutes": 60,
+        "price": 0,
+        "active": false
+      },
+      {
+        "name": "Tile & Grout Repair Assessment",
+        "description": "Review cracked tiles, loose tiles or grout that needs replacement.",
+        "duration_minutes": 45,
+        "price": 0,
+        "active": false
+      }
+    ],
+    "trade": {
+      "eyebrow": "Tile installation & repairs",
+      "headline": "Tile work, measured properly.",
+      "intro": "Arrange a walkthrough for a bathroom, kitchen, patio or floor. We’ll discuss the surface, materials and layout before pricing the work.",
+      "accent": "#584765",
+      "background": "#f6f2f8",
+      "font": "Oswald",
+      "visit": "Let us know whether old tiles need removal, how large the area is and whether you have already chosen the tiles.",
+      "fields": [
+        [
+          "area",
+          "Room, surface and approximate area",
+          "textarea",
+          true
+        ],
+        [
+          "existingTile",
+          "Are existing tiles to be removed?",
+          "text",
+          false
+        ]
+      ]
+    }
   }
 ]

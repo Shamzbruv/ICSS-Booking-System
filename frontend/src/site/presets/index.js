@@ -29,8 +29,10 @@ import cateringEvents from './catering-events.js';
 import photographyVideo from './photography-video.js';
 import tutoringCoaching from './tutoring-coaching.js';
 import homeServices from './home-services.js';
+import { TRADE_PRESETS } from './trade-starters.js';
 
 export const PRESETS = {
+  ...TRADE_PRESETS,
   'driving-lessons': drivingLessons,
   'pastor-ministry': pastorMinistry,
   'catering-events': cateringEvents,
