@@ -88,3 +88,24 @@ test('active starter templates refresh their default previews and preserve exist
     await seedStarterServices('established-owner', rows.find(row => row.name === 'Yaad Table Catering').id, db);
     assert.equal((await db.query("SELECT active FROM services WHERE tenant_id = 'established-owner'")).rows[0].active, true);
 });
+
+test('trade and pastoral starters ship complete pages and keep sample contact details out of tenant sites', async () => {
+    const { TRADE_PRESETS } = await import('../frontend/src/site/presets/trade-starters.js');
+    const { default: pastor } = await import('../frontend/src/site/presets/pastor-ministry.js');
+    const { resolveSite } = await import('../frontend/src/site/siteSchema.js');
+    for (const preset of [pastor, ...Object.values(TRADE_PRESETS)]) {
+        const { contact: sample } = preset.demo;
+        assert.match(sample.email, /@example\.com$/);
+        assert.ok(sample.address && sample.phone && sample.hours.length);
+        const site = resolveSite({ name: 'New tenant' }, preset, null);
+        const [home, services, process, book] = site.pages;
+        assert.ok(home.sections.some(section => section.type === 'contact' && section.props.showMap === false));
+        assert.ok(services.sections.some(section => section.type === 'services'));
+        assert.ok(process.sections.some(section => section.type === 'faq' && section.props.items.length >= 2));
+        assert.ok(book.sections.some(section => section.type === 'booking'));
+        assert.deepEqual(site.contact, { address: '', phone: '', whatsapp: '', email: '', mapQuery: '' });
+        assert.deepEqual(home.sections.find(section => section.type === 'contact').props.hours, []);
+        const realContact = { address: 'Tenant service area', email: 'office@example.org' };
+        assert.equal(resolveSite({ name: 'Existing tenant' }, preset, { contact: realContact }).contact.email, realContact.email);
+    }
+});

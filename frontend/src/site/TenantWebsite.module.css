@@ -238,6 +238,7 @@
 .contactGrid { display: grid; gap: 24px; }
 .contactGridSingle { max-width: 640px; margin: 0 auto; }
 .contactInfo { display: flex; flex-direction: column; gap: 14px; padding: 28px 24px; border-radius: var(--site-radius); background: var(--site-bg); border: 1px solid var(--site-border); }
+.contactSample { margin: 0 0 2px; color: var(--site-muted); font-size: .9rem; font-weight: 600; }
 .contactInfo .btnPrimary { align-self: flex-start; margin-top: 8px; }
 .contactRow { display: flex; gap: 12px; align-items: flex-start; }
 .contactRow p { margin: 0; }

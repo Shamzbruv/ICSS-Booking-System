@@ -296,8 +296,10 @@ function Cta({ props, ctx }) {
 }
 
 function Contact({ props, ctx }) {
-  const { contact } = ctx.site;
-  const mapQuery = contact.mapQuery || contact.address;
+  const sample = ctx.tenant.isDemo && !ctx.preview && ctx.preset.demo.contact;
+  const contact = sample || ctx.site.contact;
+  const hours = sample?.hours || props.hours || [];
+  const mapQuery = !sample && (contact.mapQuery || contact.address);
   const whatsapp = String(contact.whatsapp || '').replace(/[^0-9]/g, '');
   return (
     <section className={`${s.section} ${s.sectionTinted}`} id="contact">
@@ -305,13 +307,24 @@ function Contact({ props, ctx }) {
         <SectionHeading title={props.title} subtitle={props.subtitle} />
         <div className={`${s.contactGrid} ${props.showMap && mapQuery ? '' : s.contactGridSingle}`}>
           <div className={s.contactInfo}>
+            {sample && <p className={s.contactSample}>Sample contact details and hours</p>}
             {contact.address && <div className={s.contactRow}><span aria-hidden="true">📍</span><p data-site-global="contact.address"><Lines text={contact.address} /></p></div>}
-            {contact.phone && <div className={s.contactRow}><span aria-hidden="true">📞</span><a data-site-global="contact.phone" href={`tel:${contact.phone.replace(/[^+0-9]/g, '')}`}>{contact.phone}</a></div>}
+            {contact.phone && (
+              <div className={s.contactRow}>
+                <span aria-hidden="true">📞</span>
+                {sample ? <p>{contact.phone}</p> : <a data-site-global="contact.phone" href={`tel:${contact.phone.replace(/[^+0-9]/g, '')}`}>{contact.phone}</a>}
+              </div>
+            )}
             {whatsapp && <div className={s.contactRow}><span aria-hidden="true">💬</span><a href={`https://wa.me/${whatsapp}`} target="_blank" rel="noreferrer">Chat on WhatsApp</a></div>}
-            {contact.email && <div className={s.contactRow}><span aria-hidden="true">✉️</span><a data-site-global="contact.email" href={`mailto:${contact.email}`}>{contact.email}</a></div>}
-            {props.showHours !== false && (props.hours || []).length > 0 && (
+            {contact.email && (
+              <div className={s.contactRow}>
+                <span aria-hidden="true">✉️</span>
+                {sample ? <p>{contact.email}</p> : <a data-site-global="contact.email" href={`mailto:${contact.email}`}>{contact.email}</a>}
+              </div>
+            )}
+            {props.showHours !== false && hours.length > 0 && (
               <dl className={s.hoursList}>
-                {props.hours.map((row, index) => (
+                {hours.map((row, index) => (
                   <div key={index}><dt>{row.day}</dt><dd>{row.time}</dd></div>
                 ))}
               </dl>

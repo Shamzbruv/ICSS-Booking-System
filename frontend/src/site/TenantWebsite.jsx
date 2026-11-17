@@ -320,7 +320,7 @@ export default function TenantWebsite({ tenant, services, themeKey, savedSite, b
   const navOverHero = site.nav.style === 'transparent' && firstSection && HERO_TYPES.has(firstSection.type);
   const navSolid = !navOverHero || scrolled || menuOpen;
   const brandName = site.brand.name || tenant.name;
-  const ctx = { tenant, services, site, preset, fallback: preset.fallback, SiteLink, renderBooking, editing };
+  const ctx = { tenant, services, site, preset, fallback: preset.fallback, SiteLink, renderBooking, editing, preview };
   const announcement = site.announcement?.enabled && site.announcement.text;
 
   const postSelect = (section, field) => {
