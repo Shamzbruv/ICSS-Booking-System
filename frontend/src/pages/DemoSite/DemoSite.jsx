@@ -54,7 +54,7 @@ export default function DemoSite() {
     navigate(`/demo/${key}${location.search}`, { replace: true });
   };
 
-  const showStarterBar = !params.has('preview') && careerKits.some(kit => kit.key === themeKey);
+  const showStarterBar = !params.has('preview') && careerKits.some(kit => kit.key === themeKey && !kit.retired);
   return (<>
     {showStarterBar && <div className={s.previewBar}><a href="/industries#new-starters">← Starter websites</a><span>Template preview · Bookings are simulated</span><a className={s.useStarter} href={`/onboarding?template=${themeKey}`}>Use this design →</a></div>}
     <TenantWebsite

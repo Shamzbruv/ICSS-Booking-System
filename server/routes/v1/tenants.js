@@ -8,6 +8,7 @@ const express = require('express');
 const router  = express.Router();
 const bcrypt  = require('bcryptjs');
 const { query, transaction }  = require('../../db/connection');
+const { retiredStarterNames } = require('../../db/careerStarters');
 const { signToken, authenticate, requireRole, requireTenantOwnership } = require('../../middleware/auth');
 const { invalidateTenantCache } = require('../../middleware/tenantResolver');
 const { seedStarterServices } = require('../../services/provisioning');
@@ -203,7 +204,10 @@ router.get('/:slug/theme', authenticate, requireTenantOwnership('tenant_admin'),
 router.post('/:slug/theme', authenticate, requireTenantOwnership('tenant_admin'), async (req, res) => {
     const { theme_id, seed_services } = req.body;
     try {
-        const themeResult = await query(`SELECT id FROM themes WHERE id = $1`, [theme_id]);
+        const themeResult = await query(
+            `SELECT id FROM themes WHERE id = $1 AND (id = $2 OR NOT (name = ANY($3::text[])))`,
+            [theme_id, req.tenant.theme_id || null, retiredStarterNames]
+        );
         if (themeResult.rows.length === 0) return res.status(400).json({ error: 'Invalid theme.' });
 
         const result = await query(

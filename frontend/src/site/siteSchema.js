@@ -450,7 +450,7 @@ export function hexToRgba(hex, alpha) {
 export function isSafeMediaUrl(url) {
   const value = String(url || '').trim();
   if (!value) return false;
-  if (/^\/images\/starter-kits\/template-[a-z-]+\.svg$/.test(value)) return true;
+  if (/^\/images\/starter-kits\/(?:template-[a-z-]+\.svg|(?:driving-lessons|pastor-ministry)(?:-(?:detail|mobile))?\.webp)$/.test(value)) return true;
   if (/^\/media\/[0-9a-f-]{36}$/i.test(value)) return true;
   // Playground uploads stay in the browser as same-origin blob: URLs (never saved).
   if (value.startsWith(`blob:${window.location.origin}/`)) return true;

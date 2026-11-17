@@ -4,7 +4,7 @@
     "name": "Harbour Driving School",
     "category": "Driving Lessons",
     "summary": "For instructors and driving schools. Show lesson options, test prep and where you teach.",
-    "art": "/images/starter-kits/template-driving-lessons.svg",
+    "art": "/images/starter-kits/driving-lessons.webp",
     "services": [
       {
         "name": "Introductory Call",
@@ -41,7 +41,7 @@
     "name": "Open Door Ministry",
     "category": "Pastor & Ministry",
     "summary": "For pastors, churches and ministries. Welcome first-time visitors, share messages and invite speaking enquiries.",
-    "art": "/images/starter-kits/template-pastor-ministry.svg",
+    "art": "/images/starter-kits/pastor-ministry.webp",
     "services": [
       {
         "name": "First Visit Conversation",
@@ -94,7 +94,8 @@
         "price": 0,
         "active": true
       }
-    ]
+    ],
+    "retired": true
   },
   {
     "key": "photography-video",
@@ -124,7 +125,8 @@
         "price": 0,
         "active": true
       }
-    ]
+    ],
+    "retired": true
   },
   {
     "key": "tutoring-coaching",
@@ -154,7 +156,8 @@
         "price": 3000,
         "active": false
       }
-    ]
+    ],
+    "retired": true
   },
   {
     "key": "home-services",
@@ -184,6 +187,7 @@
         "price": 0,
         "active": true
       }
-    ]
+    ],
+    "retired": true
   }
 ]

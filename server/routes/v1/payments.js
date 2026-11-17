@@ -8,6 +8,7 @@ const router  = express.Router();
 const crypto  = require('crypto');
 const https   = require('https');
 const { query }  = require('../../db/connection');
+const { retiredStarterNames } = require('../../db/careerStarters');
 const { paymentLimiter } = require('../../middleware/rateLimiter');
 const { enqueueProvisioningJob } = require('../../services/provisioning');
 const { enqueueEmailOutbox } = require('../../services/emailOutbox');
@@ -273,7 +274,10 @@ router.post('/paypal/create-subscription', paymentLimiter, async (req, res) => {
         const acceptanceUserAgent = (req.get('user-agent') || '').slice(0, 512) || null;
 
         if (theme_id) {
-            const theme = await query(`SELECT id FROM themes WHERE id=$1`, [theme_id]);
+            const theme = await query(
+                `SELECT id FROM themes WHERE id = $1 AND NOT (name = ANY($2::text[]))`,
+                [theme_id, retiredStarterNames]
+            );
             if (!theme.rows.length) return res.status(400).json({ error:'Selected theme is invalid.' });
         }
         await query(
