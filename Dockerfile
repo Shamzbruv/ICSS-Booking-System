@@ -1,6 +1,7 @@
 FROM node:20-alpine AS frontend-builder
 WORKDIR /app/frontend
 COPY frontend/package*.json ./
+COPY frontend/scripts/picomatch-mitigation.cjs ./scripts/
 RUN npm ci
 COPY frontend/ ./
 # Platform Console imports these shared admin UI modules from /app/public.
