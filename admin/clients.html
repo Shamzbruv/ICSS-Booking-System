@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="referrer" content="no-referrer">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>ICSS Admin — Clients</title>
+    <link rel="icon" type="image/png" href="./favicon.png">
+    <link rel="stylesheet" href="/css/global-theme.css">
+    <link rel="stylesheet" href="css/admin.css">
+    <link rel="stylesheet" href="/css/mobile-navigation.css">
+    <link rel="stylesheet" href="/css/page-help.css">
+    <link rel="stylesheet" href="css/clients.css">
+    <link rel="manifest" href="/admin/manifest.webmanifest">
+    <meta name="theme-color" content="#7e22ce">
+    <link rel="apple-touch-icon" href="/admin/icons/apple-touch-icon-v2.png">
+    <script src="/admin/js/pwa.js" defer></script>
+</head>
+<body>
+<button class="hamburger" id="hamburgerBtn" aria-label="Open menu"><span></span><span></span><span></span></button>
+<div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+<aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+        <img class="client-admin-logo" src="./favicon.png" width="36" height="36" alt="">
+        <div class="brand-text">
+            <span class="brand-name" id="tenantName">Booking System</span>
+            <span class="brand-plan" id="tenantPlan"></span>
+        </div>
+    </div>
+    <nav class="sidebar-nav" aria-label="Dashboard navigation">
+        <a href="index.html" class="nav-item"><span class="nav-icon"></span> Dashboard</a>
+        <a href="bookings.html" class="nav-item"><span class="nav-icon"></span> Bookings</a>
+        <a href="availability.html" class="nav-item"><span class="nav-icon"></span> Availability</a>
+        <a href="settings.html" class="nav-item"><span class="nav-icon"></span> Settings</a>
+        <a href="customize.html" class="nav-item"><span class="nav-icon"></span> Website Builder</a>
+        <a href="services.html" class="nav-item"><span class="nav-icon"></span> Services</a>
+    </nav>
+    <div class="sidebar-footer">
+        <div class="user-info">
+            <div class="user-avatar" id="userAvatar">?</div>
+            <div><div class="user-name" id="userName">—</div><div class="user-role" id="userRole">—</div></div>
+        </div>
+        <button class="logout-btn" type="button">Sign Out</button>
+    </div>
+</aside>
+
+<main class="main-content clients-page">
+    <header class="page-header">
+        <div>
+            <h1 class="page-title">Clients</h1>
+            <p class="page-subtitle">Find your clients and see their visits, booking history, and usual services.</p>
+        </div>
+    </header>
+
+    <div id="clientDirectory">
+        <dl class="client-metrics" aria-label="Directory overview">
+            <div><dt>Total clients</dt><dd id="directoryTotal">—</dd></div>
+            <div><dt>Returning clients</dt><dd id="directoryReturning">—</dd></div>
+            <div><dt>Completed visits</dt><dd id="directoryVisits">—</dd></div>
+        </dl>
+
+        <section class="client-panel" aria-labelledby="directoryTitle">
+            <div class="client-panel-head">
+                <h2 id="directoryTitle">Client directory</h2>
+            </div>
+            <form id="clientFilters" class="client-filters" role="search">
+                <label class="client-search">Find a client
+                    <span><input type="search" id="clientSearch" placeholder="Name, email, or phone" maxlength="160"><button class="btn btn-primary" type="submit">Search</button></span>
+                </label>
+                <label>Visits
+                    <select id="clientFilter">
+                        <option value="all">All clients</option>
+                        <option value="returning">Returning clients</option>
+                        <option value="first">One completed visit</option>
+                        <option value="no_visits">No completed visits</option>
+                    </select>
+                </label>
+                <label>Sort by
+                    <select id="clientSort">
+                        <option value="recent">Recently booked</option>
+                        <option value="visits">Most visits</option>
+                        <option value="name">Name A–Z</option>
+                    </select>
+                </label>
+            </form>
+            <p class="client-message" id="directoryMessage" role="status"></p>
+            <ul id="clientResults" class="client-list" aria-label="Clients"></ul>
+            <div class="client-pagination" id="directoryPagination" hidden>
+                <button class="btn btn-secondary" id="clientPrevious" type="button">Previous</button>
+                <span id="clientPageLabel"></span>
+                <button class="btn btn-secondary" id="clientNext" type="button">Next</button>
+            </div>
+        </section>
+    </div>
+
+    <section id="clientProfile" class="client-profile" hidden aria-labelledby="profileName">
+        <a class="btn btn-secondary client-back" href="clients.html" id="clientBack">← All clients</a>
+        <p class="client-message" id="profileMessage" role="status"></p>
+        <div id="profileContent" hidden>
+            <section class="client-panel client-profile-overview">
+                <div class="client-panel-head">
+                    <h2 id="profileName" tabindex="-1">Client profile</h2>
+                    <div class="client-contact" id="profileContact"></div>
+                </div>
+                <dl class="client-metrics client-profile-metrics">
+                    <div><dt>Completed visits</dt><dd id="profileVisits">—</dd></div>
+                    <div><dt>Total bookings</dt><dd id="profileBookings">—</dd></div>
+                    <div><dt>Cancelled</dt><dd id="profileCancellations">—</dd></div>
+                    <div><dt>No-shows</dt><dd id="profileNoShows">—</dd></div>
+                </dl>
+            </section>
+            <div class="client-profile-grid">
+                <section class="client-panel client-insight">
+                    <h3>Most-used services</h3>
+                    <p>Based on completed visits.</p>
+                    <ol id="profileServices" class="client-services"></ol>
+                </section>
+                <section class="client-panel client-insight">
+                    <h3>Next confirmed appointment</h3>
+                    <div id="profileNextBooking"></div>
+                    <p id="profileLastVisit"></p>
+                </section>
+            </div>
+            <section class="client-panel">
+                <div class="client-panel-head">
+                    <h3>Booking history</h3>
+                </div>
+                <ul class="client-list" id="profileHistory" aria-label="Appointments"></ul>
+                <div class="client-pagination" id="historyPagination" hidden>
+                    <button class="btn btn-secondary" id="historyPrevious" type="button">Previous</button>
+                    <span id="historyPageLabel"></span>
+                    <button class="btn btn-secondary" id="historyNext" type="button">Next</button>
+                </div>
+            </section>
+        </div>
+    </section>
+</main>
+<script src="/js/mobile-navigation.js"></script>
+<script src="/js/page-help.js"></script>
+<script src="js/admin.js"></script>
+<script src="js/notifications.js" defer></script>
+<script src="js/clients.js" defer></script>
+</body>
+</html>

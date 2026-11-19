@@ -640,14 +640,20 @@ document.addEventListener('DOMContentLoaded', () => {
         button.addEventListener('click', logout);
     });
     setupMobileNav();
-    const invoiceNav = document.querySelector('.sidebar-nav');
-    if (invoiceNav && getToken() && ['tenant_admin', 'staff'].includes(getUser()?.role) && !invoiceNav.querySelector('[href="invoices.html"]')) {
-        const link = document.createElement('a');
-        link.href = 'invoices.html';
-        link.className = 'nav-item' + (location.pathname.endsWith('/invoices.html') ? ' active' : '');
-        link.innerHTML = '<span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 12h8M8 16h8M8 8h2"/></svg></span> <span>Invoices</span>';
-        if (location.pathname.endsWith('/invoices.html')) link.setAttribute('aria-current', 'page');
-        invoiceNav.appendChild(link);
+    const nav = document.querySelector('.sidebar-nav');
+    if (nav && getToken() && ['tenant_admin', 'staff'].includes(getUser()?.role)) {
+        for (const [href, label] of [['clients.html', 'Clients'], ['invoices.html', 'Invoices']]) {
+            if (nav.querySelector(`[href="${href}"]`)) continue;
+            const link = document.createElement('a');
+            link.href = href;
+            link.className = 'nav-item' + (location.pathname.endsWith('/' + href) ? ' active' : '');
+            const icon = document.createElement('span');
+            icon.className = 'nav-icon';
+            link.append(icon, ' ' + label);
+            const bookings = nav.querySelector('[href="bookings.html"]');
+            if (href === 'clients.html' && bookings) bookings.after(link);
+            else nav.appendChild(link);
+        }
     }
     ensureHelpMenuEntry();
     polishAdminNavigation();
@@ -665,7 +671,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // One visual language across every existing admin navigation entry.
 function polishAdminNavigation() {
-    const icons = { 'index.html': 'dashboard', 'bookings.html': 'calendar', 'availability.html': 'calendar', 'settings.html': 'settings', 'customize.html': 'layout', 'services.html': 'box', 'tenants.html': 'building', 'contracts.html': 'pen', 'invoices.html': 'receipt' };
+    const icons = { 'index.html': 'dashboard', 'bookings.html': 'calendar', 'clients.html': 'users', 'availability.html': 'calendar', 'settings.html': 'settings', 'customize.html': 'layout', 'services.html': 'box', 'tenants.html': 'building', 'contracts.html': 'pen', 'invoices.html': 'receipt' };
     document.querySelectorAll('.sidebar-nav .nav-item').forEach(item => {
         const key = (item.getAttribute('href') || '').split('?')[0].split('/').pop();
         const icon = icons[key] || (item.id === 'helpNavBtn' ? 'help' : null);

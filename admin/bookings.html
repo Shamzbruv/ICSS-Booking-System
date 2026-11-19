@@ -108,7 +108,7 @@
 
     <div class="table-wrap">
         <div class="table-toolbar">
-            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <div id="bookingFilters" style="display:flex;gap:10px;flex-wrap:wrap;">
                 <input type="date" id="filterDate" style="max-width:170px;">
                 <select id="filterStatus">
                     <option value="">All Statuses</option>
@@ -123,6 +123,7 @@
                 </select>
                 <input type="text" id="filterSearch" placeholder="Search name, email…" style="min-width:200px;">
             </div>
+            <a class="btn btn-secondary btn-sm hidden" href="bookings.html" id="showAllBookings">View all bookings</a>
             <div style="display:flex;gap:8px;">
                 <span id="bookingCount" style="font-size:13px;color:var(--text-dim);align-self:center;"></span>
                 <button class="btn btn-secondary btn-sm" id="refreshBookingsBtn" type="button" aria-label="Refresh bookings">↻</button>
@@ -273,10 +274,15 @@
     let cancelTargetId = null;
     let searchTimer    = null;
     const bookingStatusBusy = new Set();
+    const singleBookingId = new URLSearchParams(location.search).get('booking');
 
     document.addEventListener('DOMContentLoaded', () => {
         if (!requireAuth()) return;
         populateUserUI();
+        if (singleBookingId) {
+            document.getElementById('bookingFilters').style.display = 'none';
+            document.getElementById('showAllBookings').classList.remove('hidden');
+        }
         document.getElementById('filterDate').addEventListener('change', loadBookings);
         document.getElementById('filterStatus').addEventListener('change', loadBookings);
         document.getElementById('filterSearch').addEventListener('input', debounceLoad);
@@ -300,6 +306,7 @@
         const search = document.getElementById('filterSearch').value;
 
         const params = new URLSearchParams();
+        if (singleBookingId) params.set('booking_id', singleBookingId);
         if (date)   params.set('date', date);
         if (status) params.set('status', status);
         if (search) params.set('search', search);

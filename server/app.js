@@ -143,6 +143,7 @@ app.use('/api/v1/calendar',     calendarRoutes);
 app.use('/api/v1/themes',       themesRoutes);
 app.use('/api/v1/services',     servicesRoutes);
 app.use('/api/v1/invoices', require('./routes/v1/invoices'));
+app.use('/api/v1/clients', require('./routes/v1/clients'));
 app.use('/api/v1/reviews', require('./routes/v1/reviews'));
 app.use('/api/v1/consultations', consultations.publicRouter);
 app.use('/api/v1/platform/consultations', consultations.staffRouter);
