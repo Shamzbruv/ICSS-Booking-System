@@ -455,7 +455,10 @@ router.post('/:id/verify-payment', async (req, res) => {
 
 // GET /api/v1/bookings — List bookings (admin)
 router.get('/', authenticate, requireRole('staff', 'tenant_admin', 'super_admin'), async (req, res) => {
-    const { date, status, search, page = 1, limit = 50 } = req.query;
+    const { date, status, search, booking_id, page = 1, limit = 50 } = req.query;
+    if (booking_id !== undefined && (typeof booking_id !== 'string' || !/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(booking_id))) {
+        return res.status(400).json({ error: 'Invalid booking reference.' });
+    }
     const tenantId = req.tenant.id;
     const offset   = (parseInt(page) - 1) * parseInt(limit);
 
@@ -463,6 +466,7 @@ router.get('/', authenticate, requireRole('staff', 'tenant_admin', 'super_admin'
     const params     = [tenantId];
     let p = 2;
 
+    if (booking_id) { conditions.push(`b.id = $${p++}`); params.push(booking_id); }
     if (date)   { conditions.push(`b.booking_date = $${p++}`);   params.push(date); }
     if (status) { conditions.push(`b.status = $${p++}`);          params.push(status); }
     if (search) {

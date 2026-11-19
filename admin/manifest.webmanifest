@@ -2,7 +2,7 @@
   "id": "/admin/",
   "name": "ICSS Bookings Admin",
   "short_name": "ICSS Bookings",
-  "description": "Manage your bookings, availability, services and invoices.",
+  "description": "Manage your bookings, clients, availability, services and invoices.",
   "lang": "en",
   "start_url": "/admin/index.html",
   "scope": "/admin/",
@@ -33,6 +33,10 @@
     {
       "name": "Bookings",
       "url": "/admin/bookings.html"
+    },
+    {
+      "name": "Clients",
+      "url": "/admin/clients.html"
     },
     {
       "name": "Invoices",

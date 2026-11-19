@@ -15,6 +15,11 @@
       ['Statuses and cancellation', 'Review a booking before approving a payment or changing its status. Cancelled or rejected appointments cannot simply be revived as unpaid confirmed bookings. Cancellation may notify the customer; add a useful reason when prompted.', '#tableBody'],
       ['Invoices and customer messages', 'Booking emails can include a branded invoice when a customer email is available. For a phone customer without email, use Invoices to download a copy. Check the actual status before repeating a request after a lost connection.']
     ]],
+    'clients.html': ['Clients', 'Find the people who booked with your business and review their history.', [
+      ['Find a client', 'Search by name, email, or phone. The Visits filter lets you find returning clients, first-time visitors, and clients without any completed visits.', '#clientFilters'],
+      ['Understand the totals', 'A visit counts after you mark its booking Completed. Most-used services are ranked by those visits. Total bookings also includes upcoming, cancelled and other appointments.', '.client-metrics'],
+      ['Open a profile', 'View contact details, the next confirmed appointment and past bookings. Open any booking to manage that specific appointment.', '#clientResults']
+    ]],
     'availability.html': ['Availability', 'Control which dates and individual appointment slots customers may book.', [
       ['Choose a date', 'Move through the calendar and select the date you want to review. Inspect its day state and time slots before making changes.', '.calendar'],
       ['Block a whole day', 'Use a day block for holidays, closures or dates when the business cannot take bookings. An optional reason helps customers understand why the date is unavailable. Existing appointments still need separate attention.'],
