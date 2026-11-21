@@ -36,6 +36,7 @@ test('tenant search pages, branded previews and sitemap reflect public content o
 
     const handlers = createTenantSiteHandlers(path.join(__dirname, '../frontend'), path.join(__dirname, '../public'));
     const app = express();
+    app.get('/', handlers.homepage);
     app.get('/sitemap.xml', handlers.sitemap);
     app.get(/^\/([a-z0-9-]{2,50})\/(share-card\.png|site-logo\.png)$/, handlers.shareCard);
     app.get(/^\/([a-z0-9-]{2,50})(?:\/(home|about|gallery|book))?\/?$/, handlers.tenantPage);
@@ -44,6 +45,13 @@ test('tenant search pages, branded previews and sitemap reflect public content o
     t.after(() => new Promise(resolve => server.close(resolve)));
     const origin = 'http://127.0.0.1:' + server.address().port;
     const get = (url, options) => fetch(origin + url, options);
+
+    const homepage = await get('/');
+    assert.equal(homepage.status, 200);
+    const homepageHtml = await homepage.text();
+    assert.match(homepageHtml, /href="https:\/\/icssbookings\.com\/glam-by-tia">Glam &amp; Tia<\/a>/);
+    assert.match(homepageHtml, /href="https:\/\/icssbookings\.com\/legacy-studio">Legacy Makeup<\/a>/);
+    assert.doesNotMatch(homepageHtml, /private-studio|closed-studio|test-studio|empty-studio|Unpublished draft name/);
 
     const home = await get('/glam-by-tia');
     assert.equal(home.status, 200);

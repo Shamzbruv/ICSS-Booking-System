@@ -111,9 +111,13 @@ function pageContent(site, page) {
     return { heading: plainText(first?.headline || first?.title, 110), excerpts };
 }
 
+function tenantDisplayName(tenant) {
+    return plainText(tenant.site_config?.brand?.name, 100) || plainText(tenant.name, 100) || tenant.slug;
+}
+
 function buildSiteMetadata(tenant, services, resolvedAssets) {
     const site = tenant.site_config || {};
-    const name = plainText(site.brand?.name, 100) || plainText(tenant.name, 100) || tenant.slug;
+    const name = tenantDisplayName(tenant);
     const location = plainText(site.contact?.address ?? tenant.branding?.location, 150);
     const tagline = plainText(site.brand?.tagline ?? tenant.branding?.bookingTagline, 140);
     const serviceList = services.map(service => ({ name: plainText(service.name, 110), description: plainText(service.description, 220) })).filter(service => service.name);
@@ -220,6 +224,19 @@ function renderContent(metadata, page) {
     </main>`;
 }
 
+function renderTenantLinks(tenants) {
+    const links = tenants.filter(isIndexable).map(tenant => ({
+        name: tenantDisplayName(tenant),
+        url: pageUrl(tenant.slug, 'home')
+    })).sort((left, right) => left.name.localeCompare(right.name, 'en'));
+    if (!links.length) return '';
+
+    return `<nav class="site-footer-businesses" aria-label="Book with a business">
+        <h2>Book with a business</h2>
+        <ul>${links.map(({ name, url }) => `<li><a href="${escapeHtml(url)}">${escapeHtml(name)}</a></li>`).join('')}</ul>
+    </nav>`;
+}
+
 function renderTenantSitemap(tenants) {
     const urls = tenants.filter(isIndexable).flatMap(tenant => pageList(tenant.site_config || {}).map(page => pageUrl(tenant.slug, page)));
     return urls.map(url => `  <url><loc>${escapeHtml(url)}</loc></url>`).join('\n');
@@ -227,5 +244,5 @@ function renderTenantSitemap(tenants) {
 
 module.exports = {
     APP_ROUTES, CARD_HEIGHT, CARD_WIDTH, brandAssets, buildSiteMetadata, cardBackground, isTenantSlug,
-    renderContent, renderHead, renderTenantSitemap
+    renderContent, renderHead, renderTenantLinks, renderTenantSitemap
 };

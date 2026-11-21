@@ -109,6 +109,7 @@ const frontendDist = path.join(__dirname, '../frontend/dist');
 const { APP_ROUTES } = require('./services/tenantSeo');
 const { createTenantSiteHandlers } = require('./routes/tenantSites');
 const tenantSites = createTenantSiteHandlers(frontendDist, publicDir);
+app.get('/', tenantSites.homepage);
 app.get('/sitemap.xml', tenantSites.sitemap);
 app.get('/index.html', (req, res) => res.redirect(308, '/'));
 app.get('/industries', (req, res) => {

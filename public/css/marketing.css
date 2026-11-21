@@ -139,6 +139,16 @@
 .site-footer .site-footer-parent { color: var(--purple); font-size: 13px; font-weight: 650; }
 .site-footer nav { display: grid; align-content: start; gap: 11px; color: var(--muted); font-size: 14px; }
 .site-footer nav h2 { margin: 0 0 3px; color: var(--ink); font-size: 14px; }
+.site-footer-businesses { grid-column: 1 / -1; }
+.site-footer-businesses ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.site-footer-businesses a { text-decoration: underline; }
 .site-footer .site-footer-bottom {
   grid-column: 1 / -1;
   display: flex;

@@ -5,7 +5,7 @@ const { query } = require('../db/connection');
 const { MEDIA_RULES } = require('../services/media');
 const {
     CARD_HEIGHT, CARD_WIDTH, brandAssets, buildSiteMetadata, cardBackground, isTenantSlug,
-    renderContent, renderHead, renderTenantSitemap
+    renderContent, renderHead, renderTenantLinks, renderTenantSitemap
 } = require('../services/tenantSeo');
 
 async function findPublicTenant(slug) {
@@ -109,6 +109,27 @@ function createTenantSiteHandlers(frontendDir, publicDir) {
         }).type('png').send(card);
     }
 
+    async function homepage(req, res, next) {
+        try {
+            const [html, { rows }] = await Promise.all([
+                fs.readFile(path.join(publicDir, 'index.html'), 'utf8'),
+                query(`SELECT slug, name, is_test_account,
+                             CASE WHEN site_config IS NULL THEN NULL ELSE jsonb_build_object(
+                                 'brand', jsonb_build_object('name', site_config->'brand'->'name'),
+                                 'seo', jsonb_build_object('noIndex', site_config->'seo'->'noIndex')
+                             ) END AS site_config,
+                             EXISTS (SELECT 1 FROM services WHERE tenant_id = tenants.id AND active = true) AS has_services
+                       FROM tenants WHERE active = true AND is_test_account IS DISTINCT FROM true`)
+            ]);
+            const links = renderTenantLinks(rows);
+            return res.set('Cache-Control', 'no-cache').type('html')
+                .send(html.replace('<!-- PUBLIC_TENANT_LINKS -->', () => links));
+        } catch (error) {
+            console.error('[Homepage tenant links]', error.message);
+            return next();
+        }
+    }
+
     async function sitemap(req, res) {
         const [marketing, { rows }] = await Promise.all([
             fs.readFile(path.join(publicDir, 'sitemap.xml'), 'utf8'),
@@ -127,7 +148,7 @@ function createTenantSiteHandlers(frontendDir, publicDir) {
         res.set('Cache-Control', 'public, max-age=300').type('application/xml').send(xml);
     }
 
-    return { tenantPage, shareCard, sitemap };
+    return { homepage, tenantPage, shareCard, sitemap };
 }
 
 module.exports = { createTenantSiteHandlers };
