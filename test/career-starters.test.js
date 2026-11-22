@@ -36,7 +36,7 @@ test('active starter templates refresh their default previews and preserve exist
     await seedCareerStarters(db);
     await seedCareerStarters(db);
     const { rows } = await db.query('SELECT * FROM themes ORDER BY name');
-    assert.equal(rows.length, 10);
+    assert.equal(rows.length, 11);
     assert.equal(rows.find(row => row.name === 'Yaad Table Catering').template_path, '/demo/catering');
     assert.deepEqual(rows.find(row => row.name === 'Island Table Catering'), existing.find(row => row.name === 'Island Table Catering'));
     const driving = rows.find(row => row.name === 'Harbour Driving School');
@@ -75,6 +75,22 @@ test('active starter templates refresh their default previews and preserve exist
             assert.ok(fs.existsSync(path.join(__dirname, '../public', image)));
         }
     }
+
+    const influencerTheme = rows.find(row => row.template_path === '/demo/influencers');
+    await seedStarterServices('creator-owner', influencerTheme.id, db);
+    const { rows: pitches } = await db.query("SELECT name, active, currency FROM services WHERE tenant_id = 'creator-owner' ORDER BY name");
+    assert.deepEqual(pitches.map(row => row.name), [
+        'Brand Partnership Call', 'Creator Collaboration Call', 'Event Hosting & Appearances Call', 'UGC & Content Production Call'
+    ]);
+    assert.ok(pitches.every(row => row.active && row.currency === 'JMD'));
+    const { default: influencer } = await import('../frontend/src/site/presets/influencers.js');
+    const portfolio = influencer.site.pages.find(page => page.id === 'gallery');
+    assert.deepEqual(portfolio.sections.find(section => section.type === 'gallery').props.images, []);
+    for (const photo of influencer.demo.galleryImages) {
+        assert.ok(fs.existsSync(path.join(__dirname, '../public', photo.url)));
+    }
+    const mobileHero = sanitizeSiteConfig(influencer.site).pages[0].sections[0].props.mobileImageUrl;
+    assert.ok(fs.existsSync(path.join(__dirname, '../public', mobileHero)));
 
     await db.query('DELETE FROM themes WHERE id = $1', [driving.id]);
     await seedCareerStarters(db);

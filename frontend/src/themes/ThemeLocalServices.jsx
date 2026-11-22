@@ -4,6 +4,13 @@ import kits from '../site/presets/career-starter-kits.json';
 const field = (name, label, type = 'text', required = false) => ({ name, label, noteLabel: label, type, required });
 const rentalFields = [field('hireFrom', 'Requested rental start', 'date', true), field('hireUntil', 'Requested rental end', 'date', true)];
 const configurations = {
+  influencers: { name: 'influencers', color: '#70367d', title: 'Choose a discovery call', fields: [
+    field('brand', 'Brand, agency or creator name', 'text', true),
+    field('brief', 'Project goals, platforms & deliverables', 'textarea', true),
+    field('projectDate', 'Campaign launch or event date (if known)', 'date'),
+    field('location', 'Parish, venue or online'),
+    field('budget', 'Budget range and currency (optional)')
+  ], note: 'Your booking is for a discovery call. Rates, deliverables, usage rights and event dates are agreed separately.' },
   drivingLessons: { name: 'driving-lessons', color: '#9d3a1b', title: 'Choose a lesson or introductory call', fields: [
     { ...field('transmission', 'Transmission preference', 'select', true), options: ['', 'Automatic', 'Manual', 'No preference'].map(value => ({ value, label: value || 'Select your preference' })) },
     field('area', 'Parish & pickup community', 'text', true),
@@ -73,6 +80,7 @@ export function ThemeTutoring(props) { return <LocalServiceBooking {...props} in
 
 export function ThemeMusicians(props) { return <LocalServiceBooking {...props} industry="musicians" />; }
 
+export function ThemeInfluencers(props) { return <LocalServiceBooking {...props} industry="influencers" />; }
 export function ThemeDrivingLessons(props) { return <LocalServiceBooking {...props} industry="drivingLessons" />; }
 export function ThemePastorMinistry(props) { return <LocalServiceBooking {...props} industry="pastorMinistry" />; }
 export function ThemeCateringEvents(props) { return <LocalServiceBooking {...props} industry="cateringEvents" />; }

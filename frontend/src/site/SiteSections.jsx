@@ -155,7 +155,9 @@ function Services({ props, ctx }) {
 }
 
 function Gallery({ props, ctx }) {
-  const images = (props.images || []).map((image, sourceIndex) => ({ ...image, sourceIndex })).filter((image) => isSafeMediaUrl(image?.url));
+  const sampleImages = ctx.tenant.isDemo && !ctx.preview ? ctx.preset.demo.galleryImages : undefined;
+  const galleryImages = props.images?.length ? props.images : sampleImages || [];
+  const images = galleryImages.map((image, sourceIndex) => ({ ...image, sourceIndex })).filter((image) => isSafeMediaUrl(image?.url));
   const [open, setOpen] = useState(null);
   const layout = props.layout || 'grid';
   if (!images.length && !ctx.editing) return null;

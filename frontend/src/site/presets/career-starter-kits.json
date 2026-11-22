@@ -1,5 +1,42 @@
 [
   {
+    "key": "influencers",
+    "name": "Creator Partnerships",
+    "category": "Influencers & Content Creators",
+    "summary": "A portfolio and booking site for Jamaican creators, influencers and event hosts. Take briefs for sponsored campaigns, UGC, appearances and collaborations.",
+    "art": "/images/starter-kits/influencers.webp",
+    "services": [
+      {
+        "name": "Brand Partnership Call",
+        "description": "Discuss a sponsored campaign, product feature or paid social collaboration.",
+        "duration_minutes": 30,
+        "price": 0,
+        "active": true
+      },
+      {
+        "name": "UGC & Content Production Call",
+        "description": "Plan short-form video, product demos or photos for your own channels.",
+        "duration_minutes": 30,
+        "price": 0,
+        "active": true
+      },
+      {
+        "name": "Event Hosting & Appearances Call",
+        "description": "Discuss the date, venue, audience and role for your live event.",
+        "duration_minutes": 20,
+        "price": 0,
+        "active": true
+      },
+      {
+        "name": "Creator Collaboration Call",
+        "description": "Pitch a joint video, livestream, podcast or community project.",
+        "duration_minutes": 20,
+        "price": 0,
+        "active": true
+      }
+    ]
+  },
+  {
     "key": "driving-lessons",
     "name": "Harbour Driving School",
     "category": "Driving Lessons",

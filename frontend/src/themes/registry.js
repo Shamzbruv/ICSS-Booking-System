@@ -15,10 +15,11 @@ import ThemeCleaning from './ThemeCleaning';
 import kits from '../site/presets/career-starter-kits.json';
 
 import { ThemePartyRentals, ThemeCarRental, ThemeCatering, ThemeDetailing, ThemeHomeRepairs, ThemeTutoring, ThemeMusicians,
-  ThemeDrivingLessons, ThemePastorMinistry, ThemeCateringEvents, ThemePhotographyVideo, ThemeTutoringCoaching, ThemeHomeServices, TRADE_BOOKING_THEMES } from './ThemeLocalServices';
+  ThemeDrivingLessons, ThemePastorMinistry, ThemeCateringEvents, ThemePhotographyVideo, ThemeTutoringCoaching, ThemeHomeServices, ThemeInfluencers, TRADE_BOOKING_THEMES } from './ThemeLocalServices';
 
 export const BOOKING_THEMES = {
   ...TRADE_BOOKING_THEMES,
+  influencers: ThemeInfluencers,
   'driving-lessons': ThemeDrivingLessons,
   'pastor-ministry': ThemePastorMinistry,
   'catering-events': ThemeCateringEvents,
