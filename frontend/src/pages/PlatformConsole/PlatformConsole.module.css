@@ -755,3 +755,19 @@
 .pageHelpBar { display: flex; justify-content: flex-end; padding: 22px 32px 0; }
 .pageHelpBar + .view { padding-top: 8px; }
 @media (max-width:760px) { .pageHelpBar { padding: 14px 16px 0; } .main { padding-bottom: calc(28px + env(safe-area-inset-bottom)); } }
+
+.announcementComposer { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 22px; padding: 20px; }
+.announcementForm { display: grid; gap: 14px; }
+.announcementForm label { display: grid; gap: 7px; }
+.announcementForm textarea { resize: vertical; }
+.announcementForm button { justify-self: start; }
+.announcementPreview h3 { margin: 0 0 10px; font-size: 0.9rem; }
+.announcementPreview > div { padding: 18px; border: 1px solid currentColor; border-radius: 12px; }
+.announcementPreview strong { display: block; margin: 8px 0; font-size: 1.25rem; overflow-wrap: anywhere; }
+.announcementText { white-space: pre-wrap; overflow-wrap: anywhere; margin: 8px 0 0; }
+.announcementStatus { margin: 0; padding: 0 20px 18px; }
+.announcementHistory { margin: 0; padding: 0 20px; list-style: none; }
+.announcementHistory li { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 16px 0; border-top: 1px solid rgba(150, 150, 180, 0.2); }
+.announcementHistory li > div { min-width: 0; }
+.announcementHistory h4 { overflow-wrap: anywhere; margin: 0 0 5px; }
+@media (max-width: 780px) { .announcementComposer { grid-template-columns: 1fr; } }

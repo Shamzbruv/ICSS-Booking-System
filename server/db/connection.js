@@ -11,6 +11,7 @@
 require('dotenv').config();
 const { Pool } = require('pg');
 const { THEME_KEYS } = require('../services/siteConfig');
+const { migratePlatformAnnouncements } = require('./platformAnnouncements');
 const { migrateNewsletter } = require('./newsletterSchema');
 const { seedCareerStarters } = require('./careerStarters');
 
@@ -767,6 +768,7 @@ async function runMigrations(client) {
     `);
     await seedCareerStarters(client);
     await migrateNewsletter(client);
+    await migratePlatformAnnouncements(client);
     // Theme previews now open the live website demo for that template.
     for (const [themeName, themeKey] of Object.entries(THEME_KEYS)) {
         await client.query(`UPDATE themes SET template_path = $1 WHERE name = $2 AND template_path IS DISTINCT FROM $1`, [`/demo/${themeKey}`, themeName]);

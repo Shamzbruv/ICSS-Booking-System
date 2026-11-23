@@ -91,6 +91,9 @@ export const api = {
   // ── Platform Console (platform_owner only) ────────────────────────────────
   // All platform calls use the owner's main localStorage token automatically.
   platform: {
+    listAnnouncements: () => apiFetch('/platform/announcements', { cache: 'no-store' }),
+    publishAnnouncement: body => apiFetch('/platform/announcements', { method: 'POST', body }),
+    withdrawAnnouncement: id => apiFetch(`/platform/announcements/${encodeURIComponent(id)}/withdraw`, { method: 'POST' }),
     consultationList: (filters, signal) => apiFetch(`/platform/consultations?${new URLSearchParams(filters)}`, { signal, cache: 'no-store' }),
     consultationGet: (id, signal) => apiFetch(`/platform/consultations/${encodeURIComponent(id)}`, { signal, cache: 'no-store' }),
     consultationSchedule: (id, body) => apiFetch(`/platform/consultations/hosts/${id}`, { method: 'PUT', body }),

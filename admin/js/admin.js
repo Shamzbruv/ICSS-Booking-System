@@ -722,3 +722,83 @@ document.addEventListener('DOMContentLoaded', () => {
         button.addEventListener('click', () => requestAdminTutorial(button.dataset.startTutorial));
     });
 });
+
+function startPlatformAnnouncements() {
+    const user = getUser();
+    if (!user?.id || !['tenant_admin', 'staff'].includes(user.role) || !getToken() || getImpToken()) return;
+    if (!document.querySelector('.sidebar-nav') || typeof HTMLDialogElement === 'undefined') return;
+
+    const storageKey = 'icss_announcement_pending:' + getTenantSlug() + ':' + user.id;
+    const pending = new Set();
+    try {
+        for (const id of JSON.parse(localStorage.getItem(storageKey) || '[]')) pending.add(id);
+    } catch { /* Storage may be disabled. */ }
+
+    function remember() {
+        try { localStorage.setItem(storageKey, JSON.stringify([...pending])); }
+        catch { /* The in-memory set still applies until navigation. */ }
+    }
+
+    async function acknowledge(id) {
+        try {
+            await apiFetch('/api/v1/announcements/' + encodeURIComponent(id) + '/dismiss', { method: 'POST', keepalive: true });
+            pending.delete(id);
+            remember();
+        } catch { /* Try again the next time the dashboard checks for an update. */ }
+    }
+
+    function show(announcement) {
+        const dialog = document.createElement('dialog');
+        dialog.className = 'update-announcement';
+        dialog.setAttribute('aria-labelledby', 'platformAnnouncementTitle');
+        const header = document.createElement('div');
+        header.className = 'update-announcement-header';
+        const label = document.createElement('p');
+        label.textContent = 'ICSS Bookings update';
+        const close = document.createElement('button');
+        close.type = 'button';
+        close.className = 'update-announcement-close';
+        close.setAttribute('aria-label', 'Dismiss update announcement');
+        close.textContent = '×';
+        close.addEventListener('click', () => dialog.close());
+        header.append(label, close);
+
+        const title = document.createElement('h2');
+        title.id = 'platformAnnouncementTitle';
+        title.textContent = announcement.title;
+        const body = document.createElement('p');
+        body.className = 'update-announcement-body';
+        body.textContent = announcement.body;
+        dialog.append(header, title, body);
+        dialog.addEventListener('close', () => {
+            pending.add(announcement.id);
+            remember();
+            dialog.remove();
+            acknowledge(announcement.id);
+        }, { once: true });
+        document.body.append(dialog);
+        dialog.showModal();
+    }
+
+    let checking = false;
+    async function check() {
+        if (checking || document.hidden || document.querySelector('dialog[open], .modal.open')) return;
+        checking = true;
+        try {
+            const { announcement } = await apiFetch('/api/v1/announcements', { cache: 'no-store' });
+            if (!announcement || document.hidden) return;
+            if (pending.has(announcement.id)) {
+                await acknowledge(announcement.id);
+            } else if (!document.querySelector('dialog[open], .modal.open')) {
+                show(announcement);
+            }
+        } catch { /* Announcements must not interrupt dashboard access. */ }
+        finally { checking = false; }
+    }
+
+    check();
+    setInterval(check, 60_000);
+    document.addEventListener('visibilitychange', check);
+}
+
+document.addEventListener('DOMContentLoaded', startPlatformAnnouncements);

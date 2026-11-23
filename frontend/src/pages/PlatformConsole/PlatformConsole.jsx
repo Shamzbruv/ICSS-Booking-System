@@ -14,6 +14,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { ConsoleProvider, useConsole } from './ConsoleContext';
 import ImpersonationBanner from './ImpersonationBanner';
 import WhatsAppSettings from './WhatsAppSettings';
+import Announcements from './Announcements';
 import ConsultationWorkspace from '../Consultations/ConsultationWorkspace';
 import TenantDrawer from './TenantDrawer';
 import InstallPlatformApp from './InstallPlatformApp';
@@ -70,6 +71,7 @@ const NAV = [
   { id: 'tenants',    icon: 'building', label: 'Tenants' },
   { id: 'themes',     icon: 'layout', label: 'Themes' },
   { id: 'jobs',       icon: 'activity', label: 'Jobs & Queue' },
+  { id: 'announcements', icon: 'message', label: 'Announcements' },
   { id: 'payments',   icon: 'payment', label: 'Payments' },
   { id: 'whatsapp',   icon: 'message', label: 'WhatsApp' },
   { id: 'audit',      icon: 'receipt', label: 'Audit Log' },
@@ -569,6 +571,7 @@ function InfoRow({ label, value }) {
 }
 
 const VIEW_MAP = {
+  announcements: <Announcements />,
   whatsapp: <WhatsAppSettings />,
   dashboard:<DashboardView />,
   tenants:  <TenantsView />,
