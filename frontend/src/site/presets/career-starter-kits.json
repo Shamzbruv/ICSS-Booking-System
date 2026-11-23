@@ -1,5 +1,35 @@
 [
   {
+    "key": "expert-booking",
+    "name": "Expert Booking Page",
+    "category": "Consultants & Specialists",
+    "summary": "Share a single booking link for tech advice, specialist consultations or one-on-one sessions. Add your availability and share your link without building a website.",
+    "art": "/images/starter-kits/expert-booking.webp",
+    "services": [
+      {
+        "name": "Introductory Call",
+        "description": "Share what you need and see if an advisory session is the right fit.",
+        "duration_minutes": 15,
+        "price": 0,
+        "active": true
+      },
+      {
+        "name": "Expert Consultation",
+        "description": "Get focused advice on a decision, technical question or next step.",
+        "duration_minutes": 30,
+        "price": 0,
+        "active": false
+      },
+      {
+        "name": "Deep-Dive Session",
+        "description": "Work through a complex issue, review a plan or discuss several questions.",
+        "duration_minutes": 60,
+        "price": 0,
+        "active": false
+      }
+    ]
+  },
+  {
     "key": "influencers",
     "name": "Creator Partnerships",
     "category": "Influencers & Content Creators",

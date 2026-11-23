@@ -36,7 +36,7 @@ test('active starter templates refresh their default previews and preserve exist
     await seedCareerStarters(db);
     await seedCareerStarters(db);
     const { rows } = await db.query('SELECT * FROM themes ORDER BY name');
-    assert.equal(rows.length, 11);
+    assert.equal(rows.length, 12);
     assert.equal(rows.find(row => row.name === 'Yaad Table Catering').template_path, '/demo/catering');
     assert.deepEqual(rows.find(row => row.name === 'Island Table Catering'), existing.find(row => row.name === 'Island Table Catering'));
     const driving = rows.find(row => row.name === 'Harbour Driving School');
@@ -68,13 +68,30 @@ test('active starter templates refresh their default previews and preserve exist
         const preset = TRADE_PRESETS[kit.key] || (await import('../frontend/src/site/presets/' + kit.key + '.js')).default;
         assert.equal(preset.demo.services.length, kit.services.length);
         assert.equal(preset.site.pages.find(page => page.id === 'book').sections.some(section => section.type === 'booking'), true);
-        assert.equal(sanitizeSiteConfig(preset.site).pages[0].sections[0].props.imageUrl, kit.art);
+        if (preset.site.enabled !== false) {
+            assert.equal(sanitizeSiteConfig(preset.site).pages[0].sections[0].props.imageUrl, kit.art);
+        }
         if (kit.trade) {
             const image = sanitizeSiteConfig(preset.site).pages[0].sections[0].props.mobileImageUrl;
             assert.equal(image, kit.art.replace('.webp', '-mobile.webp'));
             assert.ok(fs.existsSync(path.join(__dirname, '../public', image)));
         }
     }
+
+    const expert = rows.find(row => row.template_path === '/demo/expert-booking');
+    await seedStarterServices('new-advisor', expert.id, db);
+    const { rows: consultations } = await db.query("SELECT name, duration_minutes, price, active FROM services WHERE tenant_id = 'new-advisor' ORDER BY duration_minutes");
+    assert.deepEqual(consultations, [
+        { name: 'Introductory Call', duration_minutes: 15, price: '0', active: true },
+        { name: 'Expert Consultation', duration_minutes: 30, price: '0', active: false },
+        { name: 'Deep-Dive Session', duration_minutes: 60, price: '0', active: false }
+    ]);
+    const { default: expertPreset } = await import('../frontend/src/site/presets/expert-booking.js');
+    const { resolveSite } = await import('../frontend/src/site/siteSchema.js');
+    const advisorSite = resolveSite({ name: 'New advisor' }, expertPreset, null);
+    assert.equal(sanitizeSiteConfig(advisorSite).enabled, false);
+    assert.equal(advisorSite.brand.name, 'New advisor');
+    assert.equal(resolveSite({ name: 'New advisor' }, expertPreset, { enabled: true }).enabled, true);
 
     const influencerTheme = rows.find(row => row.template_path === '/demo/influencers');
     await seedStarterServices('creator-owner', influencerTheme.id, db);

@@ -4,6 +4,9 @@ import kits from '../site/presets/career-starter-kits.json';
 const field = (name, label, type = 'text', required = false) => ({ name, label, noteLabel: label, type, required });
 const rentalFields = [field('hireFrom', 'Requested rental start', 'date', true), field('hireUntil', 'Requested rental end', 'date', true)];
 const configurations = {
+  expertBooking: { name: 'expert-booking', color: '#12665c', title: 'Choose a session', fields: [
+    field('topic', 'What would you like to discuss?', 'textarea', true)
+  ], note: 'Meeting details will be confirmed after booking.' },
   influencers: { name: 'influencers', color: '#70367d', title: 'Choose a discovery call', fields: [
     field('brand', 'Brand, agency or creator name', 'text', true),
     field('brief', 'Project goals, platforms & deliverables', 'textarea', true),
@@ -80,6 +83,7 @@ export function ThemeTutoring(props) { return <LocalServiceBooking {...props} in
 
 export function ThemeMusicians(props) { return <LocalServiceBooking {...props} industry="musicians" />; }
 
+export function ThemeExpertBooking(props) { return <LocalServiceBooking {...props} industry="expertBooking" />; }
 export function ThemeInfluencers(props) { return <LocalServiceBooking {...props} industry="influencers" />; }
 export function ThemeDrivingLessons(props) { return <LocalServiceBooking {...props} industry="drivingLessons" />; }
 export function ThemePastorMinistry(props) { return <LocalServiceBooking {...props} industry="pastorMinistry" />; }

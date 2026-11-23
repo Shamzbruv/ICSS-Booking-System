@@ -58,7 +58,7 @@ test('every template maps to a website preset and a live demo', async () => {
     assert.equal(themeKeyForName('Unknown'), 'universal');
 });
 
-test('each preset is individually designed with all four pages', async () => {
+test('each preset includes the pages for its layout and a booking widget', async () => {
     const fonts = new Set();
     const { TRADE_PRESETS } = await import('../frontend/src/site/presets/trade-starters.js');
     const tradeHeadlines = new Set();
@@ -72,7 +72,8 @@ test('each preset is individually designed with all four pages', async () => {
             continue;
         }
         const source = read(`frontend/src/site/presets/${key}.js`);
-        for (const pageId of ['home', 'about', 'gallery', 'book']) assert.match(source, new RegExp(`page\\('${pageId}'`), `${key} lacks ${pageId}`);
+        const expectedPages = key === 'expert-booking' ? ['home', 'book'] : ['home', 'about', 'gallery', 'book'];
+        for (const pageId of expectedPages) assert.match(source, new RegExp(`page\\('${pageId}'`), `${key} lacks ${pageId}`);
         assert.match(source, /section\('booking-main', 'booking'/, `${key} needs a booking widget`);
         const heading = source.match(/headingFont: '([^']+)'/)[1];
         fonts.add(heading);

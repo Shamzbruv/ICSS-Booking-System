@@ -123,7 +123,7 @@ function StepTheme({ data, onSelect, preferred, onPreferredUsed, onNext, onBack 
   return (
     <>
       <h1 className={s.wizard__title}>Pick your starter theme</h1>
-      <p className={s.wizard__subtitle}>Preview an entire website with a sample booking flow. After setup, use Website Builder to change the pages, images, colours and wording.</p>
+      <p className={s.wizard__subtitle}>Preview a booking page or a full website before choosing. You can customise your design after setup.</p>
       <div className={s.starterGrid}>
         {loading && <p role="status">Loading themes…</p>}
         {error && <div role="alert"><p>{error}</p><button type="button" className={`${s.btn} ${s['btn--ghost']}`} onClick={loadThemes}>Try again</button></div>}

@@ -25,6 +25,7 @@ import musicians from './musicians';
 
 import drivingLessons from './driving-lessons.js';
 import influencers from './influencers.js';
+import expertBooking from './expert-booking.js';
 import pastorMinistry from './pastor-ministry.js';
 import cateringEvents from './catering-events.js';
 import photographyVideo from './photography-video.js';
@@ -35,6 +36,7 @@ import { TRADE_PRESETS } from './trade-starters.js';
 export const PRESETS = {
   ...TRADE_PRESETS,
   influencers,
+  'expert-booking': expertBooking,
   'driving-lessons': drivingLessons,
   'pastor-ministry': pastorMinistry,
   'catering-events': cateringEvents,
