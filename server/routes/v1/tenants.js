@@ -12,6 +12,7 @@ const { retiredStarterNames } = require('../../db/careerStarters');
 const { signToken, authenticate, requireRole, requireTenantOwnership } = require('../../middleware/auth');
 const { invalidateTenantCache } = require('../../middleware/tenantResolver');
 const { seedStarterServices } = require('../../services/provisioning');
+const { normalizeEmail, getTenantReplySettings } = require('../../services/tenantReplyEmail');
 
 const RESERVED_SLUGS = new Set([
     'admin', 'api', 'login', 'signup', 'dashboard', 'settings', 'www', 'app',
@@ -452,6 +453,20 @@ router.patch('/:slug/payment-settings', authenticate, requireTenantOwnership('te
         console.error('[Tenants/Payment Settings]', err.message);
         res.status(500).json({ error: 'Failed to save payment settings.' });
     }
+});
+
+const tenantEmailAccess = [authenticate, requireTenantOwnership('tenant_admin')];
+
+router.get('/:slug/email-replies', ...tenantEmailAccess, async (req,res) => {
+    res.set('Cache-Control','private, no-store').json(await getTenantReplySettings(query, req.tenant.id));
+});
+
+router.patch('/:slug/email-replies', ...tenantEmailAccess, async (req,res) => {
+    const input = typeof req.body?.email === 'string' ? req.body.email.trim() : null;
+    const address = normalizeEmail(input);
+    if (input === null || (input && !address)) return res.status(400).json({ error:'Enter a valid email address or leave it blank.' });
+    await query('UPDATE tenants SET email_reply_to=$1 WHERE id=$2', [address || null,req.tenant.id]);
+    res.set('Cache-Control','private, no-store').json(await getTenantReplySettings(query, req.tenant.id));
 });
 
 // PATCH /api/v1/tenants/:slug/branding — Save booking-page branding (logo, tagline, etc.)

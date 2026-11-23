@@ -642,7 +642,9 @@ document.addEventListener('DOMContentLoaded', () => {
     setupMobileNav();
     const nav = document.querySelector('.sidebar-nav');
     if (nav && getToken() && ['tenant_admin', 'staff'].includes(getUser()?.role)) {
-        for (const [href, label] of [['clients.html', 'Clients'], ['invoices.html', 'Invoices']]) {
+        const entries = [['clients.html', 'Clients'], ['invoices.html', 'Invoices']];
+        if (getUser()?.role === 'tenant_admin') entries.push(['newsletter.html', 'Newsletter']);
+        for (const [href, label] of entries) {
             if (nav.querySelector(`[href="${href}"]`)) continue;
             const link = document.createElement('a');
             link.href = href;
@@ -671,7 +673,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // One visual language across every existing admin navigation entry.
 function polishAdminNavigation() {
-    const icons = { 'index.html': 'dashboard', 'bookings.html': 'calendar', 'clients.html': 'users', 'availability.html': 'calendar', 'settings.html': 'settings', 'customize.html': 'layout', 'services.html': 'box', 'tenants.html': 'building', 'contracts.html': 'pen', 'invoices.html': 'receipt' };
+    const icons = { 'index.html': 'dashboard', 'bookings.html': 'calendar', 'clients.html': 'users', 'newsletter.html': 'users', 'availability.html': 'calendar', 'settings.html': 'settings', 'customize.html': 'layout', 'services.html': 'box', 'tenants.html': 'building', 'contracts.html': 'pen', 'invoices.html': 'receipt' };
     document.querySelectorAll('.sidebar-nav .nav-item').forEach(item => {
         const key = (item.getAttribute('href') || '').split('?')[0].split('/').pop();
         const icon = icons[key] || (item.id === 'helpNavBtn' ? 'help' : null);

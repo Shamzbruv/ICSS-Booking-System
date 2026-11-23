@@ -74,6 +74,9 @@ app.use(express.urlencoded({ extended: true }));
 
 // ─── Rate Limiting ────────────────────────────────────────────────────────────
 app.use('/api/', rateLimiter);
+const newsletter = require('./routes/v1/newsletter');
+app.use('/api/v1/newsletter', newsletter.publicRouter);
+
 
 app.post('/api/v1/whatsapp/webhook', (req,res,next) => require('./services/whatsapp').webhook(req,res).catch(next));
 
@@ -144,6 +147,7 @@ app.use('/api/v1/calendar',     calendarRoutes);
 app.use('/api/v1/themes',       themesRoutes);
 app.use('/api/v1/services',     servicesRoutes);
 app.use('/api/v1/invoices', require('./routes/v1/invoices'));
+app.use('/api/v1/newsletter', newsletter.adminRouter);
 app.use('/api/v1/clients', require('./routes/v1/clients'));
 app.use('/api/v1/reviews', require('./routes/v1/reviews'));
 app.use('/api/v1/consultations', consultations.publicRouter);
@@ -204,6 +208,7 @@ async function start() {
             console.log(`   API:     http://localhost:${PORT}/api/v1/`);
             console.log(`   Mode:    ${process.env.NODE_ENV || 'development'}\n`);
             startCronJobs();
+            require('./services/newsletter').startNewsletterWorker();
             require('./services/whatsapp').startWorker();
             const { initPush, startNotificationJobs } = require('./services/notifications');
             initPush().then((ready) => console.log(ready ? '   Push:    enabled' : '   Push:    unavailable'));

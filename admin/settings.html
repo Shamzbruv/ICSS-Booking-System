@@ -78,6 +78,17 @@
         </div>
     </section>
 
+    <section class="card settings-card" id="emailReplySettings" style="max-width: 800px; margin: 0 auto;" hidden>
+        <h2 class="settings-section-title">Customer email replies</h2>
+        <p class="page-subtitle settings-section-copy">Replies to your booking emails and newsletters go to this inbox. Leave it blank to use your existing business or account email.</p>
+        <form id="emailReplyForm" class="reschedule-policy">
+            <label for="emailReplyAddress">Reply-to email address</label>
+            <input type="email" class="form-control" id="emailReplyAddress" maxlength="254" placeholder="your-business@example.com">
+            <p id="emailReplyStatus" role="status"></p>
+            <button type="submit" class="btn btn-secondary">Save reply address</button>
+        </form>
+    </section>
+
     <section class="card settings-card" id="notifications" style="max-width: 800px; margin: 0 auto;" data-tour="notification-settings">
         <p class="settings-section-kicker">Alerts</p>
         <h2 class="settings-section-title">Notifications</h2>
@@ -496,6 +507,7 @@
                 showToast('Timezone saved.', 'success');
             } catch (err) { showToast('Could not save timezone: ' + err.message, 'error'); }
         });
+        if (getUser()?.role === 'tenant_admin') loadReplySettings();
         await loadSettings();
         document.getElementById('settingsForm').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -782,6 +794,32 @@
             if (typeof showToast === 'function') showToast('Could not copy the calendar feed link.', 'error');
             else alert('Could not copy the calendar feed link.');
         }
+    }
+
+    async function loadReplySettings() {
+        const endpoint = `/api/v1/tenants/${encodeURIComponent(getTenantSlug())}/email-replies`;
+        const address = document.getElementById('emailReplyAddress');
+        const status = document.getElementById('emailReplyStatus');
+        const form = document.getElementById('emailReplyForm');
+        const update = data => {
+            address.value = data.configured;
+            status.textContent = data.effective ? 'Replies go to ' + data.effective : 'Add an inbox where you want customer replies to go.';
+        };
+        document.getElementById('emailReplySettings').hidden = false;
+        try {
+            const settings = await apiFetch(endpoint);
+            update(settings);
+        } catch (error) { status.textContent = error.message; }
+        form.addEventListener('submit', async event => {
+            event.preventDefault();
+            const button = form.querySelector('button');
+            button.disabled = true;
+            try {
+                update(await apiFetch(endpoint,{ method:'PATCH',body:{ email:address.value } }));
+                showToast('Reply address saved.','success');
+            } catch (error) { status.textContent = error.message; }
+            finally { button.disabled = false; }
+        });
     }
 
     async function loadSettings() {

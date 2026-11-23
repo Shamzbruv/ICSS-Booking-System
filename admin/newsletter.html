@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="referrer" content="no-referrer">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>ICSS Admin — Newsletter</title>
+    <link rel="icon" type="image/png" href="./favicon.png">
+    <link rel="stylesheet" href="/css/global-theme.css">
+    <link rel="stylesheet" href="css/admin.css">
+    <link rel="stylesheet" href="/css/mobile-navigation.css">
+    <link rel="stylesheet" href="/css/page-help.css">
+    <link rel="stylesheet" href="css/newsletter.css">
+    <link rel="manifest" href="/admin/manifest.webmanifest">
+    <meta name="theme-color" content="#7e22ce">
+    <link rel="apple-touch-icon" href="/admin/icons/apple-touch-icon-v2.png">
+    <script src="/admin/js/pwa.js" defer></script>
+</head>
+<body>
+<button class="hamburger" id="hamburgerBtn" aria-label="Open menu"><span></span><span></span><span></span></button>
+<div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+<aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+        <img class="client-admin-logo" src="./favicon.png" width="36" height="36" alt="">
+        <div class="brand-text">
+            <span class="brand-name" id="tenantName">Booking System</span>
+            <span class="brand-plan" id="tenantPlan"></span>
+        </div>
+    </div>
+    <nav class="sidebar-nav" aria-label="Dashboard navigation">
+        <a href="index.html" class="nav-item"><span class="nav-icon"></span> Dashboard</a>
+        <a href="bookings.html" class="nav-item"><span class="nav-icon"></span> Bookings</a>
+        <a href="availability.html" class="nav-item"><span class="nav-icon"></span> Availability</a>
+        <a href="settings.html" class="nav-item"><span class="nav-icon"></span> Settings</a>
+        <a href="customize.html" class="nav-item"><span class="nav-icon"></span> Website Builder</a>
+        <a href="services.html" class="nav-item"><span class="nav-icon"></span> Services</a>
+    </nav>
+    <div class="sidebar-footer">
+        <div class="user-info">
+            <div class="user-avatar" id="userAvatar">?</div>
+            <div><div class="user-name" id="userName">—</div><div class="user-role" id="userRole">—</div></div>
+        </div>
+        <button class="logout-btn" type="button">Sign Out</button>
+    </div>
+</aside>
+
+<main class="main-content newsletter-admin">
+    <header class="page-header">
+        <div>
+            <h1 class="page-title">Newsletter</h1>
+            <p class="page-subtitle">Manage subscribers, design your emails and send updates from your business.</p>
+        </div>
+    </header>
+
+    <p id="newsletterNotice" role="status" class="newsletter-notice"></p>
+    <div id="newsletterWorkspace" hidden>
+        <section class="newsletter-panel signup-settings" aria-label="Website signups">
+            <div>
+                <h2>Website signups</h2>
+                <p>Adds a signup form to your site. Visitors confirm their email before they can receive newsletters.</p>
+            </div>
+            <label class="check-option"><input id="signupEnabled" type="checkbox"> Show on my website</label>
+            <button class="btn btn-secondary" id="saveSignup" type="button">Save signup setting</button>
+        </section>
+
+        <section class="newsletter-panel" aria-labelledby="subscribersHeading">
+            <div class="newsletter-toolbar">
+                <div><h2 id="subscribersHeading">Subscribers</h2><p id="subscriberTotals"></p></div>
+                <button class="btn btn-primary" id="emailAll" type="button" disabled>Email all subscribers</button>
+            </div>
+            <form id="subscriberSearchForm" class="newsletter-search">
+                <label>Email address<input id="subscriberSearch" type="search" maxlength="120" placeholder="Search subscribers"></label>
+                <label>Status<select id="subscriberFilter">
+                    <option value="">All statuses</option><option value="subscribed">Subscribed</option>
+                    <option value="pending">Awaiting confirmation</option><option value="unsubscribed">Unsubscribed</option>
+                </select></label>
+                <button class="btn btn-secondary" type="submit">Search</button>
+            </form>
+            <p id="subscriberState" class="newsletter-notice" role="status"></p>
+            <ul id="subscriberList" class="newsletter-list"></ul>
+            <div class="newsletter-pagination">
+                <button class="btn btn-secondary" id="subscriberPrevious" type="button" disabled>Previous</button>
+                <span id="subscriberPage">Page 1</span>
+                <button class="btn btn-secondary" id="subscriberNext" type="button" disabled>Next</button>
+            </div>
+        </section>
+
+        <section class="newsletter-panel" aria-labelledby="composeTitle">
+            <h2 id="composeTitle" tabindex="-1">Write an email</h2>
+            <div class="newsletter-compose">
+                <form id="newsletterCompose">
+                    <div class="newsletter-recipient">
+                        <span>To</span><strong id="newsletterRecipient">All subscribed readers</strong>
+                        <button class="btn btn-secondary" id="useAll" type="button" hidden>Send to all instead</button>
+                    </div>
+                    <label>Subject<input id="messageSubject" maxlength="140" required></label>
+                    <label>Email headline <span>(optional)</span><input id="messageHeading" maxlength="140"></label>
+                    <label>Message<textarea id="messageBody" rows="7" maxlength="10000" required></textarea></label>
+                    <label>Header image URL <span>(optional)</span><input id="messageImage" type="url" maxlength="2048" placeholder="https://…"></label>
+                    <div class="newsletter-fields">
+                        <label>Button label <span>(optional)</span><input id="messageActionLabel" maxlength="45" placeholder="Book now"></label>
+                        <label>Button link<input id="messageActionUrl" type="url" maxlength="2048" placeholder="https://…"></label>
+                    </div>
+                    <fieldset class="newsletter-design">
+                        <legend>Email design</legend>
+                        <div class="newsletter-fields">
+                            <label>Layout<select id="designLayout">
+                                <option value="classic">Classic</option><option value="bold">Bold header</option><option value="minimal">Minimal</option>
+                            </select></label>
+                            <label class="check-option"><input id="designShowLogo" type="checkbox" checked> Show business logo</label>
+                            <label>Button and accent colour<input id="designAccent" type="color"></label>
+                            <label>Outer background colour<input id="designBackground" type="color" value="#f4f4f8"></label>
+                        </div>
+                        <label class="check-option"><input id="designInherit" type="checkbox" checked> Use my published website’s accent colour</label>
+                        <label>Footer note <span>(optional)</span><input id="designFooter" maxlength="220" placeholder="Business address or a sign-off"></label>
+                        <button id="saveDesign" class="btn btn-secondary" type="button">Save design as default</button>
+                    </fieldset>
+                    <p id="composerNotice" class="newsletter-notice" role="status"></p>
+                    <button class="btn btn-primary" id="sendNewsletter" type="submit">Send email</button>
+                </form>
+                <div class="newsletter-preview">
+                    <h3>Email preview</h3>
+                    <iframe title="Newsletter email preview" id="designPreview" sandbox="" referrerpolicy="no-referrer" inert></iframe>
+                    <p id="previewNotice" class="newsletter-notice" role="status"></p>
+                </div>
+            </div>
+        </section>
+
+        <section class="newsletter-panel" aria-labelledby="activityTitle">
+            <div class="newsletter-toolbar">
+                <div><h2 id="activityTitle">Send history</h2><p>Sent means accepted by the email provider.</p></div>
+                <button class="btn btn-secondary" id="refreshHistory" type="button">Refresh</button>
+            </div>
+            <p id="historyState" class="newsletter-notice" role="status"></p>
+            <ul id="newsletterHistory" class="newsletter-list"></ul>
+        </section>
+    </div>
+</main>
+<script src="/js/mobile-navigation.js"></script>
+<script src="/js/page-help.js"></script>
+<script src="js/admin.js"></script>
+<script src="js/notifications.js" defer></script>
+<script src="js/newsletter.js" defer></script>
+</body>
+</html>

@@ -1,3 +1,4 @@
+import NewsletterSignup from './NewsletterSignup';
 /**
  * TenantWebsite — the public multi-page website every tenant gets:
  *   /:slug          Home
@@ -308,11 +309,17 @@ export default function TenantWebsite({ tenant, services, themeKey, savedSite, b
     window.parent.postMessage({ type: 'icss:site-select-global', field: global }, window.location.origin);
   } : undefined;
 
+  const newsletter = (tenant.newsletter_enabled || tenant.isDemo) &&
+    (site.enabled === false || !sectionsToRender.some(section => section.type === 'newsletter' && section.visible))
+    ? <NewsletterSignup key={tenant.slug} tenant={tenant} preview={preview} />
+    : null;
+
   // Legacy "booking page only" mode.
   if (site.enabled === false) {
-    return <div ref={rootRef} className={s.site} data-site-editing={editing ? 'true' : undefined} onClickCapture={handleGlobalEdit}>
+    return <div ref={rootRef} className={s.site} style={siteCssVars(site.style)} data-site-editing={editing ? 'true' : undefined} onClickCapture={handleGlobalEdit}>
       <BookingTheme tenant={{ ...bookingTenant, embedInSite: false }} services={services} />
       <CustomerReviews tenant={tenant} preview={preview} />
+      {newsletter}
     </div>;
   }
 
@@ -398,6 +405,7 @@ export default function TenantWebsite({ tenant, services, themeKey, savedSite, b
         {(requestedPage === 'book' || onePage) && <CustomerReviews tenant={tenant} preview={preview} />}
       </main>
 
+      {newsletter}
       <footer data-site-global="footer.text" className={s.footer}>
         <div className={`${s.container} ${s.footerGrid}`}>
           <div>

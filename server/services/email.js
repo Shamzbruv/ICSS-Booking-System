@@ -12,6 +12,7 @@
 
 const { Resend } = require('resend');
 const { query } = require('../db/connection');
+const { tenantReplyAddress, normalizeEmail } = require('./tenantReplyEmail');
 const { bookingInvoiceAttachment } = require('./bookingInvoices');
 const { reviewUrl } = require('./bookingReviews');
 
@@ -63,15 +64,6 @@ function isPlatformAdminMailbox(email) {
     return !!candidate && !!platformAdminEmail && candidate === platformAdminEmail;
 }
 
-function getReplyEmail(tenant) {
-    const configuredReplyEmail = String(tenant?.branding?.replyEmail || '').trim().toLowerCase();
-    if (configuredReplyEmail && !isPlatformAdminMailbox(configuredReplyEmail)) {
-        return configuredReplyEmail;
-    }
-
-    return getDefaultNotificationEmail() || 'noreply@icssbookings.com';
-}
-
 function escapeHtml(value) {
     return String(value || '')
         .replace(/&/g, '&amp;')
@@ -90,7 +82,6 @@ function getBrand(tenant) {
         name:        b.businessName  || tenant?.name || 'ICSS Booking',
         primaryColor: b.primaryColor || '#D4AF37',
         logoUrl:     getEmailSafeAssetUrl(b.logoUrl),
-        replyEmail:  getReplyEmail(tenant),
         sendingDomain: b.sendingDomain || 'icssbookings.com',
         bookingUrl:  b.bookingUrl    || 'https://icssbookings.com'
     };
@@ -436,8 +427,8 @@ async function sendBookingConfirmation(booking, tenant) {
     await resend.emails.send({
         from:    getSenderAddress('appointments', brand),
         to:      customerEmail ? [customerEmail] : tenantRecipients,
-        cc:      customerEmail && tenantRecipients.length > 0 ? tenantRecipients : undefined,
-        replyTo: brand.replyEmail,
+        bcc:     customerEmail && tenantRecipients.length > 0 ? tenantRecipients : undefined,
+        replyTo: await tenantReplyAddress(query, booking.tenant_id || tenant?.id),
         subject: `Appointment Confirmed — ${brand.name}`,
         html: `
         <div style="font-family:Arial,sans-serif;color:#1a1a1a;max-width:600px;margin:0 auto;border:1px solid #e8e8e8;">
@@ -512,8 +503,8 @@ async function sendBookingPendingReviewEmail(booking, tenant) {
     if (customerEmail) await resend.emails.send({
         from:    getSenderAddress('appointments', brand),
         to:      customerEmail ? [customerEmail] : tenantRecipients,
-        cc:      customerEmail && tenantRecipients.length > 0 ? tenantRecipients : undefined,
-        replyTo: brand.replyEmail,
+        bcc:     customerEmail && tenantRecipients.length > 0 ? tenantRecipients : undefined,
+        replyTo: await tenantReplyAddress(query, booking.tenant_id || tenant?.id),
         subject: `${isAfterHours ? 'After-hours Request' : 'Booking Received'} — ${pendingPayment ? 'Awaiting Payment' : 'Pending Review'} · ${brand.name}`,
         html: `
         <div style="font-family:Arial,sans-serif;color:#1a1a1a;max-width:600px;margin:0 auto;border:1px solid #e8e8e8;">
@@ -540,7 +531,7 @@ async function sendBookingPendingReviewEmail(booking, tenant) {
         await resend.emails.send({
             from:    getSenderAddress('appointments', brand),
             to:      tenantRecipients,
-            replyTo: brand.replyEmail,
+            replyTo: normalizeEmail(customerEmail) || undefined,
             subject: `${isAfterHours ? 'After-hours Request Review Needed' : pendingPayment ? 'Booking Awaiting Payment' : 'Receipt Review Needed'} — ${brand.name}`,
             html: `
             <div style="font-family:Arial,sans-serif;color:#1a1a1a;max-width:600px;margin:0 auto;border:1px solid #e8e8e8;">
@@ -596,8 +587,8 @@ async function sendBookingCancellationEmail(booking, reason, tenant) {
     await resend.emails.send({
         from:    getSenderAddress('appointments', brand),
         to:      customerEmail ? [customerEmail] : tenantRecipients,
-        cc:      customerEmail && tenantRecipients.length > 0 ? tenantRecipients : undefined,
-        replyTo: brand.replyEmail,
+        bcc:     customerEmail && tenantRecipients.length > 0 ? tenantRecipients : undefined,
+        replyTo: await tenantReplyAddress(query, booking.tenant_id || tenant?.id),
         subject: `Appointment Update — ${brand.name}`,
         html: `
         <div style="font-family:Arial,sans-serif;color:#1a1a1a;max-width:600px;margin:0 auto;border:1px solid #e8e8e8;">
@@ -648,7 +639,7 @@ async function sendBookingCompletedEmail(booking, tenant, options) {
     const sent = await resend.emails.send({
         from: getSenderAddress('appointments', brand),
         to: [recipient],
-        replyTo: brand.replyEmail,
+        replyTo: await tenantReplyAddress(query, booking.tenant_id || tenant?.id),
         subject: `Thank you for visiting ${brand.name}`,
         text: `Thank you for choosing ${brand.name}. We'd love to hear about your visit.\n\nLeave a review: ${feedbackUrl}\n\nYour personal review link is valid for 180 days.`,
         html: `<div style="font-family:Arial,sans-serif;color:#1a1a1a;max-width:600px;margin:0 auto;border:1px solid #e8e8e8;">
@@ -704,8 +695,8 @@ async function sendOrderConfirmation(order, items, tenant) {
     await resend.emails.send({
         from:    getSenderAddress('orders', brand),
         to:      [order.customer_email],
-        cc:      tenantRecipients.length > 0 ? tenantRecipients : undefined,
-        replyTo: brand.replyEmail,
+        bcc:     tenantRecipients.length > 0 ? tenantRecipients : undefined,
+        replyTo: await tenantReplyAddress(query, order.tenant_id || tenant?.id),
         subject: `Order Confirmation — ${brand.name}`,
         html: `
         <div style="font-family:Arial,sans-serif;color:#1a1a1a;max-width:600px;margin:0 auto;border:1px solid #e8e8e8;">
@@ -1141,8 +1132,8 @@ async function sendBookingRescheduledEmail(booking, change, tenant) {
     await resend.emails.send({
         from: getSenderAddress('appointments', brand),
         to,
-        cc: notifyClient && tenantRecipients.length ? tenantRecipients : undefined,
-        replyTo: brand.replyEmail,
+        bcc: notifyClient && tenantRecipients.length ? tenantRecipients : undefined,
+        replyTo: await tenantReplyAddress(query, booking.tenant_id || tenant?.id),
         subject: `Appointment Rescheduled — ${brand.name}`,
         html: emailShell(brand, `
                 <p style="font-size:15px;">Hi ${firstName},</p>
@@ -1175,7 +1166,7 @@ async function sendRescheduleRequestEmails(booking, request, tenant) {
         await resend.emails.send({
             from: getSenderAddress('appointments', brand),
             to: tenantRecipients,
-            replyTo: customerEmail || undefined,
+            replyTo: normalizeEmail(customerEmail) || undefined,
             subject: `Reschedule request from ${booking.name} — ${brand.name}`,
             html: emailShell(brand, `
                 <p style="font-size:15px;line-height:1.7;"><strong>${escapeHtml(booking.name)}</strong> would like to move their appointment.</p>
@@ -1191,7 +1182,7 @@ async function sendRescheduleRequestEmails(booking, request, tenant) {
         await resend.emails.send({
             from: getSenderAddress('appointments', brand),
             to: [customerEmail],
-            replyTo: brand.replyEmail,
+            replyTo: await tenantReplyAddress(query, booking.tenant_id || tenant?.id),
             subject: `We received your reschedule request — ${brand.name}`,
             html: emailShell(brand, `
                 <p style="font-size:15px;">Hi ${escapeHtml((booking.name || '').split(' ')[0] || 'there')},</p>
@@ -1209,7 +1200,7 @@ async function sendRescheduleDeclinedEmail(booking, request, note, tenant) {
     await resend.emails.send({
         from: getSenderAddress('appointments', brand),
         to: [customerEmail],
-        replyTo: brand.replyEmail,
+        replyTo: await tenantReplyAddress(query, booking.tenant_id || tenant?.id),
         subject: `About your reschedule request — ${brand.name}`,
         html: emailShell(brand, `
                 <p style="font-size:15px;">Hi ${escapeHtml((booking.name || '').split(' ')[0] || 'there')},</p>
@@ -1231,7 +1222,7 @@ async function sendClientCancellationEmails(booking, reason, tenant) {
         await resend.emails.send({
             from: getSenderAddress('appointments', brand),
             to: [customerEmail],
-            replyTo: brand.replyEmail,
+            replyTo: await tenantReplyAddress(query, booking.tenant_id || tenant?.id),
             subject: `Appointment Cancelled — ${brand.name}`,
             html: emailShell(brand, `
                 <p style="font-size:15px;">Hi ${escapeHtml((booking.name || '').split(' ')[0] || 'there')},</p>
@@ -1245,7 +1236,7 @@ async function sendClientCancellationEmails(booking, reason, tenant) {
         await resend.emails.send({
             from: getSenderAddress('appointments', brand),
             to: tenantRecipients,
-            replyTo: customerEmail || undefined,
+            replyTo: normalizeEmail(customerEmail) || undefined,
             subject: `${booking.name} cancelled — ${when}`,
             html: emailShell(brand, `
                 <p style="font-size:15px;line-height:1.7;"><strong>${escapeHtml(booking.name)}</strong> cancelled their appointment on <strong>${when}</strong>. The time slot is open again.</p>
@@ -1418,7 +1409,19 @@ async function sendConsultationFollowUpEmail(recipient, draft, idempotencyKey) {
     }, { idempotencyKey });
 }
 
+async function sendNewsletterEmail({ brand, email, subject, html, text, headers, idempotencyKey }) {
+    const resend = getResend();
+    if (!resend) throw new Error('Newsletter email delivery is unavailable.');
+    const sender = brand.name.replace(/[<>"(),;:\\@\r\n]/g, '').trim() || 'ICSS Newsletters';
+    return resend.emails.send({
+        from: `${sender} <appointments@icssbookings.com>`,
+        to: [email], subject, html, text, headers,
+        ...(brand.replyTo ? { replyTo: brand.replyTo } : {})
+    }, { idempotencyKey });
+}
+
 module.exports = {
+    sendNewsletterEmail,
     sendConsultationEmail,
     sendConsultationRequestEmail,
     sendConsultationFollowUpEmail,

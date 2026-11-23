@@ -1,3 +1,4 @@
+import NewsletterSignup from './NewsletterSignup';
 import { useState } from 'react';
 import s from './TenantWebsite.module.css';
 import { HeroBackground, Lightbox, SmartImage } from './SiteMedia';
@@ -359,7 +360,13 @@ function Booking({ props, ctx }) {
   );
 }
 
+function Newsletter({ props, ctx }) {
+  if (!ctx.editing && !ctx.tenant.isDemo && !ctx.tenant.newsletter_enabled) return null;
+  return <NewsletterSignup key={ctx.tenant.slug} tenant={ctx.tenant} preview={ctx.preview} {...props} />;
+}
+
 const COMPONENTS = {
+  newsletter: Newsletter,
   hero: Hero,
   pageHeader: PageHeader,
   intro: Intro,

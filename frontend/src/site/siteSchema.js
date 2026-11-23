@@ -212,6 +212,10 @@ export const SECTION_TYPES = {
       list('hours', 'Opening hours', 'Day', [text('day', 'Day(s)'), text('time', 'Hours')])
     ]
   },
+  newsletter: {
+    label: 'Newsletter signup', icon: '✉', description: 'Invite visitors to subscribe. Enable signups in the Newsletter dashboard.',
+    fields: [text('title', 'Title'), area('subtitle', 'Text'), text('buttonLabel', 'Button text')]
+  },
   booking: {
     label: 'Booking widget', icon: '📅', description: 'Your live booking calendar and checkout.',
     fields: [text('title', 'Title'), area('subtitle', 'Subtitle')]
@@ -219,6 +223,7 @@ export const SECTION_TYPES = {
 };
 
 export const SECTION_DEFAULTS = {
+  newsletter: { title: 'Get news and updates', subtitle: 'Sign up for business updates. You can unsubscribe at any time.', buttonLabel: 'Subscribe' },
   hero: { mediaType: 'image', overlay: 0.45, align: 'center', height: 'full', ctaLabel: 'Book an appointment', ctaTarget: 'book', secondaryTarget: 'about', slides: [] },
   pageHeader: { overlay: 0.5 },
   intro: { imageSide: 'right', ctaTarget: 'book' },

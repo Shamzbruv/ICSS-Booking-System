@@ -52,14 +52,21 @@ router.get('/tenant', async (req, res) => {
         ,customPalette: branding?.customPalette || {}
     };
 
-    const whatsapp = await getWhatsAppPreferences(id).catch(err => {
-        console.error('[Public/WhatsApp]', err.message);
-        return null;
-    });
+    const [whatsapp, newsletter] = await Promise.all([
+        getWhatsAppPreferences(id).catch(err => {
+            console.error('[Public/WhatsApp]', err.message);
+            return null;
+        }),
+        query('SELECT enabled FROM newsletter_settings WHERE tenant_id=$1', [id]).catch(err => {
+            console.error('[Public/Newsletter]', err.code || err.name);
+            return { rows: [] };
+        })
+    ]);
 
     res.json({
         name,
         slug,
+        newsletter_enabled: Boolean(newsletter.rows[0]?.enabled),
         whatsapp_available: Boolean(whatsapp?.enabled && whatsapp.platform_enabled),
         whatsapp_terms_version: WHATSAPP_TERMS_VERSION,
         plan: plan_id,
