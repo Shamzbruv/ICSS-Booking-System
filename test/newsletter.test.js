@@ -85,6 +85,9 @@ test('newsletter confirmation, design, individual and broadcast sends, and unsub
     },null,{id:first,name:'Glam'});
     assert.equal(bookingEmails[0].reply_to,'hello@glam.example');
     assert.equal(bookingEmails[0].cc,undefined);
+    await emailService.sendDesignInquiryEmail({customerEmail:'client@example.com',designName:'Alterations'},{id:first,name:'Glam'});
+    assert.deepEqual(bookingEmails[1].to,['hello@glam.example']);
+    assert.equal(bookingEmails[1].reply_to,'client@example.com');
     assert.equal((await admin('subscribers','GET',null,second,'glam')).status,403);
     assert.equal((await admin('subscribers','GET',null,first,'glam','staff')).status,403);
     assert.equal((await signup('alice@example.com')).status,404);

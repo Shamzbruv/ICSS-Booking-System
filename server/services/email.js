@@ -721,7 +721,7 @@ async function sendDesignInquiryEmail(data, tenant) {
     if (!resend) return;
 
     const brand       = getBrand(tenant);
-    const adminEmail  = brand.replyEmail;
+    const adminEmail  = await tenantReplyAddress(query, tenant?.id) || getDefaultNotificationEmail();
     const attachments = [];
 
     if (data.photoBase64) {
