@@ -30,6 +30,10 @@ test('active starter templates refresh their default previews and preserve exist
               {"name":"Ministry Introduction","description":"Talk about the ministry and ways to get involved. Keep sensitive details for private follow-up.","duration_minutes":20,"price":0,"active":true},
               {"name":"Speaking Invitation Call","description":"Discuss the event, audience and topic. This does not confirm the pastor for your event.","duration_minutes":30,"price":0,"active":true}
             ]}');
+        INSERT INTO themes (name, category, preview_image_url, template_path, visual_config, business_config)
+        VALUES ('Expert Booking Page', 'Consultants & Specialists', '/images/starter-kits/expert-booking.webp', '/demo/expert-booking',
+            '{"summary":"Old booking-only description","custom":true}',
+            $expert$${JSON.stringify({ services: kits.find(kit => kit.key === 'expert-booking').services })}$expert$);
         INSERT INTO services (tenant_id, name, active) VALUES ('existing-pastor', 'Existing appointment', true);
     `);
     const { rows: existing } = await db.query('SELECT * FROM themes');
@@ -68,9 +72,8 @@ test('active starter templates refresh their default previews and preserve exist
         const preset = TRADE_PRESETS[kit.key] || (await import('../frontend/src/site/presets/' + kit.key + '.js')).default;
         assert.equal(preset.demo.services.length, kit.services.length);
         assert.equal(preset.site.pages.find(page => page.id === 'book').sections.some(section => section.type === 'booking'), true);
-        if (preset.site.enabled !== false) {
-            assert.equal(sanitizeSiteConfig(preset.site).pages[0].sections[0].props.imageUrl, kit.art);
-        }
+        const hero = sanitizeSiteConfig(preset.site).pages[0].sections[0].props.imageUrl;
+        assert.ok(hero && fs.existsSync(path.join(__dirname, '../public', hero)));
         if (kit.trade) {
             const image = sanitizeSiteConfig(preset.site).pages[0].sections[0].props.mobileImageUrl;
             assert.equal(image, kit.art.replace('.webp', '-mobile.webp'));
@@ -79,6 +82,11 @@ test('active starter templates refresh their default previews and preserve exist
     }
 
     const expert = rows.find(row => row.template_path === '/demo/expert-booking');
+    assert.equal(expert.id, existing.find(row => row.name === 'Expert Booking Page').id);
+    assert.equal(expert.name, 'Expert Consultant Website');
+    assert.equal(expert.visual_config.summary, kits.find(kit => kit.key === 'expert-booking').summary);
+    assert.equal(expert.visual_config.custom, true);
+    assert.equal(themeKeyForName('Expert Booking Page'), 'expert-booking');
     await seedStarterServices('new-advisor', expert.id, db);
     const { rows: consultations } = await db.query("SELECT name, duration_minutes, price, active FROM services WHERE tenant_id = 'new-advisor' ORDER BY duration_minutes");
     assert.deepEqual(consultations, [
@@ -89,9 +97,15 @@ test('active starter templates refresh their default previews and preserve exist
     const { default: expertPreset } = await import('../frontend/src/site/presets/expert-booking.js');
     const { resolveSite } = await import('../frontend/src/site/siteSchema.js');
     const advisorSite = resolveSite({ name: 'New advisor' }, expertPreset, null);
-    assert.equal(sanitizeSiteConfig(advisorSite).enabled, false);
+    assert.equal(sanitizeSiteConfig(advisorSite).enabled, true);
     assert.equal(advisorSite.brand.name, 'New advisor');
-    assert.equal(resolveSite({ name: 'New advisor' }, expertPreset, { enabled: true }).enabled, true);
+    assert.deepEqual(advisorSite.pages.filter(page => page.visible).map(page => page.label), ['Home', 'About', 'Expertise', 'Book']);
+    assert.equal(advisorSite.contact.email, '');
+    assert.equal(advisorSite.pages[0].sections[0].props.ctaTarget, 'book');
+    assert.ok(advisorSite.pages.find(page => page.id === 'about').sections.some(section => section.type === 'contact'));
+    const mobileHero = sanitizeSiteConfig(advisorSite).pages[0].sections[0].props.mobileImageUrl;
+    assert.ok(fs.existsSync(path.join(__dirname, '../public', mobileHero)));
+    assert.equal(resolveSite({ name: 'New advisor' }, expertPreset, { enabled: false }).enabled, false);
 
     const influencerTheme = rows.find(row => row.template_path === '/demo/influencers');
     await seedStarterServices('creator-owner', influencerTheme.id, db);
@@ -106,8 +120,8 @@ test('active starter templates refresh their default previews and preserve exist
     for (const photo of influencer.demo.galleryImages) {
         assert.ok(fs.existsSync(path.join(__dirname, '../public', photo.url)));
     }
-    const mobileHero = sanitizeSiteConfig(influencer.site).pages[0].sections[0].props.mobileImageUrl;
-    assert.ok(fs.existsSync(path.join(__dirname, '../public', mobileHero)));
+    const influencerMobileHero = sanitizeSiteConfig(influencer.site).pages[0].sections[0].props.mobileImageUrl;
+    assert.ok(fs.existsSync(path.join(__dirname, '../public', influencerMobileHero)));
 
     await db.query('DELETE FROM themes WHERE id = $1', [driving.id]);
     await seedCareerStarters(db);

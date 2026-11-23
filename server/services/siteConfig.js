@@ -23,6 +23,7 @@ const MAX_STRING = 6000;
 // Theme name → website preset key (frontend/src/site/presets/index.js).
 const THEME_KEYS = {
     ...Object.fromEntries(careerKits.map(kit => [kit.name, kit.key])),
+    'Expert Booking Page': 'expert-booking',
     'Island Sound Music': 'musicians',
     'Island Occasion Rentals': 'party-rentals',
     'Island Drive Rentals': 'car-rental',

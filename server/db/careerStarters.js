@@ -10,6 +10,16 @@ const originalPastoralServices = [
 
 // Add starter choices without changing the defaults used by existing tenants.
 async function seedCareerStarters(client) {
+    // Upgrade the catalog listing in place so existing signups keep their theme ID.
+    const expert = kits.find(kit => kit.key === 'expert-booking');
+    await client.query(
+        `UPDATE themes SET name = $1,
+             visual_config = COALESCE(visual_config, '{}'::jsonb) || jsonb_build_object('summary', $2::text)
+         WHERE name = 'Expert Booking Page' AND template_path = $3
+             AND NOT EXISTS (SELECT 1 FROM themes WHERE name = $1)`,
+        [expert.name, expert.summary, `/demo/${expert.key}`]
+    );
+
     for (const kit of kits.filter(kit => !kit.retired)) {
         await client.query(
             `INSERT INTO themes (name, category, preview_image_url, template_path, visual_config, business_config)

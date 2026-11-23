@@ -72,8 +72,7 @@ test('each preset includes the pages for its layout and a booking widget', async
             continue;
         }
         const source = read(`frontend/src/site/presets/${key}.js`);
-        const expectedPages = key === 'expert-booking' ? ['home', 'book'] : ['home', 'about', 'gallery', 'book'];
-        for (const pageId of expectedPages) assert.match(source, new RegExp(`page\\('${pageId}'`), `${key} lacks ${pageId}`);
+        for (const pageId of ['home', 'about', 'gallery', 'book']) assert.match(source, new RegExp(`page\\('${pageId}'`), `${key} lacks ${pageId}`);
         assert.match(source, /section\('booking-main', 'booking'/, `${key} needs a booking widget`);
         const heading = source.match(/headingFont: '([^']+)'/)[1];
         fonts.add(heading);

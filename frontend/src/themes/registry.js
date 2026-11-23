@@ -51,6 +51,7 @@ export const BOOKING_THEMES = {
 
 const LEGACY_NAMES = {
   ...Object.fromEntries(kits.map(kit => [kit.name, kit.key])),
+  'Expert Booking Page': 'expert-booking',
   'Island Sound Music': 'musicians',
   'Island Occasion Rentals': 'party-rentals',
   'Island Drive Rentals': 'car-rental',

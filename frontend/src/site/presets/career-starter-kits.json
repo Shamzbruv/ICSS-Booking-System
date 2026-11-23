@@ -1,9 +1,9 @@
 [
   {
     "key": "expert-booking",
-    "name": "Expert Booking Page",
+    "name": "Expert Consultant Website",
     "category": "Consultants & Specialists",
-    "summary": "Share a single booking link for tech advice, specialist consultations or one-on-one sessions. Add your availability and share your link without building a website.",
+    "summary": "A ready-made website for tech consultants, specialists and advisors. Introduce yourself, show your expertise and take bookings on one site.",
     "art": "/images/starter-kits/expert-booking.webp",
     "services": [
       {
