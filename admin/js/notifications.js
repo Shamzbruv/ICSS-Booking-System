@@ -27,7 +27,9 @@
     };
 
     const state = { unread: 0, latestId: null, items: [], hasMore: false, open: false, loaded: false, timer: 0 };
-    let bell, badge, panel, list, pushBanner;
+    const announcementPath = '/api/v1/announcements';
+    const updates = { items: [], unread: 0, busy: false, popup: null, popupId: null, pending: new Set() };
+    let bell, badge, panel, list, updateList, pushBanner;
 
     function el(tag, className, text) {
         const node = document.createElement(tag);
@@ -74,16 +76,17 @@
     const baseTitle = document.title.replace(/^\(\d+\+?\)\s*/, '');
     function setUnread(count) {
         state.unread = Math.max(0, Number(count) || 0);
+        const unread = state.unread + updates.unread;
         if (badge) {
-            badge.textContent = state.unread > 99 ? '99+' : String(state.unread);
-            badge.hidden = state.unread === 0;
-            bell.setAttribute('aria-label', state.unread ? `Notifications, ${state.unread} unread` : 'Notifications');
-            bell.classList.toggle('has-unread', state.unread > 0);
+            badge.textContent = unread > 99 ? '99+' : String(unread);
+            badge.hidden = unread === 0;
+            bell.setAttribute('aria-label', unread ? `Notifications, ${unread} unread` : 'Notifications');
+            bell.classList.toggle('has-unread', unread > 0);
         }
-        document.title = state.unread ? `(${state.unread > 99 ? '99+' : state.unread}) ${baseTitle}` : baseTitle;
+        document.title = unread ? `(${unread > 99 ? '99+' : unread}) ${baseTitle}` : baseTitle;
         try {
-            if (state.unread && navigator.setAppBadge) navigator.setAppBadge(state.unread);
-            else if (navigator.clearAppBadge) navigator.clearAppBadge();
+            if (unread && !impersonating() && navigator.setAppBadge) navigator.setAppBadge(unread);
+            else if (!impersonating() && navigator.clearAppBadge) navigator.clearAppBadge();
         } catch { /* badging unsupported */ }
     }
 
@@ -217,8 +220,11 @@
         head.append(title, actions);
         pushBanner = el('div', 'notif-push-banner');
         pushBanner.hidden = true;
-        list = el('div', 'notif-list');
-        panel.append(head, pushBanner, list);
+        const inbox = el('div', 'notif-list');
+        updateList = el('div', 'notif-platform-updates');
+        list = el('div');
+        inbox.append(updateList, list);
+        panel.append(head, pushBanner, inbox);
         const scrim = el('div', 'notif-scrim');
         scrim.addEventListener('click', closePanel);
         panel.scrim = scrim;
@@ -248,8 +254,10 @@
         positionPanel();
         requestAnimationFrame(() => panel.classList.add('is-open'));
         bell.setAttribute('aria-expanded', 'true');
+        refreshAnnouncements();
+        renderAnnouncements();
         if (impersonating()) {
-            list.replaceChildren(el('div', 'notif-empty', 'Sign in as a business admin or staff member to see that account’s notifications.'));
+            list.replaceChildren(el('div', 'notif-empty', 'Business notifications are available when signed in as a business admin or staff member.'));
             return;
         }
         renderPushBanner();
@@ -338,13 +346,124 @@
 
     async function markAllRead() {
         try {
-            await call('/read-all', { method: 'POST' });
+            await Promise.all([
+                call('/read-all', { method: 'POST' }),
+                global.apiFetch(announcementPath + '/dismiss-all', { method: 'POST' })
+            ]);
+            removeAnnouncementPopup();
+            updates.items.forEach(item => { item.dismissed_at ||= new Date().toISOString(); });
+            updates.unread = 0;
+            renderAnnouncements();
             state.items.forEach((item) => { item.read_at = item.read_at || new Date().toISOString(); });
             setUnread(0);
             renderList();
         } catch (err) {
             if (global.showToast) global.showToast(err.message, 'error');
         }
+    }
+
+    function announcementStorageKey() {
+        const user = global.getUser?.();
+        const identity = impersonating() ? 'preview:' + user?.actor_user_id : user?.id;
+        return 'icss_announcement_pending:' + global.getTenantSlug?.() + ':' + identity;
+    }
+
+    function rememberAnnouncements() {
+        try { localStorage.setItem(announcementStorageKey(), JSON.stringify([...updates.pending])); }
+        catch { /* Keep dismissals in memory when storage is unavailable. */ }
+    }
+
+    function renderAnnouncements() {
+        if (!updateList) return;
+        const rows = updates.items.map(item => {
+            const unread = !item.dismissed_at && !updates.pending.has(item.id);
+            const row = el('button', 'notif-item notif-tone-primary' + (unread ? ' is-unread' : ''));
+            row.type = 'button';
+            const content = el('span', 'notif-text');
+            content.append(el('strong', '', item.title), el('span', 'notif-body', item.body), el('time', 'notif-time', timeAgo(item.published_at)));
+            row.append(el('span', 'notif-icon', '↗'), content);
+            if (unread) row.append(el('span', 'notif-dot'));
+            row.addEventListener('click', () => { closePanel(); showAnnouncement(item, true); });
+            return row;
+        });
+        updateList.replaceChildren(...(rows.length ? [el('div', 'notif-group', 'Platform updates'), ...rows] : []));
+    }
+
+    function removeAnnouncementPopup() {
+        updates.popup?.remove();
+        updates.popup = null;
+        updates.popupId = null;
+    }
+
+    async function saveAnnouncementDismissal(id) {
+        await global.apiFetch(announcementPath + '/' + encodeURIComponent(id) + '/dismiss', { method: 'POST', keepalive: true });
+        updates.pending.delete(id);
+        rememberAnnouncements();
+    }
+
+    function showAnnouncement(item, fromInbox = false) {
+        removeAnnouncementPopup();
+        const popup = el('aside', 'update-announcement');
+        popup.setAttribute('aria-labelledby', 'platformAnnouncementTitle');
+        popup.setAttribute('aria-live', 'polite');
+        const header = el('div', 'update-announcement-header');
+        const close = el('button', 'update-announcement-close', '×');
+        close.type = 'button';
+        close.setAttribute('aria-label', 'Dismiss update announcement');
+        const title = el('h2', '', item.title);
+        title.id = 'platformAnnouncementTitle';
+        header.append(el('p', '', 'ICSS Bookings update'), close);
+        popup.append(header, title, el('p', 'update-announcement-body', item.body));
+        close.addEventListener('click', async () => {
+            removeAnnouncementPopup();
+            if (fromInbox) bell?.focus();
+            if (!item.dismissed_at && !updates.pending.has(item.id)) {
+                updates.pending.add(item.id);
+                rememberAnnouncements();
+                updates.unread = Math.max(0, updates.unread - 1);
+                item.dismissed_at = new Date().toISOString();
+                setUnread(state.unread);
+                renderAnnouncements();
+                if (!impersonating()) {
+                    try { await saveAnnouncementDismissal(item.id); }
+                    catch { /* The next poll will retry. */ }
+                }
+            }
+        });
+        document.body.append(popup);
+        updates.popup = popup;
+        updates.popupId = item.id;
+        if (fromInbox) close.focus();
+    }
+
+    async function refreshAnnouncements() {
+        if (updates.busy || document.hidden) return;
+        updates.busy = true;
+        try {
+            const preview = impersonating();
+            if (!preview) await Promise.allSettled([...updates.pending].map(saveAnnouncementDismissal));
+            const data = await global.apiFetch(announcementPath, { cache: 'no-store' });
+            updates.items = data.announcements;
+            updates.unread = Math.max(0, data.unread - updates.items.filter(item => !item.dismissed_at && updates.pending.has(item.id)).length);
+            setUnread(state.unread);
+            if (state.open) renderAnnouncements();
+            if (updates.popup && !updates.items.some(item => item.id === updates.popupId)) removeAnnouncementPopup();
+            const next = updates.items.find(item => !item.dismissed_at && !updates.pending.has(item.id));
+            if (!updates.popup && next && !document.hidden && !document.querySelector('dialog[open], .modal.open')) showAnnouncement(next);
+        } catch { /* Keep the dashboard usable while offline. */ }
+        finally { updates.busy = false; }
+    }
+
+    function startAnnouncements() {
+        if (!['tenant_admin', 'staff'].includes(global.getUser?.()?.role)) return;
+        try {
+            const saved = JSON.parse(localStorage.getItem(announcementStorageKey()) || '[]');
+            if (Array.isArray(saved)) updates.pending = new Set(saved);
+        } catch { /* Storage may be unavailable. */ }
+        refreshAnnouncements();
+        setInterval(refreshAnnouncements, POLL_MS);
+        document.addEventListener('visibilitychange', refreshAnnouncements);
+        global.addEventListener('focus', refreshAnnouncements);
     }
 
     // ── Push opt-in ────────────────────────────────────────────────────────
@@ -609,6 +728,7 @@
         if (!token() || !document.querySelector('.sidebar')) return;
         mountBell();
         global.addEventListener('resize', () => { if (state.open) positionPanel(); });
+        startAnnouncements();
         if (impersonating()) return;
         startPolling();
         pollUnread({ announce: false });

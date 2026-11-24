@@ -54,20 +54,35 @@ platformRouter.post('/:id/withdraw', async (req, res) => {
 });
 
 tenantRouter.use(privateResponse, authenticate, requireTenantOwnership('tenant_admin','staff'));
+
+tenantRouter.get('/', async (req, res) => {
+    // A support preview can see platform updates, but never the tenant's read state.
+    const userId = req.impersonation ? null : req.user.id;
+    const { rows } = await query(`
+        SELECT announcement.id, announcement.title, announcement.body, announcement.published_at,
+            dismissal.dismissed_at,
+            COUNT(*) FILTER (WHERE dismissal.dismissed_at IS NULL) OVER ()::int AS unread
+        FROM platform_announcements AS announcement
+        LEFT JOIN platform_announcement_dismissals AS dismissal ON dismissal.announcement_id=announcement.id
+            AND dismissal.tenant_id=$1 AND dismissal.user_id=$2
+        WHERE announcement.withdrawn_at IS NULL
+        ORDER BY (dismissal.dismissed_at IS NULL) DESC, announcement.published_at DESC, announcement.id DESC LIMIT 25`,
+    [req.tenant.id, userId]);
+    const announcements = rows.map(({ unread: _unread, ...item }) => item);
+    res.json({ announcement: announcements.find(item => !item.dismissed_at) || null, announcements, unread: rows[0]?.unread || 0 });
+});
+
 tenantRouter.use((req, res, next) => {
-    if (req.impersonation) return res.status(403).json({ error:'Announcements are available in your own tenant account.' });
+    if (req.impersonation) return res.status(403).json({ error:'Only tenant users can change their announcement read status.' });
     next();
 });
-tenantRouter.get('/', async (req, res) => {
-    const { rows: [announcement] } = await query(`
-        SELECT announcement.id, announcement.title, announcement.body, announcement.published_at
-        FROM platform_announcements AS announcement
-        WHERE announcement.withdrawn_at IS NULL AND NOT EXISTS (
-            SELECT 1 FROM platform_announcement_dismissals
-            WHERE announcement_id=announcement.id AND tenant_id=$1 AND user_id=$2
-        )
-        ORDER BY announcement.published_at DESC, announcement.id DESC LIMIT 1`, [req.tenant.id, req.user.id]);
-    res.json({ announcement: announcement || null });
+
+tenantRouter.post('/dismiss-all', async (req, res) => {
+    await query(`
+        INSERT INTO platform_announcement_dismissals (announcement_id, tenant_id, user_id)
+        SELECT id,$1,$2 FROM platform_announcements WHERE withdrawn_at IS NULL
+        ON CONFLICT DO NOTHING`, [req.tenant.id, req.user.id]);
+    res.json({ success:true });
 });
 
 tenantRouter.post('/:id/dismiss', async (req, res) => {

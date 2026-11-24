@@ -17,6 +17,8 @@ test('developer announcements are shared across tenants and dismissals belong to
         CREATE TABLE plans (id TEXT PRIMARY KEY, features JSONB, limits JSONB);
         CREATE TABLE tenants (id UUID PRIMARY KEY, slug TEXT UNIQUE, active BOOLEAN DEFAULT true, plan_id TEXT, features JSONB, limits JSONB);
         CREATE TABLE users (id UUID PRIMARY KEY, name TEXT);
+        CREATE TABLE impersonation_sessions (id UUID PRIMARY KEY, mode TEXT, actor_user_id UUID,
+            target_tenant_id UUID, revoked_at TIMESTAMPTZ, expires_at TIMESTAMPTZ);
         CREATE TABLE audit_log (tenant_id UUID, user_id UUID, action TEXT, entity TEXT, entity_id UUID, metadata JSONB, ip_address TEXT);
     `);
     const schema = { query: sql => db.exec(sql) };
@@ -38,6 +40,10 @@ test('developer announcements are shared across tenants and dismissals belong to
     const tenant = { id:owner, role:'tenant_admin', tenant_id:first };
     const staffUser = { id:staff, role:'staff', tenant_id:first };
     const other = { id:otherTenant, role:'tenant_admin', tenant_id:second };
+    const sessionId = randomUUID();
+    await db.query(`INSERT INTO impersonation_sessions (id,mode,actor_user_id,target_tenant_id,expires_at)
+        VALUES ($1,'read_only',$2,$3,NOW() + INTERVAL '1 hour')`, [sessionId,developer,first]);
+    const preview = { ...tenant, actor_user_id:developer, impersonation_session_id:sessionId };
     const request = (path, user, slug, method='GET', body) => fetch(origin + path, {
         method, body: body && JSON.stringify(body),
         headers: { 'Content-Type':'application/json', ...(user && { Authorization:'Bearer ' + jwt.sign(user,secret) }), ...(slug && { 'X-Tenant-Slug':slug }) }
@@ -66,9 +72,23 @@ test('developer announcements are shared across tenants and dismissals belong to
     assert.equal((await request(dismiss,tenant,'first','POST')).status,200);
     assert.equal((await request(dismiss,tenant,'first','POST')).status,200);
     assert.equal(await unread(tenant,'first'),null);
+    const inbox = await (await request(dashboard,tenant,'first')).json();
+    assert.equal(inbox.unread,0);
+    assert.ok(inbox.announcements[0].dismissed_at);
+    const previewInbox = await (await request(dashboard,preview,'first')).json();
+    assert.equal(previewInbox.unread,1);
+    assert.equal(previewInbox.announcement.id,draft.requestId);
+    assert.equal(previewInbox.announcements[0].dismissed_at,null);
+    assert.equal((await request('/notifications',preview,'first')).status,403);
+    assert.equal((await request(dismiss,preview,'first','POST')).status,403);
+    await db.query("UPDATE impersonation_sessions SET mode='edit' WHERE id=$1", [sessionId]);
+    assert.equal((await request(dashboard + '/dismiss-all',preview,'first','POST')).status,403);
     assert.equal((await unread(staffUser,'first')).id,draft.requestId);
     assert.equal((await unread(other,'second')).id,draft.requestId);
 
+    assert.equal((await request(dashboard + '/dismiss-all',staffUser,'first','POST')).status,200);
+    assert.equal(await unread(staffUser,'first'),null);
+    assert.equal((await unread(other,'second')).id,draft.requestId);
     assert.equal((await request(platform + '/' + draft.requestId + '/withdraw',dev,null,'POST')).status,200);
     assert.equal(await unread(other,'second'),null);
     assert.deepEqual((await db.query('SELECT action FROM audit_log ORDER BY action')).rows.map(row => row.action),

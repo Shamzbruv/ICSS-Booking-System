@@ -2837,9 +2837,13 @@ td[data-label="When"] .link-action { display: flex; }
 @media (max-width: 640px) { .reschedule-policy-grid { grid-template-columns: 1fr; } }
 
 .update-announcement {
+    position: fixed;
+    z-index: 1310;
+    right: max(16px, env(safe-area-inset-right));
+    bottom: calc(16px + env(safe-area-inset-bottom));
     width: min(490px, calc(100% - 32px));
     max-height: calc(100dvh - 40px);
-    margin: auto;
+    margin: 0;
     padding: clamp(18px, 4vw, 32px);
     border: 1px solid var(--border);
     border-radius: 18px;
@@ -2848,7 +2852,6 @@ td[data-label="When"] .link-action { display: flex; }
     box-shadow: 0 22px 64px rgba(15, 23, 42, 0.28);
     overflow: auto;
 }
-.update-announcement::backdrop { background: rgba(15, 23, 42, 0.5); }
 .update-announcement-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .update-announcement-header p { margin: 0; color: var(--text-dim); font-size: 0.875rem; font-weight: 650; }
 .update-announcement-close {
@@ -2863,4 +2866,5 @@ td[data-label="When"] .link-action { display: flex; }
 }
 .update-announcement-close:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
 .update-announcement h2 { font-size: clamp(1.35rem, 4vw, 1.8rem); margin: 12px 0; overflow-wrap: anywhere; }
+.notif-platform-updates:empty { display: none; }
 .update-announcement-body { white-space: pre-wrap; overflow-wrap: anywhere; margin: 0; line-height: 1.6; }
