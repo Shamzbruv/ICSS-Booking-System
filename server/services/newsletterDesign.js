@@ -60,7 +60,8 @@ function foreground(hex) {
     return channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722 > 0.179 ? '#111827' : '#ffffff';
 }
 
-function renderNewsletter({ brand, design, message, unsubscribe }) {
+function renderNewsletter({ brand, design, message, unsubscribe,
+    subscriptionReason = `You subscribed to updates from ${brand.name}.`, unsubscribeLabel = 'Unsubscribe' }) {
     const accent = design.accent || brand.accent;
     const ink = foreground(accent);
     const bold = design.layout === 'bold';
@@ -76,7 +77,7 @@ function renderNewsletter({ brand, design, message, unsubscribe }) {
     const button = message.actionUrl
         ? `<p style="margin:24px 0 0"><a href="${escape(message.actionUrl)}" style="display:inline-block;background:${accent};color:${ink};padding:12px 18px;border-radius:8px;font-weight:bold;text-decoration:none">${escape(message.actionLabel)}</a></p>` : '';
     const footer = unsubscribe
-        ? `<p style="margin:10px 0 0">You subscribed to updates from ${escape(brand.name)}. <a href="${escape(unsubscribe)}" style="color:#344054">Unsubscribe</a></p>` : '';
+        ? `<p style="margin:10px 0 0">${escape(subscriptionReason)} <a href="${escape(unsubscribe)}" style="color:#344054">${escape(unsubscribeLabel)}</a></p>` : '';
     const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
       <body style="margin:0;background:${design.background};font-family:Arial,sans-serif;color:#182335">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${design.background}"><tr><td align="center" style="padding:22px 10px">
@@ -93,7 +94,7 @@ function renderNewsletter({ brand, design, message, unsubscribe }) {
         </td></tr></table>
       </body></html>`;
     const plain = [brand.name, heading, message.body, message.actionUrl && `${message.actionLabel}: ${message.actionUrl}`,
-        design.footer, brand.url, unsubscribe && `Unsubscribe: ${unsubscribe}`].filter(Boolean).join('\n\n');
+        design.footer, brand.url, unsubscribe && `${unsubscribeLabel}: ${unsubscribe}`].filter(Boolean).join('\n\n');
     return { html, text: plain };
 }
 

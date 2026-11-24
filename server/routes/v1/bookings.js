@@ -9,6 +9,7 @@ const { query, transaction }    = require('../../db/connection');
 const { authenticate, requireRole, requireTenantOwnership } = require('../../middleware/auth');
 const { enforceBookingLimit }   = require('../../services/subscription');
 const { sendBookingCancellationEmail, sendBookingPendingReviewEmail } = require('../../services/email');
+const { enrollFollowup } = require('../../services/serviceFollowups');
 const { saveBookingReviewEmail, dispatchEmailOutbox } = require('../../services/emailOutbox');
 const { sendBookingConfirmationNotifications } = require('../../services/bookingNotifications');
 const calendarSync              = require('../../services/calendarSync');
@@ -619,7 +620,10 @@ router.patch('/:id/status', authenticate, requireRole('staff', 'tenant_admin'), 
                 `UPDATE bookings SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING *`,
                 [status, booking.id]
             );
-            if (status === 'completed') reviewEmail = await saveBookingReviewEmail(client, updRes.rows[0]);
+            if (status === 'completed') {
+                reviewEmail = await saveBookingReviewEmail(client, updRes.rows[0]);
+                await enrollFollowup(client, updRes.rows[0]);
+            }
             return updRes.rows[0];
         });
 

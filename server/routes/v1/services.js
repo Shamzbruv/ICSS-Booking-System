@@ -6,8 +6,9 @@
 const express = require('express');
 const router  = express.Router();
 const { query }  = require('../../db/connection');
-const { authenticate, requireRole } = require('../../middleware/auth');
+const { authenticate, requireRole, requireTenantOwnership } = require('../../middleware/auth');
 const { normalizeDepositConfig } = require('../../services/paymentRules');
+const { normalizeFollowup, listFollowups } = require('../../services/serviceFollowups');
 const { SERVICE_PAYMENT_MODES } = require('../../services/paymentGateways');
 
 router.use(authenticate);
@@ -24,6 +25,15 @@ router.get('/', async (req, res) => {
     } catch (err) {
         res.status(500).json({ error: 'Failed to fetch services.' });
     }
+});
+
+router.get('/:id/followups', requireTenantOwnership('staff','tenant_admin'), async (req,res) => {
+    if (!/^[a-f\d]{8}-(?:[a-f\d]{4}-){3}[a-f\d]{12}$/i.test(req.params.id)) {
+        return res.status(400).json({error:'Invalid service.'});
+    }
+    const page = Math.min(10000, Math.max(1, Number.parseInt(req.query.page,10) || 1));
+    res.set('Cache-Control','private, no-store');
+    res.json(await listFollowups(query, req.tenant.id, req.params.id, page));
 });
 
 // POST /api/v1/services
@@ -45,11 +55,12 @@ router.post('/', async (req, res) => {
     });
 
     try {
+        const followup = normalizeFollowup(req.body.followup);
         const result = await query(
             `INSERT INTO services (
                 tenant_id, name, description, image_url, duration_minutes, buffer_time_minutes,
-                price, currency, payment_mode, payment_requirement_type, deposit_type, deposit_amount
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
+                price, currency, payment_mode, payment_requirement_type, deposit_type, deposit_amount, followup
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING *`,
             [
                 req.tenant.id,
                 name.trim(),
@@ -62,11 +73,13 @@ router.post('/', async (req, res) => {
                 payment_mode || 'tenant_default',
                 normalized.payment_requirement_type,
                 normalized.deposit_type,
-                normalized.deposit_amount
+                normalized.deposit_amount,
+                followup || {}
             ]
         );
         res.status(201).json({ success: true, service: normalizeDepositConfig(result.rows[0]) });
     } catch (err) {
+        if (err.status === 400) return res.status(400).json({ error: err.message });
         console.error('[Services/Create] DB Error:', err.message, '| Code:', err.code);
         if (err.code === '42703') {
             return res.status(500).json({ error: `Database column missing: ${err.message}` });
@@ -93,11 +106,12 @@ router.patch('/:id', async (req, res) => {
     });
 
     try {
+        const followup = normalizeFollowup(req.body.followup);
         const result = await query(
             `UPDATE services SET
                 name = COALESCE($1, name),
                 description = COALESCE($2, description),
-                image_url = $3,
+                image_url = CASE WHEN $16::boolean THEN $3 ELSE image_url END,
                 duration_minutes = COALESCE($4, duration_minutes),
                 buffer_time_minutes = COALESCE($5, buffer_time_minutes),
                 price = COALESCE($6, price),
@@ -106,7 +120,8 @@ router.patch('/:id', async (req, res) => {
                 payment_requirement_type = COALESCE($9, payment_requirement_type),
                 deposit_type = COALESCE($10, deposit_type),
                 deposit_amount = COALESCE($11, deposit_amount),
-                active = COALESCE($12, active)
+                active = COALESCE($12, active),
+                followup = followup || COALESCE($15::jsonb, '{}'::jsonb)
              WHERE id = $13 AND tenant_id = $14 RETURNING *`,
             [
                 name ? name.trim() : null,
@@ -121,12 +136,13 @@ router.patch('/:id', async (req, res) => {
                 deposit_type !== undefined ? normalized.deposit_type : null,
                 deposit_amount !== undefined ? normalized.deposit_amount : null,
                 active !== undefined ? Boolean(active) : null,
-                req.params.id, req.tenant.id
+                req.params.id, req.tenant.id, followup, image_url !== undefined
             ]
         );
         if (result.rows.length === 0) return res.status(404).json({ error: 'Service not found.' });
         res.json({ success: true, service: normalizeDepositConfig(result.rows[0]) });
     } catch (err) {
+        if (err.status === 400) return res.status(400).json({ error: err.message });
         console.error('[Services/Update] DB Error:', err.message, '| Code:', err.code);
         if (err.code === '42703') {
             return res.status(500).json({ error: `Database column missing: ${err.message}` });

@@ -76,6 +76,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/api/', rateLimiter);
 const newsletter = require('./routes/v1/newsletter');
 app.use('/api/v1/newsletter', newsletter.publicRouter);
+app.use('/api/v1/service-followups', require('./routes/v1/serviceFollowups'));
 
 
 app.post('/api/v1/whatsapp/webhook', (req,res,next) => require('./services/whatsapp').webhook(req,res).catch(next));
@@ -210,6 +211,7 @@ async function start() {
             console.log(`   Mode:    ${process.env.NODE_ENV || 'development'}\n`);
             startCronJobs();
             require('./services/newsletter').startNewsletterWorker();
+            require('./services/serviceFollowups').startServiceFollowupWorker();
             require('./services/whatsapp').startWorker();
             const { initPush, startNotificationJobs } = require('./services/notifications');
             initPush().then((ready) => console.log(ready ? '   Push:    enabled' : '   Push:    unavailable'));

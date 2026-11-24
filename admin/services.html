@@ -193,6 +193,31 @@
                 </div>
             </div>
 
+            <fieldset class="service-followup">
+                <legend>Return-visit reminders</legend>
+                <label class="service-followup-toggle"><input type="checkbox" id="svc_followup_enabled"> Email clients when their next visit is due</label>
+                <p class="page-subtitle">Clients enter this list when you mark the service completed. Each completed visit starts a new cycle. Clients can stop reminders from their email.</p>
+                <div id="svc_followup_fields" hidden>
+                    <div class="service-followup-grid">
+                        <div class="form-group"><label for="svc_followup_interval">Recommended return after</label><input class="form-control" type="number" id="svc_followup_interval" min="1" max="365" step="1" value="3"></div>
+                        <div class="form-group"><label for="svc_followup_unit">Interval unit</label><select class="form-control" id="svc_followup_unit"><option value="days">Days</option><option value="weeks">Weeks</option><option value="months" selected>Months</option></select></div>
+                        <div class="form-group"><label for="svc_followup_lead">Send this many days early</label><input class="form-control" type="number" id="svc_followup_lead" min="0" max="90" step="1" value="7"></div>
+                    </div>
+                    <div class="form-group"><label for="svc_followup_subject">Email subject (optional)</label><input class="form-control" id="svc_followup_subject" maxlength="120" placeholder="Your next service visit"></div>
+                    <div class="form-group"><label for="svc_followup_reason">Why should the client return?</label><textarea class="form-control" id="svc_followup_reason" rows="4" maxlength="3000" placeholder="Explain what the next visit covers and why the recommended timing matters."></textarea></div>
+                    <p class="page-subtitle">The email includes your business branding, the recommended return date and a booking button.</p>
+                </div>
+                <details id="svc_followup_clients" hidden>
+                    <summary>View clients and reminder status</summary>
+                    <p id="svc_followup_status" role="status"></p>
+                    <ul id="svc_followup_list"></ul>
+                    <div class="service-followup-pagination">
+                        <button class="btn btn-secondary btn-sm" type="button" id="svc_followup_previous" disabled>Previous</button>
+                        <button class="btn btn-secondary btn-sm" type="button" id="svc_followup_next" disabled>Next</button>
+                    </div>
+                </details>
+            </fieldset>
+
             <div style="margin-top: 1.5rem; display: flex; justify-content: flex-end; gap: 0.75rem;">
                 <button type="button" class="btn btn-secondary" id="modalCancelBtn">Cancel</button>
                 <button type="submit" class="btn btn-primary">Save Service</button>
@@ -213,6 +238,12 @@
         await loadServices();
 
         document.getElementById('addServiceBtn').addEventListener('click', showCreateModal);
+        document.getElementById('svc_followup_enabled').addEventListener('change', syncFollowupFields);
+        document.getElementById('svc_followup_clients').addEventListener('toggle', event => {
+            if (event.target.open) loadFollowupClients(1);
+        });
+        document.getElementById('svc_followup_previous').addEventListener('click', () => loadFollowupClients(followupPage - 1));
+        document.getElementById('svc_followup_next').addEventListener('click', () => loadFollowupClients(followupPage + 1));
         document.getElementById('modalCloseBtn').addEventListener('click', closeModal);
         document.getElementById('modalCancelBtn').addEventListener('click', closeModal);
         document.getElementById('svcImageRemoveBtn').addEventListener('click', removeServiceImage);
@@ -440,6 +471,7 @@
                             ${serviceVisualMarkup(svc)}
                             <div style="min-width:0;">
                                 <strong>${escHtml(svc.name)}</strong>
+                                ${svc.followup?.enabled ? '<div class="service-followup-badge">Return-visit reminders on</div>' : ''}
                                 ${svc.description ? `<div style="font-size:12px;color:var(--text-dim);margin-top:2px;">${escHtml(svc.description.substring(0,60))}${svc.description.length>60?'…':''}</div>` : ''}
                             </div>
                         </div>
@@ -475,8 +507,68 @@
         if (button.dataset.serviceAction === 'delete') deleteService(button.dataset.serviceId);
     }
 
+    const followupField = name => document.getElementById('svc_followup_' + name);
+    const followupStatuses = {
+        scheduled: 'Scheduled', sending: 'Sending', sent: 'Sent', skipped: 'Skipped',
+        failed: 'Delivery failed', unsubscribed: 'Opted out'
+    };
+    let followupPage = 1;
+    let followupRequest;
+
+    function syncFollowupFields() {
+        const enabled = followupField('enabled').checked;
+        followupField('fields').hidden = !enabled;
+        followupField('fields').querySelectorAll('input, select, textarea').forEach(field => { field.disabled = !enabled; });
+        ['interval', 'lead', 'reason'].forEach(name => { followupField(name).required = enabled; });
+    }
+
+    function loadFollowupForm(service) {
+        followupRequest?.abort();
+        const config = service?.followup || {};
+        followupField('enabled').checked = config.enabled === true;
+        followupField('interval').value = config.interval ?? 3;
+        followupField('unit').value = config.unit ?? 'months';
+        followupField('lead').value = config.leadDays ?? 7;
+        followupField('subject').value = config.subject ?? '';
+        followupField('reason').value = config.reason ?? '';
+        followupField('clients').open = false;
+        followupField('clients').hidden = !service;
+        followupField('list').replaceChildren();
+        followupField('status').textContent = '';
+        syncFollowupFields();
+    }
+
+    async function loadFollowupClients(page) {
+        const id = document.getElementById('serviceId').value;
+        if (!id) return;
+        followupRequest?.abort();
+        const controller = new AbortController();
+        followupRequest = controller;
+        followupField('previous').disabled = true;
+        followupField('next').disabled = true;
+        followupField('status').textContent = 'Loading clients…';
+        try {
+            const result = await apiFetch(`/api/v1/services/${encodeURIComponent(id)}/followups?page=${page}`, { signal: controller.signal });
+            if (controller.signal.aborted) return;
+            followupPage = page;
+            followupField('status').textContent = result.clients.length ? '' : 'No clients have entered the reminder list yet.';
+            followupField('list').replaceChildren(...result.clients.map(client => {
+                const row = document.createElement('li');
+                const scheduled = client.status === 'scheduled';
+                const detail = scheduled ? (client.reminder_date ? ' · Email due ' + formatDate(client.reminder_date) : ' · Paused') : '';
+                row.textContent = client.email + ' · ' + followupStatuses[client.status] + detail;
+                return row;
+            }));
+            followupField('previous').disabled = page <= 1;
+            followupField('next').disabled = !result.more;
+        } catch (error) {
+            if (!controller.signal.aborted) followupField('status').textContent = error.message;
+        }
+    }
+
     function showCreateModal() {
         document.getElementById('serviceForm').reset();
+        loadFollowupForm();
         document.getElementById('serviceId').value = '';
         document.getElementById('modalTitle').textContent = 'Add Service';
         document.getElementById('svc_duration_h').value = '60'; // default 1hr
@@ -518,6 +610,7 @@
             syncServiceImagePreview();
             setServiceImageStatus(service.image_url ? 'Existing service image loaded.' : '');
 
+            loadFollowupForm(service);
             document.getElementById('modalTitle').textContent = 'Edit Service';
             document.getElementById('serviceModal').classList.add('open');
         } catch (err) {
@@ -548,6 +641,14 @@
             deposit_type:             document.getElementById('svc_deposit_type').value,
             deposit_amount:           parseFloat(document.getElementById('svc_deposit_amount').value) || 0,
             description:              document.getElementById('svc_description').value.trim() || null,
+            followup: followupField('enabled').checked ? {
+                enabled: true,
+                interval: Number(followupField('interval').value),
+                unit: followupField('unit').value,
+                leadDays: Number(followupField('lead').value),
+                subject: followupField('subject').value,
+                reason: followupField('reason').value
+            } : { enabled: false },
         };
 
         if (payload.payment_requirement_type === 'deposit' && payload.deposit_type === 'percentage' && (payload.deposit_amount <= 0 || payload.deposit_amount > 100)) {
