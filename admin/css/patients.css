@@ -1,0 +1,23 @@
+.patients-page [hidden] { display: none !important; }
+.patient-columns { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1.3fr); gap: 18px; align-items: start; }
+.patient-panel { border: 1px solid var(--border); border-radius: 15px; padding: clamp(16px,2vw,24px); background: var(--surface); }
+#patientBookingContext { margin-bottom: 18px; }
+.patient-panel h2, .patient-panel h3 { margin: 0 0 12px; font-size: 1.12rem; }
+.patient-panel p { color: var(--text-dim); margin: 8px 0 14px; }
+.patient-panel label { display: grid; gap: 6px; font-weight: 650; font-size: .88rem; }
+.patient-panel input:not([type=checkbox]) { width: 100%; min-width: 0; min-height: 42px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text); font: inherit; }
+.patient-panel .check-option { display: flex; align-items: center; gap: 8px; }
+.patient-search { display: grid; gap: 10px; justify-items: start; }
+.patient-search > label:first-child { width: 100%; }
+.patient-fields { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 14px; }
+.patient-buttons { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 14px; }
+.patient-list { list-style: none; margin: 10px 0; padding: 0; }
+.patient-list li { border-bottom: 1px solid var(--border); padding: 10px 0; overflow-wrap: anywhere; }
+.patient-list small { color: var(--text-dim); display: block; }
+.patient-row { width: 100%; border: 0; border-radius: 8px; text-align: left; background: transparent; color: inherit; padding: 8px; cursor: pointer; }
+.patient-row:hover, .patient-row[aria-current=true] { background: var(--primary-glow); }
+#patientHistorySection { margin-top: 20px; }
+.patient-status:not(:empty) { margin: 0 0 14px; }
+.patient-status[data-error] { color: var(--danger); }
+@media (max-width: 1050px) { .patient-columns { grid-template-columns: 1fr; } }
+@media (max-width: 480px) { .patient-fields { grid-template-columns: 1fr; } }

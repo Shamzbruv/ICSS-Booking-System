@@ -351,7 +351,7 @@
 
         const rows = bookings.map(b => `
             <tr data-booking-row="${b.id}">
-                <td data-label="Name"><strong>${escHtml(b.name)}</strong>${b.booking_source === 'phone' ? '<small class="cell-sub">☎ Booked by staff</small>' : ''}</td>
+                <td data-label="Name"><strong>${escHtml(b.name)}</strong>${canOpenPatients() ? `<small class="cell-sub"><a href="patients.html?booking=${encodeURIComponent(b.id)}">Patient record</a></small>` : ''}${b.booking_source === 'phone' ? '<small class="cell-sub">☎ Booked by staff</small>' : ''}</td>
                 <td data-label="Contact" class="cell-truncate"><span class="cell-contact">${escHtml(b.email || '—')}</span><small class="cell-sub">${escHtml(b.phone || '—')}</small></td>
                 <td data-label="When"><span class="cell-strong">${formatDate(b.booking_date)}</span><small class="cell-sub">${formatTime(b.booking_time)}${Number(b.reschedule_count) > 0 ? ` <span class="moved-pill" title="Rescheduled ${b.reschedule_count} time${b.reschedule_count === 1 ? '' : 's'}">↻ Moved ×${escHtml(b.reschedule_count)}</span>` : ''}</small>${RESCHEDULABLE.includes(b.status) ? `<button type="button" class="link-action" data-booking-action="reschedule" data-booking-id="${b.id}">Reschedule</button>` : ''}</td>
                 <td data-label="Region" class="col-region">${escHtml(b.region || '—')}</td>

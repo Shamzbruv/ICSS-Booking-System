@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="referrer" content="no-referrer">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>ICSS Admin — Patients</title>
+    <link rel="icon" type="image/png" href="./favicon.png">
+    <link rel="stylesheet" href="/css/global-theme.css">
+    <link rel="stylesheet" href="css/admin.css">
+    <link rel="stylesheet" href="/css/mobile-navigation.css">
+    <link rel="stylesheet" href="/css/page-help.css">
+    <link rel="stylesheet" href="css/clients.css">
+    <link rel="stylesheet" href="css/patients.css">
+    <link rel="manifest" href="/admin/manifest.webmanifest">
+    <meta name="theme-color" content="#7e22ce">
+    <link rel="apple-touch-icon" href="/admin/icons/apple-touch-icon-v2.png">
+    <script src="/admin/js/pwa.js" defer></script>
+</head>
+<body>
+<button class="hamburger" id="hamburgerBtn" aria-label="Open menu"><span></span><span></span><span></span></button>
+<div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+<aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+        <img class="client-admin-logo" src="./favicon.png" width="36" height="36" alt="">
+        <div class="brand-text">
+            <span class="brand-name" id="tenantName">Booking System</span>
+            <span class="brand-plan" id="tenantPlan"></span>
+        </div>
+    </div>
+    <nav class="sidebar-nav" aria-label="Dashboard navigation">
+        <a href="index.html" class="nav-item"><span class="nav-icon"></span> Dashboard</a>
+        <a href="bookings.html" class="nav-item"><span class="nav-icon"></span> Bookings</a>
+        <a href="availability.html" class="nav-item"><span class="nav-icon"></span> Availability</a>
+        <a href="settings.html" class="nav-item"><span class="nav-icon"></span> Settings</a>
+        <a href="customize.html" class="nav-item"><span class="nav-icon"></span> Website Builder</a>
+        <a href="services.html" class="nav-item"><span class="nav-icon"></span> Services</a>
+    </nav>
+    <div class="sidebar-footer">
+        <div class="user-info">
+            <div class="user-avatar" id="userAvatar">?</div>
+            <div><div class="user-name" id="userName">—</div><div class="user-role" id="userRole">—</div></div>
+        </div>
+        <button class="logout-btn" type="button">Sign Out</button>
+    </div>
+</aside>
+
+<main class="main-content patients-page">
+    <header class="page-header">
+        <div><h1 class="page-title">Patients</h1><p class="page-subtitle">Manage patient details and linked appointments.</p></div>
+        <button type="button" class="btn btn-primary" id="patientAdd" hidden>Add patient</button>
+    </header>
+    <p id="patientStatus" role="status" class="patient-status"></p>
+    <div id="patientWorkspace" hidden>
+        <section id="patientBookingContext" class="patient-panel" hidden aria-labelledby="patientBookingTitle">
+            <h2 id="patientBookingTitle">Link a booking</h2>
+            <p id="patientBookingDescription"></p>
+            <button type="button" class="btn btn-secondary" id="patientUnlink" hidden>Unlink this booking</button>
+            <a href="patients.html" class="btn btn-secondary">Leave booking view</a>
+        </section>
+        <div class="patient-columns">
+            <section class="patient-panel" aria-labelledby="patientDirectoryTitle">
+                <h2 id="patientDirectoryTitle">Patient directory</h2>
+                <form id="patientSearch" class="patient-search">
+                    <label>Search by full name, email or record reference<input type="search" id="patientSearchText" maxlength="254" placeholder="Enter an exact match"></label>
+                    <label class="check-option"><input id="patientArchived" type="checkbox"> Show archived profiles</label>
+                    <button type="submit" class="btn btn-secondary">Search</button>
+                </form>
+                <p id="patientDirectoryStatus" role="status"></p>
+                <ul class="patient-list" id="patientResults"></ul>
+                <div class="patient-buttons">
+                    <button type="button" class="btn btn-secondary" id="patientPrevious" disabled>Previous</button>
+                    <span id="patientPage">Page 1</span>
+                    <button type="button" class="btn btn-secondary" id="patientNext" disabled>Next</button>
+                </div>
+            </section>
+            <section class="patient-panel" aria-labelledby="patientEditorTitle">
+                <h2 id="patientEditorTitle" tabindex="-1">Patient profile</h2>
+                <p id="patientEmpty">Choose a patient or add a new profile.</p>
+                <form id="patientForm" hidden>
+                    <div class="patient-fields">
+                        <label>Full name<input id="patientName" required maxlength="120" autocomplete="off"></label>
+                        <label>Preferred name<input id="patientPreferredName" maxlength="120" autocomplete="off"></label>
+                        <label>Email<input id="patientEmail" type="email" maxlength="254" autocomplete="off"></label>
+                        <label>Phone<input id="patientPhone" type="tel" maxlength="40" autocomplete="off"></label>
+                        <label>Date of birth<input id="patientBirthDate" type="date" min="1800-01-01" autocomplete="off"></label>
+                        <label>Practice record reference<input id="patientReference" maxlength="60" autocomplete="off"></label>
+                    </div>
+                    <div class="patient-buttons">
+                        <button type="submit" class="btn btn-primary" id="patientSave">Save patient</button>
+                        <button type="button" class="btn btn-secondary" id="patientLink" hidden>Link this booking</button>
+                        <button type="button" class="btn btn-secondary" id="patientArchive" hidden>Archive</button>
+                    </div>
+                </form>
+                <section id="patientHistorySection" hidden aria-labelledby="patientHistoryTitle">
+                    <h3 id="patientHistoryTitle">Appointment history</h3>
+                    <ul class="patient-list" id="patientVisits"></ul>
+                    <div class="patient-buttons">
+                        <button class="btn btn-secondary" type="button" id="patientVisitsPrevious" disabled>Previous</button>
+                        <button class="btn btn-secondary" type="button" id="patientVisitsNext" disabled>Next</button>
+                    </div>
+                </section>
+            </section>
+        </div>
+    </div>
+</main>
+<script src="/js/mobile-navigation.js"></script>
+<script src="/js/page-help.js"></script>
+<script src="js/admin.js"></script>
+<script src="js/notifications.js" defer></script>
+<script src="js/patients.js" defer></script>
+</body>
+</html>
