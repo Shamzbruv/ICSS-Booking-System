@@ -15,7 +15,9 @@ test('patient profiles are encrypted, tenant-scoped, and linked to bookings expl
     });
     await db.exec(`
         CREATE TABLE plans (id TEXT PRIMARY KEY, features JSONB, limits JSONB);
-        CREATE TABLE tenants (id UUID PRIMARY KEY, slug TEXT UNIQUE, active BOOLEAN DEFAULT true, plan_id TEXT, features JSONB, limits JSONB);
+        CREATE TABLE themes (id UUID PRIMARY KEY, name TEXT);
+        CREATE TABLE tenants (id UUID PRIMARY KEY, slug TEXT UNIQUE, active BOOLEAN DEFAULT true, plan_id TEXT,
+            features JSONB, limits JSONB, theme_id UUID REFERENCES themes(id), is_test_account BOOLEAN DEFAULT false);
         CREATE TABLE users (id UUID PRIMARY KEY, tenant_id UUID, role TEXT, active BOOLEAN DEFAULT true);
         CREATE TABLE impersonation_sessions (id UUID PRIMARY KEY, mode TEXT, actor_user_id UUID,
             target_tenant_id UUID, revoked_at TIMESTAMPTZ, expires_at TIMESTAMPTZ);
@@ -56,6 +58,37 @@ test('patient profiles are encrypted, tenant-scoped, and linked to bookings expl
             ...(user && { Authorization:'Bearer ' + jwt.sign(user,secret) }), 'X-Tenant-Slug':slug,'Content-Type':'application/json'
         }});
     }
+
+    const healthTheme = randomUUID();
+    const generalTheme = randomUUID();
+    await db.query("INSERT INTO themes VALUES ($1,'Serenity Health'),($2,'Universal Services')", [healthTheme,generalTheme]);
+    const tenantApi = '/api/v1/tenants/first/theme';
+    const apiOrigin = new URL(url).origin;
+    const managerHeaders = {
+        'Content-Type':'application/json','X-Tenant-Slug':'first',
+        Authorization:'Bearer ' + jwt.sign(admin,process.env.JWT_SECRET || 'dev_secret_change_in_production')
+    };
+    const readTheme = async () => (await (await fetch(apiOrigin+tenantApi,{headers:managerHeaders})).json()).theme_key;
+    const applyTheme = async themeId => {
+        const response = await fetch(apiOrigin+tenantApi,{
+            method:'POST', headers:managerHeaders, body:JSON.stringify({theme_id:themeId})
+        });
+        assert.equal(response.status,200);
+        return (await response.json()).theme_key;
+    };
+    assert.equal(await readTheme(),'universal');
+    assert.equal(await applyTheme(healthTheme),'health');
+    assert.equal(await readTheme(),'health');
+    const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0,10);
+    const publicBooking = await fetch(apiOrigin+'/api/v1/bookings',{
+        method:'POST', headers:{'Content-Type':'application/json','X-Tenant-Slug':'first'},
+        body:JSON.stringify({name:'Sample Patient', email:'sample@example.test', phone:'8765551234',
+            date:tomorrow, time:'12:00', service_id:service, terms_accepted:true, notes:'Sample text excluded from medical bookings.'})
+    });
+    assert.equal(publicBooking.status,400);
+    assert.match((await publicBooking.json()).error,/medical bookings accept appointment details only/i);
+    assert.equal(await applyTheme(generalTheme),'universal');
+    assert.equal(await readTheme(),'universal');
 
     const search = (search, options = {}) => request('/search',{method:'POST',body:{search},...options});
     const create = (body,options = {}) => request('',{method:'POST',body,...options});

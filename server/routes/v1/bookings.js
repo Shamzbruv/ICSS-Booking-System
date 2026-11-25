@@ -4,6 +4,7 @@
  */
 
 const express = require('express');
+const { themeKeyForName } = require('../../services/siteConfig');
 const router  = express.Router();
 const { query, transaction }    = require('../../db/connection');
 const { authenticate, requireRole, requireTenantOwnership } = require('../../middleware/auth');
@@ -194,13 +195,19 @@ async function createBooking(req, res) {
         return res.status(400).json({ error: 'This time slot has already passed or is too soon. Please choose another time.' });
     }
 
-    const sanitizedNotes = notes ? notes.substring(0, 500).replace(/[<>&"']/g, '') : null;
-
     try {
         const result = await transaction(async (client) => {
-            // Pessimistic Locking: Lock the tenant row to serialize concurrent booking attempts
-            // This prevents race conditions on capacity checks and slot availability.
+            // Lock the tenant so availability and template checks use the current booking settings.
             await client.query(`SELECT id FROM tenants WHERE id = $1 FOR UPDATE`, [tenantId]);
+
+            const sanitizedNotes = notes ? notes.substring(0, 500).replace(/[<>&"']/g, '') : null;
+            if (!assisted && sanitizedNotes?.trim()) {
+                const { rows: [activeTheme] } = await client.query(
+                    `SELECT th.name FROM tenants t JOIN themes th ON th.id = t.theme_id WHERE t.id = $1`, [tenantId]);
+                if (themeKeyForName(activeTheme?.name) === 'health') {
+                    throw Object.assign(new Error('Online medical bookings accept appointment details only. Clear the notes or refresh this page. Contact the practice directly for medical concerns.'), { status: 400 });
+                }
+            }
 
             // 1. Fetch Service Details
             const svcRes = await client.query(`SELECT * FROM services WHERE id = $1 AND tenant_id = $2`, [service_id, tenantId]);

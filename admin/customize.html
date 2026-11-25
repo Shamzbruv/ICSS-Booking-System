@@ -75,6 +75,19 @@
     </div>
   </header>
 
+<section class="practice-privacy" id="practicePrivacy" aria-labelledby="practicePrivacyTitle" hidden>
+    <div>
+        <p data-practice-status>Medical template active</p>
+        <h2 id="practicePrivacyTitle">Patient privacy and records</h2>
+        <p>Public booking collects scheduling and contact details. Manage encrypted profiles and linked visits in Patients. Keep clinical notes and documents in your clinical records system.</p>
+        <p data-patient-access hidden>Sign in directly as a practice administrator to open patient records.</p>
+    </div>
+    <div class="practice-privacy-actions">
+        <a href="patients.html" class="btn btn-primary" data-patients-link hidden>Open Patients</a>
+        <a class="btn btn-secondary" data-public-booking-link target="_blank" rel="noopener noreferrer">View public booking</a>
+    </div>
+</section>
+
   <div class="builder-tabs" role="tablist" data-tour="builder-views">
     <button type="button" class="is-active" data-view="site">🌐 Website</button>
     <button type="button" data-view="booking">📅 Booking widget</button>
@@ -112,6 +125,7 @@
 <script src="/js/mobile-navigation.js"></script>
 <script src="/js/page-help.js"></script>
 <script src="js/admin.js"></script>
+<script src="js/practicePrivacy.js"></script>
 <script src="js/notifications.js" defer></script>
 <script src="js/guidedTour.js"></script>
 <script src="js/siteBuilder.js"></script>
@@ -167,18 +181,26 @@ function renderThemeLibrary(){
         const actions=document.createElement('div');actions.className='theme-card-actions';
         if(th.template_path){const a=document.createElement('a');a.href=th.template_path;a.target='_blank';a.rel='noreferrer';a.className='btn btn-secondary btn-sm';a.textContent='Preview';actions.appendChild(a)}
         const btn=document.createElement('button');btn.type='button';btn.className='btn '+(isCurrent?'btn-secondary':'btn-primary')+' btn-sm';btn.textContent=isCurrent?'Current':'Apply';btn.disabled=isCurrent;btn.addEventListener('click',()=>applyLibraryTheme(th.id,btn));actions.appendChild(btn);
-        card.append(cat,name,actions);return card;
+        card.append(cat,name);
+        if (th.category === 'Medical') {
+            const detail=document.createElement('p');detail.className='page-subtitle';
+            detail.textContent='Patient privacy notice, scheduling-only booking form and private patient workspace.';
+            card.appendChild(detail);
+        }
+        card.appendChild(actions);return card;
     }));
 }
 async function applyLibraryTheme(themeId,btn){
     const original=btn.textContent;
     btn.disabled=true;btn.textContent='Applying…';
     try{
-        await apiFetch('/api/v1/tenants/'+slug+'/theme',{method:'POST',body:{theme_id:themeId}});
+        const result=await apiFetch('/api/v1/tenants/'+slug+'/theme',{method:'POST',body:{theme_id:themeId}});
+        showPracticePrivacy(result.theme_key,{applied:true});
         currentThemeId=themeId;
         renderThemeLibrary();
         refresh();
-        showToast('Theme applied. Reloading the builder with the new template…');
+        if (result.theme_key === 'health') document.getElementById('practicePrivacy').scrollIntoView({block:'nearest'});
+        showToast(result.theme_key==='health'?'Medical template applied. Find patient privacy and records above the builder.':'Theme applied. Reloading the builder with the new template…');
         setTimeout(()=>window.location.reload(),900);
     }catch(e){
         btn.disabled=false;btn.textContent=original;
@@ -186,12 +208,10 @@ async function applyLibraryTheme(themeId,btn){
     }
 }
 async function loadThemeLibrary(){
+    const info=await loadPracticePrivacy();
+    if(!info?.is_test_account)return; // stays hidden for every other tenant
     try{
-        const [{themes},info]=await Promise.all([
-            fetch('/api/v1/themes').then(r=>r.json()),
-            apiFetch('/api/v1/tenants/'+slug+'/theme')
-        ]);
-        if(!info.is_test_account)return; // stays hidden for every other tenant
+        const {themes}=await fetch('/api/v1/themes').then(r=>r.json());
         libraryThemes=themes||[];
         currentThemeId=info.theme_id;
         renderThemeLibrary();

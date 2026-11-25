@@ -2880,3 +2880,31 @@ td[data-label="When"] .link-action { display: flex; }
 .service-followup ul { padding-left: 22px; overflow-wrap: anywhere; }
 .service-followup-pagination { display: flex; gap: 8px; }
 .service-followup-badge { color: var(--primary); font-size: 12px; margin-top: 3px; }
+
+.practice-privacy[hidden], .practice-privacy [hidden] {
+  display: none !important;
+}
+.practice-privacy {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px 24px;
+  margin-block: 0 22px;
+  padding: clamp(16px, 2.5vw, 24px);
+  border: 1px solid var(--border);
+  border-inline-start: 4px solid var(--primary);
+  border-radius: 14px;
+  background: var(--surface);
+}
+.practice-privacy h2 { margin: 3px 0 6px; font-size: 1.24rem; }
+.practice-privacy p { margin: 0; color: var(--text-dim); }
+.practice-privacy [data-practice-status] { font-weight: 700; }
+.practice-privacy-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+@media (max-width: 880px) {
+  .practice-privacy { grid-template-columns: minmax(0, 1fr); }
+}

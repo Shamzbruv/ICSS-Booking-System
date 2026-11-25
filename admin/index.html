@@ -109,6 +109,19 @@
         </div>
     </header>
 
+<section class="practice-privacy" id="practicePrivacy" aria-labelledby="practicePrivacyTitle" hidden>
+    <div>
+        <p data-practice-status>Medical template active</p>
+        <h2 id="practicePrivacyTitle">Patient privacy and records</h2>
+        <p>Public booking collects scheduling and contact details. Manage encrypted profiles and linked visits in Patients. Keep clinical notes and documents in your clinical records system.</p>
+        <p data-patient-access hidden>Sign in directly as a practice administrator to open patient records.</p>
+    </div>
+    <div class="practice-privacy-actions">
+        <a href="patients.html" class="btn btn-primary" data-patients-link hidden>Open Patients</a>
+        <a class="btn btn-secondary" data-public-booking-link target="_blank" rel="noopener noreferrer">View public booking</a>
+    </div>
+</section>
+
     <!-- Stats Grid -->
     <section class="stats-grid" id="statsGrid">
         <div class="stat-card" id="statConfirmed" data-tour="confirmed-bookings-card">
@@ -195,6 +208,7 @@
 <script src="/js/mobile-navigation.js"></script>
 <script src="/js/page-help.js"></script>
 <script src="js/admin.js"></script>
+<script src="js/practicePrivacy.js"></script>
 <script src="js/notifications.js" defer></script>
 <script src="js/guidedTour.js"></script>
 <script>
@@ -227,6 +241,7 @@
         document.getElementById('filterStartDate').value = currentStartDate;
         document.getElementById('filterEndDate').value = currentEndDate;
 
+        if (canOpenPatients() || getImpToken()) loadPracticePrivacy();
         await loadSummary();
         populateUserUI();
         initializeDashboardTour();

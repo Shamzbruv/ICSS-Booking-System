@@ -12,6 +12,7 @@ const { retiredStarterNames } = require('../../db/careerStarters');
 const { signToken, authenticate, requireRole, requireTenantOwnership } = require('../../middleware/auth');
 const { invalidateTenantCache } = require('../../middleware/tenantResolver');
 const { seedStarterServices } = require('../../services/provisioning');
+const { themeKeyForName } = require('../../services/siteConfig');
 const { normalizeEmail, getTenantReplySettings } = require('../../services/tenantReplyEmail');
 
 const RESERVED_SLUGS = new Set([
@@ -194,9 +195,16 @@ router.patch('/:slug/active', platformAdminOnly, async (req, res) => {
 // (and whether this account is flagged as the testing account — the customizer
 // only surfaces the "apply any theme" Theme Library for that account).
 router.get('/:slug/theme', authenticate, requireTenantOwnership('tenant_admin'), async (req, res) => {
-    res.json({
-        theme_id: req.tenant.theme_id || null,
-        is_test_account: Boolean(req.tenant.is_test_account)
+    const { rows: [tenant] } = await query(
+        `SELECT t.theme_id, t.is_test_account, th.name AS theme_name
+         FROM tenants t LEFT JOIN themes th ON th.id = t.theme_id WHERE t.id = $1`,
+        [req.tenant.id]
+    );
+    if (!tenant) return res.status(404).json({ error: 'Tenant not found.' });
+    res.set('Cache-Control', 'no-store').json({
+        theme_id: tenant.theme_id,
+        theme_key: themeKeyForName(tenant.theme_name),
+        is_test_account: Boolean(tenant.is_test_account)
     });
 });
 
@@ -206,7 +214,7 @@ router.post('/:slug/theme', authenticate, requireTenantOwnership('tenant_admin')
     const { theme_id, seed_services } = req.body;
     try {
         const themeResult = await query(
-            `SELECT id FROM themes WHERE id = $1 AND (id = $2 OR NOT (name = ANY($3::text[])))`,
+            `SELECT id, name FROM themes WHERE id = $1 AND (id = $2 OR NOT (name = ANY($3::text[])))`,
             [theme_id, req.tenant.theme_id || null, retiredStarterNames]
         );
         if (themeResult.rows.length === 0) return res.status(400).json({ error: 'Invalid theme.' });
@@ -223,7 +231,7 @@ router.post('/:slug/theme', authenticate, requireTenantOwnership('tenant_admin')
         }
 
         invalidateTenantCache(req.params.slug);
-        res.json({ success: true, tenant: result.rows[0], message: 'Theme applied successfully.'});
+        res.json({ success: true, tenant: result.rows[0], theme_key: themeKeyForName(themeResult.rows[0].name), message: 'Theme applied successfully.' });
     } catch (err) {
         console.error('[Tenants/Theme]', err.message);
         res.status(500).json({ error: 'Failed to update tenant theme.' });

@@ -71,6 +71,11 @@ async function loadTenantBranding() {
         document.getElementById('whatsappConsent').hidden = !state.whatsappTermsVersion;
         document.getElementById('fieldWhatsappOptIn').disabled = !state.whatsappTermsVersion;
 
+        const medical = data.themeKey === 'health';
+        document.getElementById('medicalBookingPrivacy').hidden = !medical;
+        document.getElementById('bookingNotesField').hidden = medical;
+        document.getElementById('fieldNotes').disabled = medical;
+
         state.branding = b;
 
         // Apply CSS variable
@@ -269,7 +274,8 @@ async function submitBooking(e) {
     const name  = document.getElementById('fieldName').value.trim();
     const email = document.getElementById('fieldEmail').value.trim();
     const phone = document.getElementById('fieldPhone').value.trim();
-    const notes = document.getElementById('fieldNotes').value.trim();
+    const notesField = document.getElementById('fieldNotes');
+    const notes = notesField.disabled ? '' : notesField.value.trim();
     const whatsappOptIn = document.getElementById('fieldWhatsappOptIn').checked;
 
     if (!name || !email || !phone) {

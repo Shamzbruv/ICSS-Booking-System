@@ -1,12 +1,5 @@
 import SharedBookingTheme from './SharedBookingTheme';
 
-const practitioners = [
-  { label: 'NP Elena Rivera (family health)' },
-  { label: 'Dr. Anika Patel (internal medicine)' },
-  { label: 'Dr. David Chen (wellness & longevity)' },
-  { label: 'First available' }
-];
-
 export default function ThemeHealth({ tenant, services }) {
   return (
     <SharedBookingTheme
@@ -19,20 +12,13 @@ export default function ThemeHealth({ tenant, services }) {
         itemIcon: 'fa-stethoscope',
         serviceSectionTitle: 'Choose a Visit',
         detailsSectionTitle: 'Patient Details',
-        preferenceField: { label: 'Preferred practitioner', options: practitioners, noteLabel: 'Practitioner' },
-        extraFields: [
-          { name: 'visitNotes', label: 'Notes / concerns', type: 'textarea', placeholder: 'Annual physical, fatigue, follow-up, medication questions...', noteLabel: 'Notes' }
-        ],
-        receiptLabel: 'ID / insurance or receipt',
+        privacyNotice: 'Use this form to schedule an appointment. Contact the practice directly about symptoms, medications, insurance or medical records.',
+        receiptLabel: 'Bank transfer receipt only',
+        receiptHelperText: 'Upload only proof of payment. Contact the practice directly about insurance and medical documents.',
         priceFormatter: (service) => Number(service?.price || 0) === 0 ? 'Cost varies' : `$${Number(service.price).toLocaleString()}`,
-        totalFormatter: (_, service) => Number(service?.price || 0) === 0 ? 'Varies by insurance' : `$${Number(service?.price || 0).toLocaleString()}`,
+        totalFormatter: (_, service) => Number(service?.price || 0) === 0 ? 'Contact the practice' : `$${Number(service?.price || 0).toLocaleString()}`,
         totalLabel: 'Estimated cost',
-        summaryRows: ({ selectedOption }) => [
-          { label: 'Practitioner', value: selectedOption?.label || 'First available' }
-        ],
-        buildNotes: ({ selectedOption, extraState }) =>
-          `Practitioner: ${selectedOption?.label || 'First available'}\nNotes: ${extraState.visitNotes || 'None'}`,
-        footerNote: 'Secure health booking. Please review your cancellation policy in your confirmation email.',
+        footerNote: 'Please review the cancellation policy in your confirmation email.',
         palette: {
           pageBg: '#f2f8f7',
           pageAccentA: 'rgba(67, 130, 137, 0.16)',

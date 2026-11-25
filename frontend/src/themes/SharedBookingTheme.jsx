@@ -914,6 +914,12 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
                 <h2>{theme.detailsSectionTitle || 'Your Details'}</h2>
               </div>
 
+              {theme.privacyNotice && (
+                <div className={styles.paymentNotice}>
+                  <strong>Patient privacy</strong>
+                  <p>{theme.privacyNotice}</p>
+                </div>
+              )}
               <form onSubmit={handleBooking}>
                 <div className={styles.field}>
                   <label>Full name</label>
@@ -973,7 +979,8 @@ export default function SharedBookingTheme({ tenant, services, theme }) {
                       <input type="file" accept="image/*" required onChange={(e) => setReceiptImage(e.target.files[0])} />
                     </div>
                     <p className={styles.helperText}>
-                      {tenant.bank_transfer_instructions || theme.receiptHelperText || 'Please attach your transfer screenshot before booking.'}
+                      {tenant.bank_transfer_instructions || 'Please attach your transfer screenshot before booking.'}
+                      {theme.receiptHelperText && <> {theme.receiptHelperText}</>}
                     </p>
                   </div>
                 )}
