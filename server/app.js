@@ -171,6 +171,7 @@ app.get('/health', (req, res) => {
 });
 
 // Internal SPA pages and demo templates are excluded before any tenant lookup.
+app.get(/^\/demo\/driving-lessons-ja-preview(?:\/(?:home|about|gallery|book))?\/?$/, tenantSites.drivingLessonsPreview);
 app.get(new RegExp(`^/(?:${APP_ROUTES.join('|')})(?:/|$)`), (req, res) => {
     res.set({ 'X-Robots-Tag': 'noindex, nofollow', 'Referrer-Policy': 'no-referrer' });
     res.sendFile(path.join(frontendDist, 'index.html'));

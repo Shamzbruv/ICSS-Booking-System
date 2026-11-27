@@ -14,6 +14,7 @@ import TenantWebsite from '../../site/TenantWebsite';
 import { PRESETS, getPreset } from '../../site/presets';
 import careerKits from '../../site/presets/career-starter-kits.json';
 import s from './DemoSite.module.css';
+import { drivingLessonsJa, drivingLessonsJaSlug } from './drivingLessonsJa.js';
 import { useNoIndex } from '../../hooks/useNoIndex';
 
 export default function DemoSite() {
@@ -23,22 +24,24 @@ export default function DemoSite() {
   const navigate = useNavigate();
   const params = new URLSearchParams(location.search);
   const [themeOverride, setThemeOverride] = useState(null);
-  const themeKey = themeOverride || (PRESETS[routeKey] ? routeKey : 'universal');
-  const preset = getPreset(themeKey);
+  const prospect = routeKey === drivingLessonsJaSlug;
+  const themeKey = prospect ? drivingLessonsJa.key : themeOverride || (Object.hasOwn(PRESETS, routeKey) ? routeKey : 'universal');
+  const preset = prospect ? drivingLessonsJa : getPreset(themeKey);
+  const basePath = '/demo/' + (prospect ? drivingLessonsJaSlug : themeKey);
 
   const primary = /^#[0-9a-f]{6}$/i.test(params.get('primary') || '') ? params.get('primary') : null;
   const name = (params.get('name') || '').slice(0, 60) || null;
 
   const tenant = useMemo(() => ({
     name: preset.demo.name,
-    slug: `demo-${themeKey}`,
+    slug: `demo-${prospect ? drivingLessonsJaSlug : themeKey}`,
     isDemo: true,
     themeKey,
     branding: { timezone: 'America/Jamaica', location: preset.demo.location, bookingTagline: preset.demo.tagline, customPalette: {} },
     default_payment_mode: 'none',
     payment_gateways: {},
     site: null
-  }), [preset, themeKey]);
+  }), [preset, themeKey, prospect]);
 
   const services = useMemo(() => preset.demo.services.map((service, index) => ({
     id: `demo-${themeKey}-${index}`,
@@ -54,20 +57,21 @@ export default function DemoSite() {
     navigate(`/demo/${key}${location.search}`, { replace: true });
   };
 
-  const starter = !params.has('preview') && careerKits.find(kit => kit.key === themeKey && !kit.retired);
+  const starter = !prospect && !params.has('preview') && careerKits.find(kit => kit.key === themeKey && !kit.retired);
   return (<>
+    {prospect && <div className={s.previewBar}><span>Website preview for Driving Lessons JA</span><span>Bookings are simulated</span></div>}
     {starter && <div className={s.previewBar}><a href={starter.trade ? '/industries#trade-starters' : '/industries#new-starters'}>← Starter websites</a><span>Template preview · Bookings are simulated</span><a className={s.useStarter} href={`/onboarding?template=${themeKey}`}>Use this design →</a></div>}
     <TenantWebsite
-      key={themeKey}
+      key={basePath}
       tenant={tenant}
       services={services}
       themeKey={themeKey}
-      savedSite={null}
-      basePath={`/demo/${themeKey}`}
+      savedSite={prospect ? preset.site : null}
+      basePath={basePath}
       pageParam={page}
-      preview={params.get('preview') === '1'}
-      overrides={{ name, primary }}
-      onRequestTheme={switchTheme}
+      preview={!prospect && params.get('preview') === '1'}
+      overrides={prospect ? undefined : { name, primary }}
+      onRequestTheme={prospect ? undefined : switchTheme}
     />
   </>);
 }

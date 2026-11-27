@@ -41,6 +41,23 @@ function createTenantSiteHandlers(frontendDir, publicDir) {
         return htmlPromise;
     };
 
+    async function drivingLessonsPreview(_req, res) {
+        const image = 'https://icssbookings.com/images/starter-kits/driving-ja-hero.webp';
+        const title = 'Driving Lessons JA | Website Preview';
+        const description = 'Explore driving lesson packages in Kingston and Portmore and try the booking experience.';
+        const head = `<title>${title}</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="${description}">
+<meta property="og:type" content="website">
+<meta property="og:title" content="${title}">
+<meta property="og:description" content="${description}">
+<meta property="og:image" content="${image}">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" type="image/webp" href="/images/starter-kits/driving-ja-logo.webp">`;
+        const html = (await readShell()).replace(/<!-- SITE_HEAD_START -->[\s\S]*?<!-- SITE_HEAD_END -->/, () => head);
+        return res.set({ 'X-Robots-Tag': 'noindex, nofollow', 'Referrer-Policy': 'no-referrer' }).type('html').send(html);
+    }
+
     async function tenantPage(req, res) {
         const slug = req.params[0];
         const page = req.params[1] || 'home';
@@ -148,7 +165,7 @@ function createTenantSiteHandlers(frontendDir, publicDir) {
         res.set('Cache-Control', 'public, max-age=300').type('application/xml').send(xml);
     }
 
-    return { homepage, tenantPage, shareCard, sitemap };
+    return { homepage, tenantPage, shareCard, sitemap, drivingLessonsPreview };
 }
 
 module.exports = { createTenantSiteHandlers };
