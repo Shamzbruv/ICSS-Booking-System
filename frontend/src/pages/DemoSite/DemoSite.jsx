@@ -15,7 +15,13 @@ import { PRESETS, getPreset } from '../../site/presets';
 import careerKits from '../../site/presets/career-starter-kits.json';
 import s from './DemoSite.module.css';
 import { drivingLessonsJa, drivingLessonsJaSlug } from './drivingLessonsJa.js';
+import { clarkiesDrivingSchool, clarkiesSlug } from './clarkiesDrivingSchool.js';
 import { useNoIndex } from '../../hooks/useNoIndex';
+
+const prospectSites = new Map([
+  [drivingLessonsJaSlug, drivingLessonsJa],
+  [clarkiesSlug, clarkiesDrivingSchool]
+]);
 
 export default function DemoSite() {
   useNoIndex();
@@ -24,24 +30,24 @@ export default function DemoSite() {
   const navigate = useNavigate();
   const params = new URLSearchParams(location.search);
   const [themeOverride, setThemeOverride] = useState(null);
-  const prospect = routeKey === drivingLessonsJaSlug;
-  const themeKey = prospect ? drivingLessonsJa.key : themeOverride || (Object.hasOwn(PRESETS, routeKey) ? routeKey : 'universal');
-  const preset = prospect ? drivingLessonsJa : getPreset(themeKey);
-  const basePath = '/demo/' + (prospect ? drivingLessonsJaSlug : themeKey);
+  const prospect = prospectSites.get(routeKey);
+  const themeKey = prospect ? prospect.key : themeOverride || (Object.hasOwn(PRESETS, routeKey) ? routeKey : 'universal');
+  const preset = prospect || getPreset(themeKey);
+  const basePath = '/demo/' + (prospect ? routeKey : themeKey);
 
   const primary = /^#[0-9a-f]{6}$/i.test(params.get('primary') || '') ? params.get('primary') : null;
   const name = (params.get('name') || '').slice(0, 60) || null;
 
   const tenant = useMemo(() => ({
     name: preset.demo.name,
-    slug: `demo-${prospect ? drivingLessonsJaSlug : themeKey}`,
+    slug: `demo-${prospect ? routeKey : themeKey}`,
     isDemo: true,
     themeKey,
     branding: { timezone: 'America/Jamaica', location: preset.demo.location, bookingTagline: preset.demo.tagline, customPalette: {} },
     default_payment_mode: 'none',
     payment_gateways: {},
     site: null
-  }), [preset, themeKey, prospect]);
+  }), [preset, themeKey, prospect, routeKey]);
 
   const services = useMemo(() => preset.demo.services.map((service, index) => ({
     id: `demo-${themeKey}-${index}`,
@@ -59,7 +65,7 @@ export default function DemoSite() {
 
   const starter = !prospect && !params.has('preview') && careerKits.find(kit => kit.key === themeKey && !kit.retired);
   return (<>
-    {prospect && <div className={s.previewBar}><span>Website preview for Driving Lessons JA</span><span>Bookings are simulated</span></div>}
+    {prospect && <div className={s.previewBar}><span>Website preview for {preset.demo.name}</span><span>Bookings are simulated</span></div>}
     {starter && <div className={s.previewBar}><a href={starter.trade ? '/industries#trade-starters' : '/industries#new-starters'}>← Starter websites</a><span>Template preview · Bookings are simulated</span><a className={s.useStarter} href={`/onboarding?template=${themeKey}`}>Use this design →</a></div>}
     <TenantWebsite
       key={basePath}
