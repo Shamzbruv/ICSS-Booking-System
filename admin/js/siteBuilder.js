@@ -84,6 +84,7 @@
             this.defaults = null;
             this.savedJson = null;
             this.publishedJson = null;
+            this.templateRevision = null;
             this.history = [];
             this.future = [];
             this.page = 'home';
@@ -306,7 +307,9 @@
                 if (this.mode === 'tenant' && this.api) {
                     try {
                         const state = await this.api.loadSite();
-                        this.publishedJson = state.published ? JSON.stringify(state.published) : null;
+                        this.templateRevision = state.template_revision ?? null;
+                        this.publishedJson = state.published ? JSON.stringify(state.published)
+                            : state.template_revision ? JSON.stringify(data.resolved) : null;
                         if (state.draft) {
                             const resolved = await this.request('icss:site-resolve', { site: state.draft });
                             start = resolved.resolved;
@@ -389,7 +392,7 @@
             const json = JSON.stringify(this.site);
             let saved = false;
             try {
-                const result = await this.api.saveDraft(JSON.parse(json));
+                const result = await this.api.saveDraft(JSON.parse(json), this.templateRevision);
                 // The server can replace legacy embedded images with media URLs.
                 // Apply its canonical copy only if no newer edits arrived in flight.
                 if (result?.draft && JSON.stringify(this.site) === json) {
@@ -446,7 +449,7 @@
             this.publishBtn.textContent = 'Publishing…';
             const json = JSON.stringify(this.site);
             try {
-                const result = await this.api.publish(JSON.parse(json));
+                const result = await this.api.publish(JSON.parse(json), this.templateRevision);
                 const published = result?.published || JSON.parse(json);
                 this.publishedJson = JSON.stringify(published);
                 this.savedJson = this.publishedJson;
@@ -472,7 +475,7 @@
             });
             if (!ok) return;
             try {
-                await this.api.discard();
+                await this.api.discard(this.templateRevision);
                 const resolved = await this.request('icss:site-resolve', { site: JSON.parse(this.publishedJson) });
                 this.site = clone(resolved.resolved);
                 this.savedJson = JSON.stringify(this.site);
@@ -1193,9 +1196,9 @@
         const base = `/api/v1/tenants/${encodeURIComponent(slug)}`;
         return {
             loadSite: () => apiFetch(`${base}/site`),
-            saveDraft: (site) => apiFetch(`${base}/site/draft`, { method: 'PUT', body: { site } }),
-            publish: (site) => apiFetch(`${base}/site/publish`, { method: 'POST', body: { site } }),
-            discard: () => apiFetch(`${base}/site/draft`, { method: 'DELETE' }),
+            saveDraft: (site, template_revision) => apiFetch(`${base}/site/draft`, { method: 'PUT', body: { site, template_revision } }),
+            publish: (site, template_revision) => apiFetch(`${base}/site/publish`, { method: 'POST', body: { site, template_revision } }),
+            discard: (template_revision) => apiFetch(`${base}/site/draft`, { method: 'DELETE', body: { template_revision } }),
             listMedia: () => apiFetch(`${base}/media`),
             deleteMedia: (id) => apiFetch(`${base}/media/${id}`, { method: 'DELETE' }),
             uploadMedia: (blob, meta, onProgress) => new Promise((resolve, reject) => {

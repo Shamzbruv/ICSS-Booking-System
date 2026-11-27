@@ -196,7 +196,9 @@ router.patch('/:slug/active', platformAdminOnly, async (req, res) => {
 // only surfaces the "apply any theme" Theme Library for that account).
 router.get('/:slug/theme', authenticate, requireTenantOwnership('tenant_admin'), async (req, res) => {
     const { rows: [tenant] } = await query(
-        `SELECT t.theme_id, t.is_test_account, th.name AS theme_name
+        `SELECT t.theme_id, t.is_test_account, th.name AS theme_name,
+                (t.site_draft IS NOT NULL OR t.site_config IS NOT NULL) AS has_saved_design,
+                (t.site_previous_template IS NOT NULL) AS can_restore_design
          FROM tenants t LEFT JOIN themes th ON th.id = t.theme_id WHERE t.id = $1`,
         [req.tenant.id]
     );
@@ -204,34 +206,56 @@ router.get('/:slug/theme', authenticate, requireTenantOwnership('tenant_admin'),
     res.set('Cache-Control', 'no-store').json({
         theme_id: tenant.theme_id,
         theme_key: themeKeyForName(tenant.theme_name),
-        is_test_account: Boolean(tenant.is_test_account)
+        is_test_account: Boolean(tenant.is_test_account),
+        has_saved_design: tenant.has_saved_design,
+        can_restore_design: tenant.can_restore_design
     });
 });
 
 // POST /api/v1/tenants/:slug/theme — Switch the tenant's active theme
 // The frontend can query the theme's configurations for 'preview' before calling this to activate.
 router.post('/:slug/theme', authenticate, requireTenantOwnership('tenant_admin'), async (req, res) => {
-    const { theme_id, seed_services } = req.body;
+    const { theme_id, seed_services, apply_layout, restore_previous } = req.body;
+    const replaceLayout = apply_layout === true || restore_previous === true;
     try {
-        const themeResult = await query(
-            `SELECT id, name FROM themes WHERE id = $1 AND (id = $2 OR NOT (name = ANY($3::text[])))`,
-            [theme_id, req.tenant.theme_id || null, retiredStarterNames]
-        );
-        if (themeResult.rows.length === 0) return res.status(400).json({ error: 'Invalid theme.' });
+        const result = await transaction(async client => {
+            const { rows: [current] } = await client.query(
+                `SELECT id, theme_id, is_test_account, site_previous_template, site_draft IS NOT NULL OR site_config IS NOT NULL AS has_saved_design
+                 FROM tenants WHERE id=$1 FOR UPDATE`, [req.tenant.id]);
+            if (!current) return { status:404, error:'Tenant not found.' };
+            if (replaceLayout && !current.is_test_account) {
+                return { status:403, error:'Live template switching is available on the testing account.' };
+            }
+            const previous = current.site_previous_template;
+            if (restore_previous && !previous) return { status:409, error:'There is no previous design to restore.' };
+            const selectedId = restore_previous ? previous.theme_id : theme_id;
+            const { rows: [theme] } = await client.query(
+                `SELECT id, name FROM themes WHERE id=$1 AND ($4 OR id=$2 OR NOT (name=ANY($3::text[])))`,
+                [selectedId, current.theme_id, retiredStarterNames, restore_previous === true]);
+            if (!theme && !(restore_previous && !selectedId)) return { status:400, error:'Invalid theme.' };
 
-        const result = await query(
-            `UPDATE tenants SET theme_id = $1 WHERE slug = $2 RETURNING id, slug, theme_id`,
-            [theme_id, req.params.slug]
-        );
-        if (result.rows.length === 0) return res.status(404).json({ error: 'Tenant not found.' });
-
-        // Optionally seed services if explicitly requested
-        if (seed_services) {
-            await seedStarterServices(result.rows[0].id, theme_id);
+            const newDesign = restore_previous ? previous : null;
+            const changeLayout = current.is_test_account && (
+                restore_previous || selectedId !== current.theme_id || (apply_layout === true && current.has_saved_design)
+            );
+            const { rows: [tenant] } = changeLayout
+                ? await client.query(`
+                    UPDATE tenants SET theme_id=$2, site_draft=$3, site_config=$4, site_published_at=$5,
+                        site_previous_template=jsonb_build_object('theme_id',theme_id,'site_draft',site_draft,
+                            'site_config',site_config,'site_published_at',site_published_at),
+                        site_template_revision=site_template_revision + 1, updated_at=NOW()
+                    WHERE id=$1 RETURNING id,slug,theme_id`,
+                    [current.id,selectedId,newDesign?.site_draft,newDesign?.site_config,newDesign?.site_published_at])
+                : await client.query('UPDATE tenants SET theme_id=$2 WHERE id=$1 RETURNING id,slug,theme_id',
+                    [current.id,selectedId]);
+            return { tenant, theme_key:themeKeyForName(theme?.name) };
+        });
+        if (result.error) return res.status(result.status).json({ error:result.error });
+        invalidateTenantCache(result.tenant.slug);
+        if (seed_services && !restore_previous) {
+            await seedStarterServices(result.tenant.id, result.tenant.theme_id);
         }
-
-        invalidateTenantCache(req.params.slug);
-        res.json({ success: true, tenant: result.rows[0], theme_key: themeKeyForName(themeResult.rows[0].name), message: 'Theme applied successfully.' });
+        res.json({ success:true, ...result, message:restore_previous ? 'Previous design restored.' : 'Theme applied successfully.' });
     } catch (err) {
         console.error('[Tenants/Theme]', err.message);
         res.status(500).json({ error: 'Failed to update tenant theme.' });
@@ -568,6 +592,7 @@ function siteState(row) {
         draft,
         published,
         published_at: row.site_published_at || null,
+        template_revision: row.site_template_revision || 0,
         has_unpublished_changes: Boolean(draft) && JSON.stringify(draft) !== JSON.stringify(published)
     };
 }
@@ -575,9 +600,9 @@ function siteState(row) {
 // GET /api/v1/tenants/:slug/site — Draft + published website documents
 router.get('/:slug/site', authenticate, requireTenantOwnership('tenant_admin'), async (req, res) => {
     try {
-        const result = await query(`SELECT site_draft, site_config, site_published_at FROM tenants WHERE id = $1`, [req.tenant.id]);
+        const result = await query(`SELECT site_draft, site_config, site_published_at, site_template_revision FROM tenants WHERE id = $1`, [req.tenant.id]);
         if (result.rows.length === 0) return res.status(404).json({ error: 'Tenant not found.' });
-        res.json(siteState(result.rows[0]));
+        res.set('Cache-Control', 'no-store').json(siteState(result.rows[0]));
     } catch (err) {
         console.error('[Tenants/Site Load]', err.message);
         res.status(500).json({ error: 'Failed to load website settings.' });
@@ -591,10 +616,11 @@ router.put('/:slug/site/draft', authenticate, requireTenantOwnership('tenant_adm
     catch (err) { return res.status(400).json({ error: err.message }); }
     try {
         const result = await query(
-            `UPDATE tenants SET site_draft = $1, updated_at = NOW() WHERE id = $2
-             RETURNING site_draft, site_config, site_published_at`,
-            [JSON.stringify(site), req.tenant.id]
+            `UPDATE tenants SET site_draft = $1, updated_at = NOW() WHERE id = $2 AND ($3::integer IS NULL OR site_template_revision=$3)
+             RETURNING site_draft, site_config, site_published_at, site_template_revision`,
+            [JSON.stringify(site), req.tenant.id, req.body?.template_revision ?? null]
         );
+        if (!result.rows.length) return res.status(409).json({ error:'The website template changed. Reload the builder before saving.' });
         invalidateTenantCache(req.tenant.slug);
         res.json({ success: true, ...siteState(result.rows[0]) });
     } catch (err) {
@@ -617,9 +643,11 @@ router.post('/:slug/site/publish', authenticate, requireTenantOwnership('tenant_
         }
         const result = await query(
             `UPDATE tenants SET site_config = $1, site_draft = $1, site_published_at = NOW(), updated_at = NOW()
-             WHERE id = $2 RETURNING site_draft, site_config, site_published_at`,
-            [JSON.stringify(site), req.tenant.id]
+             WHERE id = $2 AND ($3::integer IS NULL OR site_template_revision=$3)
+             RETURNING site_draft, site_config, site_published_at, site_template_revision`,
+            [JSON.stringify(site), req.tenant.id, req.body?.template_revision ?? null]
         );
+        if (!result.rows.length) return res.status(409).json({ error:'The website template changed. Reload the builder before publishing.' });
         invalidateTenantCache(req.tenant.slug);
         res.json({ success: true, message: 'Your website is live.', ...siteState(result.rows[0]) });
     } catch (err) {
@@ -632,10 +660,11 @@ router.post('/:slug/site/publish', authenticate, requireTenantOwnership('tenant_
 router.delete('/:slug/site/draft', authenticate, requireTenantOwnership('tenant_admin'), async (req, res) => {
     try {
         const result = await query(
-            `UPDATE tenants SET site_draft = NULL, updated_at = NOW() WHERE id = $1
-             RETURNING site_draft, site_config, site_published_at`,
-            [req.tenant.id]
+            `UPDATE tenants SET site_draft = NULL, updated_at = NOW() WHERE id = $1 AND ($2::integer IS NULL OR site_template_revision=$2)
+             RETURNING site_draft, site_config, site_published_at, site_template_revision`,
+            [req.tenant.id, req.body?.template_revision ?? null]
         );
+        if (!result.rows.length) return res.status(409).json({ error:'The website template changed. Reload the builder before discarding edits.' });
         invalidateTenantCache(req.tenant.slug);
         res.json({ success: true, ...siteState(result.rows[0]) });
     } catch (err) {

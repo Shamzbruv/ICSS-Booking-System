@@ -15,6 +15,7 @@ const { migratePlatformAnnouncements } = require('./platformAnnouncements');
 const { migratePatientWorkspace } = require('./patientWorkspace');
 const { migrateServiceFollowups } = require('./serviceFollowups');
 const { migrateNewsletter } = require('./newsletterSchema');
+const { migrateSiteTemplates } = require('./siteTemplates');
 const { seedCareerStarters } = require('./careerStarters');
 
 let pool;
@@ -782,6 +783,7 @@ async function runMigrations(client) {
     await client.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS site_config JSONB DEFAULT NULL`);
     await client.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS site_draft JSONB DEFAULT NULL`);
     await client.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS site_published_at TIMESTAMPTZ`);
+    await migrateSiteTemplates(client);
     await client.query(`
         CREATE TABLE IF NOT EXISTS tenant_media (
             id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

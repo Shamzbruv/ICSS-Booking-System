@@ -17,6 +17,7 @@ test('patient profiles are encrypted, tenant-scoped, and linked to bookings expl
         CREATE TABLE plans (id TEXT PRIMARY KEY, features JSONB, limits JSONB);
         CREATE TABLE themes (id UUID PRIMARY KEY, name TEXT);
         CREATE TABLE tenants (id UUID PRIMARY KEY, slug TEXT UNIQUE, active BOOLEAN DEFAULT true, plan_id TEXT,
+            site_draft JSONB, site_config JSONB, site_previous_template JSONB,
             features JSONB, limits JSONB, theme_id UUID REFERENCES themes(id), is_test_account BOOLEAN DEFAULT false);
         CREATE TABLE users (id UUID PRIMARY KEY, tenant_id UUID, role TEXT, active BOOLEAN DEFAULT true);
         CREATE TABLE impersonation_sessions (id UUID PRIMARY KEY, mode TEXT, actor_user_id UUID,

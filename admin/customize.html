@@ -117,7 +117,7 @@
       <h2 class="section-title">Your template</h2>
       <p>Your website started from an industry template with its own layout, fonts, colours and sample content. Everything can be changed in the Website tab. Want something completely bespoke? Request a custom theme below.</p>
     </div>
-    <section class="theme-library" id="themeLibrarySection" hidden><div class="theme-library-head"><h2 class="section-title">Theme Library</h2><span class="theme-library-badge">Test account</span></div><p class="theme-library-hint">Apply any industry starter theme to this account's live site, whenever you like.</p><div class="theme-grid" id="themeLibraryGrid"></div></section>
+    <section class="theme-library" id="themeLibrarySection" hidden><div class="theme-library-head"><h2 class="section-title">Theme Library</h2><span class="theme-library-badge">Test account</span></div><p class="theme-library-hint">Apply an industry template to the Website Builder and the live test booking link. You can restore the previous design.</p><button type="button" class="btn btn-secondary btn-sm" id="restoreSiteDesign" hidden>Restore previous design</button><div class="theme-grid" id="themeLibraryGrid"></div></section>
     <div class="request-box"><h3>Want a fully custom theme?</h3><p style="color:var(--text-dim);font-size:13px;line-height:1.5">Request a professionally built custom theme for <strong>JMD $10,000</strong>. Your request goes directly into the developer job queue.</p><textarea id="themeNotes" class="form-control" rows="4" placeholder="Describe your preferred style, layout, references, and special requirements..."></textarea><button class="btn btn-primary" id="requestThemeBtn" type="button" style="width:100%;margin-top:10px">Request Custom Theme — JMD $10,000</button><p id="requestMessage" style="font-size:13px;color:var(--text-dim)"></p></div>
   </section>
 </main>
@@ -171,7 +171,7 @@ async function requestTheme(){const notes=themeNotes.value.trim();if(!notes)retu
 
 // ── Theme Library — testing account only. Every other tenant never sees this
 // section: it stays hidden unless the backend confirms is_test_account. ──────
-let libraryThemes=[],currentThemeId=null;
+let libraryThemes=[],currentThemeId=null,hasSavedDesign=false;
 function renderThemeLibrary(){
     themeLibraryGrid.replaceChildren(...libraryThemes.map(th=>{
         const isCurrent=th.id===currentThemeId;
@@ -180,7 +180,7 @@ function renderThemeLibrary(){
         const name=document.createElement('div');name.className='theme-card-name';name.textContent=th.name;
         const actions=document.createElement('div');actions.className='theme-card-actions';
         if(th.template_path){const a=document.createElement('a');a.href=th.template_path;a.target='_blank';a.rel='noreferrer';a.className='btn btn-secondary btn-sm';a.textContent='Preview';actions.appendChild(a)}
-        const btn=document.createElement('button');btn.type='button';btn.className='btn '+(isCurrent?'btn-secondary':'btn-primary')+' btn-sm';btn.textContent=isCurrent?'Current':'Apply';btn.disabled=isCurrent;btn.addEventListener('click',()=>applyLibraryTheme(th.id,btn));actions.appendChild(btn);
+        const btn=document.createElement('button');btn.type='button';btn.className='btn '+(isCurrent?'btn-secondary':'btn-primary')+' btn-sm';btn.textContent=isCurrent?(hasSavedDesign?'Reapply layout':'Current'):'Apply';btn.disabled=isCurrent&&!hasSavedDesign;btn.addEventListener('click',()=>applyLibraryTheme(th.id,btn));actions.appendChild(btn);
         card.append(cat,name);
         if (th.category === 'Medical') {
             const detail=document.createElement('p');detail.className='page-subtitle';
@@ -191,17 +191,29 @@ function renderThemeLibrary(){
     }));
 }
 async function applyLibraryTheme(themeId,btn){
+    if (!await builder.modalConfirm({
+        title:themeId?'Apply this template to the test site?':'Restore the previous design?',
+        body:'The Website Builder and public booking link will update together. The current saved design will be available to restore.',
+        confirm:themeId?'Apply template':'Restore design'
+    })) return;
+    if (builder.isDirty()) {
+        await builder.saveDraft();
+        if (builder.isDirty()) {
+            showToast('Wait for your draft to finish saving, then try again.','error');
+            return;
+        }
+    }
     const original=btn.textContent;
     btn.disabled=true;btn.textContent='Applying…';
     try{
-        const result=await apiFetch('/api/v1/tenants/'+slug+'/theme',{method:'POST',body:{theme_id:themeId}});
+        const result=await apiFetch('/api/v1/tenants/'+slug+'/theme',{method:'POST',body:themeId?{theme_id:themeId,apply_layout:true}:{restore_previous:true}});
         showPracticePrivacy(result.theme_key,{applied:true});
-        currentThemeId=themeId;
+        currentThemeId=result.tenant.theme_id;
         renderThemeLibrary();
         refresh();
         if (result.theme_key === 'health') document.getElementById('practicePrivacy').scrollIntoView({block:'nearest'});
-        showToast(result.theme_key==='health'?'Medical template applied. Find patient privacy and records above the builder.':'Theme applied. Reloading the builder with the new template…');
-        setTimeout(()=>window.location.reload(),900);
+        showToast(result.theme_key==='health'?'Medical template applied. Find patient privacy and records above the builder.':'Website and booking link updated.');
+        setTimeout(()=>window.location.assign('customize.html'+window.location.search),900);
     }catch(e){
         btn.disabled=false;btn.textContent=original;
         showToast(e.message||'Could not apply that theme.','error');
@@ -214,6 +226,8 @@ async function loadThemeLibrary(){
         const {themes}=await fetch('/api/v1/themes').then(r=>r.json());
         libraryThemes=themes||[];
         currentThemeId=info.theme_id;
+        hasSavedDesign=info.has_saved_design;
+        document.getElementById('restoreSiteDesign').hidden=!info.can_restore_design;
         renderThemeLibrary();
         themeLibrarySection.hidden=false;
     }catch(e){ console.warn('Theme library skipped:',e.message); }
@@ -247,6 +261,7 @@ function maybeStartBuilderTour(){
 }
 
 document.getElementById('savePaletteBtn').addEventListener('click',()=>savePalette(true));document.getElementById('resetPaletteBtn').addEventListener('click',resetPalette);document.getElementById('requestThemeBtn').addEventListener('click',requestTheme);previewFrame.addEventListener('load',()=>{if(activeColorKey)setTimeout(()=>highlightPreview(activeColorKey),100)});load();loadThemeLibrary();
+document.getElementById('restoreSiteDesign').addEventListener('click',event=>applyLibraryTheme(null,event.currentTarget));
 </script>
 </body>
 </html>

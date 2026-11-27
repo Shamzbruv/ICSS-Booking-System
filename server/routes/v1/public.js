@@ -63,7 +63,7 @@ router.get('/tenant', async (req, res) => {
         })
     ]);
 
-    res.json({
+    res.set('Cache-Control', 'no-store').json({
         name,
         slug,
         newsletter_enabled: Boolean(newsletter.rows[0]?.enabled),
